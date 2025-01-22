@@ -20,16 +20,16 @@ on:
     types:
       - published
 
+env:
+  HTTPS_IMAGEFLOW_NIGHTLIES: "https://s3-us-west-1.amazonaws.com/imageflow-nightlies"
+  IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: "https://s3-us-west-1.amazonaws.com/imageflow-nightlies/commits/${{ github.sha }}/linux64.tar.gz"
+
 jobs:
   build:
     env:
-      # From release_ci:
       NUGET_UPLOAD_NUGET: ${{ secrets.NUGET_UPLOAD_NUGET }}
       NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
-      HTTPS_IMAGEFLOW_NIGHTLIES: "https://s3-us-west-1.amazonaws.com/imageflow-nightlies"
-      DOCKER_FETCH_COMMIT_SUFFIX: linux64
       PROFILE: release
-
     strategy:
       fail-fast: false
       matrix:
@@ -141,26 +141,22 @@ jobs:
       - name: "WOA: Setup Windows ARM64"
         uses: ./.github/actions/setup-win-arm64
         if: matrix.woa == 'true'
-
       - name: "WOA: Checkout code again with git, so git commands work."
         uses: actions/checkout@v4
         if: matrix.woa == 'true'
 
-      # ----------------------------------------------------------------------------
-      # cross and woa handle caching & rust toolchains separately
-      # ----------------------------------------------------------------------------
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.name }}
         if: matrix.cross != 'true'
+
       - uses: dtolnay/rust-toolchain@stable
         if: matrix.cross != 'true' && matrix.woa != 'true'
-
-      - run: rustup show
 
       - name: Install NASM
         uses: ./.github/actions/install-nasm
         if: matrix.cross != 'true' && matrix.woa != 'true'
+
       - name: Install i686 target
         if: ${{ matrix.target == 'i686-pc-windows-msvc' && matrix.cross != 'true' }}
         uses: dtolnay/rust-toolchain@stable
@@ -174,27 +170,13 @@ jobs:
       # ----------------------------------------------------------------------------
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
 
-      # ----------------------------------------------------------------------------
-      # Distinguish extension between .zip (Windows) and .tar.gz (other OS)
-      # ----------------------------------------------------------------------------
-      - name: Set EXTENSION=zip if windows
-        if: contains(matrix.os, 'windows')
+      - name: Set EXTENSION to .zip or .tar.gz based on OS
         shell: bash
-        run: echo "EXTENSION=zip" >> $GITHUB_ENV
+        run: echo "EXTENSION=${{ contains(matrix.os, 'windows') && 'zip' || 'tar.gz' }}" >> $GITHUB_ENV
 
-      - name: Set EXTENSION=tar.gz if not windows
-        if: ${{ !contains(matrix.os, 'windows') }}
-        shell: bash
-        run: echo "EXTENSION=tar.gz" >> $GITHUB_ENV
-
-      # ----------------------------------------------------------------------------
-      # Setup environment variables used by both test and release flows.
-      # We combine logic from both test_ci and release_ci for cross build/test setups.
-      # ----------------------------------------------------------------------------
-      - name: Set ENV vars
+      - name: Set env vars
         shell: bash
         run: |
-          # This is from release_ci
           echo "TARGET_DIR=target/${{ matrix.target }}/" >> $GITHUB_ENV
           echo "TAG_SHA_SUFFIX=${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.suffix }}" >> $GITHUB_ENV
           echo "RUSTFLAGS=${{ matrix.target-cpu && format('-Ctarget-cpu={0}', matrix.target-cpu) }} ${{ matrix.target-feature && format('-Ctarget-feature={0}', matrix.target-feature) }}" >> $GITHUB_ENV
@@ -205,34 +187,30 @@ jobs:
           echo "ALLOW_PUBLISH=${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_DYNAMIC=${{ contains(matrix.target, 'win') && 'imageflow.dll'  || contains(matrix.target, 'apple') && 'libimageflow.dylib' || 'libimageflow.so' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_STATIC=${{ contains(matrix.target, 'win') && 'imageflow.lib' || 'libimageflow.a' }}" >> $GITHUB_ENV
-      # ----------------------------------------------------------------------------
-      # More environment variables that are used for artifact naming/publishing
-      # in release mode. In test mode, they are still set, but only relevant if we
-      # actually do the release steps (conditional on event type).
-      # ----------------------------------------------------------------------------
-      - name: Set env vars for artifacts
+
+      - name: Set more env vars
         shell: bash
         run: |
+          echo "IMAGEFLOW_NUGET_VERSION=${{ github.ref_name || 'vTEST' }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TAG_SHA_SUFFIX=imageflow-${{ env.TAG_SHA_SUFFIX }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TOOL_PATH=${{ env.REL_BINARIES_DIR }}imageflow_tool${{ contains(matrix.os, 'windows') && '.exe' || '' }}" >> $GITHUB_ENV
 
-          echo "RELATIVE_GITHUB_ARCHIVE=./artifacts/github/imageflow-${{ env.TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
-
-          echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/releases/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          # We want to check these are successfully uploaded
           echo "ESTIMATED_ARTIFACT_URL_COMMITS=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
           echo "ESTIMATED_MUSL_VERSIONED_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/static/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
           echo "ESTIMATED_MUSL_LATEST_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/static/latest/${{ matrix.target }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
 
-          echo "FETCH_COMMIT_SUFFIX=${{ matrix.commit-suffix }}" >> $GITHUB_ENV
+          # These are compiled into the binaries using a build script. We might review to reduce them later.
+          echo "ESTIMATED_DOCS_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/doc" >> $GITHUB_ENV
+          echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/releases/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
           echo "CI_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
           echo "CI=True" >> $GITHUB_ENV
           echo "CI_REPO=${{ github.repository }}" >> $GITHUB_ENV
           echo "CI_JOB_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
           echo "CI_JOB_TITLE=GitHub ${{ github.job_id }} ${{ matrix.name }}" >> $GITHUB_ENV
           echo "CI_STRING=GitHub actions" >> $GITHUB_ENV
-          echo "CI_PULL_REQUEST_INFO=${{ github.event_name!='release' }}" >> $GITHUB_ENV
+          echo "CI_PULL_REQUEST_INFO=${{ github.event_name !='release' }}" >> $GITHUB_ENV
           echo "CI_BUILD_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
-          echo "ESTIMATED_DOCS_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/doc" >> $GITHUB_ENV
           echo "DEBUG=False" >> $GITHUB_ENV
           echo "TARGET_CPU=${{ matrix.target-cpu }}" >> $GITHUB_ENV
 
@@ -245,13 +223,11 @@ jobs:
           sed -i '/# enable on musl:/d' ./Cargo.toml
           echo "Finished editing imageflow_abi/Cargo.toml: "
           cat imageflow_abi/Cargo.toml
-      # ----------------------------------------------------------------------------
-      # Test steps (like in both test_ci and release_ci).
-      # For cross and WOA, special steps are used, otherwise normal cargo test.
-      # ----------------------------------------------------------------------------
+
+
+      # TESTS ---------------------------------------------------------------------
       - name: "cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
         run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
-        shell: bash
         if: matrix.cross != 'true' && matrix.woa != 'true'
 
       - name: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
@@ -264,18 +240,13 @@ jobs:
         with:
           command: "test"
           target: ${{ matrix.target }}
-          toolchain: stable
           args: "${{ env.CROSS_ARGS }}"
         if: matrix.cross == 'true'
 
-      # ----------------------------------------------------------------------------
-      # Build steps. We incorporate test_ci's approach (cargo build + cargo test).
-      # For cross or WOA, we use cross or the special powershell step.
-      # ----------------------------------------------------------------------------
+      # BUILD ---------------------------------------------------------------------
       - name: "cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
         if: matrix.cross != 'true' && matrix.woa != 'true'
         run: cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
-        shell: bash
 
       - name: "& Launch-VsDevShell.ps1 | cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
         if: matrix.woa == 'true'
@@ -287,10 +258,11 @@ jobs:
         with:
           command: "build"
           target: ${{ matrix.target }}
-          toolchain: stable
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
         if: matrix.cross == 'true'
 
+
+      # CHECK GLIBC ---------------------------------------------------------------------
       - name: "Check GLIBC version and dynamic dependencies of ${{ env.LIBIMAGEFLOW_DYNAMIC }}"
         if: matrix.max-glibc
         run: |
@@ -298,29 +270,16 @@ jobs:
           ./ci/check-glibc.sh "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" "${{ matrix.max-glibc }}"
         shell: bash
 
-      # ----------------------------------------------------------------------------
-      # Diagnose build results for debugging.
-      # ----------------------------------------------------------------------------
-      - name: imageflow_tool diagnose --show-compilation-info
-        run: "${{ env.IMAGEFLOW_TOOL_PATH }} diagnose --show-compilation-info"
+      # CHECK IMAGEFLOW_TOOL ---------------------------------------------------------------------
+      - run: "${{ env.IMAGEFLOW_TOOL_PATH }} diagnose --show-compilation-info"
         shell: bash
-        # This may fail if the tool doesn't exist for a certain platform,
-        # but in release_ci it was unconditional. We keep it consistent.
 
-      # ----------------------------------------------------------------------------
-      # Build documentation (cargo doc) if cross isn't used. For cross,
-      # we can't do doc in the same straightforward way.
-      # ----------------------------------------------------------------------------
+      # BUILD DOCUMENTATION ---------------------------------------------------------------------
       - name: "Build ${{ env.PROFILE }} Docs"
         run: cargo doc --all --no-deps ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
         if: matrix.cross != 'true'
 
-      - name: "mkdir -p ./${{ env.TARGET_DIR }}doc"
-        run: |
-          mkdir -p ./${{ env.TARGET_DIR }}doc
-          touch ./${{ env.TARGET_DIR }}doc/not-available.txt
-        if: matrix.cross == 'true'
-
+      # CREATE ZIP/TAR FILES FOR UPLOAD ---------------------------------------------------------------------
       - name: "Create zip/tar files for upload" # (always, so we know if it fails before we make a release)
         shell: bash
         run: |
@@ -335,23 +294,16 @@ jobs:
           LIBIMAGEFLOW_DYNAMIC: ${{ env.LIBIMAGEFLOW_DYNAMIC }}
           MATRIX_COMMIT_SUFFIX: ${{ matrix.commit-suffix }}
           MATRIX_TARGET: ${{ matrix.target }}
+          HTTPS_UPLOAD_BASE: ${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}
 
-      - name: "Upload to Github Release: ${{ env.RELATIVE_GITHUB_ARCHIVE }}"
-        if: ${{ env.ALLOW_PUBLISH == 'true' }}
-        uses: xresloader/upload-to-github-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          file: "./artifacts/upload/*.${{ env.EXTENSION }}"
-          tags: true
-          overwrite: true
-          verbose: true
 
+
+      # CREATE NUGET PACKAGE ---------------------------------------------------------------------
       - name: "Create NuGet Package Imageflow.NativeTool.${{ matrix.nuget-rid }}"
         shell: bash
         run: ./ci/pack_nuget/pack.sh tool
         env:
-          CI_TAG: ${{ github.ref_name || 'vTEST' }}
+          CI_TAG: ${{ env.IMAGEFLOW_NUGET_VERSION }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
@@ -362,11 +314,23 @@ jobs:
         shell: bash
         run: ./ci/pack_nuget/pack.sh
         env:
-          CI_TAG: ${{ github.ref_name || 'vTEST' }}
+          CI_TAG: ${{ env.IMAGEFLOW_NUGET_VERSION }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
           BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
+
+      # UPLOAD ---------------------------------------------------------------------
+      - name: "Upload to Github Release"
+        if: ${{ env.ALLOW_PUBLISH == 'true' }}
+        uses: xresloader/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: "./artifacts/github/*.${{ env.EXTENSION }}"
+          tags: true
+          overwrite: true
+          verbose: true
 
       - name: Upload ./artifacts/upload to S3
         if: ${{ env.ALLOW_PUBLISH == 'true' }}
@@ -377,7 +341,6 @@ jobs:
           aws_bucket: ${{ secrets.AWS_BUCKET }}
           source_dir: ./artifacts/upload
           destination_dir: ''
-
 
       - name: Publish to nuget.pkg.github.com
         if: ${{ env.ALLOW_PUBLISH == 'true' && env.NUGET_UPLOAD_GITHUB == 'true' }}
@@ -431,6 +394,10 @@ jobs:
 
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
 
+      - name: Check if IMAGEFLOW_DOWNLOAD_URL_TAR_GZ exists with curl
+        run: |
+          curl -s ${{ env.IMAGEFLOW_DOWNLOAD_URL_TAR_GZ }}
+
       - name: Publish To Docker
         run: |
           docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
@@ -440,4 +407,4 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           PUBLISH_DOCKER_TAG: ${{ github.ref_name }}
-          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: ${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/commits/${{ github.sha }}/${{ env.DOCKER_FETCH_COMMIT_SUFFIX }}.tar.gz
+          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: ${{ env.IMAGEFLOW_DOWNLOAD_URL_TAR_GZ }}

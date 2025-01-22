@@ -25,6 +25,7 @@ required_vars=(
     "GITHUB_SHA"
     "GITHUB_REF_NAME"
     "MATRIX_COMMIT_SUFFIX"
+    "HTTPS_UPLOAD_BASE"
 )
 
 for var in "${required_vars[@]}"; do
@@ -115,3 +116,10 @@ ls -l -R ./artifacts/github
 
 echo "Upload artifacts:"
 ls -l -R ./artifacts/upload 
+
+# List expected final URLS (based on contents of artifacts/uplod, recursive)
+# HTTPS_UPLOAD_BASE doesn't have a trailing slash
+echo "Expected final URLs:"
+find ./artifacts/upload -type f -print0 | while IFS= read -r -d '' file; do
+    echo "${HTTPS_UPLOAD_BASE}/${file#./artifacts/upload/}"
+done
