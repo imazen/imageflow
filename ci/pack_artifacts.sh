@@ -39,23 +39,37 @@ mkdir -p ./artifacts/{staging/{headers},github,upload/{releases/${GITHUB_REF_NAM
 mkdir -p "./artifacts/static-staging"
 
 # ------------------------------------------------------------------------------
-# Package documentation
+# Package documentation (if exists)
 # ------------------------------------------------------------------------------
 if [ -d "./${TARGET_DIR}doc" ]; then
     (
         cd "./${TARGET_DIR}doc"
-        tar czf "../docs.${EXTENSION}" ./*
+        if [ "$(ls -A)" ]; then  # Only create archive if directory is not empty
+            tar czf "../docs.${EXTENSION}" ./*
+            mv "../docs.${EXTENSION}" ./artifacts/staging/
+        else
+            echo "Documentation directory exists but is empty - skipping"
+        fi
     )
-    mv "./${TARGET_DIR}docs.${EXTENSION}" ./artifacts/staging/
+else
+    echo "Documentation directory not found - skipping"
 fi
 
 # ------------------------------------------------------------------------------
-# Copy binaries and headers
+# Copy binaries and headers (with strict checking)
 # ------------------------------------------------------------------------------
 cp -R "./${REL_BINARIES_DIR}"/{imageflow_,libimageflow}* ./artifacts/staging/
 cp bindings/headers/*.h ./artifacts/staging/headers/
 cp bindings/headers/imageflow_default.h ./artifacts/staging/imageflow.h
-cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging/
+
+# Verify and copy installation scripts
+for script in "./ci/packaging_extras/"{install,uninstall}.sh; do
+    if [ ! -f "$script" ]; then
+        echo "Error: Required installation script not found: $script"
+        exit 1
+    fi
+    cp "$script" ./artifacts/staging/
+done
 
 # Clean up unnecessary files
 rm ./artifacts/staging/*.{o,d,rlib} 2>/dev/null || true
