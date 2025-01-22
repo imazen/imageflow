@@ -34,8 +34,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # From release_ci
-          - name: x86_64-ubuntu-20
+          - name: linux-x64
             suffix: ubuntu-x86_64
             os: ubuntu-20.04
             target-cpu: x86-64
@@ -45,28 +44,28 @@ jobs:
             cross: 'true'
             max-glibc: '2.29'
 
-          # From test_ci only (new):
-          - name: x86_64-ubuntu-22
-            suffix: ubuntu-x86_64-22
-            os: ubuntu-22.04
+          # skip-publish, for testing only.
+          - name: linux-x64-ubuntu-24
+            suffix: ubuntu-x86_64-24
+            os: ubuntu-24.04
             target-cpu: x86-64
-            commit-suffix: linux64-22
+            commit-suffix: linux64_24
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
             skip-publish: 'true'
 
-          - name: ARM64-ubuntu-24
+          - name: linux-arm64-ubuntu-22
             suffix: ubuntu-arm64
-            os: ubuntu-24-arm-32gb
+            os: ubuntu-22-arm-32gb
             target-cpu: generic
-            commit-suffix: linux_arm64_glibc239
+            commit-suffix: linux_arm64
             nuget-rid: linux-arm64
             target: aarch64-unknown-linux-gnu
             features: neon
             cross: 'true'
             max-glibc: '2.39'
 
-          - name: x86_64-macos-13
+          - name: osx-x64-13
             suffix: osx-x86_64
             os: macos-13
             target-cpu: haswell
@@ -74,15 +73,15 @@ jobs:
             nuget-rid: osx-x64
             target: x86_64-apple-darwin
 
-          - name: ARM64-macos-14
-            suffix: osx-aarch64
+          - name: osx-arm64-14
+            suffix: osx-arm64
             os: macos-14
             target-cpu: apple-m1
-            commit-suffix: mac_aarch64
+            commit-suffix: osx-arm64
             nuget-rid: osx-arm64
             target: aarch64-apple-darwin
 
-          - name: x86_64-windows
+          - name: win-x64-2022
             suffix: win-x86_64
             os: windows-2022
             target-cpu: x86-64
@@ -90,7 +89,7 @@ jobs:
             nuget-rid: win-x64
             target: x86_64-pc-windows-msvc
 
-          - name: win32
+          - name: win-x86-2022
             suffix: win-x86
             os: windows-2022
             # target-cpu: generic # any target-cpu causes the build to fail
@@ -98,7 +97,7 @@ jobs:
             nuget-rid: win-x86
             target: i686-pc-windows-msvc
 
-          - name: ARM64-windows
+          - name: win-arm64-11
             suffix: win-arm64
             os: windows-11-arm-32gb
             target-cpu: generic
@@ -107,7 +106,7 @@ jobs:
             target: aarch64-pc-windows-msvc
             woa: 'true'
 
-          - name: x86_64-linux-musl
+          - name: linux-musl-x64
             suffix: linux-musl-x64
             commit-suffix: linux-musl-x64
             nuget-rid: linux-musl-x64
@@ -118,11 +117,11 @@ jobs:
             cross: 'true'
             skip-publish: 'true'
 
-          - name: ARM64-linux-musl
+          - name: linux-musl-arm64
             suffix: linux-musl-arm64
-            commit-suffix: linux_arm64_musl
+            commit-suffix: linux-musl-arm64
             nuget-rid: linux-musl-arm64
-            os: ubuntu-24-arm-32gb
+            os: ubuntu-22-arm-32gb
             target-cpu: generic
             target: aarch64-unknown-linux-musl
             features: mimalloc
