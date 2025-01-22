@@ -321,13 +321,7 @@ jobs:
           touch ./${{ env.TARGET_DIR }}doc/not-available.txt
         if: matrix.cross == 'true'
 
-      # ----------------------------------------------------------------------------
-      # Conditionally create and upload artifacts only if this is a release.
-      # In "test mode," we skip. This keeps the workflow DRY but clarifies
-      # that packaging/publishing logic won't happen on pushes or PRs.
-      # ----------------------------------------------------------------------------
-      - name: "Create zip/tar files for upload"
-        if: ${{ github.event_name == 'release' }}
+      - name: "Create zip/tar files for upload" # (always, so we know if it fails before we make a release)
         shell: bash
         run: |
           chmod +x ./ci/pack_artifacts.sh
