@@ -21,8 +21,10 @@ on:
       - published
 
 env:
-  HTTPS_IMAGEFLOW_NIGHTLIES: "https://s3-us-west-1.amazonaws.com/imageflow-nightlies"
-  IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: "https://s3-us-west-1.amazonaws.com/imageflow-nightlies/commits/${{ github.sha }}/linux64.tar.gz"
+  IMAGEFLOW_RELEASE_BUCKET: ${{ env.IMAGEFLOW_RELEASE_BUCKET || 'imageflow-nightlies' }}
+  IMAGEFLOW_RELEASE_BUCKET_REGION: ${{ env.IMAGEFLOW_RELEASE_BUCKET_REGION || 'us-west-1' }}
+  HTTPS_IMAGEFLOW_BUCKET: "https://s3.${{ env.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ env.IMAGEFLOW_RELEASE_BUCKET }}"
+  IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: "https://s3.${{ env.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ env.IMAGEFLOW_RELEASE_BUCKET }}/commits/${{ github.sha }}/linux64.tar.gz"
 
 jobs:
   build:
@@ -196,13 +198,13 @@ jobs:
           echo "IMAGEFLOW_TOOL_PATH=${{ env.REL_BINARIES_DIR }}imageflow_tool${{ contains(matrix.os, 'windows') && '.exe' || '' }}" >> $GITHUB_ENV
 
           # We want to check these are successfully uploaded
-          echo "ESTIMATED_ARTIFACT_URL_COMMITS=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
-          echo "ESTIMATED_MUSL_VERSIONED_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/static/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
-          echo "ESTIMATED_MUSL_LATEST_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/static/latest/${{ matrix.target }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "ESTIMATED_ARTIFACT_URL_COMMITS=${{ env.HTTPS_IMAGEFLOW_BUCKET }}/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "ESTIMATED_MUSL_VERSIONED_URL=${{ env.HTTPS_IMAGEFLOW_BUCKET }}/static/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "ESTIMATED_MUSL_LATEST_URL=${{ env.HTTPS_IMAGEFLOW_BUCKET }}/static/latest/${{ matrix.target }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
 
           # These are compiled into the binaries using a build script. We might review to reduce them later.
-          echo "ESTIMATED_DOCS_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/doc" >> $GITHUB_ENV
-          echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/releases/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "ESTIMATED_DOCS_URL=${{ env.HTTPS_IMAGEFLOW_BUCKET }}/doc" >> $GITHUB_ENV
+          echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_BUCKET }}/releases/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
           echo "CI_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
           echo "CI=True" >> $GITHUB_ENV
           echo "CI_REPO=${{ github.repository }}" >> $GITHUB_ENV
@@ -294,7 +296,7 @@ jobs:
           LIBIMAGEFLOW_DYNAMIC: ${{ env.LIBIMAGEFLOW_DYNAMIC }}
           MATRIX_COMMIT_SUFFIX: ${{ matrix.commit-suffix }}
           MATRIX_TARGET: ${{ matrix.target }}
-          HTTPS_UPLOAD_BASE: ${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}
+          HTTPS_UPLOAD_BASE: ${{ env.HTTPS_IMAGEFLOW_BUCKET }}
 
 
 
@@ -338,7 +340,7 @@ jobs:
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          aws_bucket: ${{ env.IMAGEFLOW_RELEASE_BUCKET }}
           source_dir: ./artifacts/upload
           destination_dir: ''
 
@@ -360,21 +362,35 @@ jobs:
           done
         shell: bash
 
-      - name: "Verify artifacts are now on S3, and public. Use curl to check, then delete"
+      - name: "Verify artifacts are now on S3, and public"
         if: ${{ env.ALLOW_PUBLISH == 'true' }}
         shell: bash
+        continue-on-error: true
         run: |
-          mkdir -p ./artifacts/verify
-          cd ./artifacts/verify
-          curl -s ${{ env.ESTIMATED_ARTIFACT_URL }}
-          curl -s ${{ env.ESTIMATED_ARTIFACT_URL_COMMITS }}
-          # if musl
+          # Function to test URL silently and return status
+          test_url() {
+            if curl -s -f -I "$1" 2>/dev/null >/dev/null; then
+              echo "✓ OK $1"
+              return 0
+            else
+              echo "✗ FAILED $1"
+              return 1
+            fi
+          }
+
+          # Test all relevant URLs
+          failed=0
+          test_url "${{ env.ESTIMATED_ARTIFACT_URL }}" || failed=1
+          test_url "${{ env.ESTIMATED_ARTIFACT_URL_COMMITS }}" || failed=1
+
+          # Test MUSL-specific URLs if applicable
           if [[ ${{ matrix.target }} == *"musl"* ]]; then
-            curl -s ${{ env.ESTIMATED_MUSL_VERSIONED_URL }}
-            curl -s ${{ env.ESTIMATED_MUSL_LATEST_URL }}
+            test_url "${{ env.ESTIMATED_MUSL_VERSIONED_URL }}" || failed=1
+            test_url "${{ env.ESTIMATED_MUSL_LATEST_URL }}" || failed=1
           fi
-          cd ${{ github.workspace }}
-          rm -rf ./artifacts/verify
+
+          # Exit with failure if any URL test failed
+          exit $failed
 
 
 
