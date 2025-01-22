@@ -10,7 +10,7 @@ edition = "2021"
 name = "imageflow"
 doc = true
 # Default crate type for non-musl targets
-crate-type = ["staticlib"]
+crate-type = ["cdylib"]
 doctest = false
 
 
