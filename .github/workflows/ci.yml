@@ -291,24 +291,24 @@ jobs:
         if: matrix.cross == 'true'
 
       # on *unknown-linux-gnu, check and extract exact glibc version of libimageflow.so
-      - name: Check glibc version of ${{ env.LIBIMAGEFLOW_STATIC }}
+      - name: Check glibc version of ${{ env.LIBIMAGEFLOW_DYNAMIC }}
         if: matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           # list all files in the target directory
           ls -l "${{ env.REL_BINARIES_DIR }}"
 
           # if libimageflow.so does not exist, fail
-          if [[ ! -f "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }}" ]]; then
-            echo "Error: ${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }} does not exist"
+          if [[ ! -f "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" ]]; then
+            echo "Error: ${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }} does not exist"
             exit 1
           fi
 
           # Use objdump to find all GLIBC version requirements
           echo "GLIBC version requirements:"
-          objdump -T "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }}" | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -Vu
+          objdump -T "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -Vu
 
           # Find the highest GLIBC version required
-          HIGHEST_GLIBC=$(objdump -T "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }}" | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -V | tail -n1)
+          HIGHEST_GLIBC=$(objdump -T "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -V | tail -n1)
           echo "Highest GLIBC version required: $HIGHEST_GLIBC"
 
           # Fail if version is above 2.17 and this is not a skipped build
