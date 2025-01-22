@@ -43,6 +43,7 @@ jobs:
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
             cross: 'true'
+            max-glibc: '2.29'
 
           # From test_ci only (new):
           - name: x86_64-ubuntu-22
@@ -63,6 +64,7 @@ jobs:
             target: aarch64-unknown-linux-gnu
             features: neon
             cross: 'true'
+            max-glibc: '2.39'
 
           - name: x86_64-macos-13
             suffix: osx-x86_64
@@ -290,9 +292,9 @@ jobs:
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
         if: matrix.cross == 'true'
 
-      # on *unknown-linux-gnu, check and extract exact glibc version of libimageflow.so
+      # on check and extract exact glibc version of libimageflow.so
       - name: Check glibc version of ${{ env.LIBIMAGEFLOW_DYNAMIC }}
-        if: matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'aarch64-unknown-linux-gnu'
+        if: matrix.max-glibc
         run: |
           # list all files in the target directory
           ls -l "${{ env.REL_BINARIES_DIR }}"
@@ -311,9 +313,9 @@ jobs:
           HIGHEST_GLIBC=$(objdump -T "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -V | tail -n1)
           echo "Highest GLIBC version required: $HIGHEST_GLIBC"
 
-          # Fail if version is above 2.17 and this is not a skipped build
-          if [[ "${{ matrix.skip-publish }}" != "true" ]] && [[ $(echo -e "2.17\n$HIGHEST_GLIBC" | sort -V | tail -n1) != "2.17" ]]; then
-            echo "Error: GLIBC version $HIGHEST_GLIBC is higher than maximum allowed version 2.17"
+          # Fail if version is above ${{ matrix.max-glibc }} and this is not a skipped build
+          if [[ "${{ matrix.skip-publish }}" != "true" ]] && [[ $(echo -e "${{ matrix.max-glibc }}\n$HIGHEST_GLIBC" | sort -V | tail -n1) != "${{ matrix.max-glibc }}" ]]; then
+            echo "Error: GLIBC version $HIGHEST_GLIBC is higher than maximum allowed version ${{ matrix.max-glibc }}"
             exit 1
           fi
         shell: bash
