@@ -63,7 +63,7 @@ jobs:
             target: aarch64-unknown-linux-gnu
             features: neon
             cross: 'true'
-            max-glibc: '2.39'
+            max-glibc: '2.34'
 
           - name: osx-x64-13
             suffix: osx-x86_64
@@ -239,7 +239,7 @@ jobs:
       - if: contains(matrix.target, 'musl')
         name: "Edit imageflow_abi/Cargo.toml to build staticlib instead of cdylib and use strip and lto"
         run: |
-          echo "Editing imageflow_abi/Cargo.toml to replace the string \"[\"cdylib\"]\" with \"[\"staticlib\"]\""
+          echo "Editing imageflow_abi/Cargo.toml to replace the string \"[\"cdylib\"\]" with \"[\"staticlib\"\]"
           sed -i 's/\["cdylib"\]/\["staticlib"\]/g' imageflow_abi/Cargo.toml
           echo "Editing ./Cargo.toml to remove all instances of '# enable on musl: '"
           sed -i '/# enable on musl:/d' ./Cargo.toml
@@ -291,32 +291,11 @@ jobs:
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
         if: matrix.cross == 'true'
 
-      # on check and extract exact glibc version of libimageflow.so
-      - name: Check glibc version of ${{ env.LIBIMAGEFLOW_DYNAMIC }}
+      - name: "Check GLIBC version and dynamic dependencies of ${{ env.LIBIMAGEFLOW_DYNAMIC }}"
         if: matrix.max-glibc
         run: |
-          # list all files in the target directory
-          ls -l "${{ env.REL_BINARIES_DIR }}"
-
-          # if libimageflow.so does not exist, fail
-          if [[ ! -f "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" ]]; then
-            echo "Error: ${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }} does not exist"
-            exit 1
-          fi
-
-          # Use objdump to find all GLIBC version requirements
-          echo "GLIBC version requirements:"
-          objdump -T "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -Vu
-
-          # Find the highest GLIBC version required
-          HIGHEST_GLIBC=$(objdump -T "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -V | tail -n1)
-          echo "Highest GLIBC version required: $HIGHEST_GLIBC"
-
-          # Fail if version is above ${{ matrix.max-glibc }} and this is not a skipped build
-          if [[ "${{ matrix.skip-publish }}" != "true" ]] && [[ $(echo -e "${{ matrix.max-glibc }}\n$HIGHEST_GLIBC" | sort -V | tail -n1) != "${{ matrix.max-glibc }}" ]]; then
-            echo "Error: GLIBC version $HIGHEST_GLIBC is higher than maximum allowed version ${{ matrix.max-glibc }}"
-            exit 1
-          fi
+          chmod +x ./ci/check-glibc.sh
+          ./ci/check-glibc.sh "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" "${{ matrix.max-glibc }}"
         shell: bash
 
       # ----------------------------------------------------------------------------
@@ -341,7 +320,6 @@ jobs:
           mkdir -p ./${{ env.TARGET_DIR }}doc
           touch ./${{ env.TARGET_DIR }}doc/not-available.txt
         if: matrix.cross == 'true'
-
 
       # ----------------------------------------------------------------------------
       # Conditionally create and upload artifacts only if this is a release.
@@ -422,7 +400,6 @@ jobs:
           TEMP_ARCHIVE_NAME: "./artifacts/staging/archive.${{ env.EXTENSION }}"
           TEMP_STATIC_LIB: "./artifacts/static-staging/${{ env.LIBIMAGEFLOW_STATIC }}"
           TEMP_STATIC_ARCHIVE: "./artifacts/static-staging/${{ env.LIBIMAGEFLOW_STATIC }}.${{ env.EXTENSION }}"
-
 
       - name: "Upload to Github Release: ${{ env.RELATIVE_GITHUB_ARCHIVE }}"
         if: ${{ env.ALLOW_PUBLISH == 'true' }}
