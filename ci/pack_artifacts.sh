@@ -36,8 +36,10 @@ for var in "${required_vars[@]}"; do
 done
 
 # Create required directories
-mkdir -p ./artifacts/{staging/{headers},github,upload/{releases/${GITHUB_REF_NAME},commits/${GITHUB_SHA}}}
-mkdir -p "./artifacts/static-staging"
+mkdir -p ./artifacts/github
+mkdir -p ./artifacts/upload/{releases/${GITHUB_REF_NAME},commits/${GITHUB_SHA}}
+mkdir -p ./artifacts/static-staging
+mkdir -p ./artifacts/staging/headers  # Explicitly create headers directory
 
 # ------------------------------------------------------------------------------
 # Package documentation (if exists)
