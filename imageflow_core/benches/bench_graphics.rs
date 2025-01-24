@@ -101,7 +101,7 @@ fn benchmark_flip_h(ctx: &mut Criterion) {
 
 fn benchmark_scale_2d(ctx: &mut Criterion) {
     let fmts=[PixelLayout::BGRA];
-    let float_spaces=[Floatspace::Linear, Floatspace::Srgb];
+    let float_spaces=[WorkingFloatspace::LinearRGB, WorkingFloatspace::StandardRGB];
     for &float_space in float_spaces.iter(){
         for &fmt in fmts.iter(){
             for w in (500u32..4000u32).step_by(2400){
@@ -119,10 +119,7 @@ fn benchmark_scale_2d(ctx: &mut Criterion) {
                         h:800u32,
                         sharpen_percent_goal: 0.0,
                         interpolation_filter: imageflow_core::graphics::weights::Filter::Robidoux,
-                        scale_in_colorspace: match float_space{
-                            Floatspace::Srgb => WorkingFloatspace::StandardRGB,
-                            Floatspace::Linear => WorkingFloatspace::LinearRGB
-                        }
+                        scale_in_colorspace: float_space
                     };
 
                     let mut group = ctx.benchmark_group(&format!("scale_2d w={} && h={} fmt={:?} float_space={:?}",w,h,fmt,float_space));
