@@ -235,14 +235,14 @@ impl Context {
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
 
-    
+
     pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
         let io = IoProxy::create_output_buffer(self, io_id).map_err(|e| e.at(here!()))?;
 
         self.add_io(io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
     }
 
-    
+
     fn swap_dimensions_by_exif(&mut self, io_id: i32, image_info: &mut ImageInfo) -> Result<()>{
         let exif_maybe = self.get_codec(io_id)
             .map_err(|e| e.at(here!()))?
@@ -448,6 +448,7 @@ impl Drop for Context {
     fn drop(&mut self) {
         if let Err(e) = self.codecs.clear(){
             //TODO: log issue somewhere?
+            eprintln!("Error clearing codecs in Context::drop: {:?}", e);
         }
         self.codecs.mut_clear(); // Dangerous, because there's no prohibition on dangling references.
         if !self.c_ctx.is_null() {
