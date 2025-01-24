@@ -1,13 +1,13 @@
 use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
-use crate::{CError, JsonResponse, ErrorKind, FlowError, Result};
+use crate::{JsonResponse, ErrorKind, FlowError, Result};
 use crate::io::IoProxy;
 use crate::flow::definitions::Graph;
 use std::any::Any;
 use imageflow_types::collections::AddRemoveSet;
 use crate::ffi::ImageflowJsonResponse;
-use crate::errors::{OutwardErrorBuffer, CErrorProxy};
+use crate::errors::OutwardErrorBuffer;
 
 use crate::codecs::CodecInstanceContainer;
 use crate::codecs::EnabledCodecs;
@@ -19,10 +19,6 @@ use itertools::Itertools;
 
 /// Something of a god object (which is necessary for a reasonable FFI interface).
 pub struct Context {
-    /// The C context object
-    c_ctx: *mut ffi::ImageflowContext,
-    /// Provides access to errors in the C context
-    error: CErrorProxy,
     /// Buffer for errors presented to users of an FFI interface
     outward_error:  OutwardErrorBuffer,
     pub debug_job_id: i32,
@@ -55,35 +51,29 @@ impl Context {
     }
 
     pub fn create_can_panic() -> Result<Box<Context>>{
-        let inner = unsafe { ffi::flow_context_create() };
-        if inner.is_null() {
-            Err(err_oom!())
-        } else {
-            Ok(Box::new(Context {
-                c_ctx: inner,
-                error: CErrorProxy::new(inner),
-                outward_error: OutwardErrorBuffer::new(),
-                debug_job_id: unsafe{ JOB_ID },
-                next_graph_version: 0,
-                next_stable_node_id: 0,
-                max_calc_flatten_execute_passes: 40,
-                graph_recording: s::Build001GraphRecording::off(),
-                codecs: AddRemoveSet::with_capacity(4),
-                io_id_list: RefCell::new(Vec::with_capacity(2)),
-                enabled_codecs: EnabledCodecs::default(),
-                bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
-                security: imageflow_types::ExecutionSecurity{
-                    max_decode_size: None,
-                    max_frame_size: Some(imageflow_types::FrameSizeLimit{
-                        w: 10000,
-                        h: 10000,
-                        megapixels: 100f32
-                    }),
-                    max_encode_size: None
-                },
-                allocations: RefCell::new(AllocationContainer::new())
-            }))
-        }
+        Ok(Box::new(Context {
+            outward_error: OutwardErrorBuffer::new(),
+            debug_job_id: unsafe{ JOB_ID },
+            next_graph_version: 0,
+            next_stable_node_id: 0,
+            max_calc_flatten_execute_passes: 40,
+            graph_recording: s::Build001GraphRecording::off(),
+            codecs: AddRemoveSet::with_capacity(4),
+            io_id_list: RefCell::new(Vec::with_capacity(2)),
+            enabled_codecs: EnabledCodecs::default(),
+            bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
+            security: imageflow_types::ExecutionSecurity{
+                max_decode_size: None,
+                max_frame_size: Some(imageflow_types::FrameSizeLimit{
+                    w: 10000,
+                    h: 10000,
+                    megapixels: 100f32
+                }),
+                max_encode_size: None
+            },
+            allocations: RefCell::new(AllocationContainer::new())
+        }))
+
     }
 
     pub fn create_cant_panic() -> Result<Box<Context>> {
@@ -100,16 +90,11 @@ impl Context {
     /// Used by abi; should not panic
     pub fn abi_begin_terminate(&mut self) -> bool {
         self.codecs.mut_clear();
-        unsafe {
-            ffi::flow_context_begin_terminate(self.c_ctx)
-        }
+        true
     }
     pub fn destroy(mut self) -> Result<()>{
-        if self.abi_begin_terminate(){
-            Ok(())
-        }else {
-            Err(cerror!(self,"Error encountered while terminating Context"))
-        }
+        self.abi_begin_terminate();
+        Ok(())
     }
 
     pub fn outward_error(&self) -> &OutwardErrorBuffer{
@@ -117,13 +102,6 @@ impl Context {
     }
     pub fn outward_error_mut(&mut self) -> &mut OutwardErrorBuffer{
         &mut self.outward_error
-    }
-
-    pub fn c_error_mut(&mut self) -> &mut CErrorProxy{
-        &mut self.error
-    }
-    pub fn c_error(&self) -> &CErrorProxy{
-        &self.error
     }
 
 
@@ -178,10 +156,6 @@ impl Context {
     }
 
 
-
-    pub fn flow_c(&self) -> *mut ffi::ImageflowContext{
-        self.c_ctx
-    }
 
     pub fn io_id_present(&self, io_id: i32) -> bool{
         self.io_id_list.borrow().iter().any(|v| *v == io_id)
@@ -451,13 +425,6 @@ impl Drop for Context {
             eprintln!("Error clearing codecs in Context::drop: {:?}", e);
         }
         self.codecs.mut_clear(); // Dangerous, because there's no prohibition on dangling references.
-        if !self.c_ctx.is_null() {
-            unsafe {
-                ffi::flow_context_destroy(self.c_ctx);
-            }
-        }
-        self.c_ctx = ptr::null_mut();
-        self.error = CErrorProxy::null();
     }
 }
 

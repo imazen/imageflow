@@ -44,24 +44,6 @@ pub struct ImageflowJsonResponse {
     pub buffer_size: libc::size_t,
 }
 
-
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct ImageflowContext {
-    pub error: ErrorInfo,
-    pub underlying_heap: Heap,
-    pub log: ProfilingLog,
-    pub object_tracking: ObjTrackingInfo,
-}
-
-// end reuse
-
-
-
-
-
-
 #[repr(C)]
 #[derive(Copy,Clone, Debug,  PartialEq)]
 pub enum Floatspace {
@@ -380,83 +362,6 @@ pub struct BitmapFloat {
 
 
 
-/** flow context: Heap Manager **/
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct Heap {
-    placeholder: u8, /* FIXME: fill in the rest
-                      * flow_heap_calloc_function _calloc;
-                      * flow_heap_malloc_function _malloc;
-                      * flow_heap_realloc_function _realloc;
-                      * flow_heap_free_function _free;
-                      * flow_heap_terminate_function _context_terminate;
-                      * void * _private_state;
-                      * */
-}
-
-// struct flow_objtracking_info;
-// void flow_context_objtracking_initialize(struct flow_objtracking_info * heap_tracking);
-// void flow_context_objtracking_terminate(flow_c * c);
-
-/** flow context: struct `flow_error_info` **/
-// struct flow_error_callstack_line {
-// const char * file;
-// int line;
-// const char * function_name;
-// };
-//
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct ErrorInfo {
-    placeholder: u8, /* FIXME: replace
-                      * flow_status_code reason;
-                      * struct flow_error_callstack_line callstack[14];
-                      * int callstack_count;
-                      * int callstack_capacity;
-                      * bool locked;
-                      * char message[FLOW_ERROR_MESSAGE_SIZE + 1];
-                      * */
-}
-
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct HeapObjectRecord {
-    placeholder: u8, /* FIXME: fill in the rest
-                      * void * ptr;
-                      * size_t bytes;
-                      * void * owner;
-                      * flow_destructor_function destructor;
-                      * bool destructor_called;
-                      * const char * allocated_by;
-                      * int allocated_by_line;
-                      * bool is_owner;
-                      * */
-}
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct ObjTrackingInfo {
-    pub allocs: HeapObjectRecord,
-    pub next_free_slot: size_t,
-    pub total_slots: size_t,
-    pub bytes_allocated_net: size_t,
-    pub bytes_allocated_gross: size_t,
-    pub allocations_net: size_t,
-    pub allocations_gross: size_t,
-    pub bytes_free: size_t,
-    pub allocations_net_peak: size_t,
-    pub bytes_allocations_net_peak: size_t,
-}
-
-
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct ProfilingLog {
-    placeholder: u8, // FIXME: replace
-}
-
 
 
 #[repr(C)]
@@ -526,22 +431,6 @@ pub struct EncoderHints {
 }
 
 
-
-#[repr(C)]
-#[derive(Clone,Debug,Copy)]
-pub struct Scale2dRenderToCanvas1d {
-    // There will need to be consistency checks against the createcanvas node
-    //
-    // struct flow_interpolation_details * interpolationDetails;
-    pub x: u32,
-    pub y: u32,
-    pub w: u32,
-    pub h: u32,
-    pub sharpen_percent_goal: f32,
-    pub interpolation_filter: Filter,
-    pub scale_in_colorspace: Floatspace,
-}
-
 #[repr(C)]
 #[derive(Clone,Debug,Copy,  PartialEq)]
 pub enum ColorProfileSource {
@@ -564,23 +453,6 @@ pub struct DecoderColorInfo {
     pub gamma: f64
 }
 
-
-
-
-#[repr(C)]
-#[derive(Clone,Debug,Copy, Eq, PartialEq)]
-pub struct Rect {
-    pub x1: i32,
-    pub y1: i32,
-    pub x2: i32,
-    pub y2: i32
-}
-
-impl Rect{
-    pub fn failure() -> Rect{
-        Rect{ x1: -1, y1: -1, x2: -1, y2: -1}
-    }
-}
 
 
 type WrapJpegErrorHandler = extern fn(*mut c_void, *mut mozjpeg_sys::jpeg_common_struct, *mut mozjpeg_sys::jpeg_error_mgr, i32, *const u8, i32) -> bool;
@@ -615,7 +487,6 @@ pub enum JpegMarker{
     EXIF = 0xE1
 }
 
-mod must_replace{}
 
 mod long_term{
     use super::*;
@@ -682,87 +553,9 @@ mod long_term{
     }
 }
 
-mod mid_term {
-    use super::*;
-    use ::libc;
-
-    extern "C" {
-        pub fn flow_context_create() -> *mut ImageflowContext;
-        pub fn flow_context_begin_terminate(context: *mut ImageflowContext) -> bool;
-        pub fn flow_context_destroy(context: *mut ImageflowContext);
-        pub fn flow_destroy(context: *mut ImageflowContext,
-                            pointer: *const libc::c_void,
-                            file: *const libc::c_char,
-                            line: i32)
-                            -> bool;
-
-
-        pub fn flow_context_has_error(context: *mut ImageflowContext) -> bool;
-        pub fn flow_context_clear_error(context: *mut ImageflowContext);
-        pub fn flow_context_error_and_stacktrace(context: *mut ImageflowContext,
-                                                 buffer: *mut u8,
-                                                 buffer_length: libc::size_t,
-                                                 full_file_path: bool)
-                                                 -> i64;
-
-        pub fn flow_context_print_and_exit_if_err(context: *mut ImageflowContext) -> bool;
-
-        pub fn flow_context_error_reason(context: *mut ImageflowContext) -> i32;
-
-        pub fn flow_context_error_status_included_in_message(context: *mut ImageflowContext) -> bool;
-
-        pub fn flow_context_set_error_get_message_buffer_info(context: *mut ImageflowContext,
-                                                              code: i32,
-                                                              status_included_in_buffer: bool,
-                                                              buffer_out: *mut *mut u8,
-                                                              buffer_size_out: *mut libc::size_t)
-                                                              -> bool;
-
-        pub fn flow_context_add_to_callstack(context: *mut ImageflowContext,
-                                             file: *const libc::c_char,
-                                             line: i32,
-                                             function_name: *const libc::c_char)
-                                             -> bool;
-
-
-
-        //#[cfg(feature = "c_rendering")]
-        pub fn flow_bitmap_bgra_flip_vertical(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
-        //#[cfg(feature = "c_rendering")]
-        pub fn flow_bitmap_bgra_flip_horizontal(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
-
-
-        //#[cfg(feature = "c_rendering")]
-        pub fn flow_node_execute_scale2d_render1d(c: *mut ImageflowContext,
-                                                  input: *mut BitmapBgra,
-                                                  canvas: *mut BitmapBgra,
-                                                  info: *const Scale2dRenderToCanvas1d)
-                                                  -> bool;
-        //#[cfg(feature = "c_rendering")]
-        pub fn flow_bitmap_bgra_populate_histogram(c: *mut ImageflowContext, input: *mut BitmapBgra, histograms: *mut u64, histogram_size_per_channel: u32, histogram_count: u32, pixels_sampled: *mut u64) -> bool;
-        //#[cfg(feature = "c_rendering")]
-        pub fn flow_bitmap_bgra_apply_color_matrix(c: *mut ImageflowContext, input: *mut BitmapBgra, row: u32, count: u32, matrix: *const *const f32) -> bool;
-        //#[cfg(feature = "c_rendering")]
-        pub fn flow_bitmap_bgra_transpose(c: *mut ImageflowContext, input: *mut BitmapBgra, output: *mut BitmapBgra) -> bool;
-    }
-}
-
-pub use self::must_replace::*;
 pub use self::long_term::*;
-pub use self::mid_term::*;
 use std::os::raw::c_char;
 use crate::graphics::bitmaps::{PixelLayout, BitmapCompositing};
 
 
 // https://github.com/rust-lang/rust/issues/17417
-
-
-#[test]
-fn flow_context_create_destroy_works() {
-    unsafe {
-        let c = flow_context_create();
-        assert!(!c.is_null());
-
-        flow_context_destroy(c);
-    }
-}

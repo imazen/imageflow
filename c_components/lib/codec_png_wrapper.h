@@ -1,6 +1,18 @@
 #pragma once
-#include "codec_wrappers.h"
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include "shared.h"
+
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#undef __STDC_FORMAT_MACROS
 #include "png.h"
+#define register /*lcms2 is for C99, not C++*/
+#include "lcms2.h"
+#undef register
+
 
 #define PUB FLOW_EXPORT
 
@@ -8,8 +20,7 @@
 extern "C" {
 #endif
 
-/*
- *
+
 typedef enum flow_codec_color_profile_source {
     flow_codec_color_profile_source_null = 0,
     flow_codec_color_profile_source_ICCP = 1,
@@ -28,7 +39,7 @@ struct flow_decoder_color_info{
     cmsCIExyYTRIPLE primaries;
     double gamma;
 };
- */
+
 struct wrap_png_decoder_state;
 
 typedef void (*wrap_png_error_handler) (png_structp png_ptr, void * custom_state, const char * error_message);
@@ -70,6 +81,7 @@ PUB bool wrap_png_encoder_write_png(void * custom_state,
                                     int zlib_compression_level,
                                     flow_pixel_format pixel_format);
 
+#undef PUB
 #ifdef __cplusplus
 }
 #endif

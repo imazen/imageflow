@@ -1,8 +1,7 @@
 #pragma once
-#include "imageflow_private.h"
+#include "shared.h"
 #include "jpeglib.h"
 #include "jerror.h"
-
 
 #define PUB FLOW_EXPORT
 
@@ -51,7 +50,7 @@ struct wrap_jpeg_source_manager{
 
 PUB void wrap_jpeg_setup_source_manager(struct wrap_jpeg_source_manager * manager);
 
-
+#undef PUB
 #ifdef __cplusplus
 }
 #endif

@@ -87,21 +87,13 @@ fn main() {
         cc.flag("-Wc++-compat");
     }
 
-    // Step 6: Feature flags (c_rendering) for conditional compilation
-    // Goal: Include or skip certain source files based on the feature set.
-    #[cfg(feature = "c_rendering")]
-    {
-        cc.define("C_RENDERING", Some("1"));
-    }
 
     // Step 7: Gather source files, conditionally excluding graphics.c if not c_rendering
     // Goal: Add each .c file to the build, except for the optional skip.
-    let skipped = PathBuf::from("lib/graphics.c");
     for file in glob::glob("lib/*.c").unwrap() {
         let path = file.unwrap();
-        if path != skipped || cfg!(feature = "c_rendering") {
-            cc.file(path);
-        }
+        cc.file(path);
+
     }
 
     // Step 8: Optional coverage and profiling flags
@@ -110,12 +102,6 @@ fn main() {
         cc.flag("--coverage");
         cc.debug(true);
         cc.opt_level(0);
-    }
-
-    if cfg!(feature = "profiling") {
-        cc.flag("-pg");
-        cc.file("tests/profile_imageflow.c");
-        cc.file("tests/helpers.c");
     }
 
     // Step 9: Compile the library

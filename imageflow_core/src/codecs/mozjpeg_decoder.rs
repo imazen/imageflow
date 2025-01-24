@@ -1,7 +1,7 @@
 use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
-use crate::{Context, CError,  Result, JsonResponse};
+use crate::{Context, Result, JsonResponse};
 use crate::ffi::{wrap_jpeg_get_custom_state, WrapJpegSourceManager};
 use crate::ffi::BitmapBgra;
 use imageflow_types::collections::AddRemoveSet;

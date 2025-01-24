@@ -14,7 +14,10 @@ struct wrap_png_decoder_state {
     bool alpha_used;
     struct flow_decoder_color_info color;
 };
-
+static void flow_decoder_color_info_init(struct flow_decoder_color_info * color){
+    memset(color, 0, sizeof(struct flow_decoder_color_info));
+    color->gamma = 0.45455;
+}
 size_t wrap_png_decoder_state_bytes(){
     return sizeof(struct wrap_png_decoder_state);
 }

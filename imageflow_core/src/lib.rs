@@ -105,7 +105,7 @@ mod internal_prelude {
         pub use crate::{Graph, Context, JsonResponse,
                    MethodRouter};
         #[doc(no_inline)]
-        pub use crate::{CError, clients, FlowError, Result, ErrorKind};
+        pub use crate::{clients, FlowError, Result, ErrorKind};
         #[doc(no_inline)]
         pub use crate::clients::fluent;
     }
@@ -118,7 +118,7 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod works_everywhere {
         #[doc(no_inline)]
-        pub use crate::{CError, clients, FlowError, Result, ErrorKind};
+        pub use crate::{clients, FlowError, Result, ErrorKind};
         #[doc(no_inline)]
         pub use crate::internal_prelude::external::*;
     }

@@ -98,49 +98,6 @@ macro_rules! unimpl {
 }
 
 
-/// Creates a FlowError of kind ErrorKind::CError based on the C error present in the
-/// provided Context. Optional message format & args.
-/// Always zero-allocation for out-of-memory errors.
-///
-#[macro_export]
-macro_rules! cerror {
-    ($context:expr) => {{
-        let cerr = $ context.c_error().require();
-        crate::FlowError{
-            kind: crate::ErrorKind::CError(cerr.status()),
-            message: cerr.into_string(), // String::new() is zero-alloc (always on OOM)
-            at: ::smallvec::SmallVec::new(),
-            node: None
-        }.at(here ! ())
-    }};
-    ($context:expr, $fmt:expr) => {{
-        let cerr = $context.c_error().require();
-        crate::FlowError{
-            kind: crate::ErrorKind::CError(cerr.status()),
-            message: if cerr.is_oom() {
-                        cerr.into_string()
-                     }else {
-                        format!(concat!($fmt, ": {}"), cerr.into_string())
-                     },
-            at: ::smallvec::SmallVec::new(),
-            node:None
-        }.at(here ! ())
-    }};
-    ($context:expr, $fmt:expr, $($arg:tt)*) => {{
-        let cerr = $context.c_error().require();
-        crate::FlowError{
-            kind: crate::ErrorKind::CError(cerr.status()),
-            message: if cerr.is_oom() {
-                        cerr.into_string()
-                     }else {
-                        format!(concat!($fmt, ": {}"), $($arg)*, cerr.into_string())
-                     },
-            at: ::smallvec::SmallVec::new(),
-            node:None
-        }.at(here ! ())
-    }};
-}
-
 /// Create an AllocationFailed FlowError with the current stack location.
 #[macro_export]
 macro_rules! err_oom {
@@ -207,7 +164,6 @@ pub enum ErrorKind{
     SizeLimitExceeded,
     InvalidBitmapType,
     Category(ErrorCategory),
-    CError(CStatus)
 }
 impl CategorizedError for ErrorKind{
     fn category(&self) -> ErrorCategory{
@@ -253,7 +209,6 @@ impl CategorizedError for ErrorKind{
             ErrorKind::FetchError |
             ErrorKind::DecodingIoError |
             ErrorKind::EncodingIoError => ErrorCategory::IoError,
-            ErrorKind::CError(ref e) => e.category(),
             ErrorKind::Category(c) => c
         }
     }
@@ -819,79 +774,6 @@ impl std::fmt::Display for OutwardErrorBuffer {
 }
 
 
-/// Represents a C error
-#[derive(Debug, Clone, PartialEq)]
-pub struct CError {
-    status: CStatus,
-    message_and_stack: String
-}
-impl CategorizedError for CError{
-    fn category(&self) -> ErrorCategory {
-        self.status().category()
-    }
-}
-
-impl CError{
-    pub fn status(&self) -> CStatus{
-        self.status
-    }
-    pub fn into_string(self) -> String{
-        self.message_and_stack
-    }
-    pub fn new(status: CStatus, message_and_stack: String) -> CError{
-        CError{ status, message_and_stack }
-    }
-    pub fn from_status(status: CStatus) -> CError{
-        CError{ status, message_and_stack: String::new()}
-    }
-    pub fn is_oom(&self) -> bool{
-        self.status == CStatus::Cat(ErrorCategory::OutOfMemory)
-    }
-
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum CStatus{
-    Custom(i32),
-    Unknown(i32),
-    ErrorMismatch,
-    Cat(ErrorCategory)
-}
-impl CategorizedError for CStatus{
-    fn category(&self) -> ErrorCategory {
-        match *self{
-            CStatus::Custom(_) => ErrorCategory::Custom,
-            CStatus::Unknown(_) => ErrorCategory::Unknown,
-            CStatus::ErrorMismatch => ErrorCategory::InternalError,
-            CStatus::Cat(c) => c
-        }
-    }
-}
-impl From<i32> for CStatus{
-    fn from(v: i32) -> CStatus{
-        if let Some(cat) = ErrorCategory::from_c_error_code(v){
-            CStatus::Cat(cat)
-        }else if v > 1024 {
-            CStatus::Custom(v)
-        }else if v == 90 {
-            CStatus::ErrorMismatch
-        }else{
-            CStatus::Unknown(v)
-        }
-    }
-}
-impl CStatus {
-    pub fn to_i32(&self) -> i32{
-        match *self{
-            CStatus::Custom(v) |
-            CStatus::Unknown(v) => v,
-            CStatus::ErrorMismatch => 90,
-            CStatus::Cat(c) => c.to_c_error_code()
-        }
-    }
-}
-
-
 /// Implement Display for various Any types that are raised via Panic
 /// Currently only implemented for owned and static strings
 pub struct PanicFormatter<'a>(pub &'a dyn Any);
@@ -1083,122 +965,4 @@ pub mod writing_to_slices {
     }
 }
 
-///
-/// Provides a safer interface to access errors provided by the underlying C context.
-#[derive(Clone,Debug)]
-pub struct CErrorProxy {
-    c_ctx: *mut ffi::ImageflowContext,
-}
-impl CErrorProxy {
-    pub(crate) fn new(c_context: *mut ffi::ImageflowContext) -> CErrorProxy{
-        CErrorProxy{
-            c_ctx: c_context
-        }
-    }
-    pub(crate) fn null() -> CErrorProxy{
-        CErrorProxy{
-            c_ctx: ptr::null_mut()
-        }
-    }
-    pub fn has_error(&self) -> bool{
-        unsafe{
-            ffi::flow_context_has_error(self.c_ctx)
-        }
-    }
-    pub fn error(&self) -> CStatus{
-        unsafe {
-            CStatus::from(ffi::flow_context_error_reason(self.c_ctx))
-        }
-    }
-    pub fn require(&self) -> CError{
-        let e = self.get();
-        if e.status() == CStatus::Cat(ErrorCategory::Ok){
-            CError::from_status(CStatus::ErrorMismatch)
-        }else {
-            e
-        }
-    }
-    pub fn get(&self) -> CError {
-        let status = self.error();
 
-        match status {
-            CStatus::Cat(ErrorCategory::OutOfMemory) |
-            CStatus::Cat(ErrorCategory::Ok) => CError::from_status(status),
-            other => {
-                CError::new(other, self.get_error_and_stacktrace())
-            }
-        }
-    }
-
-    fn get_error_and_stacktrace(&self) -> String{
-        unsafe {
-            let mut buf = vec![0u8; 2048];
-
-            let chars_written =
-                crate::ffi::flow_context_error_and_stacktrace(self.c_ctx, buf.as_mut_ptr(), buf.len(), false);
-
-            if chars_written < 0 {
-                //TODO: Retry until it fits
-                panic!("Error msg doesn't fit in 2kb");
-            } else {
-                buf.resize(chars_written as usize, 0u8);
-            }
-            String::from_utf8(buf).unwrap()
-        }
-    }
-}
-
-// Unused
-impl CErrorProxy{
-    fn clear_error(&mut self){
-        unsafe {
-            ffi::flow_context_clear_error(self.c_ctx)
-        }
-    }
-
-    /// # Raises an error in the C context
-    ///
-    /// # Caveats
-    ///
-    /// * You cannot raise a second error until the first has been cleared with
-    ///  `imageflow_context_clear_error`. You'll be ignored, as will future
-    ///   `imageflow_add_to_callstack` invocations.
-    ///
-    /// * If you provide an error code of zero one will be substituted for you.
-    ///
-    /// Returns None if the context already has an error
-    fn raise_error(&mut self, e: FlowError)
-                         -> Option<writing_to_slices::WriteResult> {
-        unsafe {
-            let mut buffer_length: usize = 0;
-            let mut buffer: *mut u8 = ptr::null_mut();
-
-
-            if ffi::flow_context_set_error_get_message_buffer_info(self.c_ctx, e.category().to_c_error_code(), true, &mut buffer as *mut *mut u8, &mut buffer_length as *mut usize){
-                let formatter = writing_to_slices::NonAllocatingFormatter(writing_to_slices::SwapDebugAndDisplay(e));
-                Some(formatter.write_and_write_errors_to_cstring(buffer, buffer_length, Some("\n[truncated\n")))
-            }else{
-                None
-            }
-        }
-    }
-
-    ///
-    /// * Strings `function_name` and `filename` should be null-terminated UTF-8 strings.
-    /// * The lifetime of `filename` and `function_name` (if provided), is expected to match or exceed the lifetime of `context`.
-    /// * You may provide a null value for `filename` or `function_name`, but for the love of puppies,
-    /// don't provide a dangling or invalid pointer, that will segfault... a long time later.
-    fn add_to_callstack(&mut self,
-                              filename: Option<&'static CStr>,
-                              line: Option<i32>,
-                              function_name: Option<&'static CStr>)
-                              -> bool {
-        unsafe {
-            ffi::flow_context_add_to_callstack(self.c_ctx,
-                                               filename.map(|cstr| cstr.as_ptr()).unwrap_or(ptr::null()),
-                                               line.unwrap_or(-1),
-                                               function_name.map(|cstr| cstr.as_ptr()).unwrap_or(ptr::null()))
-        }
-    }
-
-}

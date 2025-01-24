@@ -1,4 +1,4 @@
-use crate::ffi::{ImageflowContext, BitmapBgra};
+use crate::ffi::{BitmapBgra};
 pub use crate::ffi::EdgeKind;
 pub use crate::ffi::PixelFormat;
 use crate::Context;

@@ -1,5 +1,5 @@
 use daggy::{Dag, EdgeIndex, NodeIndex, Walker};
-use crate::ffi::{ImageflowContext, BitmapBgra};
+use crate::ffi::BitmapBgra;
 use libc::size_t;
 use petgraph::EdgeDirection;
 use petgraph::visit::EdgeRef;
@@ -23,7 +23,6 @@ mod round_corners;
 
 mod internal_prelude {
     pub use crate::ffi;
-    pub use crate::ffi::{ImageflowContext};
     pub use crate::ffi::BitmapBgra;
     pub use crate::flow::definitions::*;
     pub use crate::internal_prelude::works_everywhere::*;
@@ -116,10 +115,6 @@ impl<'c> OpCtxMut<'c> {
         }else {
             Err(nerror!(crate::ErrorKind::InvalidOperation, "Parent {:?} node not found", filter_by_kind).with_ctx_mut(self, of_node))
         }
-    }
-
-    pub fn flow_c(&self) -> *mut crate::ffi::ImageflowContext{
-        self.c.flow_c()
     }
 
     pub fn first_parent_input(&self, of_node: NodeIndex) -> Option<NodeIndex> {
