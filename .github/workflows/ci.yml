@@ -21,13 +21,14 @@ on:
       - published
 
 env:
-  IMAGEFLOW_RELEASE_BUCKET: ${{ env.IMAGEFLOW_RELEASE_BUCKET || 'imageflow-nightlies' }}
-  IMAGEFLOW_RELEASE_BUCKET_REGION: ${{ env.IMAGEFLOW_RELEASE_BUCKET_REGION || 'us-west-1' }}
-  HTTPS_IMAGEFLOW_BUCKET: "https://s3.${{ env.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ env.IMAGEFLOW_RELEASE_BUCKET }}"
-  IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: "https://s3.${{ env.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ env.IMAGEFLOW_RELEASE_BUCKET }}/commits/${{ github.sha }}/linux64.tar.gz"
+    # env. context is not available, so we set these in github org vars
+    IMAGEFLOW_RELEASE_BUCKET: ${{ vars.IMAGEFLOW_RELEASE_BUCKET || 'imageflow-nightlies' }}
+    IMAGEFLOW_RELEASE_BUCKET_REGION: ${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION || 'us-west-1' }}
+    HTTPS_IMAGEFLOW_BUCKET: "https://s3.${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ vars.IMAGEFLOW_RELEASE_BUCKET }}"
+    IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: "https://s3.${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ vars.IMAGEFLOW_RELEASE_BUCKET }}/commits/${{ github.sha }}/linux64.tar.gz"
 
 jobs:
-  build:
+    build:
     env:
       NUGET_UPLOAD_NUGET: ${{ secrets.NUGET_UPLOAD_NUGET }}
       NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
