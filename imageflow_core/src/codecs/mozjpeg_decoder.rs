@@ -182,6 +182,10 @@ impl MzDec{
                                      message_buffer_length: i32) -> bool{
         let decoder = unsafe{ &mut *(custom_state as *mut MzDec) };
 
+        if custom_state.is_null() || decoder.codec_info_disposed {
+            return false;
+        }
+
         if decoder.error.is_none() {
             if !message_buffer.is_null(){
                 let bytes = unsafe {
@@ -257,10 +261,11 @@ impl MzDec{
 
     fn dispose_codec(&mut self) {
         if !self.codec_info_disposed {
+            self.codec_info_disposed = true;
             unsafe {
                 jpeg_destroy_decompress(&mut self.codec_info)
             }
-            self.codec_info_disposed = true
+
         }
     }
 
@@ -381,6 +386,13 @@ impl MzDec{
     #[no_mangle]
     extern "C" fn source_fill_buffer(codec_info: &mut mozjpeg_sys::jpeg_decompress_struct, custom_state: *mut c_void, suspend_io: &mut bool) -> bool{
         let decoder = unsafe{ &mut *(custom_state as *mut MzDec) };
+
+        if custom_state.is_null() || decoder.codec_info_disposed {
+            return false;
+        }
+        if decoder.source_manager.is_none() {
+            return false;
+        }
 
         let source_manager = decoder.source_manager.as_deref_mut().unwrap();
 
