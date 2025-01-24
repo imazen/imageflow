@@ -133,6 +133,9 @@ impl PngDec{
     extern "C" fn png_decoder_error_handler(png_ptr: *mut c_void, custom_state: *mut c_void,
                                             message: *const c_char){
         let decoder = unsafe{ &mut *(custom_state as *mut PngDec) };
+        if custom_state.is_null() || decoder.c_state_disposed {
+            return;
+        }
 
         if decoder.error.is_none() {
             if !message.is_null(){
@@ -148,6 +151,9 @@ impl PngDec{
     #[no_mangle]
     extern "C" fn png_decoder_custom_read_function(png_ptr: *mut c_void, custom_state: *mut c_void, buffer: *mut u8, bytes_requested: usize, out_bytes_read: &mut usize) -> bool {
         let decoder = unsafe{ &mut *(custom_state as *mut PngDec) };
+        if custom_state.is_null() || decoder.c_state_disposed {
+            return false; // Nothing else we can do.
+        }
 
         let buffer_slice = unsafe{ std::slice::from_raw_parts_mut(buffer, bytes_requested) };
 
@@ -317,8 +323,13 @@ impl PngDec{
 
     fn dispose_codec(&mut self) -> Result<()>{
         let c_state = self.c_state.as_mut_ptr() as *mut c_void;
+        if c_state.is_null() || self.c_state_disposed {
+            return Ok(());
+        }
 
         unsafe {
+            // mutex?
+            self.c_state_disposed = true;
             if !ffi::wrap_png_decoder_destroy(c_state) {
                 Err(self.error.clone().expect("error missing").at(here!()))
             }else{
