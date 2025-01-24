@@ -28,7 +28,7 @@ env:
     IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: "https://s3.${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ vars.IMAGEFLOW_RELEASE_BUCKET }}/commits/${{ github.sha }}/linux64.tar.gz"
 
 jobs:
-    build:
+  build:
     env:
       NUGET_UPLOAD_NUGET: ${{ secrets.NUGET_UPLOAD_NUGET }}
       NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
@@ -392,8 +392,6 @@ jobs:
 
           # Exit with failure if any URL test failed
           exit $failed
-
-
 
   # ----------------------------------------------------------------------------
   # Reasoning: The existing release_ci.yml had a second job "publish" that
