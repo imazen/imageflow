@@ -21,8 +21,9 @@ param(
 )
 
 # Reasoning: Store the original archive filename to rename back after compression.
+# Reasoning: Convert forward slashes to backslashes in the archive name for Windows compatibility.
 # Goal: Preserve the user's intended archive filename.
-$OriginalArchiveFile = $ArchiveFile
+$OriginalArchiveFile = $ArchiveFile -replace '/', '\'
 
 # Reasoning: Ensure the archive file has a .zip extension to comply with Compress-Archive requirements.
 # Goal: Append .zip if the provided archive filename does not already end with .zip
@@ -30,9 +31,6 @@ if (-not $ArchiveFile.EndsWith('.zip', [System.StringComparison]::InvariantCultu
     $ArchiveFile += '.zip'
 }
 
-# Reasoning: Convert forward slashes to backslashes in the archive name for Windows compatibility.
-# Goal: Standardize the archive file path format.
-$ArchiveFile = $ArchiveFile -replace '/', '\'
 
 # Reasoning: Convert forward slashes to backslashes in all paths for Windows compatibility.
 # Goal: Ensure all provided paths use the correct directory separator.
