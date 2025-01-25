@@ -54,25 +54,19 @@ impl Encoder for LodepngEncoder {
             //     eprintln!("lodepng: top-right pixel of image is transparent");
             // }
 
+        let (w, h) = (bitmap.w(), bitmap.h());
 
+        Self::write_png_auto(&mut self.io, &mut bitmap.get_window_u8().unwrap(), self.use_highest_compression)?;
 
-        unsafe {
-            let frame = bitmap.get_window_u8()
-                .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
-                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+        Ok(EncodeResult {
+            w: w as i32,
+            h: h as i32,
+            io_id: self.io.io_id(),
+            bytes: ::imageflow_types::ResultBytes::Elsewhere,
+            preferred_extension: "png".to_owned(),
+            preferred_mime_type: "image/png".to_owned(),
+        })
 
-        
-            Self::write_png_auto(&mut self.io, &frame, self.use_highest_compression)?;
-
-            Ok(EncodeResult {
-                w: frame.w as i32,
-                h: frame.h as i32,
-                io_id: self.io.io_id(),
-                bytes: ::imageflow_types::ResultBytes::Elsewhere,
-                preferred_extension: "png".to_owned(),
-                preferred_mime_type: "image/png".to_owned(),
-            })
-        }
     }
 
     fn get_io(&self) -> Result<IoProxyRef> {
@@ -80,42 +74,44 @@ impl Encoder for LodepngEncoder {
     }
 }
 
-pub unsafe fn write_png<T: AsRef<std::path::Path>>(path: T, frame: &BitmapBgra) -> Result<()>{
+pub unsafe fn write_png<T: AsRef<std::path::Path>>(path: T, window: &mut crate::graphics::bitmaps::BitmapWindowMut<u8>) -> Result<()>{
 
     let file = std::fs::File::create(path)
         .map_err(|e| nerror!(ErrorKind::InvalidOperation))?;
 
-    LodepngEncoder::write_png_auto(file, frame, None)
+    LodepngEncoder::write_png_auto(file, window, None)
         .map_err(|e| e.at(here!()))?;
     Ok(())
 }
 
 impl LodepngEncoder {
 
+    pub fn write_png_auto<W: Write>(writer: W, window: &mut crate::graphics::bitmaps::BitmapWindowMut<u8>, use_highest_compression: Option<bool>) -> Result<()> {
 
+        let bytes_per_pixel = window.info().channels() as usize;
+        let w = window.w() as usize;
+        let h = window.h() as usize;
+        let proper_len = w * h * bytes_per_pixel;
 
-    pub fn write_png_auto<W: Write>(writer: W, frame: &BitmapBgra, use_highest_compression: Option<bool>) -> Result<()> {
-        let pixels_slice = unsafe {frame.pixels_slice()}.ok_or(nerror!(ErrorKind::BitmapPointerNull))?;
-        let mut pixels_buf;
-        let pixels = if frame.stride != frame.w {
-            let width_bytes = frame.width() * frame.fmt.bytes();
-            pixels_buf = Vec::with_capacity(frame.width() * frame.height());
-            pixels_buf.extend(pixels_slice.chunks(frame.stride())
-                .flat_map(|s| s[0..width_bytes].iter()));
-            &pixels_buf
-        } else {
-            pixels_slice
+        let color_type = match (bytes_per_pixel, window.info().alpha_meaningful()){
+            (4, true) => lodepng::ColorType::BGRA,
+            (4, false) => lodepng::ColorType::BGRX,
+            (3, _) => lodepng::ColorType::BGR,
+            (1, _) => lodepng::ColorType::GREY,
+            _ => return Err(nerror!(ErrorKind::InvalidState, "Unsupported pixel format"))
         };
 
-        let color_type = match frame.fmt {
-            PixelFormat::Bgra32 => lodepng::ColorType::BGRA,
-            PixelFormat::Bgr32 => lodepng::ColorType::BGRX,
-            PixelFormat::Bgr24 => lodepng::ColorType::BGR,
-            PixelFormat::Gray8 => lodepng::ColorType::GREY,
-        };
-
-        LodepngEncoder::write_png_auto_slice(writer, pixels, frame.width(), frame.height(), color_type, use_highest_compression)
+        if window.stride_padding() > 0{
+           let bytes = window.create_contiguous_vec().map_err(|e| e.at(here!()))?;
+           assert_eq!(bytes.len(), proper_len);
+           LodepngEncoder::write_png_auto_slice(writer, &bytes, w, h, color_type, use_highest_compression)
             .map_err(|e| e.at(here!()))
+        }else{
+            let slice = &window.get_slice()[..proper_len];
+            LodepngEncoder::write_png_auto_slice(writer, slice, w, h, color_type, use_highest_compression)
+            .map_err(|e| e.at(here!()))
+        }
+
     }
 
     pub fn write_png_auto_slice<W: Write>(mut writer: W, pixels: &[u8], width: usize, height: usize, pixel_format: lodepng::ColorType, use_highest_compression: Option<bool>) -> Result<()> {

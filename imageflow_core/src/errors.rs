@@ -153,7 +153,7 @@ pub enum ErrorKind{
     IoIdNotFound,
     BitmapKeyNotFound,
     ItemNotFound,
-    FailedBorrow,
+    FailedBorrow, // Still borrowed somewhere else
     NodeParamsMismatch,
     BitmapPointerNull,
     MethodNotImplemented,

@@ -515,9 +515,8 @@ impl<'a> Engine<'a> {
                                 let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
                                     .map_err(|e| e.at(here!()))?;
 
-                                let bitmap_bgra = bitmap.get_window_u8().unwrap().to_bitmap_bgra()?;
 
-                                crate::codecs::write_png(&path, &bitmap_bgra)
+                                crate::codecs::write_png(&path, &mut bitmap.get_window_u8().unwrap())
                                     .map_err(|e| e.at(here!()))?;
 
                             }

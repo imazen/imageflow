@@ -270,18 +270,23 @@ pub fn compare_encoded_to_source(input: IoTestEnum, debug: bool, require: Constr
     let ctx = ChecksumCtx::visuals();
 
     let mut context2 = Context::create().unwrap();
-    unsafe {
-        let bitmap_key = decode_input(&mut context2, input_copy);
 
-        let original = context.borrow_bitmaps().unwrap()
-            .try_borrow_mut(bitmap_key).unwrap()
-            .get_window_u8().unwrap()
-            .to_bitmap_bgra().unwrap();
+    let bitmap_key = decode_input(&mut context2, input_copy);
+    let mut original_checksum = String::new();
+    {
+        let bitmaps = context2.borrow_bitmaps()
+            .map_err(|e| e.at(here!())).unwrap();
+
+        let mut original = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!())).unwrap();
+
+        let mut original_window = original.get_window_u8().unwrap();
 
 
-        let original_checksum = ChecksumCtx::checksum_bitmap(&original);
-        ctx.save_frame(&original, &original_checksum);
-
-        compare_with(&ctx, &original_checksum, &context2, bitmap_key, ResultKind::Bytes(bytes), require, true)
+        original_checksum = ChecksumCtx::checksum_bitmap_window(&mut original_window);
+        ctx.save_frame(&mut original_window, &original_checksum);
     }
+
+    compare_with(&ctx, &original_checksum, &context2, bitmap_key, ResultKind::Bytes(bytes), require, true)
+
 }

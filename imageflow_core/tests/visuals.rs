@@ -1825,7 +1825,7 @@ fn test_detect_whitespace_basic(){
 
         window.fill_rect(1, 1, 9, 9, &red).unwrap();
 
-        let mut b = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
+        let mut b = unsafe { window.to_bitmap_bgra().unwrap() };
         let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
         assert_eq!(r.x1, 1);
         assert_eq!(r.y1, 1);

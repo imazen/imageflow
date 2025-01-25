@@ -77,9 +77,7 @@ impl NodeDefMutateBitmap for EnableTransparencyMutDef{
             Err(nerror!(crate::ErrorKind::InvalidNodeConnections, "Need Bgr32 input image to convert to bgra32"))
         }else{
             let mut window = bitmap_bitmap.get_window_u8().unwrap();
-            if window.info().surface_info().pixel_layout() == imageflow_types::PixelLayout::BGR{
-                window.set_alpha_to_255()?;
-            }
+            window.normalize_unused_alpha()?;
             bitmap_bitmap.set_alpha_meaningful(true);
             bitmap_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
             Ok(())

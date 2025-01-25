@@ -128,6 +128,15 @@ pub struct BitmapWindowMut<'a, T>{
     info: BitmapInfo
 }
 
+// impl debug for Bitmap
+impl<'a, T> fmt::Debug for BitmapWindowMut<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let type_name = std::any::type_name::<T>();
+
+        write!(f, "BitmapWindowMut<{}> {{ slice: {} w: {}, h: {}, channels: {}, info: {:?} }}", type_name, self.slice.len(), self.w(), self.h(), self.channels(), self.info )
+    }
+}
+
 impl<'a> BitmapWindowMut<'a,u8> {
     pub fn apply_matte(&mut self, matte: imageflow_types::Color) -> Result<(), FlowError> {
         crate::graphics::blend::apply_matte(self, matte)
@@ -187,7 +196,24 @@ impl<'a> BitmapWindowMut<'a,u8> {
     }
 
 }
+
 impl<'a,T>  BitmapWindowMut<'a, T> {
+
+    pub fn stride_padding(&self) -> usize{
+        self.info.item_stride as usize - self.info.w as usize * self.info.channels() as usize
+    }
+    pub fn create_contiguous_vec(&mut self) -> Result<Vec<T>, FlowError>
+    where T: Clone{
+        let width_in_t = self.w() as usize * self.channels() as usize;
+        let final_len = self.h() as usize * width_in_t;
+        let mut v = Vec::new();
+        v.try_reserve(final_len).map_err(|e| nerror!(ErrorKind::InvalidOperation, "Failed to reserve memory for contiguous vec"))?;
+        for row in self.slice.chunks(self.info.item_stride as usize).take(self.h() as usize){
+            v.extend_from_slice(&row[0..width_in_t]);
+        }
+        assert_eq!(v.len(), final_len);
+        Ok(v)
+    }
 
     #[deprecated(since = "0.1.0", note = "Stop using BitmapBgra")]
     pub unsafe fn to_bitmap_bgra(&mut self) -> Result<BitmapBgra, FlowError>{
@@ -252,6 +278,9 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
     }
     pub fn h(&self) -> u32{
         self.info.height()
+    }
+    pub fn channels(&self) -> usize{
+        self.info.channels()
     }
 
 
@@ -367,16 +396,25 @@ impl<'a>  BitmapWindowMut<'a, u8> {
         }
         let bgra = color.to_bgra8();
 
+
         let mut top = self.window(x, y, x2, y2).unwrap();
-        let mut rest = top.split_off(1).unwrap();
 
-        for first_line in top.scanlines_bgra().unwrap(){
-            first_line.row.fill(bgra);
+        if y2 > y + 2{
+            // Supposed to be a bit faster to memcpy than memset?
+            let mut rest = top.split_off(1).unwrap();
+            for top_lines in top.scanlines_bgra().unwrap(){
+                top_lines.row.fill(bgra);
+            }
+
+            for line in rest.scanlines(){
+                line.row.copy_from_slice(&top.slice_mut()[0..line.row.len()]);
+            }
+        }else{
+            for line in top.scanlines_bgra().unwrap(){
+                line.row.fill(bgra);
+            }
         }
 
-        for line in rest.scanlines(){
-            line.row.copy_from_slice(&top.slice_mut()[0..line.row.len()]);
-        }
         Ok(())
     }
 
@@ -386,6 +424,14 @@ impl<'a>  BitmapWindowMut<'a, u8> {
                 pix.a = 255;
             }
         }
+        Ok(())
+    }
+
+    pub fn normalize_unused_alpha(&mut self) -> Result<(), FlowError>{
+        if self.info().alpha_meaningful(){
+            return Ok(());
+        }
+        self.set_alpha_to_255()?;
         Ok(())
     }
 }
@@ -486,7 +532,7 @@ pub struct BitmapInfo{
 }
 
 impl BitmapInfo {
-    pub(crate) fn calculate_pixel_format(&self) -> Result<PixelFormat, FlowError> {
+    pub fn calculate_pixel_format(&self) -> Result<PixelFormat, FlowError> {
         self.info.calculate_pixel_format()
     }
 }
@@ -748,15 +794,27 @@ impl<'a, T> ScanlineIterMut<'a, T> {
 
         match bytemuck::try_cast_slice_mut::<K,T>(from_slice){
             Ok(slice) => {
-                let factor = old_slice_len / slice.len();
-                if old_slice_len % slice.len() != 0{
-                    panic!("ScanlineIterMut:try_cast: new casted slice length {} not a multiple of old slice length {}: ", slice.len(), old_slice_len);
-                }
-                let t_per_pixel = info.channels() / factor;
-                if info.channels() != t_per_pixel{
-                    panic!("info.channels() {} != t_per_pixel {}", info.channels(), t_per_pixel);
-                }
-                let t_stride = info.item_stride as usize / factor;
+
+                let (t_per_pixel, t_stride) = if old_slice_len > slice.len(){
+                    let factor = old_slice_len / slice.len();
+                    if old_slice_len % slice.len() != 0{
+                        panic!("ScanlineIterMut:try_cast: new casted slice length {} not a multiple of old slice length {}: ", slice.len(), old_slice_len);
+                    }
+                    let t_per_pixel = info.channels() / factor;
+                    let t_stride = info.item_stride as usize / factor;
+                    (t_per_pixel, t_stride)
+                }else if old_slice_len < slice.len(){
+                    let inverse_factor = slice.len() / old_slice_len;
+                    if slice.len() % old_slice_len != 0{
+                        panic!("ScanlineIterMut:try_cast: new casted slice length {} not a multiple of old slice length {}: ", slice.len(), old_slice_len);
+                    }
+                    let t_per_pixel = info.channels() * inverse_factor;
+                    let t_stride = info.item_stride as usize * inverse_factor;
+                    (t_per_pixel, t_stride)
+                }else{
+                    (info.channels(), info.item_stride as usize)
+                };
+
                 let t_per_row = info.width() as usize * t_per_pixel;
                 let padding = t_stride - t_per_row;
                 if slice.len() < t_stride * h - padding {
@@ -794,10 +852,22 @@ impl<'a, T> Scanline<'a, T>{
         self.h
     }
     #[inline]
-    pub fn channels(&self) -> usize{
+    pub fn row_item_per_pixel(&self) -> usize{
         self.t_per_pixel
     }
+    #[inline]
+    pub fn row(&self) -> &[T]{
+        self.row
+    }
+    #[inline]
+    pub fn row_mut(&mut self) -> &mut [T]{
+        self.row
+    }
 
+    #[inline]
+    pub fn y(&self) -> usize{
+        self.y
+    }
 }
 
 impl<'a, T> ExactSizeIterator for ScanlineIterMut<'a, T> {
@@ -878,6 +948,18 @@ impl<'a> BitmapWindowMut<'a, u8> {
         }
         return ScanlineIterMut::try_cast_from::<u8>(self.slice, &self.info);
     }
+
+    /// Call normalize_alpha first; this function does not skip unused alpha bytes, only unused whole pixels.
+    /// Otherwise Bgr32 may be non-deterministic
+    pub fn short_hash_pixels(&mut self) -> u64{
+        use std::hash::Hasher;
+        let mut hash = ::twox_hash::XxHash64::with_seed(0x8ed1_2ad9_483d_28a0);
+        for line in self.scanlines(){
+            hash.write(line.row);
+        }
+        hash.finish()
+    }
+
 
 }
 

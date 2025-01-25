@@ -12,9 +12,12 @@ extern crate imgref;
 use std::marker::PhantomPinned;
 use std::ffi::CString;
 use std::path::Path;
+use imageflow_core::graphics::bitmaps::BitmapWindowMut;
 use imageflow_core::{Context, FlowError, ErrorKind};
 
 use imageflow_core::ffi::BitmapBgra;
+use rgb::alt::BGRA8;
+use s::PixelLayout;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::PathBuf;
@@ -316,7 +319,7 @@ impl ChecksumCtx{
 
 
     /// Save the given image to disk by calculating its checksum.
-    pub fn save_frame(&self, bit: &BitmapBgra, checksum: &str){
+    pub fn save_frame(&self, window: &mut BitmapWindowMut<u8>, checksum: &str){
         let dest_path = self.image_path(&checksum);
         if !dest_path.exists(){
             let path_str = dest_path.to_str();
@@ -326,7 +329,7 @@ impl ChecksumCtx{
                 println!("Writing {:#?}", &dest_path);
             }
             unsafe {
-                imageflow_core::helpers::write_png(dest_path, bit).unwrap();
+                imageflow_core::helpers::write_png(dest_path, window).unwrap();
             }
         }
     }
@@ -362,11 +365,11 @@ impl ChecksumCtx{
 
     /// Provides a checksum composed of two hashes - one from the pixels, one from the dimensions and format
     /// This format is preserved from legacy C tests, thus its rudimentary (but, I suppose, sufficient) nature.
-    pub fn checksum_bitmap(bitmap: &BitmapBgra) -> String {
-        let info = format!("{}x{} fmt={}", bitmap.w, bitmap.h, bitmap.fmt as i32);
-        unsafe {
-            return format!("{:02$X}_{:02$X}", bitmap.short_hash_pixels(), hlp::hashing::legacy_djb2(info.as_bytes()), 17)
-        }
+    pub fn checksum_bitmap_window(bitmap_window: &mut BitmapWindowMut<u8>) -> String {
+        let info = format!("{}x{} fmt={}", bitmap_window.w(), bitmap_window.h(), bitmap_window.info().calculate_pixel_format().unwrap() as i32);
+
+        return format!("{:02$X}_{:02$X}", bitmap_window.short_hash_pixels(), hlp::hashing::legacy_djb2(info.as_bytes()), 17)
+
     }
 
 
@@ -378,20 +381,21 @@ impl ChecksumCtx{
     /// the checksum will be stored, and the function will return true.
     pub fn bitmap_matches(&self, c: &Context, bitmap_key: BitmapKey, name: &str) -> (ChecksumMatch, String){
 
-        let mut bitmap= unsafe {
-            c.borrow_bitmaps().unwrap()
-                .try_borrow_mut(bitmap_key).unwrap()
-                .get_window_u8().unwrap()
-                .to_bitmap_bgra().unwrap()
-        };
 
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!())).unwrap();
 
-        bitmap.normalize_alpha().unwrap();
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!())).unwrap();
 
-        let actual = Self::checksum_bitmap(&bitmap);
+        let mut window = bitmap.get_window_u8().unwrap();
+
+        window.normalize_unused_alpha().unwrap();
+
+        let actual = Self::checksum_bitmap_window(&mut window);
         //println!("actual = {}", &actual);
         // Always write a copy if it doesn't exist
-        self.save_frame(&bitmap, &actual);
+        self.save_frame(&mut window, &actual);
 
         self.exact_match(actual, name)
     }
@@ -519,6 +523,9 @@ fn diff_bytes(a: &[u8], b: &[u8]) -> (i64, i64, i64) {
     (count, premultiplied_delta, abs_diff)
 }
 
+
+
+
 fn diff_bitmap_bytes(a: &BitmapBgra, b: &BitmapBgra) -> (i64, i64, i64) {
     if a.w != b.w || a.h != b.h || a.fmt.bytes() != b.fmt.bytes() {
         panic!("Bitmap dimensions differ. a:\n{:#?}\nb:\n{:#?}", a, b);
@@ -533,6 +540,23 @@ fn diff_bitmap_bytes(a: &BitmapBgra, b: &BitmapBgra) -> (i64, i64, i64) {
             (0, 0, 0)
         } else {
             diff_bytes(a_contents_slice, b_contents_slice)
+        }
+    }).fold((0, 0, 0), |(a, b, c), (d, e, f)| (a + d, b + e, c + f))
+}
+fn diff_bitmap_windows(a: &mut BitmapWindowMut<u8>, b: &mut BitmapWindowMut<u8>) -> (i64, i64, i64) {
+    if a.w() != b.w() || a.h() != b.h() || a.channels() != b.channels() {
+        panic!("Bitmap dimensions differ. a:\n{:#?}\nb:\n{:#?}", a, b);
+    }
+    if a.info().pixel_layout() != PixelLayout::BGRA {
+        panic!("Bitmap layout is not BGRA");
+    }
+
+    a.scanlines().into_iter().zip(b.scanlines().into_iter()).map(|(a_scanline, b_scanline)| {
+
+        if a_scanline.row() == b_scanline.row() {
+            (0, 0, 0)
+        } else {
+            diff_bytes(a_scanline.row(), b_scanline.row())
         }
     }).fold((0, 0, 0), |(a, b, c), (d, e, f)| (a + d, b + e, c + f))
 }
@@ -587,96 +611,70 @@ impl<'a> ResultKind<'a>{
     }
 }
 
-fn get_imgref_bgra32(b: &mut BitmapBgra) -> imgref::ImgVec<rgb::RGBA<f32>> {
+fn get_imgref_bgra32(b: &mut BitmapWindowMut<u8>) -> imgref::ImgVec<rgb::RGBA<f32>> {
     use self::dssim::*;
 
-    match b.fmt {
-        s::PixelFormat::Bgra32 => {},
-        s::PixelFormat::Bgr32 => {
-            b.normalize_alpha().unwrap();
-        },
-        _ => unimplemented!(""),
-    };
+    b.normalize_unused_alpha().unwrap();
+    if b.info().pixel_layout() != PixelLayout::BGRA{
+        panic!("Pixel layout is not BGRA");
+    }
 
+    let (w, h) = (b.w() as usize, b.h() as usize);
 
-    assert_eq!(0, b.stride as usize % b.fmt.bytes());
+    let slice = b.get_slice();
+    let new_stride = b.info().item_stride() as usize / 4;
 
-    let stride_px = b.stride as usize / b.fmt.bytes();
-    let pixels = unsafe {
-        ::std::slice::from_raw_parts(b.pixels as *const rgb::alt::BGRA8, stride_px * b.h as usize + b.w as usize - stride_px)
-    };
+    let cast_to_bgra8 = bytemuck::cast_slice::<u8,rgb::alt::BGRA8>(slice);
 
-    assert!(pixels.len() >= b.w as usize * b.h as usize);
-
-    imgref::Img::new_stride(pixels.to_rgbaplu(), b.w as usize, b.h as usize, stride_px)
+    imgref::Img::new_stride(cast_to_bgra8.to_rgbaplu(), w, h, new_stride)
 }
 
 /// Compare two bgra32 or bgr32 frames using the given similarity requirements
-pub fn compare_bitmaps(_c: &ChecksumCtx, actual_context: &Context, actual_key: BitmapKey,
-                       expected_context: &Context,
-                       expected_key: BitmapKey, require: Similarity, panic: bool) -> bool{
+pub fn compare_bitmaps(_c: &ChecksumCtx, mut actual: &mut BitmapWindowMut<u8>, mut expected: &mut BitmapWindowMut<u8>, require: Similarity, panic: bool) -> bool{
+    let (count, premultiplied_delta, abs_diff) = diff_bitmap_windows(&mut actual, &mut expected);
+    if count == 0 {
+        return true;
+    }
+    if let Similarity::AllowDssimMatch(minval, maxval) = require {
+        let actual_ref = get_imgref_bgra32(&mut actual);
+        let expected_ref = get_imgref_bgra32(&mut expected);
+        let d = dssim::new();
 
-    unsafe {
-        let mut actual_bgra = actual_context.borrow_bitmaps().unwrap()
-            .try_borrow_mut(actual_key).unwrap()
-            .get_window_u8().unwrap()
-            .to_bitmap_bgra().unwrap();
+        let actual_img = d.create_image(&actual_ref).unwrap();
+        let expected_img = d.create_image(&expected_ref).unwrap();
 
-        let actual= &mut actual_bgra;
+        let (dssim, _) = d.compare(&expected_img, actual_img);
 
-        let mut expected_bgra = expected_context.borrow_bitmaps().unwrap()
-            .try_borrow_mut(expected_key).unwrap()
-            .get_window_u8().unwrap()
-            .to_bitmap_bgra().unwrap();
+        let failure = if dssim > maxval {
+            Some(format!("The dssim {} is greater than the permitted value {}", dssim, maxval))
+        } else if dssim < minval {
+            Some(format!("The dssim {} is lower than expected minimum value {}", dssim, minval))
+        } else {
+            None
+        };
 
-        let expected = &mut expected_bgra;
-
-        let (count, premultiplied_delta, abs_diff) = diff_bitmap_bytes(actual, expected);
-
-        if count == 0 {
-            return true;
-        }
-
-        if let Similarity::AllowDssimMatch(minval, maxval) = require {
-            let actual_ref = get_imgref_bgra32(actual);
-            let expected_ref = get_imgref_bgra32(expected);
-            let d = dssim::new();
-
-            let actual_img = d.create_image(&actual_ref).unwrap();
-            let expected_img = d.create_image(&expected_ref).unwrap();
-
-            let (dssim, _) = d.compare(&expected_img, actual_img);
-
-            let failure = if dssim > maxval {
-                Some(format!("The dssim {} is greater than the permitted value {}", dssim, maxval))
-            } else if dssim < minval {
-                Some(format!("The dssim {} is lower than expected minimum value {}", dssim, minval))
+        if let Some(message) = failure {
+            if panic {
+                panic!("{}", message);
             } else {
-                None
-            };
-
-            if let Some(message) = failure {
-                if panic {
-                    panic!("{}", message);
-                } else {
-                    eprintln!("{}", message);
-                    false
-                }
-            } else {
-                true
+                eprintln!("{}", message);
+                false
             }
         } else {
-            if let Some(message) = require.report_on_bytes(count, premultiplied_delta, abs_diff, actual.w as usize * actual.h as usize * actual.fmt.bytes()) {
-                if panic {
-                    panic!("{}", message);
-                } else {
-                    eprintln!("{}", message);
-                    return false;
-                }
-            }
             true
         }
+    } else {
+        if let Some(message) = require.report_on_bytes(count, premultiplied_delta, abs_diff, actual.info().width() as usize * actual.info().height() as usize * actual.info().channels() as usize) {
+            if panic {
+                panic!("{}", message);
+            } else {
+                eprintln!("{}", message);
+                return false;
+            }
+        }
+        true
     }
+
 }
 
 /// Evaluates the given result against known truth, applying the given constraints
@@ -697,21 +695,27 @@ pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_c
 
 
 
-    let result_checksum = unsafe {
-        let actual_bitmap = actual_context.borrow_bitmaps().unwrap()
-            .try_borrow_mut(actual_bitmap_key).unwrap()
-            .get_window_u8().unwrap().to_bitmap_bgra().unwrap();
+    let actual_bitmaps = actual_context.borrow_bitmaps()
+        .map_err(|e| e.at(here!())).unwrap();
 
-        ChecksumCtx::checksum_bitmap(&actual_bitmap)
-    };
+    let mut actual_bitmap = actual_bitmaps.try_borrow_mut(actual_bitmap_key)
+        .map_err(|e| e.at(here!())).unwrap();
 
+    let mut actual = actual_bitmap.get_window_u8().unwrap();
 
-
+    let result_checksum =  ChecksumCtx::checksum_bitmap_window(&mut actual);
 
     if result_checksum == expected_checksum {
         true
     } else{
-        compare_bitmaps(c, actual_context, actual_bitmap_key, expected_context, expected_bitmap_key, require.similarity, panic)
+        let expected_bitmaps = expected_context.borrow_bitmaps()
+            .map_err(|e| e.at(here!())).unwrap();
+
+        let mut expected_bitmap = expected_bitmaps.try_borrow_mut(expected_bitmap_key)
+            .map_err(|e| e.at(here!())).unwrap();
+        let mut expected = expected_bitmap.get_window_u8().unwrap();
+
+        compare_bitmaps(c, &mut actual, &mut expected, require.similarity, panic)
     }
 }
 
@@ -757,8 +761,24 @@ pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'
                 (image_context.as_ref(),key )
             }
         };
+        let mut res = false;
+        {
+                let expected_bitmaps = expected_context.borrow_bitmaps()
+                .map_err(|e| e.at(here!())).unwrap();
 
-        let res = compare_bitmaps(c, &actual_context, actual_bitmap_key, &expected_context, expected_bitmap_key, require.similarity, panic);
+            let mut expected_bitmap = expected_bitmaps.try_borrow_mut(expected_bitmap_key)
+                .map_err(|e| e.at(here!())).unwrap();
+            let mut expected = expected_bitmap.get_window_u8().unwrap();
+
+            let actual_bitmaps = actual_context.borrow_bitmaps()
+                .map_err(|e| e.at(here!())).unwrap();
+
+            let mut actual_bitmap = actual_bitmaps.try_borrow_mut(actual_bitmap_key)
+                .map_err(|e| e.at(here!())).unwrap();
+            let mut actual = actual_bitmap.get_window_u8().unwrap();
+
+            res = compare_bitmaps(c, &mut actual, &mut expected, require.similarity, panic);
+        }
         drop(expected_context); // Context must remain in scope until we are done with expected_bitmap
         res
     }
