@@ -23,7 +23,8 @@ param(
 # Reasoning: Store the original archive filename to rename back after compression.
 # Reasoning: Convert forward slashes to backslashes in the archive name for Windows compatibility.
 # Goal: Preserve the user's intended archive filename.
-$OriginalArchiveFile = $ArchiveFile -replace '/', '\'
+$ArchiveFile = $ArchiveFile -replace '/', '\'
+$OriginalArchiveFile = $ArchiveFile
 
 # Reasoning: Ensure the archive file has a .zip extension to comply with Compress-Archive requirements.
 # Goal: Append .zip if the provided archive filename does not already end with .zip
