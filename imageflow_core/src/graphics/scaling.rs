@@ -151,7 +151,7 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
             [contrib.left_weight as usize..=contrib.right_weight as usize];
 
         // Clear output row
-        summation_buf_window.clear_slice();
+        summation_buf_window.slice_mut().fill(0f32);
 
         // if out_row_ix == 0 || out_row_ix == 20{
         //     // print the contrib weights for this output row

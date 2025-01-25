@@ -1,7 +1,7 @@
 use crate::graphics::math::{pow, fastpow};
 
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum WorkingFloatspace {
     StandardRGB,
     LinearRGB,

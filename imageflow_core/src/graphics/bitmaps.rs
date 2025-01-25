@@ -9,7 +9,7 @@ use std::cell::{RefCell, RefMut};
 use std;
 use std::ops::DerefMut;
 use crate::ErrorKind::BitmapPointerNull;
-
+use std::fmt;
 
 
 
@@ -150,16 +150,13 @@ impl<'a> BitmapWindowMut<'a,u8> {
         let pixel =  bytemuck::cast_slice::<u8,rgb::alt::BGRA8>(&self.slice[index..index+4]);
         Some(pixel[0])
     }
-}
-
-impl<'a>  BitmapWindowMut<'a, u8> {
 
     pub unsafe fn to_vec_rgba(&self) -> Result<(Vec<rgb::RGBA8>, usize, usize), FlowError>{
 
         let w = self.w() as usize;
         let h = self.h() as usize;
 
-        match &self.info().compose{
+        match &self.info().compose(){
             BitmapCompositing::ReplaceSelf | BitmapCompositing::BlendWithSelf =>{
                 let mut v = vec![rgb::RGBA8::new(0,0,0,255);w * h];
 
@@ -192,24 +189,7 @@ impl<'a>  BitmapWindowMut<'a, u8> {
 }
 impl<'a,T>  BitmapWindowMut<'a, T> {
 
-    pub unsafe fn to_bitmap_float(&mut self) -> Result<BitmapFloat, FlowError>{
-        if std::mem::size_of::<T>() != 4{
-            return Err(nerror!(ErrorKind::InvalidState));
-        }
-
-        Ok(BitmapFloat {
-            w: self.w() as u32,
-            h: self.h() as u32,
-            pixels:  self.slice.as_mut_ptr() as *mut f32,
-            pixels_borrowed: true,
-            channels: self.info().channels() as u32,
-            alpha_meaningful: self.info().alpha_meaningful,
-            alpha_premultiplied: self.info().alpha_premultiplied,
-            float_stride: self.info().item_stride(),
-            float_count: self.info().item_stride() * self.h()
-        })
-    }
-
+    #[deprecated(since = "0.1.0", note = "Stop using BitmapBgra")]
     pub unsafe fn to_bitmap_bgra(&mut self) -> Result<BitmapBgra, FlowError>{
         if std::mem::size_of::<T>() != 1{
             return Err(nerror!(ErrorKind::InvalidState));
@@ -236,7 +216,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         };
 
 
-        match &self.info().compose{
+        match &self.info().compose(){
             BitmapCompositing::ReplaceSelf =>
                 {b.compositing_mode = crate::ffi::BitmapCompositingMode::ReplaceSelf},
             BitmapCompositing::BlendWithSelf =>
@@ -274,12 +254,6 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         self.info.height()
     }
 
-    /// Replaces all data with zeroes. Will zero data outside the window if this is a cropped window.
-    pub fn clear_slice(&mut self){
-        unsafe {
-            std::ptr::write_bytes(self.slice.as_mut_ptr(), 0, self.slice.len());
-        }
-    }
 
     pub fn row_mut(&mut self, index: u32) -> Option<&mut [T]>{
         if index >= self.info.h {
@@ -333,6 +307,13 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
     pub fn info(&'a self) -> &'a BitmapInfo{
         &self.info
     }
+    pub fn clone_mut(&'a mut self) -> BitmapWindowMut<'a, T>{
+        BitmapWindowMut{
+            info: self.info.clone(),
+            slice: self.slice,
+        }
+    }
+
     pub fn window(&mut self, x1: u32, y1: u32, x2: u32, y2: u32) -> Option<BitmapWindowMut<T>>{
         if x1 >= x2 || y1 >= y2 || x2 > self.info.width() || y2 > self.info.height(){
             return None;// Err(nerror!(ErrorKind::InvalidArgument, "x1,y1,x2,y2 must be within window bounds"));
@@ -344,31 +325,53 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
                 w: x2 - x1,
                 h: y2 - y1,
                 item_stride: self.info.item_stride(),
-                alpha_premultiplied: self.info.alpha_premultiplied(),
-                alpha_meaningful: self.info.alpha_meaningful(),
-                color_space: self.info.color_space(),
-                pixel_layout: self.info.pixel_layout(),
-                compose: self.info.compose.clone()
+                info: self.info.info.clone()
             }
         })
     }
+
+    // Split the window into two separate non-overlapping windows at the given y coordinate
+    pub fn split_off(&mut self, y: u32) -> Option<BitmapWindowMut<'a, T>>{
+        if y >= self.h() {
+            return None;
+        }
+        // create 2 new BitmapInfo, but with different h values
+        let mut info2 = self.info.clone();
+        info2.h = self.h() - y;
+
+        let s = std::mem::replace(&mut self.slice,  &mut []);
+
+        let (top, bottom) = s.split_at_mut(y as usize * self.info.item_stride as usize);
+        self.slice = top;
+        self.info.h = y;
+        Some(BitmapWindowMut{
+            slice: bottom,
+            info: info2
+        })
+    }
+
 }
 
 impl<'a>  BitmapWindowMut<'a, u8> {
 
     pub fn fill_rectangle(&mut self, color: imageflow_helpers::colors::Color32, x: u32, y: u32, x2: u32, y2: u32) -> Result<(), FlowError>{
         if y2 == y || x2 == x { return Ok(()); } // Don't fail on zero width rect
-        if y2 < y || x2 < x || x2 > self.w() || y2 > self.h(){
-            return Err(nerror!(ErrorKind::InvalidArgument, "Coordinates must be within image dimensions"));
-        }
+        if y2 <= y || x2 <= x || x2 > self.w() || y2 > self.h(){
+            return Err(nerror!(ErrorKind::InvalidArgument, "Coordinates {},{} {},{} must be within image dimensions {}x{}", x, y, x2, y2, self.w(), self.h()));        }
         if  self.info().pixel_layout() != PixelLayout::BGRA {
-            return Err(nerror!(ErrorKind::InvalidArgument, "Only BGRA supported for rounded corners"));
+            return Err(nerror!(ErrorKind::InvalidArgument, "Only BGRA supported for fill_rectangle"));
         }
         let bgra = color.to_bgra8();
-        for y in y..y2 {
-            let mut row_window = self.row_window(y).unwrap();
-            let row_pixels = row_window.slice_of_pixels_first_row().unwrap();
-            row_pixels[x as usize..x2 as usize].fill(bgra.clone());
+
+        let mut top = self.window(x, y, x2, y2).unwrap();
+        let mut rest = top.split_off(1).unwrap();
+
+        for first_line in top.scanlines_bgra().unwrap(){
+            first_line.row.fill(bgra);
+        }
+
+        for line in rest.scanlines(){
+            line.row.copy_from_slice(&top.slice_mut()[0..line.row.len()]);
         }
         Ok(())
     }
@@ -416,13 +419,8 @@ impl Bitmap{
 }
 
 
-
 #[derive(Clone, Debug)]
-pub struct BitmapInfo{
-    w: u32,
-    h: u32,
-    /// Row stride
-    item_stride: u32,
+pub struct SurfaceInfo{
     alpha_premultiplied: bool,
     alpha_meaningful: bool,
     color_space: ColorSpace,
@@ -430,32 +428,9 @@ pub struct BitmapInfo{
     compose: BitmapCompositing
 }
 
-impl BitmapInfo {
-    pub(crate) fn calculate_pixel_format(&self) -> Result<PixelFormat, FlowError> {
-        Ok(match self.pixel_layout(){
-            PixelLayout::BGR => PixelFormat::Bgr24,
-            PixelLayout::BGRA if self.alpha_meaningful() => PixelFormat::Bgra32,
-            PixelLayout::BGRA if !self.alpha_meaningful() => PixelFormat::Bgr32,
-            PixelLayout::Gray => PixelFormat::Gray8,
-            _ => { return Err(nerror!(ErrorKind::InvalidState)); }
-        })
-    }
-}
-
-impl BitmapInfo{
-    #[inline]
-    pub fn width(&self) -> u32{
-        self.w
-    }
-    #[inline]
-    pub fn height(&self) -> u32{
-        self.h
-    }
-
-    /// Row stride
-    #[inline]
-    pub fn item_stride(&self) -> u32{
-        self.item_stride
+impl SurfaceInfo{
+    pub fn alpha_premultiplied(&self) -> bool{
+        self.alpha_premultiplied
     }
     #[inline]
     pub fn pixel_layout(&self) -> PixelLayout{
@@ -470,16 +445,81 @@ impl BitmapInfo{
         self.pixel_layout.channels()
     }
     #[inline]
-    pub fn alpha_premultiplied(&self) -> bool{
-        self.alpha_premultiplied
-    }
-    #[inline]
     pub fn alpha_meaningful(&self) -> bool{
         self.alpha_meaningful
     }
     #[inline]
     pub fn compose(&self) -> &BitmapCompositing{
         &self.compose
+    }
+    pub(crate) fn calculate_pixel_format(&self) -> Result<PixelFormat, FlowError> {
+        Ok(match self.pixel_layout(){
+            PixelLayout::BGR => PixelFormat::Bgr24,
+            PixelLayout::BGRA if self.alpha_meaningful() => PixelFormat::Bgra32,
+            PixelLayout::BGRA if !self.alpha_meaningful() => PixelFormat::Bgr32,
+            PixelLayout::Gray => PixelFormat::Gray8,
+            _ => { return Err(nerror!(ErrorKind::InvalidState)); }
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BitmapInfo{
+    w: u32,
+    h: u32,
+    /// Row stride
+    item_stride: u32,
+    info: SurfaceInfo,
+}
+
+impl BitmapInfo {
+    pub(crate) fn calculate_pixel_format(&self) -> Result<PixelFormat, FlowError> {
+        self.info.calculate_pixel_format()
+    }
+}
+
+impl BitmapInfo{
+    #[inline]
+    pub fn width(&self) -> u32{
+        self.w
+    }
+    #[inline]
+    pub fn height(&self) -> u32{
+        self.h
+    }
+
+    pub fn surface_info(&self) -> &SurfaceInfo{
+        &self.info
+    }
+
+    /// Row stride
+    #[inline]
+    pub fn item_stride(&self) -> u32{
+        self.item_stride
+    }
+    #[inline]
+    pub fn pixel_layout(&self) -> PixelLayout{
+        self.info.pixel_layout
+    }
+    #[inline]
+    pub fn color_space(&self) -> ColorSpace{
+        self.info.color_space
+    }
+    #[inline]
+    pub fn channels(&self) -> usize{
+        self.info.channels()
+    }
+    #[inline]
+    pub fn alpha_premultiplied(&self) -> bool{
+        self.info.alpha_premultiplied
+    }
+    #[inline]
+    pub fn alpha_meaningful(&self) -> bool{
+        self.info.alpha_meaningful
+    }
+    #[inline]
+    pub fn compose(&self) -> &BitmapCompositing{
+        &self.info.compose
     }
 }
 pub struct Bitmap{
@@ -498,11 +538,11 @@ impl Bitmap{
     }
     #[inline]
     pub fn set_alpha_meaningful(&mut self, value: bool){
-        self.info.alpha_meaningful = value;
+        self.info.info.alpha_meaningful = value;
     }
     #[inline]
     pub fn set_compositing(&mut self, value: BitmapCompositing){
-        self.info.compose = value;
+        self.info.info.compose = value;
     }
     #[inline]
     pub fn w(&self) -> u32{
@@ -571,11 +611,13 @@ impl Bitmap{
                 w,
                 h,
                 item_stride: stride,
-                color_space,
-                alpha_premultiplied,
-                alpha_meaningful,
-                pixel_layout,
-                compose: BitmapCompositing::BlendWithSelf
+                info: SurfaceInfo {
+                    alpha_premultiplied,
+                    alpha_meaningful,
+                    color_space,
+                    pixel_layout,
+                    compose: BitmapCompositing::BlendWithSelf
+                }
             }
         })
     }
@@ -601,11 +643,13 @@ impl Bitmap{
                 w,
                 h,
                 item_stride: stride,
-                color_space,
-                alpha_premultiplied,
-                alpha_meaningful,
-                pixel_layout,
-                compose: compositing_mode.clone()
+                info: SurfaceInfo {
+                    alpha_premultiplied,
+                    alpha_meaningful,
+                    color_space,
+                    pixel_layout,
+                    compose: compositing_mode.clone()
+                }
             }
         };
 
@@ -643,6 +687,212 @@ impl Bitmap{
     pub fn get_pixel_bgra32(&mut self, x: u32, y: u32) -> Option<rgb::alt::BGRA<u8>> {
         let window = self.get_window_u8().unwrap();
         return window.get_pixel_bgra8(x, y);
+    }
+}
+
+/// Iterator that yields scanlines from a bitmap window
+pub struct ScanlineIterMut<'a, T> {
+    info: &'a SurfaceInfo,
+    remaining_slice: &'a mut [T],
+    current_y: usize,
+    t_per_pixel: usize,
+    t_per_row: usize,
+    t_stride: usize,
+    w: usize,
+    h: usize,
+    finished: bool,
+}
+// Display format for ScanlineIterMut
+// ScanlineIterMut({W}x{H}x{t_per_pixel}, y={current_y}) ({t_per_pixel} {T} per px * {w} => {t_per_row} {T} per row + padding {t_stride - t_per_row} => stride {t_stride} * ({h} - {y}) - offset {0} => {required_length}. Slice length {remaining_slice.len()})
+impl<'a, T> fmt::Display for ScanlineIterMut<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name_of_t = std::any::type_name::<T>();
+        let padding = self.t_stride - self.t_per_row;
+        let required_length = self.t_stride * (self.h - self.current_y) - padding;
+        let remaining_slice_len = self.remaining_slice.len();
+        let t_per_pixel = self.t_per_pixel;
+        let w = self.w;
+        let t_per_row = self.t_per_row;
+        let t_stride = self.t_stride;
+        let h = self.h;
+        let current_y = self.current_y;
+        write!(f, "ScanlineIterMut({w}x{h}x{t_per_pixel}, y={current_y}) ({t_per_pixel} {name_of_t} per px * {w} => {t_per_row} {name_of_t} per row + padding {padding} => stride {t_stride} * ({h} - {current_y}) - padding {padding} => {required_length}. Slice length {remaining_slice_len})")
+    }
+}
+
+impl<'a, T> ScanlineIterMut<'a, T> {
+    pub fn new(slice: &'a mut [T], info: &'a BitmapInfo) -> Option<Self> {
+        let t_per_pixel = info.channels();
+        let t_per_row = info.width() as usize * t_per_pixel;
+        let t_stride = info.item_stride as usize;
+        let w = info.width() as usize;
+        let h = info.height() as usize;
+        let padding = t_stride - t_per_row;
+        if slice.len() < t_stride * h - padding {
+            return None;
+        }
+        Some(Self { info: info.surface_info(), remaining_slice: slice, current_y: 0, t_per_pixel, t_per_row, t_stride, w, h, finished: false })
+    }
+}
+
+pub struct Scanline<'a, T> {
+    y: usize,
+    info: &'a SurfaceInfo,
+    row: &'a mut [T],
+    t_per_pixel: usize,
+    w: usize,
+    h: usize,
+}
+impl<'a, T> Scanline<'a, T>{
+    pub fn info(&self) -> &SurfaceInfo{
+        self.info
+    }
+    #[inline]
+    pub fn width(&self) -> usize{
+        self.w
+    }
+    #[inline]
+    pub fn height(&self) -> usize{
+        self.h
+    }
+    #[inline]
+    pub fn channels(&self) -> usize{
+        self.t_per_pixel
+    }
+
+}
+
+impl<'a, T> ExactSizeIterator for ScanlineIterMut<'a, T> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.h - self.current_y
+    }
+}
+
+impl<'a, T> Iterator for ScanlineIterMut<'a, T> {
+    type Item = Scanline<'a, T>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.finished {
+            return None;
+        }
+        if self.current_y >= self.h {
+            self.finished = true;
+            return None;
+        }
+
+        // Take ownership of the slice temporarily
+        let slice = std::mem::replace(&mut self.remaining_slice, &mut []);
+
+        let return_row;
+        if  self.current_y == self.h -1 {
+            if slice.len() < self.t_per_row {
+                panic!("Remaining_slice length {} is less than t_per_row {}, this should never happen. {}: ", slice.len(), self.t_per_row, &self);
+            }
+            return_row = &mut slice[..self.t_per_row];
+            self.finished = true;
+        }else{
+            if slice.len() < self.t_stride {
+                panic!("Remaining_slice length {} is less than t_stride {}, this should never happen. {}: ", slice.len(), self.t_stride, &self);
+            }
+            // Safe split
+            let (row, next_slice) = slice.split_at_mut(self.t_stride);
+            self.remaining_slice = next_slice;
+            // Only return the actual pixel data, not the stride padding
+            return_row = &mut row[..self.t_per_row];
+        }
+
+        let y = self.current_y;
+        self.current_y += 1;
+
+        Some(Scanline {
+            y,
+            info: self.info,
+            row: return_row,
+            t_per_pixel: self.t_per_pixel,
+            w: self.w,
+            h: self.h,
+        })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.finished {
+            (0, Some(0))
+        } else {
+            let remaining = self.len();
+            (remaining, Some(remaining))
+        }
+    }
+}
+
+impl<'a> BitmapWindowMut<'a, u8> {
+    /// Creates an iterator over u8 scanlines
+    pub fn scanlines(&mut self) -> ScanlineIterMut<'_, u8> {
+        ScanlineIterMut::new(self.slice, &self.info).unwrap()
+    }
+
+    /// Creates an iterator over BGRA scanlines
+    pub fn scanlines_bgra(&mut self) -> Option<ScanlineIterMut<'_, rgb::alt::BGRA<u8>>> {
+        if self.info.pixel_layout() != PixelLayout::BGRA {
+            return None;
+        }
+        if self.info.item_stride as usize % 4 != 0 {
+            panic!("ScanlineIterMut: item_stride is not a multiple of 4 on a BGRA8 bitmap, this should never happen.");
+        }
+        let new_stride = (self.info.item_stride / 4) as usize;
+        let (w, h) = (self.w() as usize, self.h() as usize);
+        let bgra_slice: &mut [rgb::alt::BGRA<u8>] = bytemuck::cast_slice_mut(self.slice);
+
+        Some(ScanlineIterMut {
+            current_y: 0,
+            t_per_pixel: 1, // One BGRA struct per pixel
+            t_per_row: w,
+            t_stride: new_stride,
+            w,
+            h,
+            info: &self.info.info,
+            remaining_slice: bgra_slice,
+            finished: false,
+        })
+    }
+}
+
+impl<'a> BitmapWindowMut<'a, f32> {
+    /// Creates an iterator over f32 scanlines
+    pub fn scanlines(&mut self) -> ScanlineIterMut<'_, f32> {
+        ScanlineIterMut::new(self.slice, &self.info).unwrap()
+    }
+}
+
+// Example usage test
+#[test]
+// Example usage test
+#[test]
+fn test_scanline_iterator() {
+    let mut c = BitmapsContainer::with_capacity(1);
+    let b1 = c.create_bitmap_u8(
+        10, 10,
+        PixelLayout::BGRA,
+        false,
+        true,
+        ColorSpace::StandardRGB,
+        BitmapCompositing::ReplaceSelf
+    ).unwrap();
+
+    let mut bitmap = c.try_borrow_mut(b1).unwrap();
+    let mut window = bitmap.get_window_u8().unwrap();
+
+    // Test u8 scanlines
+    for scanline in window.scanlines() {
+        assert_eq!(scanline.row.len(), scanline.w as usize * scanline.info.channels());
+    }
+
+    // Test BGRA scanlines
+    for scanline in window.scanlines_bgra().unwrap() {
+        assert_eq!(scanline.row.len(), scanline.w as usize);
+        // Each item is one BGRA pixel
     }
 }
 
