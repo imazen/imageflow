@@ -119,6 +119,7 @@ jobs:
             features: mimalloc
             cross: 'true'
             skip-publish: 'true'
+            static: true
 
           - name: linux-musl-arm64
             suffix: linux-musl-arm64
@@ -130,6 +131,7 @@ jobs:
             features: mimalloc
             cross: 'true'
             skip-publish: 'true'
+            static: true
 
     runs-on: ${{ matrix.os }}
     name: "${{ (matrix.cross == 'true') && 'cross ' || ''}}${{ matrix.name }}${{ matrix.target-cpu && format(' cpu: {0}', matrix.target-cpu) }}${{ matrix.target && format(' target: {0}', matrix.target) }}${{ matrix.features && format(' features: {0}', matrix.features) }} runs-on:${{ matrix.os }}"
@@ -194,7 +196,7 @@ jobs:
       - name: Set more env vars
         shell: bash
         run: |
-          echo "IMAGEFLOW_NUGET_VERSION=${{ github.ref_name || 'vTEST' }}" >> $GITHUB_ENV
+          echo "IMAGEFLOW_NUGET_VERSION=${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TAG_SHA_SUFFIX=imageflow-${{ env.TAG_SHA_SUFFIX }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TOOL_PATH=${{ env.REL_BINARIES_DIR }}imageflow_tool${{ contains(matrix.os, 'windows') && '.exe' || '' }}" >> $GITHUB_ENV
 
@@ -313,7 +315,7 @@ jobs:
           BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
 
       - name: "Create NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }}"
-        if: contains(matrix.target, 'musl') == 'false'
+        if: !matrix.static 
         shell: bash
         run: ./ci/pack_nuget/pack.sh
         env:
