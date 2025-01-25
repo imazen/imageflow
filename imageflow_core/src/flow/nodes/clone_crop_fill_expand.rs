@@ -1,5 +1,5 @@
 use super::internal_prelude::*;
-use crate::graphics::bitmaps::BitmapCompositing;
+use crate::graphics::{bitmaps::BitmapCompositing, color};
 
 
 pub static COPY_RECT: CopyRectNodeDef = CopyRectNodeDef{};
@@ -104,25 +104,14 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
 
             bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
 
-            unsafe {
-
-                if x2 <= x1 || y2 <= y1 || (x1 as i32) < 0 || (y1 as i32) < 0 || x2 > bitmap.w() || y2 > bitmap.h(){
-                    return Err(nerror!(crate::ErrorKind::InvalidCoordinates, "Invalid coordinates for {}x{} bitmap: {:?}", bitmap.w(), bitmap.h(), p));
-                }
-
-
-                let mut bitmap_bgra = bitmap.get_window_u8().unwrap().to_bitmap_bgra()?;
-
-
-                crate::graphics::fill::flow_bitmap_bgra_fill_rect(
-                                                    &mut bitmap_bgra,
-                                                    x1,
-                                                    y1,
-                                                    x2,
-                                                    y2,
-                                                    color.clone().to_u32_bgra().unwrap())
-                    .map_err(|e| e.at(here!()))?;
+            if x2 <= x1 || y2 <= y1 || (x1 as i32) < 0 || (y1 as i32) < 0 || x2 > bitmap.w() || y2 > bitmap.h(){
+                return Err(nerror!(crate::ErrorKind::InvalidCoordinates, "Invalid coordinates for {}x{} bitmap: {:?}", bitmap.w(), bitmap.h(), p));
             }
+            let mut window = bitmap.get_window_u8().unwrap();
+
+            window.fill_rect(x1, y1, x2, y2, &color)
+                .map_err(|e| e.at(here!()))?;
+
             Ok(())
         } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need FillRect, got {:?}", p))

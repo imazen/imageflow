@@ -16,24 +16,17 @@ fn benchmark_transpose(ctx: &mut Criterion) {
         for h in (1000u32..3000u32).step_by(1373) {
             let c = Context::create().unwrap();
             let mut a = Bitmap::create_u8(w, h, PixelLayout::BGRA, true, true, ColorSpace::StandardRGB,BitmapCompositing::ReplaceSelf).unwrap();
-            let mut a = unsafe {
-                let mut a_bgra = a.get_window_u8().unwrap().to_bitmap_bgra().unwrap();
-                a_bgra.fill_rect( 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
-                a_bgra
-            };
             let mut b = Bitmap::create_u8(h,w, PixelLayout::BGRA, true, true, ColorSpace::StandardRGB,BitmapCompositing::ReplaceSelf).unwrap();
-            let mut b = unsafe {
-                let a_bgra=b.get_window_u8().unwrap().to_bitmap_bgra().unwrap();
-                a_bgra
-            };
+            let mut a_window = a.get_window_u8().unwrap();
+            let mut b_window = b.get_window_u8().unwrap();
+
+            a_window.fill_rect(0, 0, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
 
             let mut group = ctx.benchmark_group(&format!("transpose w={} && h={}", w, h));
             group.measurement_time(Duration::from_secs(3));
 
             group.bench_function("Rust", |bencher| bencher.iter(|| {
-                unsafe {
-                    assert_eq!(imageflow_core::graphics::transpose::flow_bitmap_bgra_transpose(&mut a as *mut BitmapBgra, &mut b as *mut BitmapBgra), Ok(()))
-                }
+                imageflow_core::graphics::transpose::bitmap_window_transpose(&mut a_window, &mut b_window).unwrap();
             }));
 
             group.finish();
@@ -51,11 +44,8 @@ fn benchmark_flip_v(ctx: &mut Criterion) {
             for h in (500u32..3000u32).step_by(2373){
                 let c = Context::create().unwrap();
                 let mut bitmap_a = Bitmap::create_u8(w, h, fmt, true, true, ColorSpace::StandardRGB,BitmapCompositing::ReplaceSelf).unwrap();
-                let mut a = unsafe {
-                    let mut a_bgra = bitmap_a.get_window_u8().unwrap().to_bitmap_bgra().unwrap();
-                    a_bgra.fill_rect( 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
-                    a_bgra
-                };
+                bitmap_a.get_window_u8().unwrap().fill_rect(0, 0, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
+                let mut a = unsafe { bitmap_a.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
 
                 let mut group = ctx.benchmark_group(&format!("flip_v w={} && h={} fmt={:?}",w,h,fmt));
 
@@ -80,12 +70,9 @@ fn benchmark_flip_h(ctx: &mut Criterion) {
             for h in (500u32..3000u32).step_by(2373){
                 let c = Context::create().unwrap();
                 let mut a = Bitmap::create_u8(w, h, fmt, true, true, ColorSpace::StandardRGB,BitmapCompositing::ReplaceSelf).unwrap();
-                let mut a = unsafe {
-                    let mut a_bgra = a.get_window_u8().unwrap().to_bitmap_bgra().unwrap();
-                    a_bgra.fill_rect( 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
-                    a_bgra
-                };
+                a.get_window_u8().unwrap().fill_rect(0, 0, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
 
+                let mut a = unsafe { a.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
                 let mut group = ctx.benchmark_group(&format!("flip_h w={} && h={} fmt={:?}",w,h,fmt));
 
                 group.bench_function("Rust", |b| b.iter(|| {

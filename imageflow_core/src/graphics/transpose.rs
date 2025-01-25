@@ -570,7 +570,7 @@ pub fn bitmap_window_transpose(
     to: &mut BitmapWindowMut<u8>
 ) -> Result<(), FlowError> {
     if from.w() != to.h() || from.h() != to.w() || from.info().pixel_layout() != to.info().pixel_layout() {
-        return Err(nerror!(ErrorKind::InvalidArgument, "Canvas and input formats must be the same and dimensions must be swapped"));
+        return Err(nerror!(ErrorKind::InvalidArgument, "For transposition, canvas and input formats must be the same and dimensions must be swapped"));
     }
 
     if from.info().pixel_layout() != PixelLayout::BGRA {
@@ -588,30 +588,6 @@ pub fn bitmap_window_transpose(
     let to_stride = to.info().item_stride() as usize / 4;
     let width = from.w() as usize;
     let height = from.h() as usize;
-
-    transpose_u32_slices(from_slice, to_slice, from_stride, to_stride, width, height).map_err(|e| e.at(here!()))
-}
-
-// Function for flow_bitmap_bgra
-pub unsafe fn flow_bitmap_bgra_transpose(
-    from: *mut flow_bitmap_bgra,
-    to: *mut flow_bitmap_bgra,
-) -> Result<(), FlowError> {
-    if (*from).w != (*to).h || (*from).h != (*to).w || (*from).fmt != (*to).fmt  {
-        return Err(nerror!(ErrorKind::InvalidArgument, "Canvas and input formats must be the same and dimensions must be swapped"));
-    }
-
-    if (*from).fmt != PixelFormat::Bgra32 && (*from).fmt != PixelFormat::Bgr32 {
-        return Err(nerror!(ErrorKind::InvalidArgument, "Only Bgra32 and Bgr32 are supported"));
-    }
-
-    let from_slice = std::slice::from_raw_parts((*from).pixels as *const u32, ((*from).stride * (*from).h) as usize / 4);
-    let to_slice = std::slice::from_raw_parts_mut((*to).pixels as *mut u32, ((*to).stride * (*to).h) as usize / 4);
-
-    let from_stride = (*from).stride as usize / 4;
-    let to_stride = (*to).stride as usize / 4;
-    let width = (*from).w as usize;
-    let height = (*from).h as usize;
 
     transpose_u32_slices(from_slice, to_slice, from_stride, to_stride, width, height).map_err(|e| e.at(here!()))
 }

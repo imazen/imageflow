@@ -69,7 +69,7 @@ fn test_trim_whitespace() {
 
 #[test]
 fn test_trim_whitespace_with_padding() {
-    
+
     compare_encoded(
         Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/whitespace-issue.png".to_owned())),
         "trim_whitespace_with_padding",
@@ -92,7 +92,7 @@ fn test_trim_whitespace_with_padding() {
 }
 #[test]
 fn test_trim_resize_whitespace_with_padding() {
-    
+
     compare_encoded(
         Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/whitespace-issue.png".to_owned())),
         "trim_resize_whitespace_with_padding",
@@ -115,7 +115,7 @@ fn test_trim_resize_whitespace_with_padding() {
 }
 #[test]
 fn test_trim_resize_whitespace_without_padding() {
-    
+
     compare_encoded(
         Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/whitespace-issue.png".to_owned())),
         "trim_resize_whitespace_without_padding",
@@ -138,7 +138,7 @@ fn test_trim_resize_whitespace_without_padding() {
 }
 #[test]
 fn test_trim_whitespace_with_padding_no_resize() {
-    
+
     compare_encoded(
         Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/whitespace-issue.png".to_owned())),
         "trim_whitespace_with_padding_no_resize",
@@ -1692,7 +1692,7 @@ fn test_detect_whitespace(){
 
 #[test]
 fn test_detect_whitespace_all_small_images(){
-    
+
     let red = Color::Srgb(ColorSrgb::Hex("FF0000FF".to_owned()));
     let blue = Color::Srgb(ColorSrgb::Hex("0000FFFF".to_owned()));
     let mut failed_count = 0;
@@ -1721,7 +1721,7 @@ fn test_detect_whitespace_all_small_images(){
             combinations.push((w, h, on_canvas));
         }
     }
-    // add large sizes  
+    // add large sizes
     for (w, h) in [(3000, 2000), (1370, 1370), (1896, 1896), (3000, 3000)]{
         let mut on_canvas = vec![];
         for x in [67,0,1,881]{
@@ -1737,7 +1737,7 @@ fn test_detect_whitespace_all_small_images(){
     }
 
     let mut failures = vec![];
-    
+
     for (w, h, on_canvas) in combinations{
         if w < 3 || h < 3 {
             continue;
@@ -1758,7 +1758,7 @@ fn test_detect_whitespace_all_small_images(){
 
             ).unwrap();
 
-            
+
             let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).unwrap();
 
             let mut b = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
@@ -1787,7 +1787,7 @@ fn test_detect_whitespace_all_small_images(){
         }
         ctx.destroy().unwrap();
     }
-  
+
     if failed_count > 0{
         // skip these specific failures for now
         // Failed to correctly detect 1896x1370 dot at 0,67 within 1896x1896. Detected Detected x2=1895(1896).
@@ -1821,10 +1821,11 @@ fn test_detect_whitespace_basic(){
 
     {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key_a).unwrap();
+        let mut window = bitmap.get_window_u8().unwrap();
+
+        window.fill_rect(1, 1, 9, 9, &red).unwrap();
+
         let mut b = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
-
-
-        b.fill_rect(1, 1, 9, 9, &red).unwrap();
         let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
         assert_eq!(r.x1, 1);
         assert_eq!(r.y1, 1);
@@ -1845,9 +1846,9 @@ fn test_detect_whitespace_basic(){
 
     {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key_b).unwrap();
+        let mut window = bitmap.get_window_u8().unwrap();
+        window.fill_rect(2, 3, 70, 70, &red).unwrap();
         let mut b = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
-
-        b.fill_rect(2, 3, 70, 70, &red).unwrap();
         let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
         assert_eq!(r.x1, 2);
         assert_eq!(r.y1, 3);

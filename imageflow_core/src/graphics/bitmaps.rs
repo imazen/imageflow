@@ -354,6 +354,10 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
 
 impl<'a>  BitmapWindowMut<'a, u8> {
 
+    pub fn fill_rect(&mut self, x: u32, y: u32, x2: u32, y2: u32, color: &imageflow_types::Color) -> Result<(), FlowError>{
+        let color_srgb_argb = color.to_color_32()?;
+        self.fill_rectangle(color_srgb_argb, x, y, x2, y2)
+    }
     pub fn fill_rectangle(&mut self, color: imageflow_helpers::colors::Color32, x: u32, y: u32, x2: u32, y2: u32) -> Result<(), FlowError>{
         if y2 == y || x2 == x { return Ok(()); } // Don't fail on zero width rect
         if y2 <= y || x2 <= x || x2 > self.w() || y2 > self.h(){
@@ -372,6 +376,15 @@ impl<'a>  BitmapWindowMut<'a, u8> {
 
         for line in rest.scanlines(){
             line.row.copy_from_slice(&top.slice_mut()[0..line.row.len()]);
+        }
+        Ok(())
+    }
+
+    pub fn set_alpha_to_255(&mut self) -> Result<(), FlowError>{
+        for line in self.scanlines_bgra()?{
+            for pix in line.row{
+                pix.a = 255;
+            }
         }
         Ok(())
     }
@@ -655,17 +668,10 @@ impl Bitmap{
 
         if let BitmapCompositing::BlendWithMatte(c) = compositing_mode{
             let color_val = c.clone();
-            let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
             if color_val != imageflow_types::Color::Transparent {
-                unsafe {
-                    b.get_window_u8().unwrap().to_bitmap_bgra()
-                        .map_err(|e| e.at(here!()))?
-                        .fill_rect(0,
-                                  0,
-                                  w as u32,
-                                  h as u32,
-                                  &color_val)?;
-                }
+                b.get_window_u8().unwrap()
+                    .fill_rect(0, 0, w as u32, h as u32, &color_val)
+                    .map_err(|e| e.at(here!()))?;
             }
         }
         Ok(b)
@@ -732,6 +738,38 @@ impl<'a, T> ScanlineIterMut<'a, T> {
             return None;
         }
         Some(Self { info: info.surface_info(), remaining_slice: slice, current_y: 0, t_per_pixel, t_per_row, t_stride, w, h, finished: false })
+    }
+    pub fn try_cast_from<K>(from_slice: &'a mut [K], info: &'a BitmapInfo) -> Result<Self, FlowError>
+    where T: rgb::Pod, K: rgb::Pod {
+        let w = info.width() as usize;
+        let h = info.height() as usize;
+        let old_slice_len = from_slice.len();
+        let old_stride = info.item_stride as usize;
+
+        match bytemuck::try_cast_slice_mut::<K,T>(from_slice){
+            Ok(slice) => {
+                let factor = old_slice_len / slice.len();
+                if old_slice_len % slice.len() != 0{
+                    panic!("ScanlineIterMut:try_cast: new casted slice length {} not a multiple of old slice length {}: ", slice.len(), old_slice_len);
+                }
+                let t_per_pixel = info.channels() / factor;
+                if info.channels() != t_per_pixel{
+                    panic!("info.channels() {} != t_per_pixel {}", info.channels(), t_per_pixel);
+                }
+                let t_stride = info.item_stride as usize / factor;
+                let t_per_row = info.width() as usize * t_per_pixel;
+                let padding = t_stride - t_per_row;
+                if slice.len() < t_stride * h - padding {
+                    panic!("ScanlineIterMut:try_cast: new slice too short: {} < {} * {} - {}", slice.len(), t_stride, h, padding);
+                }
+
+                return Ok(Self { info: info.surface_info(),
+                     remaining_slice: slice, current_y: 0, t_per_pixel, t_per_row, t_stride, w, h, finished: false });
+            }
+            Err(e) => {
+                return Err(nerror!(ErrorKind::InvalidArgument, "Failed to cast slice: {}", e));
+            }
+        }
     }
 }
 
@@ -834,29 +872,13 @@ impl<'a> BitmapWindowMut<'a, u8> {
     }
 
     /// Creates an iterator over BGRA scanlines
-    pub fn scanlines_bgra(&mut self) -> Option<ScanlineIterMut<'_, rgb::alt::BGRA<u8>>> {
+    pub fn scanlines_bgra(&mut self) -> Result<ScanlineIterMut<'_, rgb::alt::BGRA<u8>>, FlowError> {
         if self.info.pixel_layout() != PixelLayout::BGRA {
-            return None;
+            return Err(nerror!(ErrorKind::InvalidArgument, "Bitmap is not BGRA"));
         }
-        if self.info.item_stride as usize % 4 != 0 {
-            panic!("ScanlineIterMut: item_stride is not a multiple of 4 on a BGRA8 bitmap, this should never happen.");
-        }
-        let new_stride = (self.info.item_stride / 4) as usize;
-        let (w, h) = (self.w() as usize, self.h() as usize);
-        let bgra_slice: &mut [rgb::alt::BGRA<u8>] = bytemuck::cast_slice_mut(self.slice);
-
-        Some(ScanlineIterMut {
-            current_y: 0,
-            t_per_pixel: 1, // One BGRA struct per pixel
-            t_per_row: w,
-            t_stride: new_stride,
-            w,
-            h,
-            info: &self.info.info,
-            remaining_slice: bgra_slice,
-            finished: false,
-        })
+        return ScanlineIterMut::try_cast_from::<u8>(self.slice, &self.info);
     }
+
 }
 
 impl<'a> BitmapWindowMut<'a, f32> {
@@ -866,8 +888,6 @@ impl<'a> BitmapWindowMut<'a, f32> {
     }
 }
 
-// Example usage test
-#[test]
 // Example usage test
 #[test]
 fn test_scanline_iterator() {
