@@ -1,5 +1,6 @@
 use crate::graphics::prelude::*;
 
+#[deprecated(since = "0.1.0", note = "Stop using flow_bitmap_bgra_fill_rect, use BitmapWindowMut<'a, u8>.fill_rect")]
 pub unsafe fn flow_bitmap_bgra_fill_rect(
     b: &mut crate::ffi::BitmapBgra,
     x1: u32,
