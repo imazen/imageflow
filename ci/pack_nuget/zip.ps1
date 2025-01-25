@@ -26,6 +26,9 @@ param(
 $ArchiveFile = $ArchiveFile -replace '/', '\'
 $OriginalArchiveFile = $ArchiveFile
 
+# Get just the filename from OriginalArchiveFile using the proper api
+$OriginalArchiveFileName = (Get-Item -Path $ArchiveFile).Name
+
 # Reasoning: Ensure the archive file has a .zip extension to comply with Compress-Archive requirements.
 # Goal: Append .zip if the provided archive filename does not already end with .zip
 if (-not $ArchiveFile.EndsWith('.zip', [System.StringComparison]::InvariantCultureIgnoreCase)) {
@@ -36,6 +39,7 @@ if (-not $ArchiveFile.EndsWith('.zip', [System.StringComparison]::InvariantCultu
 # Reasoning: Convert forward slashes to backslashes in all paths for Windows compatibility.
 # Goal: Ensure all provided paths use the correct directory separator.
 $Paths = $Paths | ForEach-Object { $_ -replace '/', '\' }
+Write-Host "Compressing the following files: $Paths"
 
 # Reasoning: Determine if the archive already exists to decide between creating a new archive or updating an existing one.
 # Goal: Utilize the -Update flag when appropriate to add files to an existing archive.
@@ -52,8 +56,8 @@ try {
     # Reasoning: Rename the archive back to the original filename if it was modified.
     # Goal: Maintain the user's intended archive filename without the .zip extension in the final output.
     if ($ArchiveFile -ne $OriginalArchiveFile) {
-        Write-Host "Renaming '$ArchiveFile' back to '$OriginalArchiveFile'..."
-        Rename-Item -Path $ArchiveFile -NewName $OriginalArchiveFile -ErrorAction Stop
+        Write-Host "Renaming '$ArchiveFile' back to '$OriginalArchiveFileName'..."
+        Rename-Item -Path $ArchiveFile -NewName $OriginalArchiveFileName -ErrorAction Stop
     }
 
     # Reasoning: Indicate successful completion of the compression and renaming process.
