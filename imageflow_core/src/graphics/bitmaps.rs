@@ -125,7 +125,8 @@ impl BitmapBuffer{
 
 pub struct BitmapWindowMut<'a, T>{
     slice: &'a mut [T],
-    info: BitmapInfo
+    info: BitmapInfo,
+    is_sub_window: bool
 }
 
 // impl debug for Bitmap
@@ -340,6 +341,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         BitmapWindowMut{
             info: self.info.clone(),
             slice: self.slice,
+            is_sub_window: self.is_sub_window
         }
     }
 
@@ -348,6 +350,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
             return None;// Err(nerror!(ErrorKind::InvalidArgument, "x1,y1,x2,y2 must be within window bounds"));
         }
         let offset = (x1 * self.info.channels() as u32) + (y1 * self.info.item_stride());
+        let (orig_w, orig_h) = (self.w(), self.h());
         Some(BitmapWindowMut{
             slice: &mut self.slice[offset as usize..],
             info: BitmapInfo {
@@ -355,7 +358,8 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
                 h: y2 - y1,
                 item_stride: self.info.item_stride(),
                 info: self.info.info.clone()
-            }
+            },
+            is_sub_window: (x1,y1,x2,y2) != (0,0,orig_w,orig_h)
         })
     }
 
@@ -375,7 +379,8 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         self.info.h = y;
         Some(BitmapWindowMut{
             slice: bottom,
-            info: info2
+            info: info2,
+            is_sub_window: true
         })
     }
 
@@ -384,10 +389,17 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
 impl<'a>  BitmapWindowMut<'a, u8> {
 
     pub fn fill_rect(&mut self, x: u32, y: u32, x2: u32, y2: u32, color: &imageflow_types::Color) -> Result<(), FlowError>{
+
+
         let color_srgb_argb = color.to_color_32()?;
-        self.fill_rectangle(color_srgb_argb, x, y, x2, y2)
+        self.fill_rectangle(color_srgb_argb, x, y, x2, y2).map_err(|e| e.at(here!()))
     }
     pub fn fill_rectangle(&mut self, color: imageflow_helpers::colors::Color32, x: u32, y: u32, x2: u32, y2: u32) -> Result<(), FlowError>{
+        if let BitmapCompositing::BlendWithMatte(_) = self.info().compose(){
+            if self.is_sub_window || (x,y,x2,y2) != (0,0,self.w(),self.h()){
+                return Err(nerror!(ErrorKind::InvalidArgument, "Cannot draw a rectangle on a sub-rectangle of a bitmap in BlendWithMatte mode"));
+            }
+        }
         if y2 == y || x2 == x { return Ok(()); } // Don't fail on zero width rect
         if y2 <= y || x2 <= x || x2 > self.w() || y2 > self.h(){
             return Err(nerror!(ErrorKind::InvalidArgument, "Coordinates {},{} {},{} must be within image dimensions {}x{}", x, y, x2, y2, self.w(), self.h()));        }
@@ -399,21 +411,21 @@ impl<'a>  BitmapWindowMut<'a, u8> {
 
         let mut top = self.window(x, y, x2, y2).unwrap();
 
-        if y2 > y + 2{
-            // Supposed to be a bit faster to memcpy than memset?
-            let mut rest = top.split_off(1).unwrap();
-            for top_lines in top.scanlines_bgra().unwrap(){
-                top_lines.row.fill(bgra);
-            }
+        // if y2 > y + 2{
+        //     // Supposed to be a bit faster to memcpy than memset?
+        //     let mut rest = top.split_off(1).unwrap();
+        //     for top_lines in top.scanlines_bgra().unwrap(){
+        //         top_lines.row.fill(bgra);
+        //     }
 
-            for line in rest.scanlines(){
-                line.row.copy_from_slice(&top.slice_mut()[0..line.row.len()]);
-            }
-        }else{
+        //     for line in rest.scanlines(){
+        //         line.row.copy_from_slice(&top.slice_mut()[0..line.row.len()]);
+        //     }
+        // }else{
             for line in top.scanlines_bgra().unwrap(){
                 line.row.fill(bgra);
             }
-        }
+        //}
 
         Ok(())
     }
@@ -444,7 +456,8 @@ impl Bitmap{
         self.get_u8_slice().map(|s| {
             BitmapWindowMut{
                 slice: &mut s[offset..],
-                info
+                info,
+                is_sub_window: false
             }
         })
     }
@@ -456,7 +469,8 @@ impl Bitmap{
         self.get_f32_slice().map(|s| {
             BitmapWindowMut{
                 slice: &mut s[offset..],
-                info
+                info,
+                is_sub_window: false
             }
         })
     }

@@ -176,6 +176,12 @@ impl BitmapBgra {
 
 
     pub fn fill_rect(&mut self, x1: u32, y1: u32, x2: u32, y2: u32, color: &s::Color) -> Result<()> {
+        if self.compositing_mode == BitmapCompositingMode::BlendWithMatte{
+            if (0,0,self.w,self.h) != (x1,y1,x2,y2){
+                return Err(nerror!(ErrorKind::InvalidArgument, "Cannot draw on a sub-rectangle of a bitmap in BlendWithMatte mode"));
+            }
+        }
+
         let color_srgb_argb = color.clone().to_u32_bgra().unwrap();
         unsafe {
             crate::graphics::fill::flow_bitmap_bgra_fill_rect(self, x1,y1,x2,y2, color_srgb_argb)

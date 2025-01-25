@@ -1761,6 +1761,9 @@ fn test_detect_whitespace_all_small_images(){
 
             let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).unwrap();
 
+            bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
+
+
             let mut b = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
 
             for (x, y, size_w, size_h) in on_canvas{
@@ -1821,16 +1824,18 @@ fn test_detect_whitespace_basic(){
 
     {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key_a).unwrap();
+
+        bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
         let mut window = bitmap.get_window_u8().unwrap();
 
-        window.fill_rect(1, 1, 9, 9, &red).unwrap();
+        // This works if .to_bitmap_bgra() is called first
+        // or if
 
+        window.fill_rect(1, 1, 9, 9, &red).unwrap();
         let mut b = unsafe { window.to_bitmap_bgra().unwrap() };
+
         let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
-        assert_eq!(r.x1, 1);
-        assert_eq!(r.y1, 1);
-        assert_eq!(r.x2, 9);
-        assert_eq!(r.y2, 9);
+        assert_eq!((r.x1, r.y1, r.x2, r.y2), (1, 1, 9, 9));
     }
 
     let bitmap_key_b = bitmaps.create_bitmap_u8(
@@ -1846,6 +1851,7 @@ fn test_detect_whitespace_basic(){
 
     {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key_b).unwrap();
+        bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
         let mut window = bitmap.get_window_u8().unwrap();
         window.fill_rect(2, 3, 70, 70, &red).unwrap();
         let mut b = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
