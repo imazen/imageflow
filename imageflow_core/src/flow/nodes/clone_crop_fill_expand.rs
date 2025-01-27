@@ -479,24 +479,22 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
                     let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
                         .map_err(|e| e.at(here!()))?;
 
-                    unsafe {
-                        let frame = bitmap.get_window_u8()
-                            .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
-                            .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+
+                    let frame = bitmap.get_window_u8().unwrap();
 
 
-                        if let Some(rect) = crate::graphics::whitespace::detect_content(&frame, threshold) {
-                            if rect.x2 <= rect.x1 || rect.y2 <= rect.y1 {
-                                return Err(nerror!(crate::ErrorKind::InvalidState, "Whitespace detection returned invalid rectangle"));
-                            }
-                            let padding = (percent_padding / 100f32 * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as i64;
-                            //eprintln!("Detected {}x{} whitespace rect: {:?} within {}x{}, padding: {}", rect.x2 - rect.x1, rect.y2 - rect.y1, rect, frame.w, frame.h, padding);
-                            Ok((cmp::max(0, rect.x1 as i64 - padding) as u32, cmp::max(0, rect.y1 as i64 - padding) as u32,
-                                cmp::min(bitmap.w() as i64, rect.x2 as i64 + padding) as u32, cmp::min(bitmap.h() as i64, rect.y2 as i64 + padding) as u32))
-                        } else {
-                            return Err(nerror!(crate::ErrorKind::InvalidState, "Failed to complete whitespace detection"));
+                    if let Some(rect) = crate::graphics::whitespace::detect_content(&frame, threshold) {
+                        if rect.x2 <= rect.x1 || rect.y2 <= rect.y1 {
+                            return Err(nerror!(crate::ErrorKind::InvalidState, "Whitespace detection returned invalid rectangle"));
                         }
+                        let padding = (percent_padding / 100f32 * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as i64;
+                        //eprintln!("Detected {}x{} whitespace rect: {:?} within {}x{}, padding: {}", rect.x2 - rect.x1, rect.y2 - rect.y1, rect, frame.w, frame.h, padding);
+                        Ok((cmp::max(0, rect.x1 as i64 - padding) as u32, cmp::max(0, rect.y1 as i64 - padding) as u32,
+                            cmp::min(bitmap.w() as i64, rect.x2 as i64 + padding) as u32, cmp::min(bitmap.h() as i64, rect.y2 as i64 + padding) as u32))
+                    } else {
+                        return Err(nerror!(crate::ErrorKind::InvalidState, "Failed to complete whitespace detection"));
                     }
+
                 },
                 other => { Err(nerror!(crate::ErrorKind::InvalidOperation, "Cannot CropWhitespace without a parent bitmap; got {:?}", other)) }
             }?;

@@ -15,8 +15,6 @@ use std::path::Path;
 use imageflow_core::graphics::bitmaps::BitmapWindowMut;
 use imageflow_core::{Context, FlowError, ErrorKind};
 
-use imageflow_core::ffi::BitmapBgra;
-use rgb::alt::BGRA8;
 use s::PixelLayout;
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -743,7 +741,7 @@ pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'
                 (image_context.as_ref(),key )
             }
         };
-        let mut res = false;
+        let res ;
         {
                 let expected_bitmaps = expected_context.borrow_bitmaps()
                 .map_err(|e| e.at(here!())).unwrap();
