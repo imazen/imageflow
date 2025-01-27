@@ -67,44 +67,6 @@ pub unsafe fn flow_bitmap_bgra_apply_color_matrix(
             }
             y = y.wrapping_add(1)
         }
-    } else if ch == 3 as i32 as u32 {
-        let mut y_0: u32 = row;
-        while y_0 < h {
-            let mut x_0: u32 = 0 as i32 as u32;
-            while x_0 < w {
-                let data_0: *mut libc::c_uchar = (*bmp)
-                    .pixels
-                    .offset(stride.wrapping_mul(y_0) as isize)
-                    .offset(x_0.wrapping_mul(ch) as isize);
-                let r_0: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(0) * *data_0.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(0) * *data_0.offset(1) as i32 as f32
-                        + *(*m.offset(2)).offset(0) * *data_0.offset(0) as i32 as f32
-                        + m40,
-                );
-                let g_0: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(1) * *data_0.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(1) * *data_0.offset(1) as i32 as f32
-                        + *(*m.offset(2)).offset(1) * *data_0.offset(0) as i32 as f32
-                        + m41,
-                );
-                let b_0: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(2) * *data_0.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(2) * *data_0.offset(1) as i32 as f32
-                        + *(*m.offset(2)).offset(2) * *data_0.offset(0) as i32 as f32
-                        + m42,
-                );
-                let newdata_0: *mut u8 = (*bmp)
-                    .pixels
-                    .offset(stride.wrapping_mul(y_0) as isize)
-                    .offset(x_0.wrapping_mul(ch) as isize);
-                *newdata_0.offset(0) = b_0;
-                *newdata_0.offset(1) = g_0;
-                *newdata_0.offset(2) = r_0;
-                x_0 = x_0.wrapping_add(1)
-            }
-            y_0 = y_0.wrapping_add(1)
-        }
     } else {
         //Unsupported_pixel_format
         return Err(nerror!(ErrorKind::InvalidState));
@@ -168,40 +130,6 @@ pub unsafe fn flow_bitmap_float_apply_color_matrix(
                     x = x.wrapping_add(1)
                 }
                 y = y.wrapping_add(1)
-            }
-            Ok(())
-        }
-        3 => {
-            let mut y_0: u32 = row;
-            while y_0 < h {
-                let mut x_0: u32 = 0 as i32 as u32;
-                while x_0 < w {
-                    let data_0: *mut f32 = (*bmp)
-                        .pixels
-                        .offset(stride.wrapping_mul(y_0) as isize)
-                        .offset(x_0.wrapping_mul(ch) as isize);
-                    let r_0: f32 = *(*m.offset(0)).offset(0) * *data_0.offset(2)
-                        + *(*m.offset(1)).offset(0) * *data_0.offset(1)
-                        + *(*m.offset(2)).offset(0) * *data_0.offset(0)
-                        + *(*m.offset(4 as i32 as isize)).offset(0);
-                    let g_0: f32 = *(*m.offset(0)).offset(1) * *data_0.offset(2)
-                        + *(*m.offset(1)).offset(1) * *data_0.offset(1)
-                        + *(*m.offset(2)).offset(1) * *data_0.offset(0)
-                        + *(*m.offset(4 as i32 as isize)).offset(1);
-                    let b_0: f32 = *(*m.offset(0)).offset(2) * *data_0.offset(2)
-                        + *(*m.offset(1)).offset(2) * *data_0.offset(1)
-                        + *(*m.offset(2)).offset(2) * *data_0.offset(0)
-                        + *(*m.offset(4 as i32 as isize)).offset(2);
-                    let newdata_0: *mut f32 = (*bmp)
-                        .pixels
-                        .offset(stride.wrapping_mul(y_0) as isize)
-                        .offset(x_0.wrapping_mul(ch) as isize);
-                    *newdata_0.offset(0) = b_0;
-                    *newdata_0.offset(1) = g_0;
-                    *newdata_0.offset(2) = r_0;
-                    x_0 = x_0.wrapping_add(1)
-                }
-                y_0 = y_0.wrapping_add(1)
             }
             Ok(())
         }
