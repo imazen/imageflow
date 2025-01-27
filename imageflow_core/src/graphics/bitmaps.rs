@@ -1,5 +1,6 @@
 use crate::{FlowError, ErrorKind};
 use crate::ffi::{PixelFormat, BitmapFloat, BitmapBgra, BitmapCompositingMode};
+use imageflow_helpers::colors::Color32;
 use imageflow_types::{PixelBuffer, CompositingMode};
 use imgref::ImgRef;
 use std::slice;
@@ -775,61 +776,111 @@ impl Bitmap{
 /// Iterator that yields scanlines from a bitmap window
 pub struct ScanlineIterMut<'a, T> {
     info: &'a SurfaceInfo,
+    // slice should not contain trailing padding
     remaining_slice: &'a mut [T],
-    current_y: usize,
+    next_y: i32,
     t_per_pixel: usize,
     t_per_row: usize,
     t_stride: usize,
     w: usize,
-    h: usize,
+    h: i32,
     finished: bool,
+    reverse: bool,
 }
 // Display format for ScanlineIterMut
 // ScanlineIterMut({W}x{H}x{t_per_pixel}, y={current_y}) ({t_per_pixel} {T} per px * {w} => {t_per_row} {T} per row + padding {t_stride - t_per_row} => stride {t_stride} * ({h} - {y}) - offset {0} => {required_length}. Slice length {remaining_slice.len()})
 impl<'a, T> fmt::Display for ScanlineIterMut<'a, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name_of_t = std::any::type_name::<T>();
-        let padding = self.t_stride - self.t_per_row;
-        let required_length = self.t_stride * (self.h - self.current_y) - padding;
+        let padding = self.t_stride as i32 - self.t_per_row as i32;
+        let required_length = (self.t_stride as i32 * self.len() as i32) - padding;
         let remaining_slice_len = self.remaining_slice.len();
         let t_per_pixel = self.t_per_pixel;
         let w = self.w;
         let t_per_row = self.t_per_row;
         let t_stride = self.t_stride;
         let h = self.h;
-        let current_y = self.current_y;
-        write!(f, "ScanlineIterMut({w}x{h}x{t_per_pixel}, y={current_y}) ({t_per_pixel} {name_of_t} per px * {w} => {t_per_row} {name_of_t} per row + padding {padding} => stride {t_stride} * ({h} - {current_y}) - padding {padding} => {required_length}. Slice length {remaining_slice_len})")
+        let current_y = self.next_y;
+        let reverse = if self.reverse { "[reverse]" } else { "" };
+        write!(f, "ScanlineIterMut{reverse}({w}x{h}x{t_per_pixel}, y={current_y}) ({t_per_pixel} {name_of_t} per px * {w} => {t_per_row} {name_of_t} per row + padding {padding} => stride {t_stride} * ({h} - {current_y}) - padding {padding} => {required_length}. Slice length {remaining_slice_len})")
     }
 }
 
 impl<'a, T> ScanlineIterMut<'a, T> {
-    pub fn new(slice: &'a mut [T], info: &'a BitmapInfo) -> Option<Self> {
+    pub fn empty(info: &'a BitmapInfo) -> Self{
+        eprintln!("scanline_iter_mut::empty::{:?}", &info);
+        Self {
+            info: info.surface_info(),
+            remaining_slice: &mut [],
+            next_y: 0,
+            t_per_pixel: 0,
+            t_per_row: 0,
+            t_stride: 0,
+            w: 0,
+            h: 0,
+            finished: true,
+            reverse: false
+        }
+
+    }
+    pub fn new(slice: &'a mut [T], info: &'a BitmapInfo, reverse: bool) -> Option<Self> {
         let t_per_pixel = info.channels();
         let t_per_row = info.width() as usize * t_per_pixel;
         let t_stride = info.item_stride as usize;
         let w = info.width() as usize;
         let h = info.height() as usize;
+        if h == 0 || t_per_row > t_stride{
+            return Some(Self::empty(info));
+        }
+        if h > i32::MAX as usize{
+            panic!("Height {} is too large", h);
+        }
         let padding = t_stride - t_per_row;
         if slice.len() < t_stride * h - padding {
             return None;
         }
-        Some(Self { info: info.surface_info(), remaining_slice: slice, current_y: 0, t_per_pixel, t_per_row, t_stride, w, h, finished: false })
+        let start_y = if reverse { h as i32 - 1 } else { 0 };
+        let slice_cropped = &mut slice[..t_stride * h - padding];
+        let r = Self { info: info.surface_info(),
+            remaining_slice: slice_cropped,
+            next_y: start_y,
+            t_per_pixel,
+            t_per_row,
+            t_stride,
+            w,
+            h: h as i32,
+            finished: false,
+            reverse
+        };
+        //println!("new::{}", &r);
+        Some(r)
     }
-    pub fn try_cast_from<K>(from_slice: &'a mut [K], info: &'a BitmapInfo) -> Result<Self, FlowError>
+    pub fn try_cast_from<K>(from_slice: &'a mut [K], info: &'a BitmapInfo, reverse: bool) -> Result<Self, FlowError>
     where T: rgb::Pod, K: rgb::Pod {
         let w = info.width() as usize;
-        let h = info.height() as usize;
+        if info.height() > i32::MAX as u32{
+            panic!("Height {} is too large", info.height());
+        }
+        let h = info.height() as i32;
         let old_slice_len = from_slice.len();
         let old_stride = info.item_stride as usize;
+        let start_y = if reverse { h - 1 } else { 0 };
+
+        if h == 0 || old_stride == 0{
+            return Ok(Self::empty(info));
+        }
+
 
         match bytemuck::try_cast_slice_mut::<K,T>(from_slice){
-            Ok(slice) => {
+            Ok(mut slice) => {
+                if old_slice_len % slice.len() != 0{
+                    panic!("ScanlineIterMut:try_cast: new casted slice length {} not a multiple of old slice length {}: ", slice.len(), old_slice_len);
+                }
+
 
                 let (t_per_pixel, t_stride) = if old_slice_len > slice.len(){
                     let factor = old_slice_len / slice.len();
-                    if old_slice_len % slice.len() != 0{
-                        panic!("ScanlineIterMut:try_cast: new casted slice length {} not a multiple of old slice length {}: ", slice.len(), old_slice_len);
-                    }
+
                     let t_per_pixel = info.channels() / factor;
                     let t_stride = info.item_stride as usize / factor;
                     (t_per_pixel, t_stride)
@@ -847,12 +898,17 @@ impl<'a, T> ScanlineIterMut<'a, T> {
 
                 let t_per_row = info.width() as usize * t_per_pixel;
                 let padding = t_stride - t_per_row;
-                if slice.len() < t_stride * h - padding {
+                let slice_len = slice.len();
+                if slice.len() < t_stride * h as usize - padding {
                     panic!("ScanlineIterMut:try_cast: new slice too short: {} < {} * {} - {}", slice.len(), t_stride, h, padding);
                 }
+                slice = &mut slice[..t_stride * h as usize - padding];
 
-                return Ok(Self { info: info.surface_info(),
-                     remaining_slice: slice, current_y: 0, t_per_pixel, t_per_row, t_stride, w, h, finished: false });
+                let r = Self { info: info.surface_info(),
+                     remaining_slice: slice, next_y: start_y,
+                     t_per_pixel, t_per_row, t_stride, w, h, finished: false, reverse };
+                //println!("try_cast_from::{}", &r);
+                return Ok(r);
             }
             Err(e) => {
                 return Err(nerror!(ErrorKind::InvalidArgument, "Failed to cast slice: {}", e));
@@ -868,6 +924,12 @@ pub struct Scanline<'a, T> {
     t_per_pixel: usize,
     w: usize,
     h: usize,
+}
+
+impl<'a, T> fmt::Display for Scanline<'a, T>{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Scanline<{}[{}]>[y={}]({}x{}x{})", std::any::type_name::<T>(),self.row.len(), self.y, self.w, self.h, self.t_per_pixel)
+    }
 }
 impl<'a, T> Scanline<'a, T>{
     pub fn info(&self) -> &SurfaceInfo{
@@ -903,55 +965,85 @@ impl<'a, T> Scanline<'a, T>{
 impl<'a, T> ExactSizeIterator for ScanlineIterMut<'a, T> {
     #[inline]
     fn len(&self) -> usize {
-        self.h - self.current_y
+        self.length()
     }
 }
+
+impl<'a, T> ScanlineIterMut<'a, T> {
+    #[inline]
+    pub fn length(&self) -> usize{
+        let len = {
+            if self.finished {
+                return 0;
+            }
+            if self.reverse {
+                (self.next_y + 1) as usize
+            }else{
+                (self.h as i32 - self.next_y) as usize
+            }
+        };
+        //eprintln!("length::{} (h={}, y={}, finished={})", len, self.h, self.next_y, self.finished);
+        len
+    }
+}
+
 
 impl<'a, T> Iterator for ScanlineIterMut<'a, T> {
     type Item = Scanline<'a, T>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.finished {
-            return None;
-        }
-        if self.current_y >= self.h {
-            self.finished = true;
-            return None;
-        }
 
+        if self.length() == 0{
+            //eprintln!("next::none{}", &self);
+            return None;
+        }
+        self.finished = self.length() <= 1;
         // Take ownership of the slice temporarily
         let slice = std::mem::replace(&mut self.remaining_slice, &mut []);
 
-        let return_row;
-        if  self.current_y == self.h -1 {
-            if slice.len() < self.t_per_row {
-                panic!("Remaining_slice length {} is less than t_per_row {}, this should never happen. {}: ", slice.len(), self.t_per_row, &self);
-            }
-            return_row = &mut slice[..self.t_per_row];
-            self.finished = true;
+        let chop_len = if self.next_y + 1 == self.h as i32 {
+            self.t_per_row
         }else{
-            if slice.len() < self.t_stride {
-                panic!("Remaining_slice length {} is less than t_stride {}, this should never happen. {}: ", slice.len(), self.t_stride, &self);
-            }
-            // Safe split
-            let (row, next_slice) = slice.split_at_mut(self.t_stride);
-            self.remaining_slice = next_slice;
-            // Only return the actual pixel data, not the stride padding
-            return_row = &mut row[..self.t_per_row];
+            self.t_stride
+        };
+        if slice.len() < chop_len {
+            panic!("Remaining_slice length {} is less than chop_len {}, this should never happen. \n{}: ", slice.len(), chop_len, &self);
         }
 
-        let y = self.current_y;
-        self.current_y += 1;
+        // Safe split
+        let (a, b) = if self.reverse {
+            slice.split_at_mut(slice.len() - chop_len)
+        } else {
+            slice.split_at_mut(chop_len)
+        };
 
-        Some(Scanline {
-            y,
+        let return_row = if self.reverse{
+            self.remaining_slice = a;
+            &mut b[..self.t_per_row]
+        }else{
+            self.remaining_slice = b;
+            &mut a[..self.t_per_row]
+        };
+        let y = self.next_y;
+
+        if self.reverse {
+            self.next_y -= 1;
+        }else{
+            self.next_y += 1;
+        }
+
+        let r = Some(Scanline {
+            y: y as usize,
             info: self.info,
             row: return_row,
             t_per_pixel: self.t_per_pixel,
             w: self.w,
-            h: self.h,
-        })
+            h: self.h as usize,
+        });
+        //eprintln!("next::Some{}", &r.as_ref().unwrap());
+        //eprintln!("{}", &self);
+        r
     }
 
     #[inline]
@@ -959,7 +1051,7 @@ impl<'a, T> Iterator for ScanlineIterMut<'a, T> {
         if self.finished {
             (0, Some(0))
         } else {
-            let remaining = self.len();
+            let remaining = self.length();
             (remaining, Some(remaining))
         }
     }
@@ -968,7 +1060,12 @@ impl<'a, T> Iterator for ScanlineIterMut<'a, T> {
 impl<'a> BitmapWindowMut<'a, u8> {
     /// Creates an iterator over u8 scanlines
     pub fn scanlines(&mut self) -> ScanlineIterMut<'_, u8> {
-        ScanlineIterMut::new(self.slice, &self.info).unwrap()
+        ScanlineIterMut::new(self.slice, &self.info, false).unwrap()
+    }
+
+    /// Creates an iterator over u8 scanlines in reverse order
+    pub fn scanlines_reverse(&mut self) -> ScanlineIterMut<'_, u8> {
+        ScanlineIterMut::new(self.slice, &self.info, true).unwrap()
     }
 
     /// Creates an iterator over BGRA scanlines
@@ -976,8 +1073,15 @@ impl<'a> BitmapWindowMut<'a, u8> {
         if self.info.pixel_layout() != PixelLayout::BGRA {
             return Err(nerror!(ErrorKind::InvalidArgument, "Bitmap is not BGRA"));
         }
-        return ScanlineIterMut::try_cast_from::<u8>(self.slice, &self.info);
+        ScanlineIterMut::try_cast_from::<u8>(self.slice, &self.info, false)
     }
+
+    /// Creates an iterator over BGRA scanlines in reverse order
+    pub fn scanlines_bgra_reverse(&mut self) -> Result<ScanlineIterMut<'_, rgb::alt::BGRA<u8>>, FlowError> {
+        ScanlineIterMut::try_cast_from::<u8>(self.slice, &self.info, true)
+    }
+
+
 
     /// Call normalize_alpha first; this function does not skip unused alpha bytes, only unused whole pixels.
     /// Otherwise Bgr32 may be non-deterministic
@@ -996,16 +1100,45 @@ impl<'a> BitmapWindowMut<'a, u8> {
 impl<'a> BitmapWindowMut<'a, f32> {
     /// Creates an iterator over f32 scanlines
     pub fn scanlines(&mut self) -> ScanlineIterMut<'_, f32> {
-        ScanlineIterMut::new(self.slice, &self.info).unwrap()
+        ScanlineIterMut::new(self.slice, &self.info, false).unwrap()
     }
+
+    /// Creates an iterator over f32 scanlines in reverse order
+    pub fn scanlines_reverse(&mut self) -> ScanlineIterMut<'_, f32> {
+        ScanlineIterMut::new(self.slice, &self.info, true).unwrap()
+    }
+}
+
+#[test]
+fn test_scanline_for_1x1(){
+    let mut c = BitmapsContainer::with_capacity(1);
+    let b1 = c.create_bitmap_u8(
+        1, 1,
+        PixelLayout::BGRA,
+        false,
+        true,
+        ColorSpace::StandardRGB,
+        BitmapCompositing::ReplaceSelf
+    ).unwrap();
+    let mut bitmap = c.try_borrow_mut(b1).unwrap();
+    let mut window = bitmap.get_window_u8().unwrap();
+    window.fill_rectangle(Color32(0xFF0000FF), 0, 0, 1, 1).unwrap();
+    let mut row_count = 0;
+    for scanline in window.scanlines() {
+        assert_eq!(scanline.row.len(), scanline.w as usize * scanline.info.channels());
+        eprintln!("{}\n{:?}", &scanline, &scanline.row);
+        assert_eq!(scanline.row[0], 0xFF);
+        row_count += 1;
+    }
+    assert_eq!(row_count, window.info().height() as usize);
 }
 
 // Example usage test
 #[test]
-fn test_scanline_iterator() {
+fn test_scanline_iterator_bgra32() {
     let mut c = BitmapsContainer::with_capacity(1);
     let b1 = c.create_bitmap_u8(
-        10, 10,
+        5, 5,
         PixelLayout::BGRA,
         false,
         true,
@@ -1013,19 +1146,63 @@ fn test_scanline_iterator() {
         BitmapCompositing::ReplaceSelf
     ).unwrap();
 
+
     let mut bitmap = c.try_borrow_mut(b1).unwrap();
     let mut window = bitmap.get_window_u8().unwrap();
-
+    for y in 0..window.info().height(){
+        for x in 0..window.info().width(){
+            let color = Color32::from_rgba(x as u8, y as u8, 0, 255);
+            window.fill_rectangle(color, x, y, x + 1, y + 1).unwrap();
+        }
+    }
+    // for (i, pixel) in window.slice_mut().iter_mut().enumerate(){
+    //     *pixel = i as u8;
+    // }
     // Test u8 scanlines
     for scanline in window.scanlines() {
         assert_eq!(scanline.row.len(), scanline.w as usize * scanline.info.channels());
+        println!("{}\n{:?}", &scanline, &scanline.row);
+        for x in (0..scanline.w as usize).step_by(4){
+            assert_eq!(scanline.row[x..x+4], [0, scanline.y as u8, (x / 4) as u8, 255]);
+        }
     }
-
+    let mut row_count = 0;
+    for scanline in window.scanlines_bgra().unwrap() {
+        assert_eq!(scanline.row.len(), scanline.w as usize);
+        row_count += 1;
+    }
+    assert_eq!(row_count, window.info().height() as usize);
     // Test BGRA scanlines
     for scanline in window.scanlines_bgra().unwrap() {
         assert_eq!(scanline.row.len(), scanline.w as usize);
         // Each item is one BGRA pixel
+        println!("{}\n{:?}", &scanline, &scanline.row);
+        for x in 0..scanline.w as usize{
+            print!("{} ", scanline.row[x]);
+            assert_eq!(scanline.row[x], rgb::alt::BGRA8::new_bgra(0x00, scanline.y as u8, x as u8, 0xFF));
+        }
     }
 }
 
+#[test]
+fn test_scanline_iterator_f32_reverse() {
+    let mut c = BitmapsContainer::with_capacity(1);
+    let b1 = c.create_bitmap_f32(
+        10, 10,
+        PixelLayout::BGRA,
+        false,
+        true,
+        ColorSpace::StandardRGB
+    ).unwrap();
+
+    let mut bitmap = c.try_borrow_mut(b1).unwrap();
+    let mut window = bitmap.get_window_f32().unwrap();
+
+    for scanline in window.scanlines_reverse() {
+        assert_eq!(scanline.row.len(), scanline.w as usize * scanline.info.channels());
+    }
+    for scanline in window.scanlines() {
+        assert_eq!(scanline.row.len(), scanline.w as usize * scanline.info.channels());
+    }
+}
 
