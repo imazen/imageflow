@@ -272,7 +272,7 @@ pub fn compare_encoded_to_source(input: IoTestEnum, debug: bool, require: Constr
     let mut context2 = Context::create().unwrap();
 
     let bitmap_key = decode_input(&mut context2, input_copy);
-    let mut original_checksum = String::new();
+    let original_checksum;
     {
         let bitmaps = context2.borrow_bitmaps()
             .map_err(|e| e.at(here!())).unwrap();

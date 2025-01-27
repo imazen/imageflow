@@ -176,19 +176,16 @@ impl NodeDefMutateBitmap for FlipVerticalMutNodeDef{
         "imazen.flip_vertical_mutate"
     }
     fn mutate(&self, c: &Context, bitmap_key: BitmapKey,  p: &NodeParams) -> Result<()>{
-        unsafe {
-            let bitmaps = c.borrow_bitmaps()
-                .map_err(|e| e.at(here!()))?;
-            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
-                .map_err(|e| e.at(here!()))?;
 
-            let mut bitmap_bgra = bitmap.get_window_u8().unwrap()
-                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
 
-            crate::graphics::flip::flow_bitmap_bgra_flip_vertical(&mut bitmap_bgra)
-                .map_err(|e| e.at(here!()))?;
+        crate::graphics::flip::flow_bitmap_bgra_flip_vertical_safe(&mut bitmap)
+            .map_err(|e| e.at(here!()))?;
 
-        }
+
         Ok(())
     }
 }
@@ -204,20 +201,15 @@ impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
         "imazen.flip_vertical_mutate"
     }
     fn mutate(&self, c: &Context, bitmap_key: BitmapKey,  p: &NodeParams) -> Result<()>{
-        unsafe {
 
-            let bitmaps = c.borrow_bitmaps()
-                .map_err(|e| e.at(here!()))?;
-            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
-                .map_err(|e| e.at(here!()))?;
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
+        crate::graphics::flip::flow_bitmap_bgra_flip_horizontal_safe(&mut bitmap)
+            .map_err(|e| e.at(here!()))?;
 
-            let mut bitmap_bgra = bitmap.get_window_u8().unwrap()
-                    .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
 
-            crate::graphics::flip::flow_bitmap_bgra_flip_horizontal(&mut bitmap_bgra)
-                .map_err(|e| e.at(here!()))?;
-
-        }
         Ok(())
     }
 }
