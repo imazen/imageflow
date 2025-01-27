@@ -42,35 +42,24 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
                 .try_borrow_mut()
                 .map_err(|e| nerror!(ErrorKind::FailedBorrow))?;
 
-            let mut canvas_bgra = unsafe {
-                canvas_bitmap.get_window_u8().unwrap().to_bitmap_bgra()?
-            };
-
             let mut input_bitmap = bitmaps
                 .get(input_key).ok_or_else(|| nerror!(ErrorKind::BitmapKeyNotFound))?
                 .try_borrow_mut()
                 .map_err(|e| nerror!(ErrorKind::FailedBorrow))?;
 
-            let mut input_bgra = unsafe {
-                input_bitmap.get_window_u8().unwrap().to_bitmap_bgra()?
-            };
-
-            if input_bgra.w <= from_x || input_bgra.h <= from_y ||
-                input_bgra.w < from_x + w ||
-                input_bgra.h < from_y + h ||
-                canvas_bgra.w < x + w ||
-                canvas_bgra.h < y + h {
+            if input_bitmap.w() <= from_x || input_bitmap.h() <= from_y ||
+                input_bitmap.w() < from_x + w ||
+                input_bitmap.h() < from_y + h ||
+                canvas_bitmap.w() < x + w ||
+                canvas_bitmap.h() < y + h {
                 return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "Invalid coordinates. Canvas is {}x{}, Input is {}x{}, Params provided: {:?}",
-                         canvas_bgra.w,
-                         canvas_bgra.h,
-                         input_bgra.w,
-                         input_bgra.h,
+                         canvas_bitmap.w(),
+                         canvas_bitmap.h(),
+                         input_bitmap.w(),
+                         input_bitmap.h(),
                          p));
             }
-            crate::graphics::copy_rect::copy_rect(&mut input_bgra, &mut canvas_bgra, from_x, from_y, x, y, w, h)?;
-
-
-            canvas_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
+            crate::graphics::copy_rect::copy_rectangle(&mut input_bitmap, &mut canvas_bitmap, from_x, from_y, x, y, w, h)?;
 
             Ok(())
         } else {

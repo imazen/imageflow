@@ -160,8 +160,8 @@ pub fn get_result_dimensions(steps: &[s::Node], io: Vec<IoTestEnum>, debug: bool
 
     let result = build_steps(&mut context, &steps, io, None, debug).unwrap();
 
-    if let Some(b) = unsafe { bit.bitmap(&context) } {
-        (b.w, b.h)
+    if let Some((w, h)) = bit.bitmap_size(&context) {
+        (w as u32, h as u32)
     }else{
         panic!("execution failed: {:?}", result);
     }
@@ -964,14 +964,13 @@ impl BitmapBgraContainer{
 
     /// Returns a reference the bitmap
     /// This reference is only valid for the duration of the context it was created within
-    pub unsafe fn bitmap(&self, c: &Context) -> Option<BitmapBgra>{
+    pub fn bitmap_size(&self, c: &Context) -> Option<(usize, usize)>{
         if self.dest_bitmap.is_null(){
             None
         }else {
             Some(c.borrow_bitmaps().unwrap()
                 .try_borrow_mut(self.dest_bitmap).unwrap()
-                .get_window_u8().unwrap()
-                .to_bitmap_bgra().unwrap())
+                .size())
         }
     }
 }

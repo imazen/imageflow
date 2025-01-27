@@ -200,6 +200,11 @@ impl<'a> BitmapWindowMut<'a,u8> {
 
 impl<'a,T>  BitmapWindowMut<'a, T> {
 
+    #[inline]
+    pub fn is_cropped(&self) -> bool{
+        self.is_sub_window
+    }
+
     pub fn stride_padding(&self) -> usize{
         self.info.item_stride as usize - self.info.w as usize * self.info.channels() as usize
     }
@@ -598,7 +603,8 @@ impl BitmapInfo{
 pub struct Bitmap{
     buffer: BitmapBuffer,
     offset: u32,
-    info: BitmapInfo
+    info: BitmapInfo,
+    cropped: bool
 }
 impl Bitmap{
     #[inline]
@@ -608,6 +614,10 @@ impl Bitmap{
     #[inline]
     pub fn info(&self) -> &BitmapInfo{
         &self.info
+    }
+    #[inline]
+    pub fn size(&self) -> (usize, usize){
+        (self.w() as usize, self.h() as usize)
     }
     #[inline]
     pub fn set_alpha_meaningful(&mut self, value: bool){
@@ -625,7 +635,10 @@ impl Bitmap{
     pub fn h(&self) -> u32{
         self.info.h
     }
-
+    #[inline]
+    pub fn is_cropped(&self) -> bool{
+        self.cropped
+    }
     pub fn frame_info(&self) -> crate::flow::definitions::FrameInfo {
         crate::flow::definitions::FrameInfo {
             w: self.w() as i32,
@@ -691,7 +704,8 @@ impl Bitmap{
                     pixel_layout,
                     compose: BitmapCompositing::BlendWithSelf
                 }
-            }
+            },
+            cropped: false
         })
     }
     pub fn create_u8(w: u32,
@@ -723,7 +737,8 @@ impl Bitmap{
                     pixel_layout,
                     compose: compositing_mode.clone()
                 }
-            }
+            },
+            cropped: false
         };
 
         if let BitmapCompositing::BlendWithMatte(c) = compositing_mode{
@@ -747,6 +762,7 @@ impl Bitmap{
         self.offset = self.offset + (self.info.item_stride * y1) + (self.info.pixel_layout().channels() as u32 * x1);
         self.info.w = x2 - x1;
         self.info.h = y2 - y1;
+        self.cropped = true;
         Ok(())
     }
 
