@@ -525,24 +525,6 @@ fn diff_bytes(a: &[u8], b: &[u8]) -> (i64, i64, i64) {
 
 
 
-
-fn diff_bitmap_bytes(a: &BitmapBgra, b: &BitmapBgra) -> (i64, i64, i64) {
-    if a.w != b.w || a.h != b.h || a.fmt.bytes() != b.fmt.bytes() {
-        panic!("Bitmap dimensions differ. a:\n{:#?}\nb:\n{:#?}", a, b);
-    }
-
-    let width_bytes = a.w as usize * a.fmt.bytes();
-    (0isize..a.h as isize).map(|h| {
-        let a_contents_slice = unsafe { ::std::slice::from_raw_parts(a.pixels.offset(h * a.stride as isize), width_bytes) };
-        let b_contents_slice = unsafe { ::std::slice::from_raw_parts(b.pixels.offset(h * b.stride as isize), width_bytes) };
-
-        if a_contents_slice == b_contents_slice {
-            (0, 0, 0)
-        } else {
-            diff_bytes(a_contents_slice, b_contents_slice)
-        }
-    }).fold((0, 0, 0), |(a, b, c), (d, e, f)| (a + d, b + e, c + f))
-}
 fn diff_bitmap_windows(a: &mut BitmapWindowMut<u8>, b: &mut BitmapWindowMut<u8>) -> (i64, i64, i64) {
     if a.w() != b.w() || a.h() != b.h() || a.channels() != b.channels() {
         panic!("Bitmap dimensions differ. a:\n{:#?}\nb:\n{:#?}", a, b);
