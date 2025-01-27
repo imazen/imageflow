@@ -87,6 +87,10 @@ impl Color32{
         Color32(0)
     }
 
+    pub fn from_rgba(r: u8, g: u8, b: u8, a: u8) -> Color32{
+        Color32((a as u32) << 24 | (r as u32) << 16 | (g as u32) << 8 | (b as u32))
+    }
+
     pub fn to_rgba8(&self) -> rgb::RGBA8{
         rgb::RGBA8::new(((self.0 & 0xFF_00_00) >> 16) as u8,
                         ((self.0 & 0xFF_00) >> 8) as u8,
@@ -147,6 +151,8 @@ fn test_color32(){
     t("ffff", Color32(0xffffffff));
     t("ffffff", Color32(0xffffffff));
     t("ffffffff", Color32(0xffffffff));
+
+    assert_eq!(Color32::from_rgba(255, 0, 0, 255), parse_color_hex("#ff0000").unwrap());
 
 }
 
