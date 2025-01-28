@@ -202,6 +202,16 @@ impl<'a> BitmapWindowMut<'a,u8> {
 impl<'a,T>  BitmapWindowMut<'a, T> {
 
     #[inline]
+    pub fn size_16(&self) -> Result<(u16, u16), FlowError>{
+        let w = self.w();
+        let h = self.h();
+        if h > u16::MAX as u32 || w > u16::MAX as u32 {
+            return Err(nerror!(ErrorKind::InvalidArgument, "Bitmap size {}x{} is too large to fit in a u16", w, h));
+        }
+        Ok((w as u16, h as u16))
+    }
+
+    #[inline]
     pub fn size(&self) -> (u32, u32){
         (self.w(), self.h())
     }
@@ -212,13 +222,23 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
     #[inline]
     pub fn size_i32(&self) -> (i32, i32){
         if (self.w() > i32::MAX as u32) || (self.h() > i32::MAX as u32){
-            return (i32::MAX, i32::MAX);
+            panic!("Bitmap size {}x{} is too large to fit in a i32", self.w(), self.h());
         }
         (self.w() as i32, self.h() as i32)
     }
     #[inline]
     pub fn is_cropped(&self) -> bool{
         self.is_sub_window
+    }
+
+    #[inline]
+    pub fn item_stride(&self) -> usize{
+        self.info.item_stride as usize
+    }
+
+    #[inline]
+    pub fn pixel_format(&self) -> PixelFormat{
+        self.info.calculate_pixel_format().unwrap()
     }
 
     pub fn stride_padding(&self) -> usize{

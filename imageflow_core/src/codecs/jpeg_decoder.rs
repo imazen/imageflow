@@ -87,70 +87,65 @@ impl Decoder for JpegDecoder {
 
         //TODO! Support color profiles
 
-        unsafe {
-            let w = self.width.unwrap();
-            let h = self.height.unwrap();
 
-            let bitmap_key = c.bitmaps.try_borrow_mut()
-                .map_err(|e| nerror!(ErrorKind::FailedBorrow, "{:?}", e))?
-                .create_bitmap_u8(w as u32,
-                                  h as u32,
-                                  PixelLayout::BGRA,
-                                  false,
-                                  true,
-                                  ColorSpace::StandardRGB,
-                                  BitmapCompositing::ReplaceSelf)
-                .map_err(|e| e.at(here!()))?;
+        let w = self.width.unwrap();
+        let h = self.height.unwrap();
 
-            let bitmaps = c.borrow_bitmaps()
-                .map_err(|e| e.at(here!()))?;
-            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
-                .map_err(|e| e.at(here!()))?;
+        let bitmap_key = c.bitmaps.try_borrow_mut()
+            .map_err(|e| nerror!(ErrorKind::FailedBorrow, "{:?}", e))?
+            .create_bitmap_u8(w as u32,
+                                h as u32,
+                                PixelLayout::BGRA,
+                                false,
+                                false,
+                                ColorSpace::StandardRGB,
+                                BitmapCompositing::ReplaceSelf)
+            .map_err(|e| e.at(here!()))?;
+
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
 
 
-            let mut copy = bitmap.get_window_u8().unwrap()
-                .to_bitmap_bgra()?;
+        let mut window = bitmap.get_window_u8().unwrap();
+        let (w, h) = window.size_usize();
+        let stride = window.item_stride();
 
-            //TODO: Shouldn't this be Bgr24
-
-            let copy_mut = &mut copy;
-
-            match self.pixel_format.unwrap(){
-                jpeg::PixelFormat::RGB24 => {
-                    for row in 0..h{
-                        let to_row: &mut [BGRA8] = std::slice::from_raw_parts_mut(copy_mut.pixels.offset(copy_mut.stride as isize * row as isize) as *mut BGRA8, w as usize);
-
-                        let mut x = 0;
-                        for pixel in to_row{
-                            pixel.r = pixels[x * 3];
-                            pixel.b = pixels[x * 3 + 1];
-                            pixel.g = pixels[x * 3 + 2];
-                            x+=1;
-                        }
+        //TODO: Shouldn't this be Bgr24
+        match self.pixel_format.unwrap(){
+            jpeg::PixelFormat::RGB24 => {
+                let from_stride = w * 3;
+                for mut line in window.scanlines_bgra().unwrap(){
+                    let from_slice = &pixels[line.y() * from_stride..line.y() * from_stride + from_stride];
+                    if from_slice.len() * 3 != line.row().len() {
+                        panic!("from_slice.len() * 3 != line.row().len()");
                     }
-                },
-                jpeg::PixelFormat::L8 => {
-                    for row in 0..h{
-                        let to_row: &mut [BGRA8] = std::slice::from_raw_parts_mut(copy_mut.pixels.offset(copy_mut.stride as isize * row as isize) as *mut BGRA8, w as usize);
-
-                        let mut x = 0;
-                        for pixel in to_row{
-                            pixel.r = pixels[x];
-                            pixel.b = pixel.r;
-                            pixel.g = pixel.r;
-                            x+=1;
-                        }
+                    from_slice.chunks_exact(3).zip(line.row_mut()).for_each(|(from, to)| {
+                        to.r = from[0];
+                        to.b = from[1];
+                        to.g = from[2];
+                    });
+                }
+            },
+            jpeg::PixelFormat::L8 => {
+                let from_stride = w;
+                for mut line in window.scanlines_bgra().unwrap(){
+                    let from_slice = &pixels[line.y() * from_stride..line.y() * from_stride + from_stride];
+                    if from_slice.len() != line.row().len() {
+                        panic!("from_slice.len() != line.row().len()");
                     }
+                    from_slice.iter().zip(line.row_mut()).for_each(|(from, to)| {
+                        *to = BGRA8{r: *from, g: *from, b: *from, a: 255};
+                    });
                 }
-
-                _ => {
-                    panic!("Unsupported jpeg type (grayscale or CMYK")
-                }
-
             }
 
-            Ok(bitmap_key)
+            _ => {
+                panic!("Unsupported jpeg type (grayscale or CMYK")
+            }
         }
+        Ok(bitmap_key)
     }
     fn has_more_frames(&mut self) -> Result<bool> {
         Ok(false)

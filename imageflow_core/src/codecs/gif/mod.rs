@@ -64,36 +64,34 @@ impl GifDecoder {
 
     fn create_bitmap_from_screen(&self, c: &Context) -> Result<BitmapKey>{
         // Create output bitmap and copy to it
-        unsafe {
-            let w = self.screen.width;
-            let h = self.screen.height;
 
-            let mut bitmaps = c.borrow_bitmaps_mut()
-                .map_err(|e| e.at(here!()))?;
+        let w = self.screen.width;
+        let h = self.screen.height;
 
-            let bitmap_key = bitmaps.create_bitmap_u8(w as u32,
-                                        h as u32,
-                                    PixelLayout::BGRA,
-                                    false,
-                                    true,
-                                    ColorSpace::StandardRGB,
-                                    BitmapCompositing::ReplaceSelf)
-                .map_err(|e| e.at(here!()))?;
+        let mut bitmaps = c.borrow_bitmaps_mut()
+            .map_err(|e| e.at(here!()))?;
 
-            let mut bitmap = bitmaps
-                .try_borrow_mut(bitmap_key)
-                .map_err(|e| e.at(here!()))?;
+        let bitmap_key = bitmaps.create_bitmap_u8(w as u32,
+                                    h as u32,
+                                PixelLayout::BGRA,
+                                false,
+                                true,
+                                ColorSpace::StandardRGB,
+                                BitmapCompositing::ReplaceSelf)
+            .map_err(|e| e.at(here!()))?;
 
-            let mut copy = bitmap.get_window_u8().unwrap()
-                                .to_bitmap_bgra()?;
-            let copy_mut = &mut copy;
+        let mut bitmap = bitmaps
+            .try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
 
-            for row in 0..h{
-                let to_row: &mut [BGRA8] = std::slice::from_raw_parts_mut(copy_mut.pixels.offset(copy_mut.stride as isize * row as isize) as *mut BGRA8, w as usize);
-                to_row.copy_from_slice(&self.screen.pixels[row * w..(row + 1) * w]);
-            }
-            Ok(bitmap_key)
+        let mut window = bitmap.get_window_u8().unwrap();
+
+        for mut line in window.scanlines_bgra().unwrap(){
+            let y = line.y();
+            line.row_mut().copy_from_slice(&self.screen.pixels[y * w..(y + 1) * w]);
         }
+        Ok(bitmap_key)
+
     }
     pub fn current_frame(&self) -> Option<&Frame>{
         self.last_frame.as_ref()
@@ -151,9 +149,8 @@ impl Decoder for GifDecoder {
             let buf_mut = self.buffer.get_or_insert_with(|| vec![0; buf_size]);
             let slice = &mut buf_mut[..self.reader.buffer_size()];
 
-            unsafe {
-                ptr::write_bytes(slice.as_mut_ptr(), 0, slice.len() - 1);
-            }
+            slice.fill(0);
+            //Read into that buffer
             //Read into that buffer
             self.reader.read_into_buffer(slice).map_err(|e| FlowError::from(e).at(here!()))?;
 
@@ -276,65 +273,65 @@ impl Encoder for GifEncoder{
 
 //        eprintln!("decoders: {:?}, found_frame: {}", decoder_io_ids, decoded_frame.is_some() );
 
-        unsafe {
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
 
-            let bitmaps = c.borrow_bitmaps()
-                .map_err(|e| e.at(here!()))?;
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
 
-            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
-                .map_err(|e| e.at(here!()))?;
+        let window = bitmap.get_window_u8().unwrap();
+        let (w, h) = window.size_16()?;
+        let stride = window.item_stride();
+        let fmt = window.pixel_format();
 
-            let mut frame = bitmap.get_window_u8()
-                .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
-                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+        // We gotta copy to mutate
+        let mut pixels = Vec::new();
+        pixels.extend_from_slice(window.get_slice());
 
-            let mut pixels = Vec::new();
-            pixels.extend_from_slice(frame.pixels_slice_mut().expect("Frame must have pixel buffer"));
+        let mut f = match fmt {
+            crate::ffi::PixelFormat::Bgr24 => Ok(from_bgr_with_stride(w, h, &pixels, stride)),
+            crate::ffi::PixelFormat::Bgra32 => Ok(from_bgra_with_stride(w, h, &mut pixels, stride)),
+            crate::ffi::PixelFormat::Bgr32 => Ok(from_bgrx_with_stride(w, h, &mut pixels, stride)),
+            other =>  Err(nerror!(ErrorKind::InvalidArgument, "PixelFormat {:?} not supported for gif encoding", fmt))
+        }?;
 
-            let mut f = match frame.fmt {
-                crate::ffi::PixelFormat::Bgr24 => Ok(from_bgr_with_stride(frame.w as u16, frame.h as u16, &pixels, frame.stride as usize)),
-                crate::ffi::PixelFormat::Bgra32 => Ok(from_bgra_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
-                crate::ffi::PixelFormat::Bgr32 => Ok(from_bgrx_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
-                other =>  Err(nerror!(ErrorKind::InvalidArgument, "PixelFormat {:?} not supported for gif encoding", frame.fmt))
-            }?;
-
-            if let Some(from) = decoded_frame{
-                f.delay = from.delay;
-                f.needs_user_input = from.needs_user_input;
-            }
-            if self.frame_ix == 0 {
-                // Only write before any frames
-                if let Some(r) = repeat {
-//                    eprintln!("Writing repeat");
-                    self.encoder.write_extension(::gif::ExtensionData::Repetitions(r)).map_err(|e| FlowError::from(e).at(here!()))?;
-                }else{
-//                    eprintln!("Skipping repeat");
-                }
-            }
-
-
-
-
-            // TODO: Overhaul encoding
-            // delay
-            // dispose method
-            // rect
-            // transparency??
-
-            self.encoder.write_frame(&f).map_err(|e| FlowError::from(e).at(here!()))?;
-
-            self.frame_ix+=1;
-            Ok(
-                s::EncodeResult{
-                    w: frame.w as i32,
-                    h: frame.h as i32,
-                    io_id: self.io_id,
-                    bytes: ::imageflow_types::ResultBytes::Elsewhere,
-                    preferred_extension: "gif".to_owned(),
-                    preferred_mime_type: "image/gif".to_owned()
-                }
-            )
+        if let Some(from) = decoded_frame{
+            f.delay = from.delay;
+            f.needs_user_input = from.needs_user_input;
         }
+        if self.frame_ix == 0 {
+            // Only write before any frames
+            if let Some(r) = repeat {
+//                    eprintln!("Writing repeat");
+                self.encoder.write_extension(::gif::ExtensionData::Repetitions(r)).map_err(|e| FlowError::from(e).at(here!()))?;
+            }else{
+//                    eprintln!("Skipping repeat");
+            }
+        }
+
+
+
+
+        // TODO: Overhaul encoding
+        // delay
+        // dispose method
+        // rect
+        // transparency??
+
+        self.encoder.write_frame(&f).map_err(|e| FlowError::from(e).at(here!()))?;
+
+        self.frame_ix+=1;
+        Ok(
+            s::EncodeResult{
+                w: w as i32,
+                h: h as i32,
+                io_id: self.io_id,
+                bytes: ::imageflow_types::ResultBytes::Elsewhere,
+                preferred_extension: "gif".to_owned(),
+                preferred_mime_type: "image/gif".to_owned()
+            }
+        )
+
     }
     fn get_io(&self) -> Result<IoProxyRef> {
         Ok(IoProxyRef::Ref(self.io_ref.borrow()))
