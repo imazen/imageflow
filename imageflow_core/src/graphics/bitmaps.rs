@@ -202,6 +202,21 @@ impl<'a> BitmapWindowMut<'a,u8> {
 impl<'a,T>  BitmapWindowMut<'a, T> {
 
     #[inline]
+    pub fn size(&self) -> (u32, u32){
+        (self.w(), self.h())
+    }
+    #[inline]
+    pub fn size_usize(&self) -> (usize, usize){
+        (self.w() as usize, self.h() as usize)
+    }
+    #[inline]
+    pub fn size_i32(&self) -> (i32, i32){
+        if (self.w() > i32::MAX as u32) || (self.h() > i32::MAX as u32){
+            return (i32::MAX, i32::MAX);
+        }
+        (self.w() as i32, self.h() as i32)
+    }
+    #[inline]
     pub fn is_cropped(&self) -> bool{
         self.is_sub_window
     }
