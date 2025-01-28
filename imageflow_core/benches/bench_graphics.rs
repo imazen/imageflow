@@ -1,8 +1,6 @@
 extern crate imageflow_core;
 
-use imageflow_core::ffi::*;
 use imageflow_types::*;
-use imageflow_core::Context;
 use criterion::{ criterion_group, criterion_main, Criterion};
 use imageflow_core::graphics::bitmaps::*;
 use imageflow_core::graphics::scaling::ScaleAndRenderParams;
@@ -14,7 +12,6 @@ use itertools::Itertools;
 fn benchmark_transpose(ctx: &mut Criterion) {
     for w in (1000u32..3000u32).step_by(1373) {
         for h in (1000u32..3000u32).step_by(1373) {
-            let c = Context::create().unwrap();
             let mut a = Bitmap::create_u8(w, h, PixelLayout::BGRA, true, true, ColorSpace::StandardRGB,BitmapCompositing::ReplaceSelf).unwrap();
             let mut b = Bitmap::create_u8(h,w, PixelLayout::BGRA, true, true, ColorSpace::StandardRGB,BitmapCompositing::ReplaceSelf).unwrap();
             let mut a_window = a.get_window_u8().unwrap();
@@ -35,22 +32,21 @@ fn benchmark_transpose(ctx: &mut Criterion) {
 }
 
 
-
+// cargo bench -- benchmark_flip_v
 fn benchmark_flip_v(ctx: &mut Criterion) {
-    let fmts=[PixelLayout::BGRA,PixelLayout::BGR];
+    let fmts=[PixelLayout::BGRA];
 
     for &fmt in fmts.iter(){
         for w in (500u32..3000u32).step_by(2373){
             for h in (500u32..3000u32).step_by(2373){
-                let c = Context::create().unwrap();
                 let mut bitmap_a = Bitmap::create_u8(w, h, fmt, true, true, ColorSpace::StandardRGB,BitmapCompositing::ReplaceSelf).unwrap();
                 bitmap_a.get_window_u8().unwrap().fill_rect(0, 0, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
-                let mut a = unsafe { bitmap_a.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
 
                 let mut group = ctx.benchmark_group(&format!("flip_v w={} && h={} fmt={:?}",w,h,fmt));
 
                 group.bench_function("Rust", |b| b.iter(|| {
-                    unsafe { assert_eq!(imageflow_core::graphics::flip::flow_bitmap_bgra_flip_vertical(&mut a as *mut BitmapBgra), Ok(())) }
+                    imageflow_core::graphics::flip::flow_bitmap_bgra_flip_vertical_safe(&mut bitmap_a)
+                    .unwrap();
                 }));
 
                 group.finish();
@@ -61,22 +57,23 @@ fn benchmark_flip_v(ctx: &mut Criterion) {
 
 }
 
-
+// cargo bench --bench bench_graphics  -- flip_h
 fn benchmark_flip_h(ctx: &mut Criterion) {
-    let fmts=[PixelLayout::BGRA,PixelLayout::BGR];
+
+    let fmts=[PixelLayout::BGRA];
 
     for &fmt in fmts.iter(){
         for w in (500u32..3000u32).step_by(2373){
             for h in (500u32..3000u32).step_by(2373){
-                let c = Context::create().unwrap();
                 let mut a = Bitmap::create_u8(w, h, fmt, true, true, ColorSpace::StandardRGB,BitmapCompositing::ReplaceSelf).unwrap();
-                a.get_window_u8().unwrap().fill_rect(0, 0, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
+                let mut a_window = a.get_window_u8().unwrap();
+                a_window.fill_rect(0, 0, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
 
-                let mut a = unsafe { a.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
                 let mut group = ctx.benchmark_group(&format!("flip_h w={} && h={} fmt={:?}",w,h,fmt));
 
                 group.bench_function("Rust", |b| b.iter(|| {
-                    unsafe { assert_eq!(imageflow_core::graphics::flip::flow_bitmap_bgra_flip_horizontal(&mut a as *mut BitmapBgra), Ok(())) }
+                    imageflow_core::graphics::flip::flow_bitmap_bgra_flip_horizontal_safe(&mut a)
+                    .unwrap();
                 }));
 
                 group.finish();
@@ -93,7 +90,6 @@ fn benchmark_scale_2d(ctx: &mut Criterion) {
         for &fmt in fmts.iter(){
             for w in (500u32..4000u32).step_by(2400){
                 for h in (500u32..4000u32).step_by(2400){
-                    let c = Context::create().unwrap();
                     let mut bitmap_a = Bitmap::create_u8(w, h, PixelLayout::BGRA, true, true, ColorSpace::LinearRGB,BitmapCompositing::ReplaceSelf).unwrap();
 
                     let mut bitmap_b = Bitmap::create_u8(800u32,800u32, PixelLayout::BGRA, true, true, ColorSpace::LinearRGB,BitmapCompositing::ReplaceSelf).unwrap();

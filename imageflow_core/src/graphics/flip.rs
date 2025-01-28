@@ -34,22 +34,9 @@ pub fn flow_bitmap_bgra_flip_horizontal_safe(b: &mut Bitmap) -> Result<(), FlowE
         .get_window_u8()
         .ok_or_else(|| nerror!(ErrorKind::InvalidArgument, "No valid window"))?;
 
-    // Step 3b: Reverse each row, pixel pair by pixel pair
-    let half_width = width / 2;
-    let offset = width % 2;
-    // Iterate over each row
+    // Reverse the pixel in each row
     for mut scanline in window.scanlines_bgra().unwrap() {
-        // Grab a mutable slice for this row
-
-        let (left_slice, mut right_slice) =
-                    scanline.row_mut().split_at_mut(half_width);
-
-        right_slice = &mut right_slice[offset..];
-
-        for (a, b) in
-        left_slice.iter_mut().zip(right_slice.iter_mut().rev()) {
-            std::mem::swap(a, b);
-        }
+        scanline.row_mut().reverse();
     }
     Ok(())
 }
