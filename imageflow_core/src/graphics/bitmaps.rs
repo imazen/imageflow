@@ -4,7 +4,7 @@ use imageflow_helpers::colors::Color32;
 use imageflow_types::{PixelBuffer, CompositingMode};
 use imgref::ImgRef;
 use rgb::alt::{BGR8, BGRA8};
-use rgb::Pod;
+use rgb::{Bgra, Pod};
 use std::slice;
 use slotmap::*;
 use crate::graphics::aligned_buffer::AlignedBuffer;
@@ -460,15 +460,16 @@ impl<'a,T>  BitmapWindowMut<'a, T>
 impl Bitmap{
     pub fn get_window_u8(&mut self) -> Option<BitmapWindowMut<u8>>{
         let info = self.info().clone();
-        let offset = self.offset() as usize;
 
-        self.get_u8_slice().map(|s| {
-            BitmapWindowMut{
-                slice: &mut s[offset..],
+        if let Some(slice) = self.get_u8_slice(){
+            return Some(BitmapWindowMut{
+                slice,
                 info,
                 is_sub_window: false
-            }
-        })
+            })
+        }else{
+            None
+        }
     }
     pub fn get_window_bgra32(&mut self) -> Option<BitmapWindowMut<rgb::alt::BGRA<u8, u8>>>{
         let mut info = self.info().clone();
@@ -477,40 +478,65 @@ impl Bitmap{
         }
         info.item_stride = info.item_stride / 4;
         info.items_per_pixel = 1;
-        let offset = self.offset() as usize / 4;
 
-        self.get_bgra32_slice().map(|s| {
-            BitmapWindowMut{
-                slice: &mut s[offset..],
+        if let Some(slice) = self.get_bgra32_slice(){
+            return Some(BitmapWindowMut{
+                slice,
                 info,
                 is_sub_window: false
-            }
-        })
+            })
+        }else{
+            None
+        }
+    }
+
+    pub fn get_window_bgra_f32(&mut self) -> Option<BitmapWindowMut<Bgra<f32>>>{
+        let mut info = self.info().clone();
+        if info.item_stride % 4 != 0{
+            return None;
+        }
+        info.item_stride = info.item_stride / 4;
+        info.items_per_pixel = 1;
+
+        if let Some(slice) = self.get_bgra_f32_slice(){
+            return Some(BitmapWindowMut{
+                slice,
+                info,
+                is_sub_window: false
+            })
+        }else{
+            None
+        }
     }
     pub fn get_window_f32(&mut self) -> Option<BitmapWindowMut<f32>>{
         let info = self.info().clone();
-        let offset = self.offset() as usize;
-
-        self.get_f32_slice().map(|s| {
-            BitmapWindowMut{
-                slice: &mut s[offset..],
+        if let Some(slice) = self.get_f32_slice(){
+            return Some(BitmapWindowMut{
+                slice,
                 info,
                 is_sub_window: false
-            }
-        })
+            })
+        }else{
+            None
+        }
     }
 
     fn get_u8_slice(&mut self) -> Option<&mut [u8]>{
+        let offset = self.offset() as usize;
         if let BitmapBuffer::Bytes(ref mut buf) = &mut (*(self)).buffer{
-            return Some(buf.as_slice_mut())
+            return Some(&mut buf.as_slice_mut()[offset..])
         }else{
             None
         }
     }
     fn get_bgra32_slice(&mut self) -> Option<&mut [rgb::alt::BGRA<u8, u8>]>{
+        if self.info().items_per_pixel() != 4{
+            return None;
+        }
+        let offset = self.offset() as usize / 4;
         if let BitmapBuffer::Bytes(ref mut buf) = &mut (*(self)).buffer{
             match bytemuck::try_cast_slice_mut::<u8, rgb::alt::BGRA<u8, u8>>(buf.as_slice_mut()){
-                Ok(slice) => Some(slice),
+                Ok(slice) => Some(&mut slice[offset..]),
                 Err(_) => None
             }
         }else{
@@ -518,8 +544,23 @@ impl Bitmap{
         }
     }
     fn get_f32_slice(&mut self) -> Option<&mut [f32]>{
+        let offset = self.offset() as usize;
         if let BitmapBuffer::Floats(ref mut buf) = &mut (*(self)).buffer{
-            return Some(buf.as_slice_mut())
+            return Some(&mut buf.as_slice_mut()[offset..])
+        }else{
+            None
+        }
+    }
+    fn get_bgra_f32_slice(&mut self) -> Option<&mut [Bgra<f32>]>{
+        if self.info().items_per_pixel() != 4{
+            return None;
+        }
+        let offset = self.offset() as usize / 4;
+        if let BitmapBuffer::Floats(ref mut buf) = &mut (*(self)).buffer{
+            match bytemuck::try_cast_slice_mut::<f32, Bgra<f32>>(buf.as_slice_mut()){
+                Ok(slice) => Some(&mut slice[offset..]),
+                Err(_) => None
+            }
         }else{
             None
         }
