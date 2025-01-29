@@ -24,15 +24,14 @@ param(
 # Reasoning: Convert forward slashes to backslashes in the archive name for Windows compatibility.
 # Goal: Preserve the user's intended archive filename.
 $ArchiveFile = $ArchiveFile -replace '/', '\'
-$OriginalArchiveFile = $ArchiveFile
 
-# Get just the filename from OriginalArchiveFile using the proper api
-$OriginalArchiveFileName = (Get-Item -Path $ArchiveFile).Name
+$ZipAdded = $false
 
 # Reasoning: Ensure the archive file has a .zip extension to comply with Compress-Archive requirements.
 # Goal: Append .zip if the provided archive filename does not already end with .zip
 if (-not $ArchiveFile.EndsWith('.zip', [System.StringComparison]::InvariantCultureIgnoreCase)) {
     $ArchiveFile += '.zip'
+    $ZipAdded = $true
 }
 
 
@@ -55,9 +54,11 @@ try {
 
     # Reasoning: Rename the archive back to the original filename if it was modified.
     # Goal: Maintain the user's intended archive filename without the .zip extension in the final output.
-    if ($ArchiveFile -ne $OriginalArchiveFile) {
-        Write-Host "Renaming '$ArchiveFile' back to '$OriginalArchiveFileName'..."
-        Rename-Item -Path $ArchiveFile -NewName $OriginalArchiveFileName -ErrorAction Stop
+    if ($ZipAdded) {
+        # Get just the filename from the archive file
+        $FinalArchiveFileName = (Get-Item -Path $ArchiveFile).Name -replace '\.zip$', ''
+        Write-Host "Renaming '$ArchiveFile' back to '$FinalArchiveFile'..."
+        Rename-Item -Path $ArchiveFile -NewName $FinalArchiveFileName -ErrorAction Stop
     }
 
     # Reasoning: Indicate successful completion of the compression and renaming process.
