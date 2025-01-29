@@ -603,7 +603,7 @@ fn get_imgref_bgra32(b: &mut BitmapWindowMut<u8>) -> imgref::ImgVec<rgb::RGBA<f3
     let (w, h) = (b.w() as usize, b.h() as usize);
 
     let slice = b.get_slice();
-    let new_stride = b.info().item_stride() as usize / 4;
+    let new_stride = b.info().t_stride() as usize / 4;
 
     let cast_to_bgra8 = bytemuck::cast_slice::<u8,rgb::alt::BGRA8>(slice);
 
@@ -645,7 +645,7 @@ pub fn compare_bitmaps(_c: &ChecksumCtx, mut actual: &mut BitmapWindowMut<u8>, m
             true
         }
     } else {
-        if let Some(message) = require.report_on_bytes(count, premultiplied_delta, abs_diff, actual.info().width() as usize * actual.info().height() as usize * actual.items_per_pixel() as usize) {
+        if let Some(message) = require.report_on_bytes(count, premultiplied_delta, abs_diff, actual.info().width() as usize * actual.info().height() as usize * actual.t_per_pixel() as usize) {
             if panic {
                 panic!("{}", message);
             } else {

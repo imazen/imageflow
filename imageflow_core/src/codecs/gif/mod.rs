@@ -280,7 +280,7 @@ impl Encoder for GifEncoder{
 
         let window = bitmap.get_window_u8().unwrap();
         let (w, h) = window.size_16()?;
-        let stride = window.item_stride();
+        let stride = window.t_stride();
         let fmt = window.pixel_format();
 
         // We gotta copy to mutate

@@ -207,7 +207,7 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
                 return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "DrawImageExact target rect x1={},y1={},w={},h={} does not fit canvas size {}x{}.",
                     x,y,  w, h, canvas_bitmap.w(), canvas_bitmap.h()));
             }
-            if input_bitmap.info().items_per_pixel() != 4 || canvas_bitmap.info().items_per_pixel() != 4 {
+            if input_bitmap.info().t_per_pixel() != 4 || canvas_bitmap.info().t_per_pixel() != 4 {
                 return Err(nerror!(crate::ErrorKind::InvalidNodeConnections,
                     "DrawImageExact can only operate on Rgb32 and Rgba32 bitmaps. Input pixel format {:?}. Canvas pixel format {:?}.", input_bitmap.frame_info().fmt, canvas_bitmap.frame_info().fmt));
             }

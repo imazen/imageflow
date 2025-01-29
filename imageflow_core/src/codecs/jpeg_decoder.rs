@@ -110,7 +110,7 @@ impl Decoder for JpegDecoder {
 
         let mut window = bitmap.get_window_u8().unwrap();
         let (w, h) = window.size_usize();
-        let stride = window.item_stride();
+        let stride = window.t_stride();
 
         //TODO: Shouldn't this be Bgr24
         match self.pixel_format.unwrap(){

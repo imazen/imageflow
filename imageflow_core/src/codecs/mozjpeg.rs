@@ -132,7 +132,7 @@ impl Encoder for MozjpegEncoder {
             .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
 
 
-        if window.w() as usize == window.item_stride() {
+        if window.w() as usize == window.t_stride() {
             compressor.write_scanlines(window.get_slice())
                 .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
         } else {

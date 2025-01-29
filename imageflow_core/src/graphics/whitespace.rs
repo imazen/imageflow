@@ -345,8 +345,8 @@ Blue: 0.114;
         panic!("Invalid grayscale_Stride")
     }
 
-    let bytes_per_pixel = b.items_per_pixel() as usize;
-    let stride = b.info().item_stride() as usize;
+    let bytes_per_pixel = b.t_per_pixel() as usize;
+    let stride = b.info().t_stride() as usize;
     let first_pixel = stride * y as usize + bytes_per_pixel * x as usize;
     let remnant: usize = stride - (bytes_per_pixel * w as usize);
     let gray_remnant: usize = grayscale_stride - w as usize;

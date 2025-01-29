@@ -584,8 +584,8 @@ pub fn bitmap_window_transpose(
         std::slice::from_raw_parts_mut(to.slice_mut().as_mut_ptr() as *mut u32, to.slice_mut().len() / 4)
     };
 
-    let from_stride = from.info().item_stride() as usize / 4;
-    let to_stride = to.info().item_stride() as usize / 4;
+    let from_stride = from.info().t_stride() as usize / 4;
+    let to_stride = to.info().t_stride() as usize / 4;
     let width = from.w() as usize;
     let height = from.h() as usize;
 

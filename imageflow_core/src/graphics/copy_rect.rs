@@ -31,8 +31,8 @@ pub fn copy_rectangle(input: &mut Bitmap, canvas: &mut Bitmap, from_x: u32, from
     let (canvas_fmt, input_fmt) =
     (canvas.info().calculate_pixel_format().map_err(|e| e.at(here!()))?,
                     input.info().calculate_pixel_format().map_err(|e| e.at(here!()))?);
-    let canvas_stride = canvas.info().item_stride();
-    let input_stride = input.info().item_stride();
+    let canvas_stride = canvas.info().t_stride();
+    let input_stride = input.info().t_stride();
     let (canvas_w, canvas_h) = canvas.size();
     let (input_w, input_h) = input.size();
     let mut cropping_happened = input.is_cropped() || canvas.is_cropped();

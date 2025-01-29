@@ -172,7 +172,7 @@ impl Decoder for WebPDecoder {
 
             let mut window = bitmap.get_window_u8().unwrap();
 
-            let stride = window.info().item_stride();
+            let stride = window.info().t_stride();
             let slice = window.slice_mut();
             let slice_len = slice.len();
 
@@ -232,7 +232,7 @@ impl Encoder for WebPEncoder {
         let mut window = bitmap.get_window_u8().unwrap();
         let (w, h) = window.size_i32();
         let layout = window.info().pixel_layout();
-        let stride = window.info().item_stride() as i32;
+        let stride = window.info().t_stride() as i32;
         window.normalize_unused_alpha()?;
 
         let mut_slice = window.slice_mut();
