@@ -231,14 +231,14 @@ fn get_pixel(b: &BitmapWindowMut<f32>, x: i32, y: i32) -> [f32; 4] {
     let x = x.max(0).min(b.w() as i32 - 1);
     let y = y.max(0).min(b.h() as i32 - 1);
 
-    if b.info().channels() != 4 {
+    if b.items_per_pixel() != 4 {
         panic!("get_pixel called on non-4 channel bitmap")
     }
 
 
     let y_offset = (y) as usize * b.info().item_stride() as usize;
-    let x_start = (x) as usize * b.info().channels() as usize + y_offset;
-    let pixel = b.get_slice()[x_start..x_start + b.info().channels() as usize].as_ref();
+    let x_start = (x) as usize * b.items_per_pixel() as usize + y_offset;
+    let pixel = b.get_slice()[x_start..x_start + b.items_per_pixel() as usize].as_ref();
 
     [pixel[0], pixel[1], pixel[2], pixel[3]]
 }
@@ -364,7 +364,7 @@ fn multiply_and_add_row_simple(mutate_row: &mut [f32], input_row: &[f32], coeffi
 fn bitmap_window_srgba32_to_f32x4(colorcontext: &ColorContext, from: &BitmapWindowMut<u8>, to: &mut BitmapWindowMut<f32>) {
     //Ensure the widths and heights match, and that both source and dest are 4 channels
     let (w, h) = from.size_usize();
-    if from.size() != to.size() || from.info().channels() != 4 || to.info().channels() != 4 {
+    if from.size() != to.size() || from.items_per_pixel() != 4 || to.items_per_pixel() != 4 {
         panic!("Mismatched source and dest window dimensions or channel counts");
     }
 
@@ -409,7 +409,7 @@ fn composite_linear_over_srgb(
     src: &mut BitmapWindowMut<f32>,
     canvas: &mut BitmapWindowMut<u8>,
 ) -> Result<(), FlowError> {
-    if src.info().channels() != 4 || !canvas.info().channels() == 4 {
+    if src.items_per_pixel() != 4 || !canvas.items_per_pixel() == 4 {
         return Err(nerror!(ErrorKind::InvalidState));
     }
 
@@ -463,7 +463,7 @@ fn blend_matte(cc: &ColorContext, bitmap: &mut BitmapWindowMut<f32>, matte: [u8;
 
 fn demultiply_alpha(bitmap: &mut BitmapWindowMut<f32>) -> Result<(), FlowError> {
     // verify channels == 4
-    if bitmap.info().channels() != 4 || !bitmap.info().alpha_meaningful() || !bitmap.info().alpha_premultiplied() {
+    if bitmap.items_per_pixel() != 4 || !bitmap.info().alpha_meaningful() || !bitmap.info().alpha_premultiplied() {
         return Err(nerror!(ErrorKind::InvalidState));
     }
     let (w, h) = (bitmap.w() as usize, bitmap.h() as usize);
@@ -553,7 +553,7 @@ fn copy_linear_over_srgb(
     canvas: &mut BitmapWindowMut<u8>,
 ) -> Result<(), FlowError> {
     // w,h, channels must match
-    if from.w() != canvas.w() || from.h() != canvas.h() || from.info().channels() != canvas.info().channels() {
+    if from.w() != canvas.w() || from.h() != canvas.h() ||  from.items_per_pixel() != canvas.items_per_pixel() {
         return Err(nerror!(ErrorKind::InvalidState));
     }
     let clear_alpha: bool = !from.info().alpha_meaningful() && canvas.info().alpha_meaningful();

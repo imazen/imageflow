@@ -645,7 +645,7 @@ pub fn compare_bitmaps(_c: &ChecksumCtx, mut actual: &mut BitmapWindowMut<u8>, m
             true
         }
     } else {
-        if let Some(message) = require.report_on_bytes(count, premultiplied_delta, abs_diff, actual.info().width() as usize * actual.info().height() as usize * actual.info().channels() as usize) {
+        if let Some(message) = require.report_on_bytes(count, premultiplied_delta, abs_diff, actual.info().width() as usize * actual.info().height() as usize * actual.items_per_pixel() as usize) {
             if panic {
                 panic!("{}", message);
             } else {

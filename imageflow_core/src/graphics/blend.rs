@@ -5,7 +5,7 @@ use itertools::Itertools;
 //noinspection RsBorrowChecker,RsBorrowChecker
 pub fn apply_matte(b: &mut BitmapWindowMut<u8>, matte_color: imageflow_types::Color) -> Result<(), FlowError>{
     // There's nothing to do unless it's BGRA
-    if b.info().channels() != 4 || !b.info().alpha_meaningful() {
+    if b.items_per_pixel() != 4 || !b.info().alpha_meaningful() {
         return Ok(())
     }
 

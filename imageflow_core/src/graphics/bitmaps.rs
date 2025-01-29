@@ -139,7 +139,7 @@ where T: Pod
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let type_name = std::any::type_name::<T>();
 
-        write!(f, "BitmapWindowMut<{}> {{ slice: {} w: {}, h: {}, channels: {}, info: {:?} }}", type_name, self.slice.len(), self.w(), self.h(), self.channels(), self.info )
+        write!(f, "BitmapWindowMut<{}> {{ slice: {} w: {}, h: {}, t_per_pixel: {}, info: {:?} }}", type_name, self.slice.len(), self.w(), self.h(), self.items_per_pixel(), self.info )
     }
 }
 
@@ -263,11 +263,8 @@ impl<'a,T>  BitmapWindowMut<'a, T>
         self.h() as i32
     }
 
-    #[deprecated]
-    #[inline]
-    pub fn channels(&self) -> usize{
-        self.info.channels()
-    }
+
+
     #[inline]
     pub fn items_per_pixel(&self) -> usize{
         self.info.items_per_pixel() as usize
@@ -532,10 +529,7 @@ impl SurfaceInfo{
     pub fn color_space(&self) -> ColorSpace{
         self.color_space
     }
-    #[inline]
-    pub fn channels(&self) -> usize{
-        self.pixel_layout.channels()
-    }
+
     #[inline]
     pub fn alpha_meaningful(&self) -> bool{
         self.alpha_meaningful
@@ -603,11 +597,7 @@ impl BitmapInfo{
     pub fn color_space(&self) -> ColorSpace{
         self.info.color_space
     }
-    #[inline]
-    #[deprecated]
-    pub fn channels(&self) -> usize{
-        self.info.channels()
-    }
+
     #[inline]
     pub fn alpha_premultiplied(&self) -> bool{
         self.info.alpha_premultiplied
