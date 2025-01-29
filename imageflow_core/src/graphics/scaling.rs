@@ -363,15 +363,16 @@ fn multiply_and_add_row_simple(mutate_row: &mut [f32], input_row: &[f32], coeffi
 
 fn bitmap_window_srgba32_to_f32x4(colorcontext: &ColorContext, from: &BitmapWindowMut<u8>, to: &mut BitmapWindowMut<f32>) {
     //Ensure the widths and heights match, and that both source and dest are 4 channels
-    if from.w() != to.w() || from.h() != to.h() || from.info().channels() != 4 || to.info().channels() != 4 {
+    let (w, h) = from.size_usize();
+    if from.size() != to.size() || from.info().channels() != 4 || to.info().channels() != 4 {
         panic!("Mismatched source and dest window dimensions or channel counts");
     }
 
-    for row_ix in 0..from.h() {
+    for row_ix in 0..h {
         let from_row = from.row(row_ix).unwrap();
         let to_row = to.row_mut(row_ix).unwrap();
 
-        for x in 0..from.w() as usize {
+        for x in 0..w {
             let pixel = &from_row[x * 4..(x + 1) * 4];
             let alpha = if !from.info().alpha_meaningful() {
                 1.0
@@ -444,7 +445,7 @@ fn blend_matte(cc: &ColorContext, bitmap: &mut BitmapWindowMut<f32>, matte: [u8;
     let h = bitmap.h();
     let w = bitmap.w();
     for row in 0..h as usize {
-        let slice = bitmap.row_mut(row as u32).unwrap();
+        let slice = bitmap.row_mut(row).unwrap();
         for col in 0..w as usize {
             let alpha = slice[col * 4 + 3];
             let a: f32 = (1.0f32 - alpha) * matte_a;
@@ -467,7 +468,7 @@ fn demultiply_alpha(bitmap: &mut BitmapWindowMut<f32>) -> Result<(), FlowError> 
     }
     let (w, h) = (bitmap.w() as usize, bitmap.h() as usize);
     for row in 0..h {
-        let slice = bitmap.row_mut(row as u32).unwrap();
+        let slice = bitmap.row_mut(row).unwrap();
 
 
         for col in 0..w as usize {
@@ -499,8 +500,8 @@ fn compose_linear_over_srgb(
     let dest_alpha_offset = if canvas.info().alpha_meaningful() { 0.0f32 } else { 1.0f32 };
 
     for row in 0..src.h() as usize {
-        let src_slice = src.row(row as u32).unwrap();
-        let canvas_slice = canvas.row_mut(row as u32).unwrap();
+        let src_slice = src.row(row).unwrap();
+        let canvas_slice = canvas.row_mut(row).unwrap();
 
 
         //
@@ -558,8 +559,8 @@ fn copy_linear_over_srgb(
     let clear_alpha: bool = !from.info().alpha_meaningful() && canvas.info().alpha_meaningful();
     let copy_alpha: bool = from.info().alpha_meaningful() && canvas.info().alpha_meaningful();
     for row in 0..from.h() as usize {
-        let input_slice = from.row(row as u32).unwrap();
-        let canvas_slice = canvas.row_mut(row as u32).unwrap();
+        let input_slice = from.row(row).unwrap();
+        let canvas_slice = canvas.row_mut(row).unwrap();
 
         // let input_pixels = bytemuck::cast_slice::<f32, rgb::Bgra<f32>>(input_slice);
         // let canvas_pixels = bytemuck::cast_slice_mut::<u8, rgb::Bgra<u8>>(canvas_slice);

@@ -14,7 +14,7 @@ use imagequant;
 use rgb::ComponentSlice;
 use crate::codecs::lode;
 use crate::graphics::bitmaps::BitmapKey;
-
+use std::mem::MaybeUninit;
 pub struct PngquantEncoder {
     liq: imagequant::Attributes,
     io: IoProxy,
@@ -56,43 +56,65 @@ impl Encoder for PngquantEncoder {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
-        {
-            let mut bitmap_bgra = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra()? };
-            bitmap_bgra.normalize_alpha().map_err(|e| e.at(here!()))?;
-        }
+        bitmap.get_window_u8().unwrap().normalize_unused_alpha()
+        .map_err(|e| e.at(here!()))?;
+        let mut window = bitmap.get_window_bgra32().unwrap();
 
-        unsafe {
-            let (vec,w,h) = bitmap.get_window_u8()
-                .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
-                .to_vec_rgba()
-                .map_err(|e| e.at(here!()))?;
+        let (w,h) = window.size_usize();
 
-            let mut img = imagequant::Image::new_borrowed(&self.liq, &vec ,w, h,0.)?;
 
-            let res = match self.liq.quantize(&mut img) {
+
+        let error = {
+            let mut img = unsafe {
+                imagequant::Image::new_fn(&self.liq, |row: &mut [MaybeUninit<imagequant::RGBA>], row_index:usize| {
+                    let from = window.row(row_index).unwrap();
+                    from.into_iter().zip(row).for_each(|(from, to)| {
+                        to.write(imagequant::RGBA {
+                            r: from.r,
+                            g: from.g,
+                            b: from.b,
+                            a: from.a,
+                        });
+                    });
+                },w,h,0.0).map_err(|e| crate::FlowError::from(e).at(here!()))?
+            };
+            match self.liq.quantize(&mut img){
                 Ok(mut res) => {
                     res.set_dithering_level(1.).unwrap();
 
                     let (pal, pixels) = res.remapped(&mut img).unwrap(); // could have alloc failure here, should map
 
                     lode::LodepngEncoder::write_png8(&mut self.io, &pal, &pixels, w, h, self.maximum_deflate)?;
+                    None
                 },
-                Err(imagequant::liq_error::QualityTooLow) => {
-                    lode::LodepngEncoder::write_png_auto_slice(&mut self.io, PngquantEncoder::raw_byte_access(vec.as_slice()), w, h, lodepng::ColorType::RGBA, self.maximum_deflate)?;
-                }
-                Err(err) => return Err(err)?,
-            };
+                Err(e) => Some(e)
+            }
+        };
+        match error {
+            Some(imagequant::liq_error::QualityTooLow) => {
+
+                let (vec, w, h) = window.to_vec_rgba().map_err(|e| e.at(here!()))?;
+
+                let slice_as_u8 = bytemuck::cast_slice::<rgb::RGBA8, u8>(vec.as_slice());
 
 
-            Ok(EncodeResult {
-                w: w as i32,
-                h: h as i32,
-                io_id: self.io.io_id(),
-                bytes: ::imageflow_types::ResultBytes::Elsewhere,
-                preferred_extension: "png".to_owned(),
-                preferred_mime_type: "image/png".to_owned(),
-            })
-        }
+                lode::LodepngEncoder::write_png_auto_slice(&mut self.io, slice_as_u8, w, h, lodepng::ColorType::RGBA, self.maximum_deflate)
+                .map_err(|e| e.at(here!()))?;
+            }
+            Some(err) => return Err(err)?,
+            None => {}
+        };
+
+
+        Ok(EncodeResult {
+            w: w as i32,
+            h: h as i32,
+            io_id: self.io.io_id(),
+            bytes: ::imageflow_types::ResultBytes::Elsewhere,
+            preferred_extension: "png".to_owned(),
+            preferred_mime_type: "image/png".to_owned(),
+        })
+
     }
 
     fn get_io(&self) -> Result<IoProxyRef> {

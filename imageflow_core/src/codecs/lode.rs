@@ -116,6 +116,9 @@ impl LodepngEncoder {
 
     pub fn write_png_auto_slice<W: Write>(mut writer: W, pixels: &[u8], width: usize, height: usize, pixel_format: lodepng::ColorType, use_highest_compression: Option<bool>) -> Result<()> {
 
+        if pixels.len() == 0{
+            return Err(nerror!(ErrorKind::InvalidOperation, "No pixels to encode"));
+        }
 
         let mut lode = lodepng::Encoder::new();
         lode.set_auto_convert(true);

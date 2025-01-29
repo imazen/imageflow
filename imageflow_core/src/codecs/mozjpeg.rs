@@ -43,9 +43,9 @@ impl MozjpegEncoder {
         }
 
         Ok(MozjpegEncoder {
-            io, 
-            quality: Some(u8::min(100,quality.unwrap_or(DEFAULT_QUALITY))), 
-            progressive, 
+            io,
+            quality: Some(u8::min(100,quality.unwrap_or(DEFAULT_QUALITY))),
+            progressive,
             matte,
             optimize_coding: Some(true),
             defaults: Defaults::MozJPEG,
@@ -55,7 +55,7 @@ impl MozjpegEncoder {
 
     pub(crate) fn create_classic(c: &Context, quality: Option<u8>, progressive: Option<bool>, optimize_coding: Option<bool>, matte: Option<Color>, io: IoProxy) -> Result<Self> {
         Ok(MozjpegEncoder {
-            io, 
+            io,
             quality: Some(u8::min(100,quality.unwrap_or(DEFAULT_QUALITY)))
             ,progressive, matte,
             optimize_coding,
@@ -79,20 +79,16 @@ impl Encoder for MozjpegEncoder {
             .map_err(|e| e.at(here!()))?;
         bitmap.set_alpha_meaningful(false);
 
-        let frame = unsafe{ bitmap.get_window_u8()
-            .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
-            .to_bitmap_bgra().map_err(|e| e.at(here!()))?};
+        let mut window = bitmap.get_window_u8().unwrap();
 
-
-
-        let in_color_space = match frame.fmt {
+        let in_color_space = match window.pixel_format() {
             PixelFormat::Bgra32 => mozjpeg::ColorSpace::JCS_EXT_BGRA,
             PixelFormat::Bgr32 => mozjpeg::ColorSpace::JCS_EXT_BGRX,
             PixelFormat::Bgr24 => mozjpeg::ColorSpace::JCS_EXT_BGR,
             PixelFormat::Gray8 => mozjpeg::ColorSpace::JCS_GRAYSCALE,
         };
         let mut cinfo = mozjpeg::Compress::new(in_color_space);
-        cinfo.set_size(frame.width(), frame.height());
+        cinfo.set_size(window.w() as usize, window.h() as usize);
         match self.defaults {
             Defaults::MozJPEG => {},
             Defaults::LibJPEGv6 => {
@@ -113,10 +109,10 @@ impl Encoder for MozjpegEncoder {
 
         let chroma_quality = self.quality.unwrap_or(DEFAULT_QUALITY) as f32; // Lower values allow blurrier color
 
+        let pixel_buffer = window.get_pixel_buffer().unwrap();
 
-        let pixels_buffer = unsafe {frame.pixels_buffer()}.ok_or(nerror!(ErrorKind::BitmapPointerNull))?;
         let max_sampling = PixelSize{cb:(2,2), cr:(2,2)}; // Set to 1 to force higher res
-        let res = match pixels_buffer {
+        let res = match pixel_buffer {
             PixelBuffer::Bgra32(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
             PixelBuffer::Bgr32(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
             PixelBuffer::Bgr24(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
@@ -136,22 +132,21 @@ impl Encoder for MozjpegEncoder {
             .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
 
 
-        let pixels_slice = unsafe {frame.pixels_slice()}.ok_or(nerror!(ErrorKind::BitmapPointerNull))?;
-        if frame.width() == frame.stride() {
-            compressor.write_scanlines(pixels_slice)
+        if window.w() as usize == window.item_stride() {
+            compressor.write_scanlines(window.get_slice())
                 .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
         } else {
-            let width_bytes = frame.width() * frame.fmt.bytes();
-            for row in pixels_slice.chunks(frame.stride()) {
-                compressor.write_scanlines(&row[0..width_bytes])
+
+            for line in window.scanlines(){
+                compressor.write_scanlines(&line.row())
                     .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
             }
         }
         compressor.finish().map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
 
         Ok(EncodeResult {
-            w: frame.w as i32,
-            h: frame.h as i32,
+            w: window.w_i32(),
+            h: window.h_i32(),
             io_id: self.io.io_id(),
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "jpg".to_owned(),

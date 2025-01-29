@@ -1,6 +1,8 @@
 use std;
 use std::sync::*;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
+use crate::graphics::bitmaps::BitmapWindowMut;
+use imageflow_types::PixelLayout;
 use lcms2::*;
 use lcms2;
 use crate::ffi;
@@ -150,20 +152,18 @@ impl ColorTransformCache{
         }
     }
 
-    fn apply_transform(frame: &mut BitmapBgra, transform: &Transform<u32,u32, ThreadContext,DisallowCache>) {
-        for row in 0..frame.h {
-            let pixels = unsafe{ slice::from_raw_parts_mut(frame.pixels.offset((row * frame.stride) as isize) as *mut u32, frame.w as usize) };
-            let _ = (pixels.first(), pixels.last());
-            transform.transform_in_place(pixels)
+    fn apply_transform(frame: &mut BitmapWindowMut<u8>, transform: &Transform<u32,u32, ThreadContext,DisallowCache>) {
+        for mut line in frame.scanlines_u32().unwrap(){
+            transform.transform_in_place(line.row_mut());
         }
     }
 
-    pub fn transform_to_srgb(frame: &mut BitmapBgra, color: &ffi::DecoderColorInfo, input_pixel_format: PixelFormat, output_pixel_format: PixelFormat) -> Result<()>{
+    pub fn transform_to_srgb(frame: &mut BitmapWindowMut<u8>, color: &ffi::DecoderColorInfo, input_pixel_format: PixelFormat, output_pixel_format: PixelFormat) -> Result<()>{
 
-        if frame.fmt.bytes() != 4{
+        if frame.info().pixel_layout() != PixelLayout::BGRA{
             return Err(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Color profile application is only supported for Bgr32 and Bgra32 canvases"));
         }
-        let pixel_format = ColorTransformCache::get_pixel_format(frame.fmt);
+        let pixel_format = ColorTransformCache::get_pixel_format(frame.pixel_format());
 
         match color.source {
             ffi::ColorProfileSource::Null | ffi::ColorProfileSource::sRGB => Ok(()),

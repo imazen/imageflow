@@ -15,7 +15,7 @@ use rgb;
 use crate::ffi;
 use imageflow_helpers::preludes::from_std::CStr;
 use std::ffi::c_void;
-use crate::graphics::bitmaps::BitmapKey;
+use crate::graphics::bitmaps::{BitmapKey, BitmapWindowMut};
 
 pub struct LibPngEncoder {
     io: IoProxy,
@@ -43,10 +43,10 @@ impl Encoder for LibPngEncoder {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
+
         if let EncoderPreset::Libpng {ref matte, ..} = preset{
             if let Some(ref color) = matte{
-                bitmap.get_window_u8().unwrap()
-                    .apply_matte(color.clone())
+                bitmap.get_window_u8().unwrap().apply_matte(color.clone())
                     .map_err(|e| e.at(here!()))?;
                 // Optimize png size
                 if color.is_opaque(){
@@ -55,22 +55,19 @@ impl Encoder for LibPngEncoder {
             }
         }
 
-        unsafe {
-            let frame = bitmap.get_window_u8()
-                .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
-                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+        let mut window = bitmap.get_window_u8().unwrap();
 
-            self.write_png(&frame, preset).map_err(|e| e.at(here!()))?;
+        self.write_png(&mut window, preset).map_err(|e| e.at(here!()))?;
 
-            Ok(EncodeResult {
-                w: frame.w as i32,
-                h: frame.h as i32,
-                io_id: self.io.io_id(),
-                bytes: ::imageflow_types::ResultBytes::Elsewhere,
-                preferred_extension: "png".to_owned(),
-                preferred_mime_type: "image/png".to_owned(),
-            })
-        }
+        Ok(EncodeResult {
+            w: window.w_i32(),
+            h: window.h_i32(),
+            io_id: self.io.io_id(),
+            bytes: ::imageflow_types::ResultBytes::Elsewhere,
+            preferred_extension: "png".to_owned(),
+            preferred_mime_type: "image/png".to_owned(),
+        })
+
     }
 
     fn get_io(&self) -> Result<IoProxyRef> {
@@ -82,6 +79,10 @@ impl LibPngEncoder {
     #[no_mangle]
     extern "C" fn png_encoder_error_handler(png_ptr: *mut c_void, custom_state: *mut c_void,
                                     message: *const c_char) {
+       if custom_state.is_null(){
+            eprintln!("LibPNG encoder error handler called with null custom_state");
+            return;
+       }
         let encoder = unsafe { &mut *(custom_state as *mut LibPngEncoder) };
 
         if encoder.error.is_none() {
@@ -102,8 +103,16 @@ impl LibPngEncoder {
 
     #[no_mangle]
     extern "C" fn png_encoder_custom_write_function(png_ptr: *mut c_void, custom_state: *mut c_void, buffer: *mut u8, buffer_length: usize) -> bool {
+        if custom_state.is_null(){
+            eprintln!("LibPNG encoder custom write function called with null custom_state");
+            return false;
+        }
         let encoder: &mut LibPngEncoder = unsafe { &mut *(custom_state as *mut LibPngEncoder) };
 
+        if buffer.is_null(){
+            eprintln!("LibPNG encoder custom write function called with null buffer");
+            return false;
+        }
         let buffer_slice = unsafe { std::slice::from_raw_parts(buffer, buffer_length) };
 
         return match encoder.io.write_all(buffer_slice) {
@@ -115,20 +124,20 @@ impl LibPngEncoder {
         }
     }
 
-    pub fn write_png(&mut self, frame: &BitmapBgra, preset: &EncoderPreset) -> Result<()> {
+    pub fn write_png(&mut self, frame: &mut BitmapWindowMut<u8>, preset: &EncoderPreset) -> Result<()> {
         if let EncoderPreset::Libpng { depth, matte, zlib_compression } = preset {
-            let rows = frame.get_row_pointers().map_err(|e| e.at(here!()))?;
+            let rows = frame.create_row_pointers().map_err(|e| e.at(here!()))?;
             let disable_alpha = depth.unwrap_or(imageflow_types::PngBitDepth::Png32) == imageflow_types::PngBitDepth::Png24;
             unsafe {
                 if !ffi::wrap_png_encoder_write_png(self as *mut LibPngEncoder as *mut c_void,
                                                     Self::png_encoder_error_handler,
                                                     Self::png_encoder_custom_write_function,
-                                                    rows.as_ptr(),
-                                                    frame.w as usize,
-                                                    frame.h as usize,
+                                                    rows.rows.as_ptr(),
+                                                    rows.w,
+                                                    rows.h,
                                                     disable_alpha,
                                                     zlib_compression.unwrap_or(6),
-                                                    frame.fmt) {
+                                                    frame.pixel_format()) {
                     Err(self.error.clone().expect("error missing").at(here!()))
                 } else {
                     Ok(())

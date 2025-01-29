@@ -18,7 +18,7 @@ extern crate mozjpeg_sys;
 use ::mozjpeg_sys::*;
 use imageflow_helpers::preludes::from_std::ptr::{null, slice_from_raw_parts, null_mut};
 use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
-use crate::graphics::bitmaps::{BitmapKey, ColorSpace, BitmapCompositing};
+use crate::graphics::bitmaps::{Bitmap, BitmapCompositing, BitmapKey, ColorSpace};
 use mozjpeg_sys::c_void;
 
 static CMYK_PROFILE: &'static [u8] = include_bytes!("cmyk.icc");
@@ -119,12 +119,9 @@ impl Decoder for MozJpegDecoder {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
-        unsafe {
-            let mut canvas = bitmap.get_window_u8().unwrap()
-                .to_bitmap_bgra()?;
 
-            self.decoder.read_frame(&mut canvas)?;
-        }
+        self.decoder.read_frame(&mut bitmap)?;
+
 
         Ok(bitmap_key)
     }
@@ -285,7 +282,7 @@ impl MzDec{
         Ok(self.exif_rotation_flag)
     }
 
-    fn read_frame(&mut self, canvas: *mut BitmapBgra) -> Result<()> {
+    fn read_frame(&mut self, canvas: &mut Bitmap) -> Result<()> {
         if self.codec_info_disposed{
             return Err(nerror!(ErrorKind::InvalidOperation, "MozJpeg decoder disposed before call to read_frame"))
         }
@@ -293,10 +290,8 @@ impl MzDec{
         self.read_header()?;
         self.apply_downscaling();
 
-        unsafe {
-            if self.w != (*canvas).w || self.h != (*canvas).h {
-                return Err(nerror!(ErrorKind::InvalidArgument, "Canvas not sized for decoded jpeg"));
-            }
+        if self.w !=  canvas.w() || self.h != canvas.h() {
+            return Err(nerror!(ErrorKind::InvalidArgument, "Canvas not sized for decoded jpeg"));
         }
 
         let jpeg_color_space = self.codec_info.jpeg_color_space;
@@ -320,18 +315,23 @@ impl MzDec{
 
         self.gamma = self.codec_info.output_gamma;
 
-        let mut row_pointers = unsafe{ (*canvas).get_row_pointers()}?;
+        let mut window = canvas.get_window_u8().unwrap();
 
-        if row_pointers.len() != self.codec_info.output_height as usize{
+        let row_pointers = window.create_row_pointers()?;
+
+        if row_pointers.h != self.codec_info.output_height as usize{
             return Err(nerror!(ErrorKind::InvalidOperation, "get_row_pointers() length ({}) does not match image height ({})",
-            row_pointers.len(), self.codec_info.output_height));
+            row_pointers.h, self.codec_info.output_height));
         }
 
         let mut scanlines_read = 0;
 
         while self.codec_info.output_scanline < self.codec_info.output_height {
             unsafe {
-                let next_lines = &mut row_pointers[self.codec_info.output_scanline as usize];
+                let index = self.codec_info.output_scanline as usize;
+                let next_lines = row_pointers.rows[index..].as_ptr();
+
+
                 if !ffi::wrap_jpeg_read_scan_lines(&mut self.codec_info,
                                                    next_lines,
                                                     self.h,
@@ -369,7 +369,7 @@ impl MzDec{
 
             let input_pixel_format = if is_cmyk { PixelFormat::CMYK_8_REV } else { PixelFormat::BGRA_8 };
 
-            let result = ColorTransformCache::transform_to_srgb(unsafe { &mut *canvas }, &color_info, input_pixel_format, PixelFormat::BGRA_8)
+            let result = ColorTransformCache::transform_to_srgb(&mut window, &color_info, input_pixel_format, PixelFormat::BGRA_8)
                 .map_err(|e| e.at(here!()));
             if result.is_err() && !self.ignore_color_profile_errors{
                 return result;

@@ -18,7 +18,7 @@ use rgb::alt::BGRA8;
 use imageflow_helpers::preludes::from_std::ptr::{null, slice_from_raw_parts, null_mut};
 use mozjpeg_sys::c_void;
 use std::os::raw::c_char;
-use crate::graphics::bitmaps::{BitmapKey, ColorSpace, BitmapCompositing};
+use crate::graphics::bitmaps::{Bitmap, BitmapCompositing, BitmapKey, ColorSpace};
 
 pub struct LibPngDecoder{
     decoder: Box<PngDec>
@@ -87,14 +87,10 @@ impl Decoder for LibPngDecoder {
             BitmapCompositing::ReplaceSelf)
             .map_err(|e| e.at(here!()))?;
 
+        let mut bitmap  = bitmaps.try_borrow_mut(canvas_key)
+            .map_err(|e| e.at(here!()))?;
 
-        let mut canvas = unsafe { bitmaps.try_borrow_mut(canvas_key)
-            .map_err(|e| e.at(here!()))?
-            .get_window_u8().unwrap()
-            .to_bitmap_bgra().map_err(|e| e.at(here!()))?
-        };
-
-        self.decoder.read_frame(&mut canvas)?;
+        self.decoder.read_frame(&mut bitmap)?;
 
         Ok(canvas_key)
     }
@@ -279,36 +275,38 @@ impl PngDec{
         Ok((self.w, self.h, self.pixel_format))
     }
 
-    fn read_frame(&mut self, canvas: *mut BitmapBgra) -> Result<()> {
+    fn read_frame(&mut self, canvas: &mut Bitmap) -> Result<()> {
         if self.c_state_disposed{
             return Err(nerror!(ErrorKind::InvalidOperation, "LibPNG decoder disposed before call to read_frame"))
         }
 
         self.read_header().map_err(|e| e.at(here!()))?;
 
-        unsafe {
-            if self.w != (*canvas).w || self.h != (*canvas).h {
-                return Err(nerror!(ErrorKind::InvalidArgument, "Canvas not sized for decoded image"));
-            }
+
+        if self.w != canvas.w() || self.h != canvas.h() {
+            return Err(nerror!(ErrorKind::InvalidArgument, "Canvas not sized for decoded image"));
         }
 
-        let mut row_pointers = unsafe{ (*canvas).get_row_pointers()
-            .map_err(|e| e.at(here!()))}?;
+
+        let mut window = canvas.get_window_u8().unwrap();
+
+
+        let mut row_pointers = window.create_row_pointers()
+            .map_err(|e| e.at(here!()))?;
 
 
         unsafe {
             let c_state = self.c_state.as_mut_ptr() as *mut c_void;
 
-            if !ffi::wrap_png_decode_finish(c_state, row_pointers.as_mut_ptr(), row_pointers.len(), (*canvas).fmt.bytes() * (*canvas).width()) {
+            if !ffi::wrap_png_decode_finish(c_state, row_pointers.rows.as_mut_ptr(), row_pointers.h, row_pointers.items_w) {
                 return Err(self.error.clone().expect("error missing").at(here!()));
             }
-
 
             let color_info = &*ffi::wrap_png_decoder_get_color_info(c_state);
 
             if !self.ignore_color_profile {
 
-                let result = ColorTransformCache::transform_to_srgb(&mut *canvas, color_info, PixelFormat::BGRA_8, PixelFormat::BGRA_8)
+                let result = ColorTransformCache::transform_to_srgb(&mut window, color_info, PixelFormat::BGRA_8, PixelFormat::BGRA_8)
                     .map_err(|e| e.at(here!()));
                 if result.is_err() && !self.ignore_color_profile_errors{
                     return result;
