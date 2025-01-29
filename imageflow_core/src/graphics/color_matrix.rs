@@ -1,141 +1,26 @@
+use rgb::alt::BGRA8;
+
 use crate::graphics::prelude::*;
 
-pub unsafe fn flow_bitmap_bgra_apply_color_matrix(
-    bmp: *mut flow_bitmap_bgra,
-    row: u32,
-    count: u32,
-    m: *const *const f32,
-) -> Result<(), FlowError> {
-    let stride: u32 = (*bmp).stride;
-    let ch: u32 = flow_pixel_format_bytes_per_pixel((*bmp).fmt);
-    let w: u32 = (*bmp).w;
-    let h: u32 = row.wrapping_add(count).min((*bmp).h);
-    let m40: f32 = *(*m.offset(4 as i32 as isize)).offset(0) * 255.0f32;
-    let m41: f32 = *(*m.offset(4 as i32 as isize)).offset(1) * 255.0f32;
-    let m42: f32 = *(*m.offset(4 as i32 as isize)).offset(2) * 255.0f32;
-    let m43: f32 = *(*m.offset(4 as i32 as isize)).offset(3 as i32 as isize) * 255.0f32;
-    if ch == 4 as i32 as u32 {
-        let mut y: u32 = row;
-        while y < h {
-            let mut x: u32 = 0 as i32 as u32;
-            while x < w {
-                let data: *mut u8 = (*bmp)
-                    .pixels
-                    .offset(stride.wrapping_mul(y) as isize)
-                    .offset(x.wrapping_mul(ch) as isize);
-                let r: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(0) * *data.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(0) * *data.offset(1) as i32 as f32
-                        + *(*m.offset(2)).offset(0) * *data.offset(0) as i32 as f32
-                        + *(*m.offset(3 as i32 as isize)).offset(0)
-                        * *data.offset(3 as i32 as isize) as i32 as f32
-                        + m40,
-                );
-                let g: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(1) * *data.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(1) * *data.offset(1) as i32 as f32
-                        + *(*m.offset(2)).offset(1) * *data.offset(0) as i32 as f32
-                        + *(*m.offset(3 as i32 as isize)).offset(1)
-                        * *data.offset(3 as i32 as isize) as i32 as f32
-                        + m41,
-                );
-                let b: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(2) * *data.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(2) * *data.offset(1) as i32 as f32
-                        + *(*m.offset(2)).offset(2) * *data.offset(0) as i32 as f32
-                        + *(*m.offset(3 as i32 as isize)).offset(2)
-                        * *data.offset(3 as i32 as isize) as i32 as f32
-                        + m42,
-                );
-                let a: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(3 as i32 as isize) * *data.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(3 as i32 as isize) * *data.offset(1) as i32 as f32
-                        + *(*m.offset(2)).offset(3 as i32 as isize) * *data.offset(0) as i32 as f32
-                        + *(*m.offset(3 as i32 as isize)).offset(3 as i32 as isize)
-                        * *data.offset(3 as i32 as isize) as i32 as f32
-                        + m43,
-                );
-                let newdata: *mut u8 = (*bmp)
-                    .pixels
-                    .offset(stride.wrapping_mul(y) as isize)
-                    .offset(x.wrapping_mul(ch) as isize);
-                *newdata.offset(0) = b;
-                *newdata.offset(1) = g;
-                *newdata.offset(2) = r;
-                *newdata.offset(3 as i32 as isize) = a;
-                x = x.wrapping_add(1)
-            }
-            y = y.wrapping_add(1)
+pub fn window_bgra32_apply_color_matrix(window: &mut BitmapWindowMut<BGRA8>, m: &[[f32;5];5]) -> Result<(), FlowError>{
+
+    let m40: f32 = m[4][0] * 255.0f32;
+    let m41: f32 = m[4][1] * 255.0f32;
+    let m42: f32 = m[4][2] * 255.0f32;
+    let m43: f32 = m[4][3] * 255.0f32;
+
+    for mut line in window.scanlines(){
+        for pixel in line.row_mut(){
+            let r = pixel.r as f32;
+            let g = pixel.g as f32;
+            let b = pixel.b as f32;
+            let a = pixel.a as f32;
+
+            pixel.r = uchar_clamp_ff(m[0][0] * r + m[1][0] * g + m[2][0] * b + m[3][0] * a + m40);
+            pixel.g = uchar_clamp_ff(m[0][1] * r + m[1][1] * g + m[2][1] * b + m[3][1] * a + m41);
+            pixel.b = uchar_clamp_ff(m[0][2] * r + m[1][2] * g + m[2][2] * b + m[3][2] * a + m42);
+            pixel.a = uchar_clamp_ff(m[0][3] * r + m[1][3] * g + m[2][3] * b + m[3][3] * a + m43);
         }
-    } else {
-        //Unsupported_pixel_format
-        return Err(nerror!(ErrorKind::InvalidState));
     }
     Ok(())
-}
-
-// note: this file isn't exercised by test suite
-pub unsafe fn flow_bitmap_float_apply_color_matrix(
-    bmp: *mut flow_bitmap_float,
-    row: u32,
-    count: u32,
-    m: *mut *mut f32,
-) -> Result<(), FlowError> {
-    let stride: u32 = (*bmp).float_stride;
-    let ch: u32 = (*bmp).channels;
-    let w: u32 = (*bmp).w;
-    let h: u32 = row.wrapping_add(count).min((*bmp).h);
-    match ch {
-        4 => {
-            let mut y: u32 = row;
-            while y < h {
-                let mut x: u32 = 0 as i32 as u32;
-                while x < w {
-                    let data: *mut f32 = (*bmp)
-                        .pixels
-                        .offset(stride.wrapping_mul(y) as isize)
-                        .offset(x.wrapping_mul(ch) as isize);
-                    let r: f32 = *(*m.offset(0)).offset(0) * *data.offset(2)
-                        + *(*m.offset(1)).offset(0) * *data.offset(1)
-                        + *(*m.offset(2)).offset(0) * *data.offset(0)
-                        + *(*m.offset(3 as i32 as isize)).offset(0)
-                        * *data.offset(3 as i32 as isize)
-                        + *(*m.offset(4 as i32 as isize)).offset(0);
-                    let g: f32 = *(*m.offset(0)).offset(1) * *data.offset(2)
-                        + *(*m.offset(1)).offset(1) * *data.offset(1)
-                        + *(*m.offset(2)).offset(1) * *data.offset(0)
-                        + *(*m.offset(3 as i32 as isize)).offset(1)
-                        * *data.offset(3 as i32 as isize)
-                        + *(*m.offset(4 as i32 as isize)).offset(1);
-                    let b: f32 = *(*m.offset(0)).offset(2) * *data.offset(2)
-                        + *(*m.offset(1)).offset(2) * *data.offset(1)
-                        + *(*m.offset(2)).offset(2) * *data.offset(0)
-                        + *(*m.offset(3 as i32 as isize)).offset(2)
-                        * *data.offset(3 as i32 as isize)
-                        + *(*m.offset(4 as i32 as isize)).offset(2);
-                    let a: f32 = *(*m.offset(0)).offset(3 as i32 as isize) * *data.offset(2)
-                        + *(*m.offset(1)).offset(3 as i32 as isize) * *data.offset(1)
-                        + *(*m.offset(2)).offset(3 as i32 as isize) * *data.offset(0)
-                        + *(*m.offset(3 as i32 as isize)).offset(3 as i32 as isize)
-                        * *data.offset(3 as i32 as isize)
-                        + *(*m.offset(4 as i32 as isize)).offset(3 as i32 as isize);
-                    let newdata: *mut f32 = (*bmp)
-                        .pixels
-                        .offset(stride.wrapping_mul(y) as isize)
-                        .offset(x.wrapping_mul(ch) as isize);
-                    *newdata.offset(0) = b;
-                    *newdata.offset(1) = g;
-                    *newdata.offset(2) = r;
-                    *newdata.offset(3 as i32 as isize) = a;
-                    x = x.wrapping_add(1)
-                }
-                y = y.wrapping_add(1)
-            }
-            Ok(())
-        }
-        _ => {
-            //Unsupported_pixel_format
-            Err(nerror!(ErrorKind::InvalidState))
-        }
-    }
 }

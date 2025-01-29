@@ -1,4 +1,6 @@
-use crate::graphics::histogram::flow_bitmap_bgra_populate_histogram;
+use rgb::Bgra;
+
+use crate::graphics::{bitmaps::BitmapWindowMut, histogram::populate_histogram_from_window};
 use super::internal_prelude::*;
 // TODO: someday look into better algorithms - see http://colorconstancy.com/ and http://ipg.fer.hr/ipg/resources/color_constancy
 // http://localhost:39876/ir4/proxy_unsplash/photo-1496264057429-6a331647b69e?a.balancewhite=true&w=800
@@ -41,59 +43,31 @@ fn create_byte_mapping(low: usize, high: usize) -> Vec<u8>{
 }
 
 
-fn apply_mappings(bitmap: *mut BitmapBgra, map_red: &[u8], map_green: &[u8], map_blue: &[u8]) -> Result<()>{
+fn apply_mappings(bitmap: &mut BitmapWindowMut<Bgra<u8, u8>>, map_red: &[u8], map_green: &[u8], map_blue: &[u8]) -> Result<()>{
 
-    let input: &BitmapBgra = unsafe{ &*bitmap };
-    let bytes: &mut [u8] = unsafe { slice::from_raw_parts_mut::<u8>(input.pixels, (input.stride * input.h) as usize) };
 
     if map_red.len() < 256 || map_green.len() < 256 || map_blue.len() < 256{
         return Err(nerror!(crate::ErrorKind::InvalidState));
     }
-
-    match input.fmt {
-        PixelFormat::Gray8 =>
-            Err(unimpl!())
-        ,
-        PixelFormat::Bgra32 | PixelFormat::Bgr32=> {
-            for row in bytes.chunks_mut(input.stride as usize){
-                for pixel in row.chunks_mut(4).take(input.w as usize){
-                    //pixel[0] = map_blue[pixel[0]];
-                    //pixel[1] = map_green[pixel[1]];
-                    //pixel[2] = map_red[pixel[2]];
-                    unsafe {
-                        *pixel.get_unchecked_mut(0) = *map_blue.get_unchecked(*pixel.get_unchecked(0) as usize);
-                        *pixel.get_unchecked_mut(1) = *map_green.get_unchecked(*pixel.get_unchecked(1) as usize);
-                        *pixel.get_unchecked_mut(2) = *map_red.get_unchecked(*pixel.get_unchecked(2) as usize);
-                    }
-                }
+    for mut line in bitmap.scanlines(){
+        for pixel in line.row_mut(){
+            unsafe{
+                pixel.r = *map_red.get_unchecked(pixel.r as usize);
+                pixel.g = *map_green.get_unchecked(pixel.g as usize);
+                pixel.b = *map_blue.get_unchecked(pixel.b as usize);
             }
-            Ok(())
-        },
-        PixelFormat::Bgr24 => {
-            for row in bytes.chunks_mut(input.stride as usize){
-                for pixel in row.chunks_mut(3).take(input.w as usize){
-                    //pixel[0] = *map_blue[pixel[0]];
-                    //pixel[1] = *map_green[pixel[1]];
-                    //pixel[2] = *map_red[pixel[2]];
-                    unsafe {
-                        *pixel.get_unchecked_mut(0) = *map_blue.get_unchecked(*pixel.get_unchecked(0) as usize);
-                        *pixel.get_unchecked_mut(1) = *map_green.get_unchecked(*pixel.get_unchecked(1) as usize);
-                        *pixel.get_unchecked_mut(2) = *map_red.get_unchecked(*pixel.get_unchecked(2) as usize);
-                    }
-                }
-            }
-            Ok(())
-        },
+        }
     }
+    Ok(())
 }
 
-fn white_balance_srgb_mut(bitmap: *mut BitmapBgra, histograms: &[u64;768], pixels_sampled: u64, low_threshold: Option<f32>, high_threshold: Option<f32>) -> Result<()>{
+fn white_balance_srgb_mut(bitmap: &mut BitmapWindowMut<Bgra<u8, u8>>, histograms: &[[u64; 256];3], pixels_sampled: u64, low_threshold: Option<f32>, high_threshold: Option<f32>) -> Result<()>{
     let low_threshold = f64::from(low_threshold.unwrap_or(0.006));
     let high_threshold = f64::from(high_threshold.unwrap_or(0.006));
 
-    let (red_low, red_high) = area_threshold(&histograms[0..256], pixels_sampled, low_threshold, high_threshold);
-    let (green_low, green_high) = area_threshold(&histograms[256..512], pixels_sampled, low_threshold, high_threshold);
-    let (blue_low, blue_high) = area_threshold(&histograms[512..768], pixels_sampled, low_threshold, high_threshold);
+    let (red_low, red_high) = area_threshold(&histograms[0], pixels_sampled, low_threshold, high_threshold);
+    let (green_low, green_high) = area_threshold(&histograms[1], pixels_sampled, low_threshold, high_threshold);
+    let (blue_low, blue_high) = area_threshold(&histograms[2], pixels_sampled, low_threshold, high_threshold);
 
     let red_map = create_byte_mapping(red_low, red_high);
     let green_map = create_byte_mapping(green_low, green_high);
@@ -114,30 +88,24 @@ impl NodeDefMutateBitmap for WhiteBalanceSrgbMutDef{
         "imazen.white_balance_srgb_mut"
     }
     fn mutate(&self, c: &Context, bitmap_key: BitmapKey,  p: &NodeParams) -> Result<()> {
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
+        let mut bitmap_bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
 
-        unsafe {
-
-            let bitmaps = c.borrow_bitmaps()
-                .map_err(|e| e.at(here!()))?;
-            let mut bitmap_bitmap = bitmaps.try_borrow_mut(bitmap_key)
-                .map_err(|e| e.at(here!()))?;
-
-            let mut bitmap = bitmap_bitmap.get_window_u8().unwrap().to_bitmap_bgra()?;
+        let mut window = bitmap_bitmap.get_window_bgra32().unwrap();
 
 
-            let mut histograms: [u64; 768] = [0; 768];
-            let mut pixels_sampled: u64 = 0;
+        let mut histograms: [[u64; 256]; 3] = [[0; 256]; 3];
+        let pixels_sampled: u64 = window.w() as u64 * window.h() as u64;
 
-            flow_bitmap_bgra_populate_histogram(&mut bitmap as *mut BitmapBgra, histograms.as_mut_ptr(), 256,
-                                                3, &mut pixels_sampled as *mut u64)
-                .map_err(|e| e.at(here!()))?;
+        populate_histogram_from_window(&mut window, &mut histograms)
+            .map_err(|e| e.at(here!()))?;
 
-            if let NodeParams::Json(s::Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold }) = *p {
-                white_balance_srgb_mut(&mut bitmap, &histograms, pixels_sampled, threshold, threshold)
-            } else {
-                Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
-            }
+        if let NodeParams::Json(s::Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold }) = *p {
+            white_balance_srgb_mut(&mut window, &histograms, pixels_sampled, threshold, threshold)
+        } else {
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
         }
-
     }
 }

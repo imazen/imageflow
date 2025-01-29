@@ -1,5 +1,4 @@
 use crate::graphics::bitmaps::BitmapCompositing;
-use crate::graphics::color_matrix::flow_bitmap_bgra_apply_color_matrix;
 use super::internal_prelude::*;
 
 
@@ -22,24 +21,18 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
     }
     fn mutate(&self, c: &Context, bitmap_key: BitmapKey,  p: &NodeParams) -> Result<()> {
         if let NodeParams::Json(s::Node::ColorMatrixSrgb { ref matrix }) = *p {
-            unsafe {
-                let bitmaps = c.borrow_bitmaps()
-                    .map_err(|e| e.at(here!()))?;
-                let mut bitmap_bitmap = bitmaps.try_borrow_mut(bitmap_key)
-                    .map_err(|e| e.at(here!()))?;
 
-                let mut bitmap = bitmap_bitmap.get_window_u8().unwrap().to_bitmap_bgra()?;
+            let bitmaps = c.borrow_bitmaps()
+                .map_err(|e| e.at(here!()))?;
+            let mut bitmap_bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                .map_err(|e| e.at(here!()))?;
+
+            let mut window = bitmap_bitmap.get_window_bgra32().unwrap();
+            crate::graphics::color_matrix::window_bgra32_apply_color_matrix(&mut window, &matrix)
+                .map_err(|e| e.at(here!()))?;
+            bitmap_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
 
 
-                let color_matrix_ptrs = matrix.iter().map(|row| row as *const f32).collect::<Vec<*const f32>>();
-//TODO: create test first.
-                flow_bitmap_bgra_apply_color_matrix( &mut bitmap, 0, bitmap.h, color_matrix_ptrs.as_ptr())
-                    .map_err(|e| e.at(here!()))?;
-                bitmap_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
-
-                let _ = color_matrix_ptrs;
-
-            }
             Ok(())
         } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
