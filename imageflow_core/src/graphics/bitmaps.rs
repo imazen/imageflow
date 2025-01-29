@@ -1,5 +1,5 @@
 use crate::{FlowError, ErrorKind};
-use crate::ffi::{PixelFormat, BitmapFloat, BitmapCompositingMode};
+use crate::ffi::{PixelFormat, BitmapCompositingMode};
 use imageflow_helpers::colors::Color32;
 use imageflow_types::{PixelBuffer, CompositingMode};
 use imgref::ImgRef;

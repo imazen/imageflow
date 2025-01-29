@@ -55,35 +55,6 @@ pub enum BitmapCompositingMode {
 }
 
 
-/// floating-point bitmap, typically linear RGBA, premultiplied
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct BitmapFloat {
-    /// buffer width in pixels
-    pub w: u32,
-    /// buffer height in pixels
-    pub h: u32,
-    /// The number of floats per pixel
-    pub channels: u32,
-    /// The pixel data
-    pub pixels: *mut c_float,
-    /// If true, don't dispose the buffer with the struct
-    pub pixels_borrowed: bool,
-    /// The number of floats in the buffer
-    pub float_count: u32,
-    /// The number of floats between (0,0) and (0,1)
-    pub float_stride: u32,
-
-    /// If true, alpha has been premultiplied
-    pub alpha_premultiplied: bool,
-    /// If true, the alpha channel holds meaningful data
-    pub alpha_meaningful: bool,
-}
-
-
-
-
-
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct DecoderDownscaleHints {
