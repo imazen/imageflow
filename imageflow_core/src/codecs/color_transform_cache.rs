@@ -55,8 +55,8 @@ pub struct ColorTransformCache{
 }
 
 lazy_static!{
-    static ref PROFILE_TRANSFORMS: ::chashmap::CHashMap<u64, Transform<u32,u32,ThreadContext, DisallowCache>> = ::chashmap::CHashMap::with_capacity(4);
-    static ref GAMA_TRANSFORMS: ::chashmap::CHashMap<u64, Transform<u32,u32, ThreadContext,DisallowCache>> = ::chashmap::CHashMap::with_capacity(4);
+    static ref PROFILE_TRANSFORMS: ::dashmap::DashMap<u64, Transform<u32,u32,ThreadContext, DisallowCache>> = ::dashmap::DashMap::with_capacity(4);
+    static ref GAMA_TRANSFORMS: ::dashmap::DashMap<u64, Transform<u32,u32, ThreadContext,DisallowCache>> = ::dashmap::DashMap::with_capacity(4);
 
 }
 

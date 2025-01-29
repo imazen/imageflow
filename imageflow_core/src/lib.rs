@@ -35,7 +35,7 @@ extern crate uuid;
 extern crate imagequant;
 extern crate gif;
 extern crate smallvec;
-extern crate chashmap;
+extern crate dashmap;
 extern crate rgb;
 extern crate imgref;
 extern crate lodepng;

@@ -155,7 +155,7 @@ pub trait PersistentStringCache: Sync + Send{
 pub struct WriteThroughCache{
     prefix: &'static str,
     // Would be nice if we could lookup by &str instead of &String
-    cache: ::chashmap::CHashMap<String, String>,
+    cache: ::dashmap::DashMap<String, String>,
     disk: &'static DiskStorage
 }
 
@@ -164,7 +164,7 @@ impl WriteThroughCache{
     pub fn new(prefix: &'static str, disk: &'static DiskStorage) -> Self{
         WriteThroughCache{
             prefix,
-            cache: ::chashmap::CHashMap::new(),
+            cache: ::dashmap::DashMap::new(),
             disk
         }
     }

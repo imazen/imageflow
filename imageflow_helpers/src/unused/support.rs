@@ -48,13 +48,13 @@ impl fmt::Display for IssueSink {
 //#[allow(dead_code)]
 //pub struct IssueSync{
 //    source: &'static str,
-//    dict: ::chashmap::CHashMap<u64, Issue>
+//    dict: ::dashmap::DashMap<u64, Issue>
 //}
 //impl IssueSync {
 //    pub fn new(source: &'static str) -> Self {
 //        IssueSync {
 //            source,
-//            dict: ::chashmap::CHashMap::new()
+//            dict: ::dashmap::DashMap::new()
 //        }
 //    }
 //    pub fn error(&self, msg: String, detail: String) {

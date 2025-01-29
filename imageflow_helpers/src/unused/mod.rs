@@ -107,8 +107,8 @@ impl Endpoint for LicenseEndpoint{
 
 pub struct LicenseManagerSingleton{
     licenses: AppendList<License>,
-    aliases_to_id: ::chashmap::CHashMap<Cow<'static, str>,String>,
-    cached: ::chashmap::CHashMap<Cow<'static, str>,LicenseBlob>,
+    aliases_to_id: ::dashmap::DashMap<Cow<'static, str>,String>,
+    cached: ::dashmap::DashMap<Cow<'static, str>,LicenseBlob>,
     #[allow(dead_code)]
     sink: IssueSink,
     trusted_keys: &'static [RSADecryptPublic],
@@ -141,8 +141,8 @@ impl LicenseManagerSingleton{
             trusted_keys,
             clock,
             cache,
-            cached: ::chashmap::CHashMap::new(),
-            aliases_to_id: ::chashmap::CHashMap::new(),
+            cached: ::dashmap::DashMap::new(),
+            aliases_to_id: ::dashmap::DashMap::new(),
             licenses: AppendList::new(),
             sink: IssueSink::new("LicenseManager"),
             created,
@@ -236,7 +236,7 @@ impl LicenseManagerSingleton{
         self.licenses.iter().find(|l| l.id().eq_ignore_ascii_case(id))
     }
 
-    pub fn cached_remote(&self, id: &str) -> Option<::chashmap::ReadGuard<Cow<'static,str>,LicenseBlob>>{
+    pub fn cached_remote(&self, id: &str) -> Option<::dashmap::ReadGuard<Cow<'static,str>,LicenseBlob>>{
 
         //
         self.cached.get(&Cow::Owned(id.to_owned()))

@@ -44,12 +44,12 @@ impl AppClock for OffsetClock{
 }
 
 pub struct StringMemCache{
-    cache: ::chashmap::CHashMap<String, String>,
+    cache: ::dashmap::DashMap<String, String>,
 }
 impl StringMemCache{
     pub fn new() -> Self{
         StringMemCache{
-            cache: ::chashmap::CHashMap::new()
+            cache: ::dashmap::DashMap::new()
         }
     }
     pub fn into_cache(self) -> Box<dyn PersistentStringCache + Send + Sync>{

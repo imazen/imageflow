@@ -49,7 +49,7 @@ jpeg-decoder ="0.3.1"
 
 lcms2 = "6"
 lcms2-sys = "4"
-chashmap = "2.2"
+dashmap = "6.1.0"
 
 getopts ="0.2"
 byteorder="1"
