@@ -1,7 +1,7 @@
 use super::Encoder;
 use super::s::{EncoderPreset, EncodeResult};
 use crate::io::IoProxy;
-use crate::ffi::BitmapBgra;
+
 use imageflow_types::{PixelFormat, Color};
 use imageflow_types::PixelBuffer;
 use crate::{Context, Result, ErrorKind, FlowError};

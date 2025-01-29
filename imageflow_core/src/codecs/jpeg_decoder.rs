@@ -2,7 +2,7 @@ use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{Context, Result, JsonResponse};
-use crate::ffi::BitmapBgra;
+
 use imageflow_types::collections::AddRemoveSet;
 use crate::io::IoProxy;
 use uuid::Uuid;

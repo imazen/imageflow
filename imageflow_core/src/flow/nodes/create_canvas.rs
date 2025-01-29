@@ -26,7 +26,7 @@ impl CreateCanvasNodeDef{
                 Err(nerror!(crate::ErrorKind::InvalidNodeParams, "canvas format cannot be grayscale; single-channel grayscale bitmaps are not yet supported in Imageflow"))
             }else if format == ffi::PixelFormat::Bgr24{
                 Err(nerror!(crate::ErrorKind::InvalidNodeParams, "canvas format {:?} not permitted. Use Bgr32 instead", format))
-            }else if format != ffi::PixelFormat::Bgr24 && format != ffi::PixelFormat::Bgr32 && format != ffi::PixelFormat::Bgra32 {
+            }else if format != ffi::PixelFormat::Bgr32 && format != ffi::PixelFormat::Bgra32 {
                 Err(nerror!(crate::ErrorKind::InvalidNodeParams, "canvas format {:?} not recognized", format))
             } else {
                 Ok((w,h,format,color.clone()))

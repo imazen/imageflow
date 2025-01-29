@@ -1,5 +1,5 @@
 use daggy::{Dag, EdgeIndex, NodeIndex, Walker};
-use crate::ffi::BitmapBgra;
+
 use libc::size_t;
 use petgraph::EdgeDirection;
 use petgraph::visit::EdgeRef;
@@ -23,7 +23,6 @@ mod round_corners;
 
 mod internal_prelude {
     pub use crate::ffi;
-    pub use crate::ffi::BitmapBgra;
     pub use crate::flow::definitions::*;
     pub use crate::internal_prelude::works_everywhere::*;
     pub use petgraph::EdgeDirection;

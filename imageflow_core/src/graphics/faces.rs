@@ -3,7 +3,6 @@
 extern  crate rustface;
 use internal_prelude::works_everywhere::*;
 use ::std::option::Option;
-use ::ffi::BitmapBgra;
 use ::std::cmp;
 use ::std::option::Option::*;
 use num::Integer;

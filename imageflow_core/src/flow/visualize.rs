@@ -1,5 +1,5 @@
 use crate::Graph;
-use crate::ffi::BitmapBgra;
+
 use crate::internal_prelude::works_everywhere::*;
 use super::definitions::{FrameEstimate, Node, PixelFormat, EdgeKind, NodeResult};
 
@@ -86,9 +86,6 @@ pub fn render_dotfile_to_png(dotfile_path: &str) {
 
 static INDENT: &'static str = "    ";
 
-fn get_pixel_format_name_for(bitmap: *const BitmapBgra) -> &'static str {
-    unsafe { get_pixel_format_name((*bitmap).fmt) }
-}
 
 fn get_pixel_format_name(fmt: PixelFormat) -> &'static str {
     match fmt {

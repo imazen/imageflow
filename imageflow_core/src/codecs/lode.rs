@@ -1,7 +1,7 @@
 use super::Encoder;
 use super::s::{EncoderPreset, EncodeResult};
 use crate::io::IoProxy;
-use crate::ffi::BitmapBgra;
+
 use imageflow_types::PixelFormat;
 use crate::{Context, Result, ErrorKind, FlowError};
 use crate::io::IoProxyRef;
@@ -88,7 +88,7 @@ impl LodepngEncoder {
 
     pub fn write_png_auto<W: Write>(writer: W, window: &mut crate::graphics::bitmaps::BitmapWindowMut<u8>, use_highest_compression: Option<bool>) -> Result<()> {
 
-        let bytes_per_pixel = window.info().channels() as usize;
+        let bytes_per_pixel = window.items_per_pixel() as usize;
         let w = window.w() as usize;
         let h = window.h() as usize;
         let proper_len = w * h * bytes_per_pixel;

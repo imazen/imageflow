@@ -20,7 +20,7 @@ pub(crate) mod rounded_corners;
 
 #[doc(hidden)]
 mod prelude{
-    pub(crate) use crate::ffi::{BitmapFloat,BitmapBgra,BitmapCompositingMode};
+    pub(crate) use crate::ffi::{BitmapFloat,BitmapCompositingMode};
     pub(crate) use crate::FlowError;
     pub(crate) use crate::errors::ErrorKind;
 
@@ -44,7 +44,6 @@ mod prelude{
     pub(crate) use crate::graphics::aligned_buffer::AlignedBuffer;
 
     pub(crate) use crate::ffi::BitmapFloat as flow_bitmap_float;
-    pub(crate) use crate::ffi::BitmapBgra as flow_bitmap_bgra;
     pub(crate) use imageflow_types::PixelFormat;
 
     pub(crate) fn flow_pixel_format_bytes_per_pixel(format: crate::ffi::PixelFormat) -> u32

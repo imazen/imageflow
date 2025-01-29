@@ -250,7 +250,7 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
 
             let compose = blend.unwrap_or(::imageflow_types::CompositingMode::Compose) == s::CompositingMode::Compose;
 
-            // We can write to the temporary BitmapBgra field because we set it on the real bitmap later after we're done
+
             if canvas_bitmap.info().compose() == &BitmapCompositing::ReplaceSelf && compose {
                 canvas_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
             }

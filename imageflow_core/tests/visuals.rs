@@ -1881,9 +1881,6 @@ fn test_detect_whitespace_basic(){
         bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
         let mut window = bitmap.get_window_u8().unwrap();
 
-        // This works if .to_bitmap_bgra() is called first
-        // or if
-
         window.fill_rect(1, 1, 9, 9, &red).unwrap();
 
         let r = ::imageflow_core::graphics::whitespace::detect_content(&window, 1).unwrap();

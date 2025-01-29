@@ -1,6 +1,6 @@
 use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
-use crate::ffi::BitmapBgra;
+
 use super::*;
 extern crate mozjpeg_sys;
 extern crate byteorder;

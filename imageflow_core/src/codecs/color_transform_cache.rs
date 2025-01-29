@@ -7,7 +7,7 @@ use lcms2::*;
 use lcms2;
 use crate::ffi;
 use crate::errors::{FlowError, ErrorKind, ErrorCategory, Result};
-use crate::ffi::{BitmapBgra, DecoderColorInfo};
+use crate::ffi::DecoderColorInfo;
 use std::cell::RefCell;
 use std::thread;
 

@@ -74,6 +74,7 @@ pub enum PixelFormat {
     #[serde(rename="bgr_32")]
     Bgr32 = 70,
     #[serde(rename="bgr_24")]
+
     Bgr24 = 3,
     #[serde(rename="gray_8")]
     Gray8 = 1,

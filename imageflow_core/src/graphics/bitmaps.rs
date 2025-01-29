@@ -1,5 +1,5 @@
 use crate::{FlowError, ErrorKind};
-use crate::ffi::{PixelFormat, BitmapFloat, BitmapBgra, BitmapCompositingMode};
+use crate::ffi::{PixelFormat, BitmapFloat, BitmapCompositingMode};
 use imageflow_helpers::colors::Color32;
 use imageflow_types::{PixelBuffer, CompositingMode};
 use imgref::ImgRef;
@@ -238,63 +238,6 @@ impl<'a,T>  BitmapWindowMut<'a, T>
         Ok(v)
     }
 
-
-
-    #[deprecated(since = "0.1.0", note = "Stop using BitmapBgra")]
-    pub unsafe fn to_bitmap_bgra(&mut self) -> Result<BitmapBgra, FlowError>{
-        if std::mem::size_of::<T>() != 1{
-            return Err(nerror!(ErrorKind::InvalidState));
-        }
-
-        // zero width and zero height are invalid
-        if self.w() == 0 || self.h() == 0 {
-            return Err(nerror!(ErrorKind::InvalidArgument, "Bitmap dimensions cannot be zero"));
-        }
-
-
-        let fmt = self.info().calculate_pixel_format()
-            .map_err(|e| e.at(here!()))?;
-
-
-        let mut b = BitmapBgra {
-            w: self.w() as u32,
-            h: self.h() as u32,
-            stride: self.info.item_stride,
-            pixels: self.slice.as_mut_ptr() as *mut u8,
-            fmt,
-            matte_color: [0;4],
-            compositing_mode: crate::ffi::BitmapCompositingMode::ReplaceSelf
-        };
-
-
-        match &self.info().compose(){
-            BitmapCompositing::ReplaceSelf =>
-                {b.compositing_mode = crate::ffi::BitmapCompositingMode::ReplaceSelf},
-            BitmapCompositing::BlendWithSelf =>
-                {b.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf},
-            BitmapCompositing::BlendWithMatte(c) => {
-                b.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithMatte;
-
-                let color_val = c.clone();
-                let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
-
-                b.matte_color = std::mem::transmute(color_srgb_argb);
-
-                if c != &imageflow_types::Color::Transparent {
-                    b.fill_rect(
-                                          0,
-                                          0,
-                                          self.w(),
-                                          self.h(),
-                                          &color_val)?;
-                }
-            }
-        }
-
-
-
-        Ok(b)
-    }
 
 
     #[inline]

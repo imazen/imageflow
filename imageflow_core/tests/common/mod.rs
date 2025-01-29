@@ -525,7 +525,7 @@ fn diff_bytes(a: &[u8], b: &[u8]) -> (i64, i64, i64) {
 
 
 fn diff_bitmap_windows(a: &mut BitmapWindowMut<u8>, b: &mut BitmapWindowMut<u8>) -> (i64, i64, i64) {
-    if a.w() != b.w() || a.h() != b.h() || a.channels() != b.channels() {
+    if a.w() != b.w() || a.h() != b.h() || a.info().pixel_layout() != b.info().pixel_layout() {
         panic!("Bitmap dimensions differ. a:\n{:#?}\nb:\n{:#?}", a, b);
     }
     if a.info().pixel_layout() != PixelLayout::BGRA {
