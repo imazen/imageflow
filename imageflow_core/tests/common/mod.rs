@@ -248,6 +248,7 @@ impl ChecksumCtx{
     }
 
     /// Set the result checksum for a named test
+    /// Doesn't work right under nextest when new checksums are added
     #[allow(unused_variables)]
     pub fn set(&self, name: String, checksum: String) -> Result<(),()>{
         #[allow(unused_variables)]
