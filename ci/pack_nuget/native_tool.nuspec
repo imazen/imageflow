@@ -8,7 +8,14 @@
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>imageflow_tool is a fast, correct image processing tool suitable for web servers. This package contains only the native executable; see Imageflow.Net for a managed wrapper.</description>
         <copyright>AGPLv3 or commercial</copyright>
+        <projectUrl>https://imageflow.io</projectUrl>
         <tags>imageflow imazen imageflow_tool</tags>
         <repository type="git" url="https://github.com/:repo_name_tool:" />
+        <readme>docs\README.md</readme>
+        <license type="file">docs\LICENSE.md</license>
     </metadata>
+    <files>
+        <file src="README.md*" target="docs\" />
+        <file src="LICENSE.md*" target="docs\" />
+    </files>
 </package>

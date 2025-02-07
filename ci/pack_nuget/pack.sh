@@ -97,13 +97,7 @@ mkdir -p "$STAGING_DIR" || true
         LIB_NAME=libimageflow.so
         TOOL_NAME=imageflow_tool
     fi
-    
-    mkdir -p lib/netstandard1.0
-    echo "" > lib/netstandard1.0/_._
 
-    mkdir -p lib/netstandard2.0
-    echo "" > lib/netstandard2.0/_._
-    
     mkdir -p "$RUNTIME_DIR"
     if [[ "$1" == "tool" ]]; then
         cp "${BINARIES_DIR//\\//}${TOOL_NAME}" "${RUNTIME_DIR}${TOOL_NAME}"
@@ -115,7 +109,12 @@ mkdir -p "$STAGING_DIR" || true
     SED_NUGET_PACKAGE_NAME="$(echo $NUGET_PACKAGE_NAME | sed -e 's/[\/&]/\\&/g')"
     SED_NUGET_PACKAGE_VERSION="$(echo $NUGET_PACKAGE_VERSION | sed -e 's/[\/&]/\\&/g')"
     SED_NUGET_LIBFILE="$(echo $RUNTIME_DIR$LIB_NAME | sed -e 's/[\/&]/\\&/g' | sed -e 's/\//\\/g')" # fix slashes too
-    
+        
+    if [[ "$1" == "tool" ]]; then
+        NUSPEC_NAME="native_tool.nuspec"
+    else
+        NUSPEC_NAME="native.nuspec"
+    fi
     
     if [[ "${NUGET_RUNTIME}" == *'win'* ]]; then
         if [[ "${NUGET_RUNTIME}" == *'x64'* ]]; then
@@ -124,26 +123,31 @@ mkdir -p "$STAGING_DIR" || true
             mkdir -p buildTransitive/net45
             cat ../../imageflow_x64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
             cat ../../imageflow_x64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH_2"
+            mkdir -p lib/netstandard1.0
+            echo "" > lib/netstandard1.0/_._
+            NUSPEC_NAME="native_legacy.nuspec"
         elif [[ "${NUGET_RUNTIME}" == *'x86'* ]]; then
             # add props
             mkdir -p build/net45
             mkdir -p buildTransitive/net45
             cat ../../imageflow_x86.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
             cat ../../imageflow_x86.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH_2"
+            mkdir -p lib/netstandard1.0
+            echo "" > lib/netstandard1.0/_._
+            NUSPEC_NAME="native_legacy.nuspec"
         elif [[ "${NUGET_RUNTIME}" == *'arm64'* ]]; then
             # add props
-            mkdir -p build/net45
-            mkdir -p buildTransitive/net45
-            cat ../../imageflow_arm64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
-            cat ../../imageflow_arm64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH_2"
+            # nuget is fully broken for win-arm64, so let's skip .NET Framework 4.x compat in case it helps
+            # mkdir -p build/net45
+            # mkdir -p buildTransitive/net45
+            # cat ../../imageflow_arm64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
+            # cat ../../imageflow_arm64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH_2"
+            # mkdir -p lib/netstandard1.0
+            # echo "" > lib/netstandard1.0/_._
+            # NUSPEC_NAME="native_legacy.nuspec"
         fi
     fi
-    
-    if [[ "$1" == "tool" ]]; then
-        NUSPEC_NAME="native_tool.nuspec"
-    else
-        NUSPEC_NAME="native.nuspec"
-    fi
+
     
     cat ../../${NUSPEC_NAME} \
     | sed -e "s/:id:/${SED_NUGET_PACKAGE_NAME}/g" \
