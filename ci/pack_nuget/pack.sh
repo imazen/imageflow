@@ -100,6 +100,9 @@ mkdir -p "$STAGING_DIR" || true
     
     mkdir -p lib/netstandard1.0
     echo "" > lib/netstandard1.0/_._
+
+    mkdir -p lib/netstandard2.0
+    echo "" > lib/netstandard2.0/_._
     
     mkdir -p "$RUNTIME_DIR"
     if [[ "$1" == "tool" ]]; then
