@@ -9,9 +9,6 @@
         <description>imageflow_tool is a fast, correct image processing tool suitable for web servers. This package contains only the native executable; see Imageflow.Net for a managed wrapper.</description>
         <copyright>AGPLv3 or commercial</copyright>
         <tags>imageflow imazen imageflow_tool</tags>
-        <dependencies>
-            <group targetFramework=".NETStandard1.0" />
-        </dependencies>
         <repository type="git" url="https://github.com/:repo_name_tool:" />
     </metadata>
 </package>
