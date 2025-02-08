@@ -68,6 +68,10 @@ SCRIPT_DIR="$(cd "$SCRIPT_DIR"; pwd)"
 
 STAGING_DIR="${SCRIPT_DIR}/staging"
 
+## Use powershell, fail silently if not on Windows  
+WIN_SCRIPT_DIR=$(powershell.exe -Command "(Get-Item .).FullName"  | tr -d '\r' || echo ".")
+echo "WIN_SCRIPT_DIR: $WIN_SCRIPT_DIR"
+
 mkdir -p "$STAGING_DIR" || true
 
 ( cd "$STAGING_DIR"
@@ -82,7 +86,9 @@ mkdir -p "$STAGING_DIR" || true
     PROPS_PATH="build/net45/${NUGET_PACKAGE_NAME}.targets"
     PROPS_PATH_2="buildTransitive/net45/${NUGET_PACKAGE_NAME}.targets"
     NUGET_OUTPUT_DIR="${SCRIPT_DIR}/../../artifacts/nuget"
+    WIN_OUTPUT_DIR="${WIN_SCRIPT_DIR//\\/\\\\}\\..\\..\\artifacts\\nuget"
     NUGET_OUTPUT_FILE="${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg"
+    WIN_NUGET_OUTPUT_FILE="${WIN_OUTPUT_DIR}\\${NUGET_COMBINED_NAME}.nupkg"
   
     mkdir -p "${NUGET_OUTPUT_DIR}" || true
     
@@ -109,7 +115,10 @@ mkdir -p "$STAGING_DIR" || true
     SED_NUGET_PACKAGE_NAME="$(echo $NUGET_PACKAGE_NAME | sed -e 's/[\/&]/\\&/g')"
     SED_NUGET_PACKAGE_VERSION="$(echo $NUGET_PACKAGE_VERSION | sed -e 's/[\/&]/\\&/g')"
     SED_NUGET_LIBFILE="$(echo $RUNTIME_DIR$LIB_NAME | sed -e 's/[\/&]/\\&/g' | sed -e 's/\//\\/g')" # fix slashes too
-        
+    
+    # echo "SED_NUGET_PACKAGE_NAME: $SED_NUGET_PACKAGE_NAME"
+    # echo "SED_NUGET_PACKAGE_VERSION: $SED_NUGET_PACKAGE_VERSION"
+    # echo "SED_NUGET_LIBFILE: $SED_NUGET_LIBFILE"
     if [[ "$1" == "tool" ]]; then
         NUSPEC_NAME="native_tool.nuspec"
     else
@@ -136,6 +145,7 @@ mkdir -p "$STAGING_DIR" || true
             echo "" > lib/netstandard1.0/_._
             NUSPEC_NAME="native_legacy.nuspec"
         elif [[ "${NUGET_RUNTIME}" == *'arm64'* ]]; then
+            echo "Skipping .NET Framework 4.x compat for win-arm64, xplat nuget is fully broken for win-arm64"
             # add props
             # nuget is fully broken for win-arm64, so let's skip .NET Framework 4.x compat in case it helps
             # mkdir -p build/net45
@@ -148,7 +158,7 @@ mkdir -p "$STAGING_DIR" || true
         fi
     fi
 
-    
+    echo "Modifying ${NUSPEC_NAME} to create ${NUGET_PACKAGE_NAME}.nuspec, using values: ${SED_NUGET_PACKAGE_NAME}, ${SED_NUGET_PACKAGE_VERSION}, ${REPO_NAME}"
     cat ../../${NUSPEC_NAME} \
     | sed -e "s/:id:/${SED_NUGET_PACKAGE_NAME}/g" \
     | sed -e "s/:version:/${SED_NUGET_PACKAGE_VERSION}/g" \
@@ -156,12 +166,24 @@ mkdir -p "$STAGING_DIR" || true
     | sed -e "s/:repo_name_tool:/${REPO_NAME}/g" > "${NUGET_PACKAGE_NAME}.nuspec"
     
     
-    echo "${NUGET_PACKAGE_NAME}.nuspec:"
+    echo "Contents of ${NUGET_PACKAGE_NAME}.nuspec:"
     cat "${NUGET_PACKAGE_NAME}.nuspec"
     echo
-    
+
+    # Escape backslashes in WIN_SCRIPT_DIR
+    WIN_ZIP_SCRIPT="${WIN_SCRIPT_DIR//\\/\\\\}"
+    WIN_ZIP_SCRIPT="${WIN_ZIP_SCRIPT}\\zip.ps1"
+    echo "WIN_ZIP_SCRIPT: $WIN_ZIP_SCRIPT"
+
     rm "${NUGET_OUTPUT_FILE}" || true
-    zip -r "${NUGET_OUTPUT_FILE}" . || 7z a -tzip "${NUGET_OUTPUT_FILE}" "*" || powershell.exe -ExecutionPolicy Bypass -File "${SCRIPT_DIR}/zip.ps1" "${NUGET_OUTPUT_FILE}" "*"
+    echo "Packing ${NUGET_OUTPUT_FILE} with the following files:"
+    # (relative only, short paths, not grouped by directory):"
+    find . -type f -printf '%P\n'
+    zip -r "${NUGET_OUTPUT_FILE}" . || \
+     7z a -tzip "${NUGET_OUTPUT_FILE}" "*" || \
+     powershell.exe -ExecutionPolicy Bypass -File "${WIN_ZIP_SCRIPT}" "${WIN_NUGET_OUTPUT_FILE}" "*" || \
+     powershell.exe -ExecutionPolicy Bypass -File "${SCRIPT_DIR}/zip.ps1" "${NUGET_OUTPUT_FILE}" "*" || \
+     echo "Failed to pack ${NUGET_OUTPUT_FILE}, tried zip, 7z, and powershell zip.ps1 at ${WIN_SCRIPT_DIR}"
     
     # verify file is not empty
     if [[ ! -s "${NUGET_OUTPUT_FILE}" ]]; then
