@@ -61,21 +61,37 @@ NUGET_OUTPUT_DIR="${SCRIPT_DIR}/../../${REL_NUGET_OUTPUT_DIR}"
 mkdir -p "$NUGET_OUTPUT_DIR" || true
 
 # --------------------------------------------------------------------------------
-# Reasoning: Define the meta packages and their dependency runtimes.
+# Reasoning: Define meta packages and their dependency runtimes using indexed arrays,
+# making the script compatible with Bash versions older than 4.
 # --------------------------------------------------------------------------------
-declare -A PACKAGES=(
-    ["Imageflow.NativeRuntime.All"]="win-x64 win-x86 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64"
-    ["Imageflow.NativeRuntime.All.x64"]="win-x64 linux-x64 osx-x64"
-    ["Imageflow.NativeRuntime.All.Arm64"]="win-arm64 linux-arm64 osx-arm64"
-    ["Imageflow.NativeRuntime.All.Windows"]="win-x64 win-x86 win-arm64"
-    ["Imageflow.NativeRuntime.All.Linux"]="linux-x64 linux-arm64"
-    ["Imageflow.NativeRuntime.All.Mac"]="osx-x64 osx-arm64"
-    ["Imageflow.Net.All"]="Imageflow.NativeRuntime.All Imageflow.Net"
-    ["Imageflow.Net.All.x64"]="Imageflow.NativeRuntime.All.x64 Imageflow.Net"
-    ["Imageflow.Net.All.Arm64"]="Imageflow.NativeRuntime.All.Arm64 Imageflow.Net"
-    ["Imageflow.Net.All.Windows"]="Imageflow.NativeRuntime.All.Windows Imageflow.Net"
-    ["Imageflow.Net.All.Linux"]="Imageflow.NativeRuntime.All.Linux Imageflow.Net"
-    ["Imageflow.Net.All.Mac"]="Imageflow.NativeRuntime.All.Mac Imageflow.Net"
+PACKAGES_KEYS=( \
+    "Imageflow.NativeRuntime.All" \
+    "Imageflow.NativeRuntime.All.x64" \
+    "Imageflow.NativeRuntime.All.Arm64" \
+    "Imageflow.NativeRuntime.All.Windows" \
+    "Imageflow.NativeRuntime.All.Linux" \
+    "Imageflow.NativeRuntime.All.Mac" \
+    "Imageflow.Net.All" \
+    "Imageflow.Net.All.x64" \
+    "Imageflow.Net.All.Arm64" \
+    "Imageflow.Net.All.Windows" \
+    "Imageflow.Net.All.Linux" \
+    "Imageflow.Net.All.Mac" \
+)
+
+PACKAGES_VALUES=( \
+    "win-x64 win-x86 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64" \
+    "win-x64 linux-x64 osx-x64" \
+    "win-arm64 linux-arm64 osx-arm64" \
+    "win-x64 win-x86 win-arm64" \
+    "linux-x64 linux-arm64" \
+    "osx-x64 osx-arm64" \
+    "Imageflow.NativeRuntime.All Imageflow.Net" \
+    "Imageflow.NativeRuntime.All.x64 Imageflow.Net" \
+    "Imageflow.NativeRuntime.All.Arm64 Imageflow.Net" \
+    "Imageflow.NativeRuntime.All.Windows Imageflow.Net" \
+    "Imageflow.NativeRuntime.All.Linux Imageflow.Net" \
+    "Imageflow.NativeRuntime.All.Mac Imageflow.Net" \
 )
 
 # --------------------------------------------------------------------------------
@@ -103,11 +119,11 @@ generate_dependencies() {
 }
 
 # --------------------------------------------------------------------------------
-# Reasoning: Iterate over each meta package configuration and create package.
+# Reasoning: Iterate over each meta package configuration by numeric index.
 # --------------------------------------------------------------------------------
-for PACKAGE_NAME in "${!PACKAGES[@]}"; do
-    # Set the dependency string for the current package.
-    DEPENDENCIES="${PACKAGES[$PACKAGE_NAME]}"
+for (( i=0; i < ${#PACKAGES_KEYS[@]}; i++ )); do
+    PACKAGE_NAME="${PACKAGES_KEYS[$i]}"
+    DEPENDENCIES="${PACKAGES_VALUES[$i]}"
     export NUGET_COMBINED_NAME="$PACKAGE_NAME.$NUGET_PACKAGE_VERSION"
     echo "Generating package ${PACKAGE_NAME} with dependencies ${DEPENDENCIES}"
     
