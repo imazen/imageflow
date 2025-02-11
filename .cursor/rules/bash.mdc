@@ -1,0 +1,58 @@
+---
+description: Rules for working on bash scripts and their tests
+globs: *.sh, *.yml
+---
+# Goal: Enforce cross-platform bash script guidelines
+# Reasoning:
+#   1. We want all .sh scripts to work with Bash 3.2 on macOS, Git Bash on Windows, WSL2, Ubuntu 22–24. cygpath is never available.
+#   2. We need to ensure each .sh script has a corresponding test_ script. test_scripts should create a unique directory to contain all their filesystem work, remove it on pass/fail, and restore the current directory and env vars to what they were before it ran.
+#   3. For Windows, we assume a fresh install with only Git available; use powershell.exe if needed (no pwsh).
+#   4. Powershell automatically handles slash conversions, but /c/ must become C:/. Create tests for powershell files
+#   5. Use set -e and set -o pipefail for bash. Avoid silent failure. 
+#   6. For both powerhshell files and bash files, use functions and DRY things as much as possible. 
+#   7. Add verification checks for all inputs, whether files, dirs, or variables, and make contractual boundaries and division of responsibility clear.
+
+<rule>
+name: cross_platform_bash_scripts
+description: Ensures that all bash scripts are cross-platform compatible and have matching test scripts
+filters:
+  # Match any .sh file outside of test_ prefixed scripts
+  - type: file_extension
+    pattern: "\\.sh$"
+  - type: filename
+    pattern: "^(?!test_).+\\.sh$"
+
+actions:
+  - type: reject
+    conditions:
+      # Reject any .sh file without a matching test_ script of the same name
+      - pattern: "^(?!test_)(.+)\\.sh$"
+        message: |
+          Found a bash script without a corresponding test script. 
+          Please add a test_ script to ensure thorough testing across platforms.
+
+  - type: suggest
+    message: |
+      Ensure compatibility with:
+      • Bash 3.2 on macOS
+      • Git Bash on Windows (use powershell.exe where appropriate)
+      • WSL2
+      • Ubuntu 22–24
+      • x64 and arm64 architectures
+      Please provide a test_ script that verifies the script on each platform.
+      Use set -e and set -o pipefail for bash
+      For both powerhshell files and bash files, use functions and DRY things as much as possible. 
+      Add verification checks for all inputs, whether files, dirs, or variables, and make contractual boundaries and division of responsibility clear. 
+examples:
+  - input: |
+      # Good scenario:
+      build.sh and test_build.sh
+      deploy.sh and test_deploy.sh
+
+      # Bad scenario:
+      build.sh (no test script)
+    output: "All .sh files have matching test_ scripts for cross-platform testing"
+metadata:
+  priority: high
+  version: 1.0
+</rule>
