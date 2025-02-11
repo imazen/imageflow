@@ -105,7 +105,7 @@ fn linear_to_srgb(clr: f32) -> f32 {
     if clr <= 0.0031308f32 {
         12.92f32 * clr * 255.0f32
     }else {
-        1.055f32 * 255.0f32 * unsafe{ fastpow(clr, 0.41666666f32)} - 14.025f32
+        1.055f32 * 255.0f32 * fastpow(clr, 0.41666666f32) - 14.025f32
     }
 }
 #[inline]

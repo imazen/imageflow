@@ -1,4 +1,5 @@
 use imageflow_types::{Color, RoundCornersMode};
+use rgb::alt::BGRA8;
 use crate::graphics::prelude::*;
 
 fn get_radius(radius: RoundCornersMode, w: u32, h: u32) -> RoundCornersRadius{
@@ -183,7 +184,7 @@ impl QuadrantInfo{
 // }
 
 pub fn flow_bitmap_bgra_clear_around_rounded_corners(
-    b: &mut BitmapWindowMut<u8>,
+    b: &mut BitmapWindowMut<BGRA8>,
     round_corners_mode: RoundCornersMode,
     color: Color
 ) -> Result<(), FlowError> {
@@ -254,7 +255,7 @@ pub fn flow_bitmap_bgra_clear_around_rounded_corners(
 
         for y in start_y..end_y{
             let mut row_window = b.row_window(y as u32).unwrap();
-            let row_pixels = row_window.slice_of_pixels_first_row().unwrap();
+            let row_pixels = row_window.slice_mut();
             let yf = y as f32 + 0.5;
             let y_dist_from_center = (quadrant.center_y - yf).abs();
             let y_dist_squared = y_dist_from_center * y_dist_from_center;

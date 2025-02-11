@@ -73,7 +73,7 @@ impl Encoder for MozjpegEncoder {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
-        bitmap.get_window_u8().unwrap()
+        bitmap.get_window_bgra32().unwrap()
             .apply_matte(self.matte.clone().unwrap_or(
                 imageflow_types::Color::Srgb(imageflow_types::ColorSrgb::Hex("FFFFFFFF".to_owned()))))
             .map_err(|e| e.at(here!()))?;

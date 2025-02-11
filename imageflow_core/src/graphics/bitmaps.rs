@@ -1221,6 +1221,33 @@ impl<'a> BitmapWindowMut<'a, BGRA8> {
         Ok(BitmapWindowMut { slice: buffer.slice, info, is_sub_window: self.is_sub_window })
     }
 
+
+    pub fn apply_matte(&mut self, matte: imageflow_types::Color) -> Result<(), FlowError> {
+        crate::graphics::blend::apply_matte(self, matte)
+    }
+
+    pub fn fill_rectangle(&mut self, color: imageflow_helpers::colors::Color32, x: u32, y: u32, x2: u32, y2: u32) -> Result<(), FlowError>{
+        if let BitmapCompositing::BlendWithMatte(_) = self.info().compose(){
+            if self.is_sub_window || (x,y,x2,y2) != (0,0,self.w(),self.h()){
+                return Err(nerror!(ErrorKind::InvalidArgument, "Cannot draw a rectangle on a sub-rectangle of a bitmap in BlendWithMatte mode"));
+            }
+        }
+        if y2 == y || x2 == x { return Ok(()); } // Don't fail on zero width rect
+        if y2 <= y || x2 <= x || x2 > self.w() || y2 > self.h(){
+            return Err(nerror!(ErrorKind::InvalidArgument, "Coordinates {},{} {},{} must be within image dimensions {}x{}", x, y, x2, y2, self.w(), self.h()));        }
+        if  self.info().pixel_layout() != PixelLayout::BGRA {
+            return Err(nerror!(ErrorKind::InvalidArgument, "Only BGRA supported for fill_rectangle"));
+        }
+        let bgra = color.to_bgra8();
+
+
+        let mut top = self.window(x, y, x2, y2).unwrap();
+        for line in top.scanlines(){
+            line.row.fill(bgra);
+        }
+        Ok(())
+    }
+
 }
 impl<'a> BitmapWindowMut<'a, u8> {
 
@@ -1306,8 +1333,6 @@ impl<'a> BitmapWindowMut<'a, u8> {
 
 
     pub fn fill_rect(&mut self, x: u32, y: u32, x2: u32, y2: u32, color: &imageflow_types::Color) -> Result<(), FlowError>{
-
-
         let color_srgb_argb = color.to_color_32()?;
         self.fill_rectangle(color_srgb_argb, x, y, x2, y2).map_err(|e| e.at(here!()))
     }
@@ -1363,9 +1388,6 @@ impl<'a> BitmapWindowMut<'a, u8> {
         Ok(())
     }
 
-    pub fn apply_matte(&mut self, matte: imageflow_types::Color) -> Result<(), FlowError> {
-        crate::graphics::blend::apply_matte(self, matte)
-    }
 
     pub fn slice_of_pixels_first_row(&mut self) -> Option<&mut [rgb::alt::BGRA8]>{
         if self.info().t_per_pixel() != 4 || self.slice.len() %4 != 0{

@@ -46,7 +46,7 @@ impl Encoder for LibPngEncoder {
 
         if let EncoderPreset::Libpng {ref matte, ..} = preset{
             if let Some(ref color) = matte{
-                bitmap.get_window_u8().unwrap().apply_matte(color.clone())
+                bitmap.get_window_bgra32().unwrap().apply_matte(color.clone())
                     .map_err(|e| e.at(here!()))?;
                 // Optimize png size
                 if color.is_opaque(){

@@ -61,7 +61,7 @@ impl NodeDefMutateBitmap for RoundImageCornersMut{
 
             bitmap_bitmap.set_compositing(crate::graphics::bitmaps::BitmapCompositing::BlendWithSelf);
 
-            let mut bitmap_window = bitmap_bitmap.get_window_u8().unwrap();
+            let mut bitmap_window = bitmap_bitmap.get_window_bgra32().unwrap();
 
             crate::graphics::rounded_corners::flow_bitmap_bgra_clear_around_rounded_corners(&mut bitmap_window, *radius, background_color.to_owned())
                 .map_err(|e| e.at(here!()))?;
