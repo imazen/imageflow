@@ -3,6 +3,9 @@
 # Exit on error
 set -e
 set -o pipefail 
+
+UTILS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Platform detection function
 detect_platform() {
     echo "Detecting platform..."
@@ -82,10 +85,15 @@ create_package() {
     ( cd "$staging_dir"
         # Windows-specific handling
         if [[ "$PLATFORM" == "windows" ]]; then
-            echo "Using Windows packaging method..."
+            
+            # replace /c/ with C:/
+            WIN_SCRIPT_DIR=$(echo "$UTILS_SCRIPT_DIR" | sed 's/\/c\//C:\//g')
+            echo "Using zip.ps1: $WIN_SCRIPT_DIR/zip.ps1"
+
             # Convert paths to Windows format for PowerShell
-            local ps_output_file=$(echo "$output_file" | sed 's/\//\\/g')
-            if ! powershell.exe -ExecutionPolicy Bypass -Command "Compress-Archive -Path * -DestinationPath \"${ps_output_file}\" -Force" > "${ps_log}" 2>&1; then
+            
+            # Convert paths to Windows format for PowerShell
+            if ! powershell.exe -ExecutionPolicy Bypass -File "${WIN_SCRIPT_DIR}/zip.ps1" -ArchiveFile "${output_file}" -Paths . > "${ps_log}" 2>&1; then
                 echo "PowerShell compression failed with output:"
                 cat "${ps_log}"
                 return 1

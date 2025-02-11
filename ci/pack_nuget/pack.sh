@@ -216,7 +216,7 @@ mkdir -p "$STAGING_DIR" || true
     echo "Packing ${NUGET_OUTPUT_FILE} with the following files:"
     # (relative only, short paths, not grouped by directory):"
     echo "----------------------------------------"
-    find . -type f -printf '%P\n'
+    find . -type f -printf '%P\n' || find . -type f #osx doesn't support -printf
     echo "----------------------------------------"
     
     echo "Attempting to create package..."

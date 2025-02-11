@@ -149,7 +149,7 @@ jobs:
         uses: actions/checkout@v4
         if: matrix.woa == 'true'
 
-      - name: Test NuGet packing system on this OS before we compiled
+      - name: Test NuGet Package creation early
         shell: bash
         run: ./ci/pack_nuget/tests/run_all_tests.sh
 

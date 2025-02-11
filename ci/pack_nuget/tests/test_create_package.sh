@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # Load utils
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SAVE_DIR=$(pwd)
+cd "$SCRIPT_DIR"
+
 source ../utils.sh
 
 # Create unique test directory and output file names
@@ -18,6 +22,7 @@ cleanup() {
     else
         echo "✅ Test completed successfully"
     fi
+    cd "$SAVE_DIR"
     exit $exit_code
 }
 trap cleanup  1 2 3 6

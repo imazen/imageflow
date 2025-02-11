@@ -224,7 +224,7 @@ for PACKAGE_NAME in "${!PACKAGES[@]}"; do
         
         echo "Packing ${NUGET_OUTPUT_FILE} with the following files:"
         echo "----------------------------------------"
-        find . -type f -printf '%P\n'
+        find . -type f -printf '%P\n' || find . -type f  #osx doesn't support -printf
         echo "----------------------------------------"
         
         # --------------------------------------------------------------------------------

@@ -20,10 +20,12 @@ param(
     [string[]] $Paths
 )
 
-# Reasoning: Store the original archive filename to rename back after compression.
-# Reasoning: Convert forward slashes to backslashes in the archive name for Windows compatibility.
-# Goal: Preserve the user's intended archive filename.
-$ArchiveFile = $ArchiveFile -replace '/', '\'
+
+# Slashes don't matter, but /c/ needs to be C:/
+$ArchiveFile = $ArchiveFile -replace '/c/', 'C:/'
+$Paths = $Paths | ForEach-Object { $_ -replace '/c/', 'C:/' }
+$ArchiveFile = $ArchiveFile -replace '\c\', 'C:/'
+$Paths = $Paths | ForEach-Object { $_ -replace '\c\', 'C:\' }
 
 $ZipAdded = $false
 
