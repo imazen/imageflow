@@ -304,7 +304,9 @@ jobs:
           MATRIX_TARGET: ${{ matrix.target }}
           HTTPS_UPLOAD_BASE: ${{ env.HTTPS_IMAGEFLOW_BUCKET }}
 
-
+      - name: "Create ${{ env.REL_NUGET_OUTPUT_DIR }}"
+        shell: bash
+        run: mkdir -p ${{ env.REL_NUGET_OUTPUT_DIR }}
 
       # CREATE NUGET PACKAGE ---------------------------------------------------------------------
       - name: "Create NuGet Package Imageflow.NativeTool.${{ matrix.nuget-rid }}"

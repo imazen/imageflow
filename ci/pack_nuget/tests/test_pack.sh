@@ -90,7 +90,7 @@ fi
 # Testing: Loop over multiple target runtimes
 # ---------------------------
 # Reasoning: Define an array of target runtime values to test pack.sh.
-RUNTIMES=("win-arm64" "win-x86" "win-x64" "osx-x64" "osx-arm64" "linux-arm64" "linux-x64")
+RUNTIMES=("win-arm64" "win-x86" "win-x64" "osx-x64" "osx-arm64" "linux-arm64" "linux-x64" "linux-musl-x64" "linux-musl-arm64")
 
 for runtime in "${RUNTIMES[@]}"; do
     # Reasoning: Set PACKAGE_SUFFIX and NUGET_RUNTIME to the current runtime value.
@@ -103,5 +103,6 @@ for runtime in "${RUNTIMES[@]}"; do
     echo "---------------------------------------------------"
     
     # Reasoning: Invoke the pack.sh script. If it fails for any runtime, exit the test.
-    ./ci/pack_nuget/pack.sh || { echo "Failed for runtime $runtime"; exit 1; }
+    ./ci/pack_nuget/pack.sh || { echo "Failed for lib - runtime $runtime"; exit 1; }
+    ./ci/pack_nuget/pack.sh tool || { echo "Failed for tool - runtime $runtime"; exit 1; }
 done
