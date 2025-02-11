@@ -70,6 +70,12 @@ declare -A PACKAGES=(
     ["Imageflow.NativeRuntime.All.Windows"]="win-x64 win-x86 win-arm64"
     ["Imageflow.NativeRuntime.All.Linux"]="linux-x64 linux-arm64"
     ["Imageflow.NativeRuntime.All.Mac"]="osx-x64 osx-arm64"
+    ["Imageflow.Net.All"]="Imageflow.NativeRuntime.All Imageflow.Net"
+    ["Imageflow.Net.All.x64"]="Imageflow.NativeRuntime.All.x64 Imageflow.Net"
+    ["Imageflow.Net.All.Arm64"]="Imageflow.NativeRuntime.All.Arm64 Imageflow.Net"
+    ["Imageflow.Net.All.Windows"]="Imageflow.NativeRuntime.All.Windows Imageflow.Net"
+    ["Imageflow.Net.All.Linux"]="Imageflow.NativeRuntime.All.Linux Imageflow.Net"
+    ["Imageflow.Net.All.Mac"]="Imageflow.NativeRuntime.All.Mac Imageflow.Net"
 )
 
 # --------------------------------------------------------------------------------
@@ -77,11 +83,19 @@ declare -A PACKAGES=(
 # --------------------------------------------------------------------------------
 generate_dependencies() {
     local deps=($1)
+    IMAGEFLOW_NET_VERSION=$(get_latest_version "Imageflow.Net")
     local xml=""
     xml+='    <dependencies>\n'
     xml+='      <group targetFramework=".NETStandard2.0">'
     for dep in "${deps[@]}"; do
-        xml+="\n        <dependency id=\"Imageflow.NativeRuntime.${dep}\" version=\"[${NUGET_PACKAGE_VERSION}]\" />"
+        if [[ "$dep" == "Imageflow.Net" ]]; then
+            # Use the latest version of Imageflow.Net, it's published separately   
+            xml+="\n        <dependency id=\"$dep\" version=\"[${IMAGEFLOW_NET_VERSION}]\" />"
+        elif [[ "$dep" =~ "Imageflow.NativeRuntime." ]]; then
+            xml+="\n        <dependency id=\"$dep\" version=\"[${NUGET_PACKAGE_VERSION}]\" />"
+        else
+            xml+="\n        <dependency id=\"Imageflow.NativeRuntime.${dep}\" version=\"[${NUGET_PACKAGE_VERSION}]\" />"
+        fi
     done
     xml+="\n      </group>\n"
     xml+="    </dependencies>"

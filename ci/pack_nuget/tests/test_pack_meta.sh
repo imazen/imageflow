@@ -85,6 +85,12 @@ EXPECTED_PACKAGES=(
     "Imageflow.NativeRuntime.All.Windows"
     "Imageflow.NativeRuntime.All.Linux"
     "Imageflow.NativeRuntime.All.Mac"
+    "Imageflow.Net.All"
+    "Imageflow.Net.All.x64"
+    "Imageflow.Net.All.Arm64"
+    "Imageflow.Net.All.Windows"
+    "Imageflow.Net.All.Linux"
+    "Imageflow.Net.All.Mac"
 )
 
 echo -e "\nVerifying created packages:"
