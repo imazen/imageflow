@@ -1,10 +1,10 @@
 <#
-powershell.exe -ExecutionPolicy Bypass -File .\test_zip.ps1
-
-
-    Reasoning: We want to create a script that will test zip.ps1. 
-    Goal: Validate that using both forward slashes and backward slashes in paths results in correct zip file creation and renaming.
+    Usage: powershell.exe -ExecutionPolicy Bypass -File .\test_zip.ps1
 #>
+
+# Get script directory and parent directory
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$PackDir = Split-Path -Parent $ScriptDir
 
 <#
     Reasoning: Step 1 - Set up our test environment.
@@ -30,7 +30,6 @@ New-Item -ItemType File -Path $FileC | Out-Null
 $ArchiveForwardSlash = Join-Path $TestDir "archive_forward"
 $ArchiveBackwardSlash = Join-Path $TestDir "archive_backward.zip"
 
-
 <#
     Reasoning: Step 2 - Test using forward slashes in paths.
     Goal: Verify that zip.ps1 correctly handles forward slashes and appends .zip if missing.
@@ -38,9 +37,9 @@ $ArchiveBackwardSlash = Join-Path $TestDir "archive_backward.zip"
 Write-Host "`n--- Testing zip.ps1 with forward slashes ---"
 
 # Invoke zip.ps1 with forward slash paths and no .zip extension
-Push-Location (Split-Path $PSScriptRoot)
+Push-Location $PackDir
 try {
-    & "$PSScriptRoot\zip.ps1" $ArchiveForwardSlash $FileA.Replace('\','/') $FileB.Replace('\','/') 
+    & "$PackDir\zip.ps1" $ArchiveForwardSlash $FileA.Replace('\','/') $FileB.Replace('\','/') 
 }
 catch {
     Write-Error "Test failed with forward slash paths: $_"
@@ -48,23 +47,22 @@ catch {
 Pop-Location
 
 Write-Host "Checking if archive was created (with .zip extension appended)..."
-$ExpectedForwardSlashZip = $ArchiveForwardSlash.TrimEnd('.zip')
+$ExpectedForwardSlashZip = $ArchiveForwardSlash + ".zip"
 if (Test-Path "$ExpectedForwardSlashZip") {
     Write-Host "SUCCESS: Archive with forward slashes created as expected: $ExpectedForwardSlashZip"
 } else {
     Write-Error "FAIL: Archive with forward slashes was not found."
 }
 
-
-<# clec
+<#
     Reasoning: Step 3 - Test using backward slashes in paths.
     Goal: Verify that zip.ps1 handles backward slashes properly and respects existing .zip in archive name.
 #>
 Write-Host "`n--- Testing zip.ps1 with backward slashes ---"
 
-Push-Location (Split-Path $PSScriptRoot)
+Push-Location $PackDir
 try {
-    & "$PSScriptRoot\zip.ps1" $ArchiveBackwardSlash "$FileA" "$FileB" "$SubDir"
+    & "$PackDir\zip.ps1" $ArchiveBackwardSlash "$FileA" "$FileB" "$SubDir"
 }
 catch {
     Write-Error "Test failed with backward slash paths: $_"
@@ -78,7 +76,6 @@ if (Test-Path "$ArchiveBackwardSlash") {
     Write-Error "FAIL: Archive with backward slashes was not found."
 }
 
-
 <#
     Reasoning: Step 4 - Teardown and clean up test artifacts.
     Goal: Remove test files and directories after testing is complete.
@@ -90,4 +87,4 @@ try {
 }
 catch {
     Write-Host "Cleanup failed: $_"
-}
+} 

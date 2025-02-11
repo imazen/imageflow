@@ -31,6 +31,8 @@ CTestTestfile.cmake
 coverage.info
 imageflow_cache/
 
+trash/
+
 # Exhaustive search logs
 
 *searchlog*.txt

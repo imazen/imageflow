@@ -26,13 +26,12 @@ env:
     IMAGEFLOW_RELEASE_BUCKET_REGION: ${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION || 'us-west-1' }}
     HTTPS_IMAGEFLOW_BUCKET: "https://s3.${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ vars.IMAGEFLOW_RELEASE_BUCKET }}"
     IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: "https://s3.${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ vars.IMAGEFLOW_RELEASE_BUCKET }}/commits/${{ github.sha }}/linux64.tar.gz"
-
+    NUGET_UPLOAD_NUGET: ${{ secrets.NUGET_UPLOAD_NUGET }}
+    NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
+    REL_NUGET_OUTPUT_DIR: "artifacts/nuget/"
+    PROFILE: release
 jobs:
   build:
-    env:
-      NUGET_UPLOAD_NUGET: ${{ secrets.NUGET_UPLOAD_NUGET }}
-      NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
-      PROFILE: release
     strategy:
       fail-fast: false
       matrix:
@@ -149,6 +148,10 @@ jobs:
       - name: "WOA: Checkout code again with git, so git commands work."
         uses: actions/checkout@v4
         if: matrix.woa == 'true'
+
+      - name: Test NuGet packing system on this OS before we compiled
+        shell: bash
+        run: ./ci/pack_nuget/tests/run_all_tests.sh
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -311,8 +314,9 @@ jobs:
           CI_TAG: ${{ env.IMAGEFLOW_NUGET_VERSION }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
-          REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
-          BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
+          REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
+          REL_BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
+          REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
 
       - name: "Create NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }}"
         if: ${{ !matrix.static }}
@@ -322,8 +326,9 @@ jobs:
           CI_TAG: ${{ env.IMAGEFLOW_NUGET_VERSION }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
-          REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
-          BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
+          REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
+          REL_BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
+          REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
 
       # UPLOAD ---------------------------------------------------------------------
       - name: "Upload to Github Release"
@@ -350,7 +355,7 @@ jobs:
       - name: Publish to nuget.pkg.github.com
         if: ${{ env.ALLOW_PUBLISH == 'true' && env.NUGET_UPLOAD_GITHUB == 'true' }}
         run: |
-          for f in ./artifacts/nuget/*.nupkg
+          for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
           do
             curl -vX PUT -u "${{github.repository_owner}}:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/${{github.repository_owner}}/
           done
@@ -359,7 +364,7 @@ jobs:
       - name: Publish to nuget.org
         if: ${{ env.ALLOW_PUBLISH == 'true' && env.NUGET_UPLOAD_NUGET == 'true' }}
         run: |
-          for f in ./artifacts/nuget/*.nupkg
+          for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
           do
              curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
           done
@@ -394,6 +399,38 @@ jobs:
 
           # Exit with failure if any URL test failed
           exit $failed
+
+  nuget-meta-packages:
+    needs: [build]
+    runs-on: ubuntu-latest
+    name: "Create and publish meta packages like Imageflow.NativeRuntime.All, etc"
+    steps:
+      - name: Create nuget packages
+        shell: bash
+        run: ./ci/pack_nuget/pack_meta.sh
+        env:
+          CI_TAG: ${{ env.IMAGEFLOW_NUGET_VERSION }}
+          REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
+          REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
+
+      - name: Publish to nuget.pkg.github.com
+        if: ${{ env.ALLOW_PUBLISH == 'true' && env.NUGET_UPLOAD_GITHUB == 'true' }}
+        run: |
+          for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
+          do
+            curl -vX PUT -u "${{github.repository_owner}}:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/${{github.repository_owner}}/
+          done
+        shell: bash
+
+      - name: Publish to nuget.org
+        if: ${{ env.ALLOW_PUBLISH == 'true' && env.NUGET_UPLOAD_NUGET == 'true' }}
+        run: |
+          for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
+          do
+             curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
+          done
+        shell: bash
+
 
   # ----------------------------------------------------------------------------
   # Reasoning: The existing release_ci.yml had a second job "publish" that
