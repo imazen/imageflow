@@ -498,30 +498,30 @@ impl<'a> Engine<'a> {
 
                     self.more_frames = self.more_frames || more_frames;
 
-                    unsafe {
-                        if self.c.graph_recording.record_frame_images.unwrap_or(false) {
-                            if let NodeResult::Frame(bitmap_key) = self.g
-                                .node_weight(next_ix)
-                                .unwrap()
-                                .result {
-                                let path = format!("node_frames/job_{}_node_{}.png",
-                                                   self.c.debug_job_id,
-                                                   self.g.node_weight(next_ix).unwrap().stable_id);
-                                let _ = std::fs::create_dir("node_frames");
+                
+                    if self.c.graph_recording.record_frame_images.unwrap_or(false) {
+                        if let NodeResult::Frame(bitmap_key) = self.g
+                            .node_weight(next_ix)
+                            .unwrap()
+                            .result {
+                            let path = format!("node_frames/job_{}_node_{}.png",
+                                                self.c.debug_job_id,
+                                                self.g.node_weight(next_ix).unwrap().stable_id);
+                            let _ = std::fs::create_dir("node_frames");
 
 
-                                let bitmaps = self.c.borrow_bitmaps()
-                                    .map_err(|e| e.at(here!()))?;
-                                let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
-                                    .map_err(|e| e.at(here!()))?;
+                            let bitmaps = self.c.borrow_bitmaps()
+                                .map_err(|e| e.at(here!()))?;
+                            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                                .map_err(|e| e.at(here!()))?;
 
 
-                                crate::codecs::write_png(&path, &mut bitmap.get_window_u8().unwrap())
-                                    .map_err(|e| e.at(here!()))?;
+                            crate::codecs::write_png(&path, &mut bitmap.get_window_u8().unwrap())
+                                .map_err(|e| e.at(here!()))?;
 
-                            }
                         }
                     }
+                    
                 }
             }
 

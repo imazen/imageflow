@@ -53,20 +53,20 @@ impl NodeDefMutateBitmap for RoundImageCornersMut{
     }
     fn mutate(&self, c: &Context, bitmap_key: BitmapKey,  p: &NodeParams) -> Result<()> {
         if let NodeParams::Json(s::Node::RoundImageCorners{ref background_color, ref radius}) = p {
-            unsafe {
-                let bitmaps = c.borrow_bitmaps()
-                    .map_err(|e| e.at(here!()))?;
-                let mut bitmap_bitmap = bitmaps.try_borrow_mut(bitmap_key)
-                    .map_err(|e| e.at(here!()))?;
 
-                bitmap_bitmap.set_compositing(crate::graphics::bitmaps::BitmapCompositing::BlendWithSelf);
+            let bitmaps = c.borrow_bitmaps()
+                .map_err(|e| e.at(here!()))?;
+            let mut bitmap_bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                .map_err(|e| e.at(here!()))?;
 
-                let mut bitmap_window = bitmap_bitmap.get_window_u8().unwrap();
+            bitmap_bitmap.set_compositing(crate::graphics::bitmaps::BitmapCompositing::BlendWithSelf);
 
-                crate::graphics::rounded_corners::flow_bitmap_bgra_clear_around_rounded_corners(&mut bitmap_window, *radius, background_color.to_owned())
-                    .map_err(|e| e.at(here!()))?;
+            let mut bitmap_window = bitmap_bitmap.get_window_u8().unwrap();
 
-            }
+            crate::graphics::rounded_corners::flow_bitmap_bgra_clear_around_rounded_corners(&mut bitmap_window, *radius, background_color.to_owned())
+                .map_err(|e| e.at(here!()))?;
+
+
             Ok(())
         } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need RoundImageCorners, got {:?}", p))
