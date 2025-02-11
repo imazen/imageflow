@@ -327,9 +327,7 @@ impl ChecksumCtx{
             }else {
                 println!("Writing {:#?}", &dest_path);
             }
-            unsafe {
-                imageflow_core::helpers::write_png(dest_path, window).unwrap();
-            }
+            imageflow_core::helpers::write_png(dest_path, window).unwrap();
         }
     }
     /// Save the given bytes to disk by calculating their checksum.

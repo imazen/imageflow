@@ -182,7 +182,7 @@ impl QuadrantInfo{
 //     }
 // }
 
-pub unsafe fn flow_bitmap_bgra_clear_around_rounded_corners(
+pub fn flow_bitmap_bgra_clear_around_rounded_corners(
     b: &mut BitmapWindowMut<u8>,
     round_corners_mode: RoundCornersMode,
     color: Color

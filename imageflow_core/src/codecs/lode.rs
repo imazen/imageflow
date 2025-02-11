@@ -74,7 +74,7 @@ impl Encoder for LodepngEncoder {
     }
 }
 
-pub unsafe fn write_png<T: AsRef<std::path::Path>>(path: T, window: &mut crate::graphics::bitmaps::BitmapWindowMut<u8>) -> Result<()>{
+pub fn write_png<T: AsRef<std::path::Path>>(path: T, window: &mut crate::graphics::bitmaps::BitmapWindowMut<u8>) -> Result<()>{
 
     let file = std::fs::File::create(path)
         .map_err(|e| nerror!(ErrorKind::InvalidOperation))?;
