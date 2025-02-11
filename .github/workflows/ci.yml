@@ -405,18 +405,28 @@ jobs:
   nuget-meta-packages:
     needs: [build]
     runs-on: ubuntu-latest
-    name: "Create and publish meta packages like Imageflow.NativeRuntime.All, etc"
+    name: "Meta NuGet packages like Imageflow.NativeRuntime.All, etc"
     steps:
+      - name: "Goal: ${{ github.event_name == 'release' && 'publish' || 'test creating' }} Imageflow.NativeRuntime.All* && Imageflow.Net.All*"
+        run: echo "Hi"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: "Create ${{ env.REL_NUGET_OUTPUT_DIR }}"
+        shell: bash
+        run: mkdir -p ${{ env.REL_NUGET_OUTPUT_DIR }}
+
       - name: Create nuget packages
         shell: bash
         run: ./ci/pack_nuget/pack_meta.sh
         env:
-          CI_TAG: ${{ env.IMAGEFLOW_NUGET_VERSION }}
+          CI_TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
           REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
 
       - name: Publish to nuget.pkg.github.com
-        if: ${{ env.ALLOW_PUBLISH == 'true' && env.NUGET_UPLOAD_GITHUB == 'true' }}
+        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
         run: |
           for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
           do
@@ -425,7 +435,7 @@ jobs:
         shell: bash
 
       - name: Publish to nuget.org
-        if: ${{ env.ALLOW_PUBLISH == 'true' && env.NUGET_UPLOAD_NUGET == 'true' }}
+        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
         run: |
           for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
           do
