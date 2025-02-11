@@ -28,6 +28,7 @@ required_vars=(
     "HTTPS_UPLOAD_BASE"
 )
 
+
 for var in "${required_vars[@]}"; do
     if [ -z "${!var}" ]; then
         echo "Error: Required environment variable $var is not set"
@@ -35,6 +36,15 @@ for var in "${required_vars[@]}"; do
     fi
 done
 
+# require REL_BINARIES_DIR to end in a slash and exist
+if [[ "${REL_BINARIES_DIR}" != */ ]]; then
+    echo "Error: REL_BINARIES_DIR must end in a slash"
+    exit 1
+fi
+if [ ! -d "${REL_BINARIES_DIR}" ]; then
+    echo "Error: REL_BINARIES_DIR does not exist"
+    exit 1
+fi
 # Create required directories
 mkdir -p ./artifacts/github
 mkdir -p ./artifacts/upload/{releases/${GITHUB_REF_NAME},commits/${GITHUB_SHA}}
@@ -42,12 +52,12 @@ mkdir -p ./artifacts/static-staging
 mkdir -p ./artifacts/staging/headers  # Explicitly create headers directory
 
 # ------------------------------------------------------------------------------
-# Package documentation (if exists)
+# Package documentation (if exists and is non-empty)
 # ------------------------------------------------------------------------------
 if [ -d "./${TARGET_DIR}doc" ]; then
     (
         cd "./${TARGET_DIR}doc"
-        if [ [ -A ] ]; then  # Only create archive if directory is not empty
+        if [ "$(ls -A 2>/dev/null)" ]; then  # Only create archive if directory is not empty
             tar czf "../../artifacts/staging/docs.${EXTENSION}" ./*
         else
             echo "Documentation directory exists but is empty - skipping"
@@ -58,9 +68,17 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# Copy binaries and headers (with strict checking)
+# Copy binaries (and symbols) and headers (with strict checking)
 # ------------------------------------------------------------------------------
-cp -R "./${REL_BINARIES_DIR}"/{imageflow_,libimageflow}* ./artifacts/staging/
+# List all files to be copied
+echo "Copying files from ${REL_BINARIES_DIR} and bindings/headers"
+ls "./${REL_BINARIES_DIR}"libimageflow* | cat
+ls "./${REL_BINARIES_DIR}"imageflow_* | cat
+ls bindings/headers/*.h | cat
+ls bindings/headers/imageflow_default.h | cat
+echo "--------------------------------"
+cp -R "./${REL_BINARIES_DIR}"libimageflow* ./artifacts/staging/ || true
+cp -R "./${REL_BINARIES_DIR}"imageflow_* ./artifacts/staging/
 cp bindings/headers/*.h ./artifacts/staging/headers/
 cp bindings/headers/imageflow_default.h ./artifacts/staging/imageflow.h
 
@@ -90,7 +108,7 @@ TEMP_ARCHIVE_NAME="./artifacts/staging/archive.${EXTENSION}"
 # ------------------------------------------------------------------------------
 # Create release archives
 # ------------------------------------------------------------------------------
-cp "${TEMP_ARCHIVE_NAME}" "./artifacts/github/imageflow-${IMAGEFLOW_TAG_SHA_SUFFIX}.${EXTENSION}"
+cp "${TEMP_ARCHIVE_NAME}" "./artifacts/github/${IMAGEFLOW_TAG_SHA_SUFFIX}.${EXTENSION}"
 cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${IMAGEFLOW_TAG_SHA_SUFFIX}.${EXTENSION}"
 cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}.${EXTENSION}"
 
@@ -113,10 +131,11 @@ fi
 
 # List created artifacts
 echo "GitHub release artifacts:"
-ls -l -R ./artifacts/github
-
+ls -R ./artifacts/github | cat
+echo "--------------------------------"
 echo "Upload artifacts:"
-ls -l -R ./artifacts/upload 
+ls -R ./artifacts/upload | cat
+echo "--------------------------------"
 
 # List expected final URLS (based on contents of artifacts/uplod, recursive)
 # HTTPS_UPLOAD_BASE doesn't have a trailing slash

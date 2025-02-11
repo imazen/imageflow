@@ -117,7 +117,6 @@ jobs:
             target: x86_64-unknown-linux-musl
             features: mimalloc
             cross: 'true'
-            skip-publish: 'true'
             static: true
 
           - name: linux-musl-arm64
@@ -129,7 +128,6 @@ jobs:
             target: aarch64-unknown-linux-musl
             features: mimalloc
             cross: 'true'
-            skip-publish: 'true'
             static: true
 
     runs-on: ${{ matrix.os }}

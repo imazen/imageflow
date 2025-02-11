@@ -86,6 +86,12 @@ if [[ ! -d "$BINARIES_DIR" ]]; then
     exit 1
 fi
 
+# if $1 is not tool, and runtime contains musl, and libimageflow.so does not exist, skip this package
+if [[ "$1" != "tool" && "$NUGET_RUNTIME" == *"musl"* && ! -f "$BINARIES_DIR/libimageflow.so" ]]; then
+    echo "Skipping musl package for ${PACKAGE_SUFFIX}, libimageflow.so does not exist"
+    exit 0
+fi
+
 
 export NUGET_COMBINED_NAME="$NUGET_PACKAGE_NAME.$NUGET_PACKAGE_VERSION"
 

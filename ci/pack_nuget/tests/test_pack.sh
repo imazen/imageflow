@@ -75,11 +75,7 @@ if [ ! -d "$REL_BINARIES_DIR" ]; then
     mkdir -p "$REL_BINARIES_DIR"
 fi
 echo "Creating mock binaries in ${REL_BINARIES_DIR}"
-touch "$REL_BINARIES_DIR/imageflow.dll"
-touch "$REL_BINARIES_DIR/libimageflow.so"
-touch "$REL_BINARIES_DIR/libimageflow.dylib"
-touch "$REL_BINARIES_DIR/imageflow_tool"
-touch "$REL_BINARIES_DIR/imageflow_tool.exe"
+
 
 if [ ! -d "$REL_NUGET_OUTPUT_DIR" ]; then
     echo "Creating directory ${REL_NUGET_OUTPUT_DIR}"
@@ -96,6 +92,29 @@ for runtime in "${RUNTIMES[@]}"; do
     # Reasoning: Set PACKAGE_SUFFIX and NUGET_RUNTIME to the current runtime value.
     export PACKAGE_SUFFIX="$runtime"
     export NUGET_RUNTIME="$runtime"
+
+    # Clear evertyhing in REL_BINARIES_DIR
+    rm -rf "$REL_BINARIES_DIR"/*
+
+    # Create only the files expected for the current runtime. musl builds only have imageflow_tool and .a files.
+    case "$runtime" in
+        "win-arm64" | "win-x64" | "win-x86")
+            touch "$REL_BINARIES_DIR/imageflow.dll"
+            touch "$REL_BINARIES_DIR/imageflow_tool.exe"
+            ;;
+        "osx-x64" | "osx-arm64")
+            touch "$REL_BINARIES_DIR/libimageflow.dylib"
+            touch "$REL_BINARIES_DIR/imageflow_tool"
+            ;;
+        "linux-arm64" | "linux-x64")
+            touch "$REL_BINARIES_DIR/libimageflow.so"
+            touch "$REL_BINARIES_DIR/imageflow_tool"
+            ;;
+        "linux-musl-x64" | "linux-musl-arm64")
+            touch "$REL_BINARIES_DIR/imageflow_tool"
+            touch "$REL_BINARIES_DIR/libimageflow.a"
+            ;;
+    esac    
     
     echo "---------------------------------------------------"
     echo "Running pack.sh for runtime: $runtime"
