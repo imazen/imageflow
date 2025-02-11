@@ -1,21 +1,30 @@
 #!/bin/bash
-set -e #Exit on failure.
+# Reasoning: Set strict mode to exit on errors and ensure failures in pipelines are caught.
+set -e # Exit on failure.
 
-# Get script directory
+# ---------------------------
+# Setup: determine directories
+# ---------------------------
+# Reasoning: Get the current script directory and calculate the corresponding pack directory.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACK_DIR="$(dirname "$SCRIPT_DIR")"
 
+# Create a unique test directory name using current timestamp and random value.
 TEST_DIR_REL="trash/test_pack_$(date +%s)_$RANDOM"
-# Create unique test directory
+# Reasoning: Create a unique and isolated test directory for running pack.sh.
 TEST_DIR="${SCRIPT_DIR}/${TEST_DIR_REL}"
 echo "TEST_DIR: ${TEST_DIR}"
 
-# Ensure cleanup happens even on failure
+# ---------------------------
+# Setup: cleanup function for test environment
+# ---------------------------
+# Reasoning: Ensure that we clean up the test directory even if the test fails.
 cleanup() {
+    # Reasoning: Capture exit code and print cleanup message.
     local exit_code=$?
     echo "Cleaning up test environment..."
     rm -rf "${TEST_DIR}"
-    cd $SAVE_DIR
+    cd "$SAVE_DIR"
     if [ $exit_code -ne 0 ]; then
         echo "❌ Test failed with exit code: $exit_code"
     else
@@ -23,39 +32,46 @@ cleanup() {
     fi
     exit $exit_code
 }
-trap cleanup  1 2 3 6
+trap cleanup 1 2 3 6
 
-# Set up test environment
+# ---------------------------
+# Setup: create test environment and mock binaries
+# ---------------------------
 echo "Creating test environment in: ${TEST_DIR}"
 mkdir -p "${TEST_DIR}/binaries"
 
-# Create mock binary files
+# Reasoning: Create minimal mock files that will be used by pack.sh.
 touch "${TEST_DIR}/binaries/imageflow.dll"
 touch "${TEST_DIR}/binaries/imageflow_tool.exe"
 
-# Set up environment - ensure BINARIES_DIR ends with a slash
+# ---------------------------
+# Setup: export environment variables used by pack.sh
+# ---------------------------
+# Reasoning: The pack.sh script expects these environment variables.
 export REL_BINARIES_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/binaries/"
 export REL_NUGET_OUTPUT_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/nuget/"
 export CI_TAG="v0.9-rc1-1"
-export PACKAGE_SUFFIX="win-x64"
-export NUGET_RUNTIME="win-x64"
 export REPO_NAME="imazen/imageflow"
 
+# Note: PACKAGE_SUFFIX and NUGET_RUNTIME will be set per runtime in the loop below.
 echo "Test environment:"
 echo "REL_BINARIES_DIR: ${REL_BINARIES_DIR}"
 echo "CI_TAG: ${CI_TAG}"
-echo "PACKAGE_SUFFIX: ${PACKAGE_SUFFIX}"
-echo "NUGET_RUNTIME: ${NUGET_RUNTIME}"
 echo "REPO_NAME: ${REPO_NAME}"
 echo "REL_NUGET_OUTPUT_DIR: ${REL_NUGET_OUTPUT_DIR}"
 
+# ---------------------------
+# Setup: Change directory to the repository root (or fallback)
+# ---------------------------
 SAVE_DIR=$(pwd)
-# cd to root of repo, or fallback to current script plus ../..
-cd $(git rev-parse --show-toplevel) || cd $(dirname $0)/../..
-echo "Changed to $(pwd)"
-# if BINARIES_DIR doesn't exist, relative to root of repo, run cargo build --release 
+# Reasoning: Determine the repo root via git; this is required because pack.sh computes paths relative to it.
+cd $(git rev-parse --show-toplevel) || cd $(dirname "$0")/../..
+echo "Changed directory to: $(pwd)"
+
+# ---------------------------
+# Setup: Create necessary binaries in the expected relative binaries directory.
+# ---------------------------
 if [ ! -d "$REL_BINARIES_DIR" ]; then
-    # create imageflow.dll, .so, .dylin, imageflow_tool, and imageflow_tool.exe in BINARIES_DIR with touch
     mkdir -p "$REL_BINARIES_DIR"
 fi
 echo "Creating mock binaries in ${REL_BINARIES_DIR}"
@@ -64,8 +80,28 @@ touch "$REL_BINARIES_DIR/imageflow.so"
 touch "$REL_BINARIES_DIR/imageflow.dylib"
 touch "$REL_BINARIES_DIR/imageflow_tool"
 touch "$REL_BINARIES_DIR/imageflow_tool.exe"
+
 if [ ! -d "$REL_NUGET_OUTPUT_DIR" ]; then
-    echo "Creating dir ${REL_NUGET_OUTPUT_DIR}"
+    echo "Creating directory ${REL_NUGET_OUTPUT_DIR}"
     mkdir -p "$REL_NUGET_OUTPUT_DIR"
 fi
-./ci/pack_nuget/pack.sh
+
+# ---------------------------
+# Testing: Loop over multiple target runtimes
+# ---------------------------
+# Reasoning: Define an array of target runtime values to test pack.sh.
+RUNTIMES=("win-arm64" "win-x86" "win-x64" "osx-x64" "osx-arm64" "linux-arm64" "linux-x64")
+
+for runtime in "${RUNTIMES[@]}"; do
+    # Reasoning: Set PACKAGE_SUFFIX and NUGET_RUNTIME to the current runtime value.
+    export PACKAGE_SUFFIX="$runtime"
+    export NUGET_RUNTIME="$runtime"
+    
+    echo "---------------------------------------------------"
+    echo "Running pack.sh for runtime: $runtime"
+    echo "PACKAGE_SUFFIX: $PACKAGE_SUFFIX, NUGET_RUNTIME: $NUGET_RUNTIME"
+    echo "---------------------------------------------------"
+    
+    # Reasoning: Invoke the pack.sh script. If it fails for any runtime, exit the test.
+    ./ci/pack_nuget/pack.sh || { echo "Failed for runtime $runtime"; exit 1; }
+done
