@@ -76,8 +76,8 @@ if [ ! -d "$REL_BINARIES_DIR" ]; then
 fi
 echo "Creating mock binaries in ${REL_BINARIES_DIR}"
 touch "$REL_BINARIES_DIR/imageflow.dll"
-touch "$REL_BINARIES_DIR/imageflow.so"
-touch "$REL_BINARIES_DIR/imageflow.dylib"
+touch "$REL_BINARIES_DIR/libimageflow.so"
+touch "$REL_BINARIES_DIR/libimageflow.dylib"
 touch "$REL_BINARIES_DIR/imageflow_tool"
 touch "$REL_BINARIES_DIR/imageflow_tool.exe"
 
