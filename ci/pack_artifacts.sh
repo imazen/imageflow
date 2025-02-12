@@ -9,6 +9,8 @@ set -e
 # - IMAGEFLOW_TAG_SHA_SUFFIX: Used for naming artifacts
 # - LIBIMAGEFLOW_STATIC: Static library name
 # - LIBIMAGEFLOW_DYNAMIC: Dynamic library name
+# - IMAGEFLOW_TOOL: Tool name (e.g. imageflow_tool or imageflow_tool.exe)
+# - TAG_SHA_SUFFIX: Suffix for the current matrix build
 # - GITHUB_SHA: Git commit SHA
 # - GITHUB_REF_NAME: Git ref name (tag/branch)
 # - MATRIX_COMMIT_SUFFIX: Suffix for the current matrix build
@@ -22,6 +24,8 @@ required_vars=(
     "IMAGEFLOW_TAG_SHA_SUFFIX"
     "LIBIMAGEFLOW_STATIC"
     "LIBIMAGEFLOW_DYNAMIC"
+    "IMAGEFLOW_TOOL"
+    "TAG_SHA_SUFFIX"
     "GITHUB_SHA"
     "GITHUB_REF_NAME"
     "MATRIX_COMMIT_SUFFIX"
@@ -45,9 +49,12 @@ if [ ! -d "${REL_BINARIES_DIR}" ]; then
     echo "Error: REL_BINARIES_DIR does not exist"
     exit 1
 fi
+
 # Create required directories
 mkdir -p ./artifacts/github
-mkdir -p ./artifacts/upload/{releases/${GITHUB_REF_NAME},commits/${GITHUB_SHA}}
+mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
+mkdir -p ./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}
+mkdir -p ./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUFFIX}
 mkdir -p ./artifacts/static-staging
 mkdir -p ./artifacts/staging/headers  # Explicitly create headers directory
 
@@ -79,6 +86,8 @@ ls bindings/headers/imageflow_default.h | cat
 echo "--------------------------------"
 cp -R "./${REL_BINARIES_DIR}"libimageflow* ./artifacts/staging/ || true
 cp -R "./${REL_BINARIES_DIR}"imageflow_* ./artifacts/staging/
+# tool should always exist
+cp -R "./${REL_BINARIES_DIR}"${IMAGEFLOW_TOOL} ./artifacts/staging/
 cp bindings/headers/*.h ./artifacts/staging/headers/
 cp bindings/headers/imageflow_default.h ./artifacts/staging/imageflow.h
 
@@ -110,7 +119,8 @@ TEMP_ARCHIVE_NAME="./artifacts/staging/archive.${EXTENSION}"
 # ------------------------------------------------------------------------------
 cp "${TEMP_ARCHIVE_NAME}" "./artifacts/github/${IMAGEFLOW_TAG_SHA_SUFFIX}.${EXTENSION}"
 cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${IMAGEFLOW_TAG_SHA_SUFFIX}.${EXTENSION}"
-cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}.${EXTENSION}"
+cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}/imageflow.${EXTENSION}"
+cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUFFIX}/imageflow.${EXTENSION}"
 
 # ------------------------------------------------------------------------------
 # Handle static library if it exists
@@ -118,15 +128,31 @@ cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COM
 TEMP_STATIC_LIB="./artifacts/static-staging/${LIBIMAGEFLOW_STATIC}"
 if [ -f "${TEMP_STATIC_LIB}" ]; then
     TEMP_STATIC_ARCHIVE="./artifacts/static-staging/${LIBIMAGEFLOW_STATIC}.${EXTENSION}"
-    tar czf "${TEMP_STATIC_ARCHIVE}" -C "$(dirname "${TEMP_STATIC_LIB}")" "$(basename "${TEMP_STATIC_LIB}")"
+    FILE_NAME="staticlib-${LIBIMAGEFLOW_STATIC}.${EXTENSION}"
+    tar czf "${TEMP_STATIC_ARCHIVE}" "${TEMP_STATIC_LIB}"
+    # Create static archive directories and copy files
+    # Create static archive directories and copy files
+    cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/staticlib-${TAG_SHA_SUFFIX}.${FILE_NAME}"
+    cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
+    cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
+    cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/github/staticlib-${TAG_SHA_SUFFIX}.${FILE_NAME}"
+fi
+
+# ------------------------------------------------------------------------------
+# Make a single-file imageflow_tool archive that extracts without a directory
+# ------------------------------------------------------------------------------
+TEMP_TOOL="./artifacts/staging/${IMAGEFLOW_TOOL}"
+if [ -f "${TEMP_TOOL}" ]; then
+    TEMP_TOOL_ARCHIVE="./artifacts/static-staging/imageflow_tool.${EXTENSION}"
+    FILE_NAME="${IMAGEFLOW_TOOL}.${EXTENSION}" #imageflow_tool.tar.gz or imageflow_tool.exe.zip
+    tar czf "${TEMP_TOOL_ARCHIVE}" "${TEMP_TOOL}"
 
     # Create static archive directories and copy files
-    mkdir -p ./artifacts/upload/static/${MATRIX_TARGET}/{latest,releases/${GITHUB_REF_NAME},commits/${GITHUB_SHA}}
-    
-    cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/static/${MATRIX_TARGET}/latest/${LIBIMAGEFLOW_STATIC}.${EXTENSION}"
-    cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/static/${MATRIX_TARGET}/releases/${GITHUB_REF_NAME}/${LIBIMAGEFLOW_STATIC}.${EXTENSION}"
-    cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/static/${MATRIX_TARGET}/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}.${EXTENSION}"
-    cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/github/lib${IMAGEFLOW_TAG_SHA_SUFFIX}-${MATRIX_COMMIT_SUFFIX}.${LIBIMAGEFLOW_STATIC}.${EXTENSION}"
+
+    cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/tool-${TAG_SHA_SUFFIX}.${FILE_NAME}"
+    cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
+    cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
+    cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/github/tool-${TAG_SHA_SUFFIX}.${FILE_NAME}"
 fi
 
 # List created artifacts

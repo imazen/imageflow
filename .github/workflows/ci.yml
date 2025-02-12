@@ -25,7 +25,10 @@ env:
     IMAGEFLOW_RELEASE_BUCKET: ${{ vars.IMAGEFLOW_RELEASE_BUCKET || 'imageflow-nightlies' }}
     IMAGEFLOW_RELEASE_BUCKET_REGION: ${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION || 'us-west-1' }}
     HTTPS_IMAGEFLOW_BUCKET: "https://s3.${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ vars.IMAGEFLOW_RELEASE_BUCKET }}"
-    IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: "https://s3.${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ vars.IMAGEFLOW_RELEASE_BUCKET }}/commits/${{ github.sha }}/linux64.tar.gz"
+    IMAGEFLOW_DOWNLOAD_COMMIT_BASE: "https://s3.${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION }}.amazonaws.com/${{ vars.IMAGEFLOW_RELEASE_BUCKET }}/commits/${{ github.sha }}/"
+    IMAGEFLOW_TOOL_DOCKER_x64_FILE : "linux-musl-x64/imageflow_tool.tar.gz"
+    IMAGEFLOW_TOOL_DOCKER_arm64_FILE : "linux-musl-arm64/imageflow_tool.tar.gz"
+
     NUGET_UPLOAD_NUGET: ${{ secrets.NUGET_UPLOAD_NUGET }}
     NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
     REL_NUGET_OUTPUT_DIR: "artifacts/nuget/"
@@ -40,7 +43,7 @@ jobs:
             suffix: ubuntu-x86_64
             os: ubuntu-20.04
             target-cpu: x86-64
-            commit-suffix: linux64
+            commit-suffix: linux64  # used only for s3 commits/{suffix} folder
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
             cross: 'true'
@@ -60,7 +63,7 @@ jobs:
             suffix: ubuntu-arm64
             os: ubuntu-22-arm-32gb
             target-cpu: generic
-            commit-suffix: linux_arm64
+            commit-suffix: linux-arm64
             nuget-rid: linux-arm64
             target: aarch64-unknown-linux-gnu
             features: neon
@@ -71,7 +74,7 @@ jobs:
             suffix: osx-x86_64
             os: macos-13
             target-cpu: haswell
-            commit-suffix: mac64
+            commit-suffix: osx-x64
             nuget-rid: osx-x64
             target: x86_64-apple-darwin
 
@@ -87,7 +90,7 @@ jobs:
             suffix: win-x86_64
             os: windows-2022
             target-cpu: x86-64
-            commit-suffix: win-x86_64
+            commit-suffix: win-x64
             nuget-rid: win-x64
             target: x86_64-pc-windows-msvc
 
@@ -193,6 +196,7 @@ jobs:
           echo "ALLOW_PUBLISH=${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_DYNAMIC=${{ contains(matrix.target, 'win') && 'imageflow.dll'  || contains(matrix.target, 'apple') && 'libimageflow.dylib' || 'libimageflow.so' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_STATIC=${{ contains(matrix.target, 'win') && 'imageflow.lib' || 'libimageflow.a' }}" >> $GITHUB_ENV
+          ecgi "IMAGEFLOW_TOOL"=${{ contains(matrix.target, 'win') && 'imageflow_tool.exe" || 'imageflow_tool' }}" >> $GITHUB_ENV
 
       - name: Set more env vars
         shell: bash
@@ -301,6 +305,8 @@ jobs:
           MATRIX_COMMIT_SUFFIX: ${{ matrix.commit-suffix }}
           MATRIX_TARGET: ${{ matrix.target }}
           HTTPS_UPLOAD_BASE: ${{ env.HTTPS_IMAGEFLOW_BUCKET }}
+          TAG_SHA_SUFFIX: ${{ env.TAG_SHA_SUFFIX }}
+          IMAGEFLOW_TOOL: ${{ env.IMAGEFLOW_TOOL }}
 
       - name: "Create ${{ env.REL_NUGET_OUTPUT_DIR }}"
         shell: bash
@@ -442,33 +448,4 @@ jobs:
         shell: bash
 
 
-  # ----------------------------------------------------------------------------
-  # Reasoning: The existing release_ci.yml had a second job "publish" that
-  # published to Docker. We replicate that here. It only runs if the event
-  # is a release. This job depends on "build" so that artifacts are built first.
-  # ----------------------------------------------------------------------------
-  publish:
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: ${{ github.event_name == 'release' }}
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - uses: FranzDiebold/github-env-vars-action@v1.3.0
-
-      - name: Check if IMAGEFLOW_DOWNLOAD_URL_TAR_GZ exists with curl
-        run: |
-          curl -s ${{ env.IMAGEFLOW_DOWNLOAD_URL_TAR_GZ }}
-
-      - name: Publish To Docker
-        run: |
-          docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-          ./ci/travis_publish_docker_images.sh docker/imageflow_tool imazen/imageflow_tool
-        env:
-          PUBLISH_DOCKER: True
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          PUBLISH_DOCKER_TAG: ${{ github.ref_name }}
-          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: ${{ env.IMAGEFLOW_DOWNLOAD_URL_TAR_GZ }}
