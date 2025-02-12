@@ -9,14 +9,11 @@
         <description>:package_description:</description>
         <copyright>AGPLv3 or commercial</copyright>
         <projectUrl>https://imageflow.io</projectUrl>
-        <tags>imageflow imazen</tags>
+        <tags>imageflow imazen nativeruntime webp image resizing imageresizer</tags>
         <repository type="git" url="https://github.com/:repo_name:" />
-        <readme>docs\README.md</readme>
-        <license type="file">docs\LICENSE.md</license>
+        <readme>README.md</readme>
+        <license type="file">LICENSE.md</license>
+        <icon>icon.png</icon>
         :dependencies:
     </metadata>
-    <files>
-        <file src="README.md*" target="docs\" />
-        <file src="LICENSE.md*" target="docs\" />
-    </files>
 </package>

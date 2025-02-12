@@ -49,7 +49,7 @@ mkdir -p "${TEST_DIR}/artifacts/nuget"
 export CI_TAG="v0.9-rc1-1"
 export REPO_NAME="imazen/imageflow"
 export REL_NUGET_OUTPUT_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/artifacts/nuget/"
-
+export REL_NUGET_ARCHIVE_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/archive/"
 # Create mock dependency packages
 echo "Creating mock dependency packages..."
 for rid in win-x64 win-x86 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64; do

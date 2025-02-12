@@ -193,7 +193,7 @@ jobs:
           echo "LIBIMAGEFLOW_DYNAMIC=${{ contains(matrix.target, 'win') && 'imageflow.dll'  || contains(matrix.target, 'apple') && 'libimageflow.dylib' || 'libimageflow.so' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_STATIC=${{ contains(matrix.target, 'win') && 'imageflow.lib' || 'libimageflow.a' }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TOOL=${{ contains(matrix.os, 'windows') && 'imageflow_tool.exe' || 'imageflow_tool' }}" >> $GITHUB_ENV
-          
+
       - name: Set more env vars
         shell: bash
         run: |
@@ -219,6 +219,8 @@ jobs:
           echo "CI_BUILD_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
           echo "DEBUG=False" >> $GITHUB_ENV
           echo "TARGET_CPU=${{ matrix.target-cpu }}" >> $GITHUB_ENV
+          echo "REL_NUGET_ARCHIVE_DIR=./artifacts/upload/nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/" >> $GITHUB_ENV
+
 
       - if: contains(matrix.target, 'musl')
         name: "Edit imageflow_abi/Cargo.toml to build staticlib instead of cdylib and use strip and lto"
@@ -319,6 +321,7 @@ jobs:
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
           REL_BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
           REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
+          REL_NUGET_ARCHIVE_DIR: "${{ env.REL_NUGET_ARCHIVE_DIR }}"
 
       - name: "Create NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }}"
         if: ${{ !matrix.static }}
@@ -331,6 +334,7 @@ jobs:
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
           REL_BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
           REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
+          REL_NUGET_ARCHIVE_DIR: "${{ env.REL_NUGET_ARCHIVE_DIR }}"
 
       # UPLOAD ---------------------------------------------------------------------
       - name: "Upload to Github Release"

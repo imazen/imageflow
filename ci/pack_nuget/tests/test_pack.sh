@@ -50,6 +50,7 @@ touch "${TEST_DIR}/binaries/imageflow_tool.exe"
 # Reasoning: The pack.sh script expects these environment variables.
 export REL_BINARIES_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/binaries/"
 export REL_NUGET_OUTPUT_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/nuget/"
+export REL_NUGET_ARCHIVE_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/archive/"
 export CI_TAG="v0.9-rc1-1"
 export REPO_NAME="imazen/imageflow"
 
@@ -59,7 +60,7 @@ echo "REL_BINARIES_DIR: ${REL_BINARIES_DIR}"
 echo "CI_TAG: ${CI_TAG}"
 echo "REPO_NAME: ${REPO_NAME}"
 echo "REL_NUGET_OUTPUT_DIR: ${REL_NUGET_OUTPUT_DIR}"
-
+echo "REL_NUGET_ARCHIVE_DIR: ${REL_NUGET_ARCHIVE_DIR}"
 # ---------------------------
 # Setup: Change directory to the repository root (or fallback)
 # ---------------------------

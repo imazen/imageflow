@@ -253,5 +253,12 @@ for (( i=0; i < ${#PACKAGES_KEYS[@]}; i++ )); do
         fi
         
         echo "${NUGET_OUTPUT_FILE} packed successfully"
+
+        # if REL_NUGET_ARCHIVE_DIR is defined, copy the package to it
+        if [[ -n "$REL_NUGET_ARCHIVE_DIR" ]]; then
+            echo "Copying ${NUGET_OUTPUT_FILE} to ${REL_NUGET_ARCHIVE_DIR}"
+            mkdir -p "${SCRIPT_DIR}/../../${REL_NUGET_ARCHIVE_DIR}"
+            cp "${NUGET_OUTPUT_FILE}" "${SCRIPT_DIR}/../../${REL_NUGET_ARCHIVE_DIR}"
+        fi
     )
 done

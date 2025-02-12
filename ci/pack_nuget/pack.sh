@@ -141,7 +141,7 @@ mkdir -p "$STAGING_DIR" || true
       <group targetFramework=".NETStandard1.0" />
     </dependencies>'
     else 
-        DEPENDENCIES="<!-- no dependencies -->"
+        DEPENDENCIES="<dependencies></dependencies>"
     fi
 
     # Set up Windows-specific props files
@@ -212,6 +212,7 @@ mkdir -p "$STAGING_DIR" || true
     # Copy documentation
     cp "${SCRIPT_DIR}/README.md" .
     cp "${SCRIPT_DIR}/LICENSE.md" .
+    cp "${SCRIPT_DIR}/icon.png" .
 
 
     # Create package with multiple fallbacks
@@ -232,4 +233,11 @@ mkdir -p "$STAGING_DIR" || true
     fi
     
     echo "${NUGET_OUTPUT_FILE} packed successfully"
+
+    # if REL_NUGET_ARCHIVE_DIR is defined, copy the package to it
+    if [[ -n "$REL_NUGET_ARCHIVE_DIR" ]]; then
+        echo "Copying ${NUGET_OUTPUT_FILE} to ${REL_NUGET_ARCHIVE_DIR}"
+        mkdir -p "${SCRIPT_DIR}/../../${REL_NUGET_ARCHIVE_DIR}"
+        cp "${NUGET_OUTPUT_FILE}" "${SCRIPT_DIR}/../../${REL_NUGET_ARCHIVE_DIR}"
+    fi
 )
