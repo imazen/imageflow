@@ -192,14 +192,14 @@ jobs:
           echo "ALLOW_PUBLISH=${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_DYNAMIC=${{ contains(matrix.target, 'win') && 'imageflow.dll'  || contains(matrix.target, 'apple') && 'libimageflow.dylib' || 'libimageflow.so' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_STATIC=${{ contains(matrix.target, 'win') && 'imageflow.lib' || 'libimageflow.a' }}" >> $GITHUB_ENV
-          echo "IMAGEFLOW_TOOL=${{ contains(matrix.target, 'win') && 'imageflow_tool.exe' || 'imageflow_tool' }}" >> $GITHUB_ENV
-
+          echo "IMAGEFLOW_TOOL=${{ contains(matrix.os, 'windows') && 'imageflow_tool.exe' || 'imageflow_tool' }}" >> $GITHUB_ENV
+          
       - name: Set more env vars
         shell: bash
         run: |
           echo "IMAGEFLOW_NUGET_VERSION=${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TAG_SHA_SUFFIX=imageflow-${{ env.TAG_SHA_SUFFIX }}" >> $GITHUB_ENV
-          echo "IMAGEFLOW_TOOL_PATH=${{ env.REL_BINARIES_DIR }}imageflow_tool${{ contains(matrix.os, 'windows') && '.exe' || '' }}" >> $GITHUB_ENV
+          echo "IMAGEFLOW_TOOL_PATH=${{ env.REL_BINARIES_DIR }}${{ env.IMAGEFLOW_TOOL }}" >> $GITHUB_ENV
 
           # We want to check these are successfully uploaded
           echo "ESTIMATED_ARTIFACT_URL_COMMITS=${{ env.HTTPS_IMAGEFLOW_BUCKET }}/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
