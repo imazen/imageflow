@@ -1,3 +1,0 @@
-Hardware: Requires a Sandy Bridge (2011) or later compatible CPU with AVX support. (May exclude Celeron and Pentium-branded discount processors)
-
-Software: 64-bit Ubuntu 16.04 or other linux supplying Ubuntu GLIBC 2.23-0ubuntu3

@@ -1,3 +1,0 @@
-Hardware: Requires a Haswell (2013) or later compatible CPU with AVX2 support. (Excludes Celeron and Pentium-branded CPUS)
-
-Software: 64-bit Ubuntu 16.04 or other linux supplying Ubuntu GLIBC 2.23-0ubuntu3

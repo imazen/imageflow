@@ -1,1 +1,0 @@
-# Imageflow Build Image for Ubuntu 16 / GCC 5

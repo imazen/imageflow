@@ -3,6 +3,8 @@ use_small_heuristics="Max"
 newline_style="Unix"
 fn_args_layout="Compressed"
 group_imports = "StdExternalCrate"
+format_strings = false
+reorder_imports = true
 
 # Once these stabilize, they'd be nice
 # indent_style="Visual"
