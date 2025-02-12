@@ -61,17 +61,15 @@ mkdir -p ./artifacts/staging/headers  # Explicitly create headers directory
 # ------------------------------------------------------------------------------
 # Package documentation (if exists and is non-empty)
 # ------------------------------------------------------------------------------
-if [ -d "./${TARGET_DIR}doc" ]; then
+if [ -d "./${TARGET_DIR}doc" ] && [ -n "$(ls -A "./${TARGET_DIR}doc" 2>/dev/null)" ]; then
     (
         cd "./${TARGET_DIR}doc"
-        if [ "$(ls -A 2>/dev/null)" ]; then  # Only create archive if directory is not empty
-            tar czf "../../artifacts/staging/docs.${EXTENSION}" ./*
-        else
-            echo "Documentation directory exists but is empty - skipping"
-        fi
+        mkdir -p "$(pwd)/../../artifacts/staging"
+        tar czf "$(pwd)/../../artifacts/staging/docs.${EXTENSION}" ./*
     )
+    echo "Documentation packaged successfully"
 else
-    echo "Documentation directory not found - skipping"
+    echo "Documentation directory not found or empty - skipping documentation packaging"
 fi
 
 # ------------------------------------------------------------------------------

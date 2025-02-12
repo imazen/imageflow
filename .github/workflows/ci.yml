@@ -53,7 +53,7 @@ jobs:
 
           - name: linux-arm64-ubuntu-22
             suffix: ubuntu-arm64
-            os: ubuntu-22-arm-32gb
+            os: ubuntu-22-arm-32gb #ubuntu-22.04-arm is in public preview
             target-cpu: generic
             commit-suffix: linux-arm64
             nuget-rid: linux-arm64
@@ -120,7 +120,7 @@ jobs:
             suffix: linux-musl-arm64
             commit-suffix: linux-musl-arm64
             nuget-rid: linux-musl-arm64
-            os: ubuntu-22-arm-32gb
+            os: ubuntu-22-arm-32gb  #ubuntu-22.04-arm is in public preview
             target-cpu: generic
             target: aarch64-unknown-linux-musl
             features: mimalloc
@@ -433,7 +433,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./docker/imageflow_tool/
-          file: Dockerfile
+          file: ./docker/imageflow_tool/Dockerfile
           # call: build (default I think)
           platforms: ${{ matrix.docker-platform }}
           push: ${{ env.ALLOW_PUBLISH == 'true' }}
