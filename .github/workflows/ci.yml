@@ -192,7 +192,7 @@ jobs:
           echo "ALLOW_PUBLISH=${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_DYNAMIC=${{ contains(matrix.target, 'win') && 'imageflow.dll'  || contains(matrix.target, 'apple') && 'libimageflow.dylib' || 'libimageflow.so' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_STATIC=${{ contains(matrix.target, 'win') && 'imageflow.lib' || 'libimageflow.a' }}" >> $GITHUB_ENV
-          ecgi "IMAGEFLOW_TOOL"=${{ contains(matrix.target, 'win') && 'imageflow_tool.exe' || 'imageflow_tool' }}" >> $GITHUB_ENV
+          echo "IMAGEFLOW_TOOL=${{ contains(matrix.target, 'win') && 'imageflow_tool.exe' || 'imageflow_tool' }}" >> $GITHUB_ENV
 
       - name: Set more env vars
         shell: bash
