@@ -39,9 +39,6 @@ rgb = "0.8"
 
 base64 = "0.22"
 
-zip = { version = "2" }
-
-
 
 
 unicase = "2"

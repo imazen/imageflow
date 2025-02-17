@@ -47,7 +47,6 @@ extern crate regex;
 extern crate blake2_rfc;
 extern crate twox_hash;
 extern crate chrono;
-extern crate zip;
 //extern crate serde;
 //extern crate serde_json;
 extern crate backtrace;

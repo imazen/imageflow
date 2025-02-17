@@ -4,8 +4,8 @@ extern crate imageflow_helpers;
 extern crate imageflow_types as s;
 extern crate imageflow_core as fc;
 extern crate serde_json;
-
-use std::ffi::OsStr;
+extern crate zip;
+use std::{ffi::OsStr, fs::File, io::{Read, Write}};
 use imageflow_helpers as hlp;
 
 use std::path::{Path,PathBuf};
@@ -189,7 +189,7 @@ pub fn main_with_exit_code() -> i32 {
             std::env::set_current_dir(&current_dir).unwrap();
             let mut archive_name = dir_str.as_os_str().to_owned();
             archive_name.push(".zip");
-            hlp::filesystem::zip_directory_non_recursive(&dir,&Path::new(&archive_name)).unwrap();
+            zip_directory_non_recursive(&dir,&Path::new(&archive_name)).unwrap();
             return cap.exit_code();
         } else if let Some(dir) = m.get_one::<PathBuf>("bundle-to").map(|v| v.to_owned()) {
                 builder.write_errors_maybe().unwrap();
@@ -242,4 +242,35 @@ pub fn main_with_exit_code() -> i32 {
 #[test]
 fn test_file_macro_for_this_build(){
     assert!(file!().starts_with("imageflow_tool"))
+}
+
+pub fn zip_directory_non_recursive<P: AsRef<Path>>(dir: P, archive_name: P) -> zip::result::ZipResult<()> {
+    let mut zip = zip::ZipWriter::new(File::create(archive_name.as_ref()).unwrap());
+
+    let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+
+    zip.add_directory(archive_name.as_ref().file_stem().unwrap().to_str().unwrap().to_owned(), options)?;
+    let entries = std::fs::read_dir(dir.as_ref()).unwrap();
+
+    for entry_maybe in entries {
+        if let Ok(entry) = entry_maybe {
+            let file_name = entry.file_name().into_string().unwrap();
+            if file_name.starts_with('.') {
+                //skipping
+            } else if entry.path().is_file() {
+                let mut file = File::open(entry.path()).unwrap();
+                let mut contents = Vec::new();
+                file.read_to_end(&mut contents).unwrap();
+
+                let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+
+                zip.start_file(file_name, options)?;
+                zip.write_all(&contents)?;
+            }
+        }
+        //println!("Name: {}", path.unwrap().path().display())
+    }
+
+    zip.finish()?;
+    Ok(())
 }
