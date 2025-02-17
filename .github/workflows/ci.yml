@@ -1,4 +1,4 @@
-name: "Test/Release"
+name: "Test/Release" # Reminder, to test locally, https://sanjulaganepola.github.io/github-local-actions-docs/
 on:
   push:
     branches:
@@ -38,7 +38,7 @@ jobs:
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
             cross: 'true'
-            max-glibc: '2.29'
+            max-glibc: '2.17'
 
 
           # skip-publish, for testing only.
@@ -60,7 +60,7 @@ jobs:
             target: aarch64-unknown-linux-gnu
             features: neon
             cross: 'true'
-            max-glibc: '2.34'
+            max-glibc: '2.17'
 
           - name: osx-x64-13
             suffix: osx-x86_64
@@ -244,11 +244,12 @@ jobs:
         if: matrix.woa == 'true'
 
       - name: "cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
-        uses: houseabsolute/actions-rust-cross@v1.0.1
+        uses: houseabsolute/actions-rust-cross@v1.0.2
         with:
           command: "test"
           target: ${{ matrix.target }}
           args: "${{ env.CROSS_ARGS }}"
+          force-use-cross: true
         if: matrix.cross == 'true'
 
       # BUILD ---------------------------------------------------------------------
