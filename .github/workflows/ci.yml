@@ -251,7 +251,7 @@ jobs:
           command: "test"
           target: ${{ matrix.target }}
           args: "${{ env.CROSS_ARGS }}"
-          force-use-cross: ${{ matrix.force-cross }}
+          force-use-cross: ${{ matrix.force-cross || false }}
         if: matrix.cross == 'true'
 
       # BUILD ---------------------------------------------------------------------
@@ -270,7 +270,7 @@ jobs:
           command: "build"
           target: ${{ matrix.target }}
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
-          force-use-cross: ${{ matrix.force-cross }}
+          force-use-cross: ${{ matrix.force-cross || false }}
         if: matrix.cross == 'true'
 
 
