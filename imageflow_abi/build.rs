@@ -1,10 +1,10 @@
 
 extern crate cbindgen;
-extern crate regex;
+extern crate regex_lite;
 extern crate imageflow_helpers;
 use imageflow_helpers::identifier_styles::*;
 
-use regex::{Regex, Captures};
+use regex_lite::{Regex, Captures};
 use std::io::Write;
 use std::path;
 use cbindgen::Builder;

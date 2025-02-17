@@ -1,4 +1,4 @@
-use regex::{Regex, Captures};
+use regex_lite::{Regex, Captures};
 
 // TODO: Document handling of whitespace within an identifier, and what identifiers this will work on
 

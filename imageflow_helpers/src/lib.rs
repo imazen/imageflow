@@ -43,7 +43,7 @@ extern crate lazy_static;
 
 extern crate rand;
 
-extern crate regex;
+extern crate regex_lite;
 extern crate blake2_rfc;
 extern crate twox_hash;
 extern crate chrono;

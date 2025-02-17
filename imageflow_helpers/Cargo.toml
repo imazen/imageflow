@@ -33,7 +33,7 @@ uuid = { version = "*", features= ["v4", "v5"]}
 #lockless = { git="https://github.com/Diggsey/lockless", rev="15264477a4889a9cb2964180b33a53919d72d3fc" }
 smallvec = "*"
 # regex
-regex = { version = "1" } #, features = ["pattern"]
+regex-lite = { version = "0.1.6" } #, features = ["pattern"]
 rand = "*"
 rgb = "0.8"
 
