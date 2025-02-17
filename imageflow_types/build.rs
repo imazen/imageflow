@@ -10,6 +10,8 @@ use std::path::{Path};
 use std::process::{Command, Output};
 use std::collections::HashMap;
 use std::time::{Instant};
+extern crate rayon;
+use rayon::prelude::*;
 
 quick_error! {
     #[derive(Debug)]
@@ -124,30 +126,31 @@ fn env_or_cmd(key: &str, cmd: &str) -> Option<String>{
 //    Path::new(&build_rs_path).parent().expect("Rust must be stripping parent directory info from file! macro. This breaks path stuff in build.rs.").to_owned()
 //}
 
-fn collect_info(shopping_list: Vec<EnvTidbit>) -> HashMap<String, Option<String>>{
+fn collect_info(shopping_list: Vec<EnvTidbit>) -> HashMap<String, Option<String>> {
+    let results: Vec<(String, Option<String>)> = shopping_list
+        .into_par_iter()
+        .map(|from| {
+            let (k, v) = match from {
+                EnvTidbit::Env(key) => (key, fetch_env(key, false, true)),
+                EnvTidbit::EnvReq(key) => (key, fetch_env(key, true, true)),
+                EnvTidbit::FileContentsReq { key, relative_to_build_rs } => {
+                    let io_error_expect = format!("Failed to read file {:?}. This file is required to be embedded in output binaries.", relative_to_build_rs);
+                    let mut file = File::open(relative_to_build_rs).expect(&io_error_expect);
+                    let mut contents = String::new();
+                    file.read_to_string(&mut contents).expect(&io_error_expect);
+                    (key, Some(contents))
+                },
+                EnvTidbit::Cmd { key, cmd } => (key, command(key, cmd, false, false)),
+                EnvTidbit::CmdReq { key, cmd } => (key, command(key, cmd, true, false)),
+                EnvTidbit::CmdOrEnvReq { key, cmd } => (key, command(key, cmd, true, true)),
+                EnvTidbit::CmdOrEnv { key, cmd } => (key, command(key, cmd, false, true)),
+                EnvTidbit::EnvOrCmdInconsistent { key, cmd } => (key, env_or_cmd(key, cmd)),
+            };
+            (k.to_owned(), v)
+        })
+        .collect();
 
-    let mut info = HashMap::new();
-    for from in shopping_list {
-        let (k,v) = match from {
-            EnvTidbit::Env(key) => (key, fetch_env(key, false, true)),
-            EnvTidbit::EnvReq(key) => (key, fetch_env(key, true, true)),
-            EnvTidbit::FileContentsReq{key, relative_to_build_rs} => {
-
-                let io_error_expect = format!("Failed to read file {:?}. This file is required to be embedded in output binaries.", relative_to_build_rs);
-                let mut file = File::open(relative_to_build_rs).expect(&io_error_expect);
-                let mut contents = String::new();
-                file.read_to_string( &mut contents).expect(&io_error_expect);
-                (key, Some(contents))
-            },
-            EnvTidbit::Cmd{key, cmd} => (key, command(key, cmd, false, false)),
-            EnvTidbit::CmdReq{key, cmd} => (key, command(key, cmd, true, false)),
-            EnvTidbit::CmdOrEnvReq{key, cmd} => (key, command(key, cmd, true, true)),
-            EnvTidbit::CmdOrEnv{key, cmd} => (key, command(key, cmd, false, true)),
-            EnvTidbit::EnvOrCmdInconsistent{key, cmd} => (key, env_or_cmd(key, cmd)),
-        };
-        info.insert(k.to_owned(),v);
-    }
-    info
+    results.into_iter().collect()
 }
 fn what_to_collect() -> Vec<EnvTidbit>{
     let mut c = Vec::new();

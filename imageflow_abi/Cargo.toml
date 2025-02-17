@@ -26,6 +26,6 @@ base64="0.22"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*"}
 cbindgen = "0.28"
 regex-lite = { version = "0.1.6" }
-
+rayon = "1"
 [features]
 nightly = ["imageflow_core/nightly", "imageflow_helpers/nightly"]

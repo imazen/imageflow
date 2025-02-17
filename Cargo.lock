@@ -945,6 +945,7 @@ dependencies = [
  "imageflow_core",
  "imageflow_helpers",
  "libc",
+ "rayon",
  "regex-lite",
  "smallvec",
 ]
@@ -1097,6 +1098,7 @@ dependencies = [
  "imgref",
  "lazy_static",
  "quick-error",
+ "rayon",
  "regex-lite",
  "rgb",
  "serde",
