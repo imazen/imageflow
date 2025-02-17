@@ -59,8 +59,7 @@ extern crate unicase;
 extern crate time;
 extern crate uuid;
 extern crate smallvec;
-#[cfg(test)]
-extern crate mockito;
+
 
 extern crate digest;
 pub mod identifier_styles;
