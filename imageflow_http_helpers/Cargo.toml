@@ -12,5 +12,8 @@ imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 reqwest = { version = "0.12.7", features = ["blocking"] }
 tokio = { version = "1", features = ["full"] }
 
-[target.'cfg(any(all(target_arch = "aarch64", target_os = "windows"), target_os = "linux", target_env="musl"))'.dependencies]
+[target.'cfg(all(target_arch = "aarch64", target_os = "windows"))'.dependencies]
 reqwest = { version = "0.12.7", features = ["blocking", "native-tls-vendored"] }
+
+[target.'cfg(any(target_os = "linux", target_env="musl"))'.dependencies]
+reqwest = { version = "0.12.7", features = ["blocking", "rustls-tls"] }
