@@ -62,7 +62,7 @@ jobs:
             features: neon
             cross: 'true'
             force-cross: 'false'
-            max-glibc: '2.17'
+            max-glibc: '2.34'
 
           - name: osx-x64-13
             suffix: osx-x86_64

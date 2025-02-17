@@ -1,9 +1,4 @@
 ---
-description:
-globs:
+description: Run cargo fmt after making changes 
+globs: *.rs
 ---
-
-# Your rule content
-
-- You can @ files here
-- You can use markdown but dont have to
