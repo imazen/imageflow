@@ -54,14 +54,14 @@ jobs:
 
           - name: linux-arm64-ubuntu-22
             suffix: ubuntu-arm64
-            os: ubunutu-latest #ubuntu-22-arm-32gb #ubuntu-22.04-arm is in public preview
+            os: ubuntu-22.04-arm #ubunutu-latest #ubuntu-22-arm-16gb #ubuntu-22.04-arm is in public preview
             target-cpu: generic
             commit-suffix: linux-arm64
             nuget-rid: linux-arm64
             target: aarch64-unknown-linux-gnu
             features: neon
             cross: 'true'
-            force-cross: 'true'
+            force-cross: 'false'
             max-glibc: '2.17'
 
           - name: osx-x64-13
@@ -98,7 +98,7 @@ jobs:
 
           - name: win-arm64-11
             suffix: win-arm64
-            os: windows-11-arm-32gb
+            os: windows-11-arm-16gb
             target-cpu: generic
             commit-suffix: win-arm64
             nuget-rid: win-arm64
@@ -122,7 +122,7 @@ jobs:
             suffix: linux-musl-arm64
             commit-suffix: linux-musl-arm64
             nuget-rid: linux-musl-arm64
-            os: ubuntu-latest #ubuntu-22-arm-32gb  #ubuntu-22.04-arm is in public preview
+            os: ubuntu-22.04-arm # ubuntu-latest #ubuntu-22-arm-16gb  #ubuntu-22.04-arm is in public preview
             target-cpu: generic
             target: aarch64-unknown-linux-musl
             features: mimalloc
@@ -251,7 +251,7 @@ jobs:
           command: "test"
           target: ${{ matrix.target }}
           args: "${{ env.CROSS_ARGS }}"
-          force-use-cross: ${{ matrix.force-cross || false }}
+          force-use-cross: ${{ matrix.force-cross == 'true' || false }}
         if: matrix.cross == 'true'
 
       # BUILD ---------------------------------------------------------------------
@@ -270,7 +270,7 @@ jobs:
           command: "build"
           target: ${{ matrix.target }}
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
-          force-use-cross: ${{ matrix.force-cross || false }}
+          force-use-cross: ${{ matrix.force-cross == 'true' || false }}
         if: matrix.cross == 'true'
 
 

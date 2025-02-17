@@ -4,8 +4,10 @@ pre-build = ["git config --system --add safe.directory '*'"]
 [target.x86_64-unknown-linux-gnu]
 image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main-centos"
 
-[target.aarch64-unknown-linux-gnu]
-image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main-centos"
+#[target.aarch64-unknown-linux-gnu]
+#image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main-centos"
+
+
 
 [build.env]
 passthrough = [
