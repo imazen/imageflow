@@ -38,6 +38,7 @@ jobs:
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
             cross: 'true'
+            force-cross: 'true'
             max-glibc: '2.17'
 
 
@@ -53,13 +54,14 @@ jobs:
 
           - name: linux-arm64-ubuntu-22
             suffix: ubuntu-arm64
-            os: ubuntu-22-arm-32gb #ubuntu-22.04-arm is in public preview
+            os: ubunutu-latest #ubuntu-22-arm-32gb #ubuntu-22.04-arm is in public preview
             target-cpu: generic
             commit-suffix: linux-arm64
             nuget-rid: linux-arm64
             target: aarch64-unknown-linux-gnu
             features: neon
             cross: 'true'
+            force-cross: 'true'
             max-glibc: '2.17'
 
           - name: osx-x64-13
@@ -120,7 +122,7 @@ jobs:
             suffix: linux-musl-arm64
             commit-suffix: linux-musl-arm64
             nuget-rid: linux-musl-arm64
-            os: ubuntu-22-arm-32gb  #ubuntu-22.04-arm is in public preview
+            os: ubuntu-latest #ubuntu-22-arm-32gb  #ubuntu-22.04-arm is in public preview
             target-cpu: generic
             target: aarch64-unknown-linux-musl
             features: mimalloc
@@ -249,7 +251,7 @@ jobs:
           command: "test"
           target: ${{ matrix.target }}
           args: "${{ env.CROSS_ARGS }}"
-          force-use-cross: true
+          force-use-cross: ${{ matrix.force-cross }}
         if: matrix.cross == 'true'
 
       # BUILD ---------------------------------------------------------------------
@@ -263,11 +265,12 @@ jobs:
         shell: powershell
 
       - name: "cross cargo build --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
-        uses: houseabsolute/actions-rust-cross@v1.0.1
+        uses: houseabsolute/actions-rust-cross@v1.0.2
         with:
           command: "build"
           target: ${{ matrix.target }}
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
+          force-use-cross: ${{ matrix.force-cross }}
         if: matrix.cross == 'true'
 
 
@@ -282,6 +285,7 @@ jobs:
       # CHECK IMAGEFLOW_TOOL ---------------------------------------------------------------------
       - run: "${{ env.IMAGEFLOW_TOOL_PATH }} diagnose --show-compilation-info"
         shell: bash
+        if: matrix.cross != 'true'
 
       # BUILD DOCUMENTATION ---------------------------------------------------------------------
       - name: "Build ${{ env.PROFILE }} Docs"
