@@ -9,6 +9,7 @@ use std::io::{Write, Read, BufWriter};
 use std::path::{Path};
 use std::process::{Command, Output};
 use std::collections::HashMap;
+use std::time::{Instant};
 
 quick_error! {
     #[derive(Debug)]
@@ -46,9 +47,16 @@ fn run(cmd: &str) -> std::result::Result<String,Error> {
     }
     let exe = args.remove(0);
 
+    let start = Instant::now();
     let output: Output = Command::new(exe)
         .args(&args)
         .output()?;
+    let duration = start.elapsed();
+
+    if duration.as_millis() > 500 {
+        println!("Warning: command `{}` took {}ms to execute", cmd, duration.as_millis());
+    }
+
     if !output.status.success() {
         return Err(Error::CommandFailed(output));
     }
@@ -150,8 +158,8 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_ALL", cmd: "git describe --always --all --long"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_TAG", cmd: "git describe --exact-match --tags"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_BRANCH", cmd: "git symbolic-ref --short HEAD"});
-    static ENV_VARS: [&'static str;21] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",
-        "CI_PULL_REQUEST_INFO", "CI_TAG", "CI_REPO", "CI_RELATED_BRANCH", "CI", "TARGET", "OUT_DIR", "HOST", "OPT_LEVEL", "DEBUG", "PROFILE", "RUSTC", "RUSTFLAGS","TARGET_CPU"
+    static ENV_VARS: [&'static str;22] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",
+        "CI_PULL_REQUEST_INFO", "CI_TAG", "CI_RELEASE", "CI_REPO", "CI_RELATED_BRANCH", "CI", "TARGET", "OUT_DIR", "HOST", "OPT_LEVEL", "DEBUG", "PROFILE", "RUSTC", "RUSTFLAGS","TARGET_CPU"
     ];
     for name in ENV_VARS.iter(){
         c.push(EnvTidbit::Env(name));
@@ -160,8 +168,12 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     c.push(EnvTidbit::Cmd{key: "GIT_STATUS", cmd: "git status"});
     c.push(EnvTidbit::Cmd{key: "GLIBC_VERSION", cmd: "ldd --version"});
     c.push(EnvTidbit::Cmd{key: "UNAME", cmd: "uname -av"});
-    c.push(EnvTidbit::Cmd{key: "WIN_SYSTEMINFO", cmd: "systeminfo.exe"});
-    //TODO: ver?
+
+    // only if CI_RELEASE==true
+    if env::var("CI_RELEASE").unwrap_or("false".to_owned()).to_lowercase() == "true" {
+        c.push(EnvTidbit::Cmd{key: "WIN_SYSTEMINFO", cmd: "systeminfo.exe"}); // takes 3-9 seconds...
+    }
+
     c.push(EnvTidbit::Cmd{key: "DEFAULT_GCC_VERSION", cmd: "gcc -v"});
     c.push(EnvTidbit::Cmd{key: "DEFAULT_CLANG_VERSION", cmd: "clang --version"});
     c.push(EnvTidbit::CmdReq{key: "DEFAULT_RUSTC_VERSION", cmd: "rustc -V"});

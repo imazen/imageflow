@@ -21,6 +21,7 @@ passthrough = [
     "CI_PULL_REQUEST_INFO",
     "CI_TAG",
     "CI_REPO",
+    "CI_RELEASE",
     "CI_RELATED_BRANCH",
     "CI",
     "OPT_LEVEL",

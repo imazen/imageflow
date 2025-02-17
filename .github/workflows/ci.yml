@@ -222,7 +222,7 @@ jobs:
           echo "DEBUG=False" >> $GITHUB_ENV
           echo "TARGET_CPU=${{ matrix.target-cpu }}" >> $GITHUB_ENV
           echo "REL_NUGET_ARCHIVE_DIR=./artifacts/upload/nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/" >> $GITHUB_ENV
-
+          echo "CI_RELEASE=${{ github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
 
       - if: contains(matrix.target, 'musl')
         name: "Edit imageflow_abi/Cargo.toml to build staticlib instead of cdylib and use strip and lto"
