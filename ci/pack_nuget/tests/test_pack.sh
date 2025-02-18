@@ -32,7 +32,7 @@ cleanup() {
     fi
     exit $exit_code
 }
-trap cleanup 1 2 3 6
+trap cleanup 1 2 3 6 ERR EXIT
 
 # ---------------------------
 # Setup: create test environment and mock binaries

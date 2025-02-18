@@ -63,26 +63,70 @@ create_package() {
         echo "Warning: Using current directory for temporary files"
     fi
     # make random subdirectory in temp_dir
-    local temp_subdir="${temp_dir}/$(date +%s)_$RANDOM"
+    local temp_subdir="${temp_dir}/$(date +%s)_${RANDOM}"
     mkdir -p "$temp_subdir"
     
     # Create unique temp files
-    local ps_log="${temp_subdir}/ps_$(date +%s)_$RANDOM.log"
-    local ditto_log="${temp_subdir}/ditto_$(date +%s)_$RANDOM.log"
-    local zip_log="${temp_subdir}/zip_$(date +%s)_$RANDOM.log"
-    local sevenzip_log="${temp_subdir}/7z_$(date +%s)_$RANDOM.log"
+    local ps_log="${temp_subdir}/ps_$(date +%s)_${RANDOM}.log"
+    local ditto_log="${temp_subdir}/ditto_$(date +%s)_${RANDOM}.log"
+    local zip_log="${temp_subdir}/zip_$(date +%s)_${RANDOM}.log"
+    local sevenzip_log="${temp_subdir}/7z_$(date +%s)_${RANDOM}.log"
     
     # Cleanup function for temp files
     cleanup_logs() {
         rm -f "$ps_log" "$ditto_log" "$zip_log" "$sevenzip_log"
+        return 0 # Explicit return
     }
-    trap cleanup_logs  1 2 3 6
+    trap cleanup_logs 1 2 3 6 ERR EXIT
     
     echo "Using temp directory: $temp_subdir"
     echo "Creating package from folder: $staging_dir"
     echo "Output file: $output_file"
     
     ( cd "$staging_dir"
+
+
+        
+        # Try zip with different options
+        if command -v zip >/dev/null 2>&1; then
+            echo "Using zip..."
+            ls -la
+            echo "---------------"
+            if ! (zip -r -q "${output_file}" .) > "${zip_log}" 2>&1; then 
+                echo "Standard zip failed, trying without quiet flag..."
+                if ! (zip -r "${output_file}" .*) > "${zip_log}" 2>&1; then
+                    echo "zip failed with output:"
+                    cat "${zip_log}"
+                else
+                    return 0
+                fi
+            else
+                return 0
+            fi
+        fi
+        
+        # Try 7z with different options
+        if command -v 7z >/dev/null 2>&1; then
+            echo "Using 7z..."
+            if ! 7z a -tzip "${output_file}" * > "${sevenzip_log}" 2>&1; then  # Changed . to *
+                echo "7z failed with output:"
+                cat "${sevenzip_log}"
+                return 1
+            fi
+            return 0
+        fi
+
+        # macOS-specific handling
+        if [[ "$PLATFORM" == "macos" ]] && command -v ditto >/dev/null 2>&1; then
+            echo "Using macOS ditto..."
+            if ! ditto -c -k --sequesterRsrc . "${output_file}" > "${ditto_log}" 2>&1; then  # Removed --keepParent
+                echo "ditto failed with output:"
+                cat "${ditto_log}"
+                return 1
+            fi
+            return 0
+        fi
+        
         # Windows-specific handling
         if [[ "$PLATFORM" == "windows" ]]; then
             
@@ -101,49 +145,7 @@ create_package() {
             return 0
         fi
         
-        # macOS-specific handling
-        if [[ "$PLATFORM" == "macos" ]] && command -v ditto >/dev/null 2>&1; then
-            echo "Using macOS ditto..."
-            if ! ditto -c -k --sequesterRsrc --keepParent . "${output_file}" > "${ditto_log}" 2>&1; then
-                echo "ditto failed with output:"
-                cat "${ditto_log}"
-                return 1
-            fi
-            return 0
-        fi
-        
-        # Try zip with different options
-        if command -v zip >/dev/null 2>&1; then
-            echo "Using zip..."
-            if ! zip -r -q "${output_file}" . > "${zip_log}" 2>&1; then
-                echo "Standard zip failed, trying without quiet flag..."
-                if ! zip -r "${output_file}" . > "${zip_log}" 2>&1; then
-                    echo "zip failed with output:"
-                    cat "${zip_log}"
-                else
-                    return 0
-                fi
-            else
-                return 0
-            fi
-        fi
-        
-        # Try 7z with different options
-        if command -v 7z >/dev/null 2>&1; then
-            echo "Using 7z..."
-            if ! 7z a -tzip "${output_file}" . > "${sevenzip_log}" 2>&1; then
-                echo "Standard 7z failed, trying with wildcard..."
-                if ! 7z a -tzip "${output_file}" "*" > "${sevenzip_log}" 2>&1; then
-                    echo "7z failed with output:"
-                    cat "${sevenzip_log}"
-                else
-                    return 0
-                fi
-            else
-                return 0
-            fi
-        fi
-        
+
         echo "Error: No working compression method found"
         return 1
     )
@@ -174,13 +176,14 @@ get_latest_version() {
     fi
     
     # Create unique temp file
-    local temp_file="${temp_root}/nuget_versions_$(date +%s)_$RANDOM.json"
+    local temp_file="${temp_root}/nuget_versions_$(date +%s)_${RANDOM}.json"
     
     # Cleanup function for temp file
     cleanup_temp() {
         rm -f "$temp_file"
+        return 0 # Explicit return
     }
-    trap cleanup_temp  1 2 3 6
+    trap cleanup_temp  1 2 3 6 ERR EXIT
     
     local version=""
     
@@ -239,5 +242,100 @@ get_latest_version() {
     fi
     
     echo "Error: Could not fetch latest version for $package_id" >&2
+    return 1
+}
+
+# Function to verify NuGet package structure
+verify_nupkg() {
+    local nupkg_path="$1"
+    
+    # Validate input
+    if [ ! -f "$nupkg_path" ]; then
+        echo "Error: Package file not found: $nupkg_path" >&2
+        return 1
+    fi
+    
+    if [[ ! "$nupkg_path" =~ \.nupkg$ ]]; then
+        echo "Error: File must have .nupkg extension: $nupkg_path" >&2
+        return 1
+    fi
+    
+    # Create temp directory with unique name
+    local temp_dir="${TMPDIR:-/tmp}/nupkg-verify-$(date +%s)-${RANDOM}-${RANDOM}-$$"
+    echo "Creating temp directory: $temp_dir"
+    mkdir -p "$temp_dir"
+    
+    # Ensure cleanup happens even on failure
+    cleanup() {
+        local exit_code=$?
+        echo "Cleaning up temp directory" >&2
+        rm -rf "$temp_dir"
+        return 0 # Explicit return
+    }
+    trap cleanup 1 2 3 6 ERR EXIT
+    
+    echo "Extracting package to verify structure..."
+    
+    # Try unzip first
+    if command -v unzip >/dev/null 2>&1; then
+        echo "Using unzip..."
+        if unzip -q "$nupkg_path" -d "$temp_dir"; then
+            local nuspec_count
+            nuspec_count=$(find "$temp_dir" -maxdepth 1 -name "*.nuspec" | wc -l)
+            
+            if [ "$nuspec_count" -eq 0 ]; then
+                echo "Error: No .nuspec file found in package root" >&2
+                echo "unzip -l $nupkg_path"
+                unzip -l "$nupkg_path"
+                echo "Contents of temp directory:"
+                ls -R "$temp_dir"
+                return 1
+            elif [ "$nuspec_count" -gt 1 ]; then
+                echo "Error: Multiple .nuspec files found in package root" >&2
+                return 1
+            fi
+            
+            echo "Found .nuspec file: $(find "$temp_dir" -maxdepth 1 -name "*.nuspec" -exec basename {} \;)"
+            return 0
+        fi
+    fi
+    
+    # Try 7z if available
+    if command -v 7z >/dev/null 2>&1; then
+        echo "Using 7z..."
+        if 7z x "$nupkg_path" -o"$temp_dir" >/dev/null; then
+            local nuspec_count
+            nuspec_count=$(find "$temp_dir" -maxdepth 1 -name "*.nuspec" | wc -l)
+            
+            if [ "$nuspec_count" -eq 0 ]; then
+                echo "Error: No .nuspec file found in package root" >&2
+                echo "Contents of temp directory:"
+                ls -R "$temp_dir"
+                return 1
+            elif [ "$nuspec_count" -gt 1 ]; then
+                echo "Error: Multiple .nuspec files found in package root" >&2
+                return 1
+            fi
+            
+            echo "Found .nuspec file: $(find "$temp_dir" -maxdepth 1 -name "*.nuspec" -exec basename {} \;)"
+            return 0
+        fi
+    fi
+    
+    # Fallback to PowerShell on Windows
+    if [[ "$PLATFORM" == "windows" ]]; then
+        echo "Using PowerShell..."
+        # Convert path to Windows format
+        local win_nupkg_path
+        win_nupkg_path=$(echo "$nupkg_path" | sed 's/\/c\//C:\//g')
+        local win_script_dir
+        win_script_dir=$(echo "$UTILS_SCRIPT_DIR" | sed 's/\/c\//C:\//g')
+        
+        if powershell.exe -ExecutionPolicy Bypass -File "${win_script_dir}/verify_nupkg.ps1" -NupkgPath "$win_nupkg_path"; then
+            return 0
+        fi
+    fi
+    
+    echo "Error: No suitable extraction method found (unzip, 7z, or PowerShell required)" >&2
     return 1
 }

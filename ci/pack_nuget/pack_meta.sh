@@ -247,7 +247,7 @@ for (( i=0; i < ${#PACKAGES_KEYS[@]}; i++ )); do
         # Reasoning: Create the package by calling the shared create_package function.
         # --------------------------------------------------------------------------------
         echo "Attempting to create package..."
-        if ! create_package "${NUGET_OUTPUT_FILE}" "$STAGING_DIR"; then
+        if ! create_package "${NUGET_OUTPUT_FILE}" "$(pwd)"; then
             echo "Failed to create package ${NUGET_PACKAGE_NAME}"
             exit 1
         fi
@@ -260,5 +260,10 @@ for (( i=0; i < ${#PACKAGES_KEYS[@]}; i++ )); do
             mkdir -p "${SCRIPT_DIR}/../../${REL_NUGET_ARCHIVE_DIR}"
             cp "${NUGET_OUTPUT_FILE}" "${SCRIPT_DIR}/../../${REL_NUGET_ARCHIVE_DIR}"
         fi
+
+        echo "Extracting and checking for .nuspec in ${NUGET_OUTPUT_FILE}"
+        verify_nupkg "${NUGET_OUTPUT_FILE}"
     )
+
+    rm -rf "$STAGING_DIR"
 done

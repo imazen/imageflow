@@ -30,7 +30,7 @@ cleanup() {
 }
 
 # Trap the specified signals explicitly.
-trap cleanup SIGHUP SIGINT SIGQUIT SIGTERM SIGUSR1 SIGUSR2 SIGABRT
+trap cleanup SIGHUP SIGINT SIGQUIT SIGTERM SIGUSR1 SIGUSR2 SIGABRT ERR EXIT
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

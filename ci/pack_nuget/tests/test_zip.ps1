@@ -17,27 +17,28 @@ New-Item -ItemType Directory -Path $TestDir | Out-Null
 # Create sample files
 $FileA = Join-Path $TestDir "fileA.txt"
 $FileB = Join-Path $TestDir "fileB.log"
-New-Item -ItemType File -Path $FileA | Out-Null
-New-Item -ItemType File -Path $FileB | Out-Null
+"Content A" | Set-Content $FileA
+"Content B" | Set-Content $FileB
 
 # Create a subdirectory, also containing a sample file
 $SubDir = Join-Path $TestDir "subfolder"
 New-Item -ItemType Directory -Path $SubDir | Out-Null
 $FileC = Join-Path $SubDir "fileC.txt"
-New-Item -ItemType File -Path $FileC | Out-Null
+"Content C" | Set-Content $FileC
 
 # Define archives to be created (with and without .zip extension)
-$ArchiveForwardSlash = Join-Path $TestDir "archive_forward"
+$ArchiveForwardSlash = Join-Path $TestDir "archive_forward.huh"
 $ArchiveBackwardSlash = Join-Path $TestDir "archive_backward.zip"
+$ArchiveWildcard = Join-Path $TestDir "archive_wildcard.zip"
+$ArchiveNupkg = Join-Path $TestDir "test_package.nupkg"
 
 <#
     Reasoning: Step 2 - Test using forward slashes in paths.
-    Goal: Verify that zip.ps1 correctly handles forward slashes and appends .zip if missing.
+    Goal: Verify that zip.ps1 correctly handles forward slashes and places files in root.
 #>
 Write-Host "`n--- Testing zip.ps1 with forward slashes ---"
 
-# Invoke zip.ps1 with forward slash paths and no .zip extension
-Push-Location $PackDir
+Push-Location $TestDir
 try {
     & "$PackDir\zip.ps1" $ArchiveForwardSlash $FileA.Replace('\','/') $FileB.Replace('\','/') 
 }
@@ -46,38 +47,103 @@ catch {
 }
 Pop-Location
 
-Write-Host "Checking if archive was created (with .zip extension appended)..."
-$ExpectedForwardSlashZip = $ArchiveForwardSlash + ".zip"
+Write-Host "Checking if archive was created and contains files in root..."
+$ExpectedForwardSlashZip = $ArchiveForwardSlash
 if (Test-Path "$ExpectedForwardSlashZip") {
-    Write-Host "SUCCESS: Archive with forward slashes created as expected: $ExpectedForwardSlashZip"
+    # Create temp extraction directory
+    $ExtractDir = Join-Path $TestDir "extract_forward"
+    New-Item -ItemType Directory -Path $ExtractDir | Out-Null
+    Expand-Archive -Path $ExpectedForwardSlashZip -DestinationPath $ExtractDir
+    
+    # Verify files are in root
+    if ((Test-Path (Join-Path $ExtractDir "fileA.txt")) -and 
+        (Test-Path (Join-Path $ExtractDir "fileB.log"))) {
+        Write-Host "SUCCESS: Archive with forward slashes created and files are in root"
+    } else {
+        Write-Error "FAIL: Files not found in root of archive"
+        Write-Host "Archive contents: $(Get-ChildItem -Path $ExtractDir)"
+    }
 } else {
     Write-Error "FAIL: Archive with forward slashes was not found."
 }
 
 <#
-    Reasoning: Step 3 - Test using backward slashes in paths.
-    Goal: Verify that zip.ps1 handles backward slashes properly and respects existing .zip in archive name.
+    Reasoning: Step 3 - Test using wildcard expansion.
+    Goal: Verify that using '.' as path correctly expands to all files in directory.
 #>
-Write-Host "`n--- Testing zip.ps1 with backward slashes ---"
+Write-Host "`n--- Testing zip.ps1 with wildcard expansion ---"
 
-Push-Location $PackDir
+Push-Location $TestDir
 try {
-    & "$PackDir\zip.ps1" $ArchiveBackwardSlash "$FileA" "$FileB" "$SubDir"
+    & "$PackDir\zip.ps1" $ArchiveWildcard "."
 }
 catch {
-    Write-Error "Test failed with backward slash paths: $_"
+    Write-Error "Test failed with wildcard expansion: $_"
 }
 Pop-Location
 
-Write-Host "Checking if archive was created (already included .zip extension)..."
-if (Test-Path "$ArchiveBackwardSlash") {
-    Write-Host "SUCCESS: Archive with backward slashes created as expected: $ArchiveBackwardSlash"
+Write-Host "Checking if wildcard archive contains all files in root..."
+if (Test-Path $ArchiveWildcard) {
+    $ExtractWildcardDir = Join-Path $TestDir "extract_wildcard"
+    New-Item -ItemType Directory -Path $ExtractWildcardDir | Out-Null
+    Expand-Archive -Path $ArchiveWildcard -DestinationPath $ExtractWildcardDir
+    
+    # Verify all files are present in root
+    $AllFilesPresent = $true
+    foreach ($file in @("fileA.txt", "fileB.log", "subfolder\fileC.txt")) {
+        if (-not (Test-Path (Join-Path $ExtractWildcardDir $file))) {
+            $AllFilesPresent = $false
+            Write-Error "FAIL: File $file not found in expected location"
+        }
+    }
+    if ($AllFilesPresent) {
+        Write-Host "SUCCESS: Wildcard expansion worked correctly"
+    }
 } else {
-    Write-Error "FAIL: Archive with backward slashes was not found."
+    Write-Error "FAIL: Wildcard archive was not created"
 }
 
 <#
-    Reasoning: Step 4 - Teardown and clean up test artifacts.
+    Reasoning: Step 4 - Test .nupkg extension handling
+    Goal: Verify that zip.ps1 correctly handles .nupkg files by creating a .zip archive
+#>
+Write-Host "`n--- Testing zip.ps1 with .nupkg extension ---"
+
+Push-Location $TestDir
+try {
+    & "$PackDir\zip.ps1" $ArchiveNupkg $FileA $FileB
+}
+catch {
+    Write-Error "Test failed with .nupkg extension: $_"
+}
+Pop-Location
+
+Write-Host "Checking if .nupkg archive was created and contains files..."
+if (Test-Path $ArchiveNupkg) {
+    $ExtractNupkgDir = Join-Path $TestDir "extract_nupkg"
+    New-Item -ItemType Directory -Path $ExtractNupkgDir | Out-Null
+    
+    # Try to extract the .nupkg file (it should be a valid zip file)
+    try {
+        Expand-Archive -Path $ArchiveNupkg -DestinationPath $ExtractNupkgDir
+        
+        # Verify files are present in root
+        if ((Test-Path (Join-Path $ExtractNupkgDir "fileA.txt")) -and 
+            (Test-Path (Join-Path $ExtractNupkgDir "fileB.log"))) {
+            Write-Host "SUCCESS: .nupkg archive created and files are in root"
+        } else {
+            Write-Error "FAIL: Files not found in root of .nupkg archive"
+        }
+    }
+    catch {
+        Write-Error "FAIL: Could not extract .nupkg file as zip archive: $_"
+    }
+} else {
+    Write-Error "FAIL: .nupkg archive was not created"
+}
+
+<#
+    Reasoning: Step 5 - Teardown and clean up test artifacts.
     Goal: Remove test files and directories after testing is complete.
 #>
 Write-Host "`n--- Cleaning up test artifacts ---"

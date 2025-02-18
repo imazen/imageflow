@@ -25,7 +25,7 @@ cleanup() {
     cd "$SAVE_DIR"
     exit $exit_code
 }
-trap cleanup  1 2 3 6
+trap cleanup  1 2 3 6 ERR EXIT
 
 echo "Checking available compression tools..."
 if command -v zip >/dev/null 2>&1; then

@@ -7,7 +7,7 @@
     - Converts forward slashes to backslashes for Windows compatibility.
     - Appends .zip to the archive filename if not present and renames it back after compression.
     - Uses -Update to add to existing archives if they already exist.
-    - Exits with a non-zero code if compression or renaming fails.
+    - When "." is specified as a path, expands to all files in current directory.
 .EXAMPLE
     powershell.exe -File zip.ps1 archive.zip file1.txt folder/subfolder/file2.log
 #>
@@ -19,7 +19,6 @@ param(
     [Parameter(Mandatory=$true, Position=1, ValueFromRemainingArguments)]
     [string[]] $Paths
 )
-
 
 # Slashes don't matter, but /c/ needs to be C:/
 $ArchiveFile = $ArchiveFile -replace '/c/', 'C:/'
@@ -36,22 +35,28 @@ if (-not $ArchiveFile.EndsWith('.zip', [System.StringComparison]::InvariantCultu
     $ZipAdded = $true
 }
 
+# Convert forward slashes and expand wildcards
+$ExpandedPaths = @()
+foreach ($path in $Paths) {
+    $path = $path -replace '/', '\'
+    if ($path -eq ".") {
+        # When "." is specified, add all items in current directory
+        $ExpandedPaths += Get-ChildItem -Path "." | ForEach-Object { $_.FullName }
+    } else {
+        $ExpandedPaths += $path
+    }
+}
 
-# Reasoning: Convert forward slashes to backslashes in all paths for Windows compatibility.
-# Goal: Ensure all provided paths use the correct directory separator.
-$Paths = $Paths | ForEach-Object { $_ -replace '/', '\' }
-Write-Host "Compressing the following files: $Paths"
+Write-Host "Compressing the following items: $($ExpandedPaths -join ', ')"
 
-# Reasoning: Determine if the archive already exists to decide between creating a new archive or updating an existing one.
-# Goal: Utilize the -Update flag when appropriate to add files to an existing archive.
 try {
     if (Test-Path $ArchiveFile) {
         Write-Host "Archive '$ArchiveFile' exists. Adding new files..."
-        Compress-Archive -Path $Paths -DestinationPath $ArchiveFile -Update -ErrorAction Stop
+        Compress-Archive -Path $ExpandedPaths -DestinationPath $ArchiveFile -Update -ErrorAction Stop
     }
     else {
-        Write-Host "Creating new archive '$ArchiveFile' with specified files/directories..."
-        Compress-Archive -Path $Paths -DestinationPath $ArchiveFile -ErrorAction Stop
+        Write-Host "Creating new archive '$ArchiveFile'..."
+        Compress-Archive -Path $ExpandedPaths -DestinationPath $ArchiveFile -ErrorAction Stop
     }
 
     # Reasoning: Rename the archive back to the original filename if it was modified.
@@ -59,7 +64,7 @@ try {
     if ($ZipAdded) {
         # Get just the filename from the archive file
         $FinalArchiveFileName = (Get-Item -Path $ArchiveFile).Name -replace '\.zip$', ''
-        Write-Host "Renaming '$ArchiveFile' back to '$FinalArchiveFile'..."
+        Write-Host "Renaming '$ArchiveFile' back to '$FinalArchiveFileName'..."
         Rename-Item -Path $ArchiveFile -NewName $FinalArchiveFileName -ErrorAction Stop
     }
 
