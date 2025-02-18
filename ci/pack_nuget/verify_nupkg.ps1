@@ -33,6 +33,9 @@ function Test-NupkgStructure {
         return $false
     }
 
+    #Fix up /c/ to C:/
+    $NupkgPath = $NupkgPath -replace '/c/', 'C:/'
+
     # Create unique temp directory
     $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) "nupkg-verify-$(Get-Random)"
     
