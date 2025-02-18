@@ -12,10 +12,10 @@ runs:
       run: |
         if (Test-Path "C:\Program Files\Git\bin\git.exe") {
           Write-Host "Git is already installed. Skipping installation."
-          echo "git-installed=true" >> $GITHUB_OUTPUT
+          echo "git-installed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
         } else {
-          Write-Host "Git is not installed, installing..."
-          echo "git-installed=false" >> $GITHUB_OUTPUT
+          Write-Host "Git is not installed"
+          echo "git-installed=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
         }
 
 
