@@ -5,18 +5,6 @@ description: 'Set up Windows ARM64 environment with necessary tools'
 runs:
   using: "composite"
   steps:
-
-    - name: Install Git (required for actions/cache to work (tar is needed))
-      shell: powershell
-      run: |
-        $url = "https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.2/Git-2.47.1.2-arm64.exe"
-        Invoke-WebRequest -Uri $url -OutFile git-installer.exe
-        Start-Process -FilePath .\git-installer.exe -ArgumentList "/VERYSILENT", "/NORESTART" -Wait
-
-    - name: Use GNU tar from Git
-      shell: powershell
-      run:  echo "C:\Program Files\Git\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
     # - name: Cache tools
     #   uses: actions/cache@v4
     #   id: cache-tools
@@ -25,6 +13,9 @@ runs:
     #       C:\Users\runneradmin\.rustup
     #       C:\Users\runneradmin\.cargo
     #     key: ${{ runner.os }}-arm64-tools-v3
+
+    - name: Setup Git
+      uses: ./.github/actions/setup-git-win-arm64
 
     - name: Install Visual Studio Build Tools (Preview)
       shell: powershell
@@ -67,7 +58,6 @@ runs:
       run: |
         echo "Adding tools to PATH"
         echo "C:\BuildTools\Common7\Tools"  | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        echo "C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         echo "C:\BuildTools\VC\Tools\MSVC\$msvc_ver\bin\Hostx64\arm64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         echo "C:\BuildTools\VC\Tools\MSVC\$msvc_ver\bin\Hostx64\x64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         echo "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append

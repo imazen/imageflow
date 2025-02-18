@@ -141,9 +141,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: "WOA: Setup Windows ARM64"
-        uses: ./.github/actions/setup-win-arm64
+      - name: "WOA: Setup Git and GNU tools for Windows ARM64"
+        uses: ./.github/actions/setup-git-win-arm64
         if: matrix.woa == 'true'
+
       - name: "WOA: Checkout code again with git, so git commands work."
         uses: actions/checkout@v4
         if: matrix.woa == 'true'
@@ -156,6 +157,10 @@ jobs:
         with:
           key: ${{ matrix.name }}
         if: matrix.cross != 'true'
+
+      - name: "WOA: Install MSBUILD + Rust + Nasm + Git for Windows ARM64"
+        uses: ./.github/actions/setup-win-arm64
+        if: matrix.woa == 'true'
 
       - uses: dtolnay/rust-toolchain@stable
         if: matrix.cross != 'true' && matrix.woa != 'true'
