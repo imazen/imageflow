@@ -48,8 +48,9 @@ function Test-NupkgStructure {
         # Extract the package
         Write-Host "Extracting package to verify structure..."
         $zipPath = $NupkgPath -replace '\.nupkg$','.zip'
-        Write-Host "Renaming $NupkgPath to $zipPath"
-        Rename-Item -Path $NupkgPath -NewName $zipPath
+        $zipJustNameAndExt = (Get-Item -Path $zipPath).Name
+        Write-Host "Renaming $NupkgPath to $zipJustNameAndExt"
+        Rename-Item -Path $NupkgPath -NewName $zipJustNameAndExt
         Expand-Archive -Path $zipPath -DestinationPath $tempDir -Force
 
         # Look for .nuspec file in root
@@ -79,8 +80,9 @@ function Test-NupkgStructure {
             Write-Host "Cleaned up temp directory"
         }
         if (Test-Path $zipPath) {
-            Write-Host "Renaming $zipPath back to $NupkgPath"
-            Rename-Item -Path $zipPath -NewName $NupkgPath
+            $nupkgJustNameAndExt = (Get-Item -Path $NupkgPath).Name
+            Write-Host "Renaming $zipPath back to $nupkgJustNameAndExt"
+            Rename-Item -Path $zipPath -NewName $nupkgJustNameAndExt
         }
     }
 }

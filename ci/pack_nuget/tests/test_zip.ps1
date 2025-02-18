@@ -127,7 +127,8 @@ if (Test-Path $ArchiveNupkg) {
     try {
         # Rename the file to .zip before extracting
         $ZipArchive = $ArchiveNupkg -replace '\.nupkg$','.zip'
-        Rename-Item -Path $ArchiveNupkg -NewName $ZipArchive
+        $zipJustNameAndExt = (Get-Item -Path $ZipArchive).Name
+        Rename-Item -Path $ArchiveNupkg -NewName $zipJustNameAndExt
         Expand-Archive -Path $ZipArchive -DestinationPath $ExtractNupkgDir
 
         # Verify files are present in root
@@ -144,7 +145,8 @@ if (Test-Path $ArchiveNupkg) {
     finally {
         # Rename back to nupkg
          if (Test-Path $ZipArchive) {
-            Rename-Item -Path $ZipArchive -NewName $ArchiveNupkg
+            $nupkgJustNameAndExt = (Get-Item -Path $ArchiveNupkg).Name
+            Rename-Item -Path $ZipArchive -NewName $nupkgJustNameAndExt
          }
     }
 } else {
