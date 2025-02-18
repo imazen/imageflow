@@ -27,9 +27,9 @@ $FileC = Join-Path $SubDir "fileC.txt"
 "Content C" | Set-Content $FileC
 
 # Define archives to be created (with and without .zip extension)
-$ArchiveForwardSlash = Join-Path $TestDir "archive_forward.huh"
-$ArchiveBackwardSlash = Join-Path $TestDir "archive_backward.zip"
-$ArchiveWildcard = Join-Path $TestDir "archive_wildcard.zip"
+$ArchiveForwardSlash = Join-Path $TestDir "archive_forward.nupkg"
+$ArchiveBackwardSlash = Join-Path $TestDir "archive_backward.nupkg"
+$ArchiveWildcard = Join-Path $TestDir "archive_wildcard.nupkg"
 $ArchiveNupkg = Join-Path $TestDir "test_package.nupkg"
 
 <#
@@ -125,10 +125,13 @@ if (Test-Path $ArchiveNupkg) {
     
     # Try to extract the .nupkg file (it should be a valid zip file)
     try {
-        Expand-Archive -Path $ArchiveNupkg -DestinationPath $ExtractNupkgDir
-        
+        # Rename the file to .zip before extracting
+        $ZipArchive = $ArchiveNupkg -replace '\.nupkg$','.zip'
+        Rename-Item -Path $ArchiveNupkg -NewName $ZipArchive
+        Expand-Archive -Path $ZipArchive -DestinationPath $ExtractNupkgDir
+
         # Verify files are present in root
-        if ((Test-Path (Join-Path $ExtractNupkgDir "fileA.txt")) -and 
+        if ((Test-Path (Join-Path $ExtractNupkgDir "fileA.txt")) -and
             (Test-Path (Join-Path $ExtractNupkgDir "fileB.log"))) {
             Write-Host "SUCCESS: .nupkg archive created and files are in root"
         } else {
@@ -137,6 +140,12 @@ if (Test-Path $ArchiveNupkg) {
     }
     catch {
         Write-Error "FAIL: Could not extract .nupkg file as zip archive: $_"
+    }
+    finally {
+        # Rename back to nupkg
+         if (Test-Path $ZipArchive) {
+            Rename-Item -Path $ZipArchive -NewName $ArchiveNupkg
+         }
     }
 } else {
     Write-Error "FAIL: .nupkg archive was not created"

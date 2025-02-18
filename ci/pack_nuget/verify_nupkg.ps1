@@ -43,7 +43,9 @@ function Test-NupkgStructure {
 
         # Extract the package
         Write-Host "Extracting package to verify structure..."
-        Expand-Archive -Path $NupkgPath -DestinationPath $tempDir -Force
+        $zipPath = $NupkgPath -replace '\.nupkg$','.zip'
+        Rename-Item -Path $NupkgPath -NewName $zipPath
+        Expand-Archive -Path $zipPath -DestinationPath $tempDir -Force
 
         # Look for .nuspec file in root
         $nuspecFiles = Get-ChildItem -Path $tempDir -Filter "*.nuspec"
@@ -70,6 +72,9 @@ function Test-NupkgStructure {
         if (Test-Path $tempDir) {
             Remove-Item -Path $tempDir -Recurse -Force
             Write-Host "Cleaned up temp directory"
+        }
+        if (Test-Path $zipPath) {
+            Rename-Item -Path $zipPath -NewName $NupkgPath
         }
     }
 }
