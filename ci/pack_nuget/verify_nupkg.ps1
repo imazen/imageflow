@@ -35,6 +35,7 @@ function Test-NupkgStructure {
 
     #Fix up /c/ to C:/
     $NupkgPath = $NupkgPath -replace '/c/', 'C:/'
+    $NupkgPath = $NupkgPath -replace '\c\', 'C:/'
 
     # Create unique temp directory
     $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) "nupkg-verify-$(Get-Random)"
@@ -47,6 +48,7 @@ function Test-NupkgStructure {
         # Extract the package
         Write-Host "Extracting package to verify structure..."
         $zipPath = $NupkgPath -replace '\.nupkg$','.zip'
+        Write-Host "Renaming $NupkgPath to $zipPath"
         Rename-Item -Path $NupkgPath -NewName $zipPath
         Expand-Archive -Path $zipPath -DestinationPath $tempDir -Force
 
@@ -77,6 +79,7 @@ function Test-NupkgStructure {
             Write-Host "Cleaned up temp directory"
         }
         if (Test-Path $zipPath) {
+            Write-Host "Renaming $zipPath back to $NupkgPath"
             Rename-Item -Path $zipPath -NewName $NupkgPath
         }
     }
