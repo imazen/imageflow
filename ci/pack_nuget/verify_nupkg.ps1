@@ -48,7 +48,7 @@ function Test-NupkgStructure {
         # Extract the package
         Write-Host "Extracting package to verify structure..."
         $zipPath = $NupkgPath -replace '\.nupkg$','.zip'
-        $zipJustNameAndExt = (Get-Item -Path $zipPath).Name
+        $zipJustNameAndExt = [System.IO.Path]::GetFileName($zipPath)
         Write-Host "Renaming $NupkgPath to $zipJustNameAndExt"
         Rename-Item -Path $NupkgPath -NewName $zipJustNameAndExt
         Expand-Archive -Path $zipPath -DestinationPath $tempDir -Force
@@ -80,7 +80,7 @@ function Test-NupkgStructure {
             Write-Host "Cleaned up temp directory"
         }
         if (Test-Path $zipPath) {
-            $nupkgJustNameAndExt = (Get-Item -Path $NupkgPath).Name
+            $nupkgJustNameAndExt = [System.IO.Path]::GetFileName($NupkgPath)
             Write-Host "Renaming $zipPath back to $nupkgJustNameAndExt"
             Rename-Item -Path $zipPath -NewName $nupkgJustNameAndExt
         }

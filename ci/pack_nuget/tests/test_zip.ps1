@@ -127,7 +127,7 @@ if (Test-Path $ArchiveNupkg) {
     try {
         # Rename the file to .zip before extracting
         $ZipArchive = $ArchiveNupkg -replace '\.nupkg$','.zip'
-        $zipJustNameAndExt = (Get-Item -Path $ZipArchive).Name
+        $zipJustNameAndExt = [System.IO.Path]::GetFileName($ZipArchive)
         Rename-Item -Path $ArchiveNupkg -NewName $zipJustNameAndExt
         Expand-Archive -Path $ZipArchive -DestinationPath $ExtractNupkgDir
 
@@ -145,7 +145,7 @@ if (Test-Path $ArchiveNupkg) {
     finally {
         # Rename back to nupkg
          if (Test-Path $ZipArchive) {
-            $nupkgJustNameAndExt = (Get-Item -Path $ArchiveNupkg).Name
+            $nupkgJustNameAndExt = [System.IO.Path]::GetFileName($ArchiveNupkg)
             Rename-Item -Path $ZipArchive -NewName $nupkgJustNameAndExt
          }
     }

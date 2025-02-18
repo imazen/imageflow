@@ -63,7 +63,7 @@ try {
     # Goal: Maintain the user's intended archive filename without the .zip extension in the final output.
     if ($ZipAdded) {
         # Get just the filename from the archive file
-        $FinalArchiveFileName = (Get-Item -Path $ArchiveFile).Name -replace '\.zip$', ''
+        $FinalArchiveFileName = [System.IO.Path]::GetFileName($ArchiveFile)
         Write-Host "Renaming '$ArchiveFile' back to '$FinalArchiveFileName'..."
         Rename-Item -Path $ArchiveFile -NewName $FinalArchiveFileName -ErrorAction Stop
     }
