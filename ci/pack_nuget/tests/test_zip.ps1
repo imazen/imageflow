@@ -34,9 +34,8 @@ $FileC = Join-Path $SubDir "fileC.txt"
 "Content C" | Set-Content $FileC -ErrorAction Stop
 
 # Define archives to be created (with and without .zip extension)
-$ArchiveForwardSlash = Join-Path $TestOutputDir "archive_forward.nupkg"
-$ArchiveBackwardSlash = Join-Path $TestOutputDir "archive_backward.nupkg"
-$ArchiveWildcard = Join-Path $TestOutputDir "archive_wildcard.nupkg"
+$ArchiveForwardSlash = Join-Path $TestOutputDir "archive_forward.zip"
+$ArchiveWildcard = Join-Path $TestOutputDir "archive_wildcard.zip"
 $ArchiveNupkg = Join-Path $TestOutputDir "test_package.nupkg"
 
 <#
@@ -47,7 +46,7 @@ Write-Host "`n--- Testing zip.ps1 with forward slashes ---"
 
 Push-Location $TestInputDir
 try {
-    & "$PackDir\zip.ps1" $ArchiveForwardSlash $FileA.Replace('\','/') $FileB.Replace('\','/')
+    & "$PackDir\zip.ps1" -ArchiveFile $ArchiveForwardSlash -CompressionLevel NoCompression -Paths $FileA.Replace('\','/'),$FileB.Replace('\','/')
 }
 catch {
     Write-Error "❌ Test failed with forward slash paths: $_"
@@ -86,7 +85,7 @@ Write-Host "`n--- Testing zip.ps1 with wildcard expansion ---"
 
 Push-Location $TestInputDir
 try {
-    & "$PackDir\zip.ps1" $ArchiveWildcard "."
+    & "$PackDir\zip.ps1" -ArchiveFile $ArchiveWildcard -CompressionLevel Fastest -Paths "."
 }
 catch {
     Write-Error "Test failed with wildcard expansion: $_"
@@ -125,7 +124,7 @@ Write-Host "`n--- Testing zip.ps1 with .nupkg extension ---"
 
 Push-Location $TestInputDir
 try {
-    & "$PackDir\zip.ps1" $ArchiveNupkg $FileA $FileB
+    & "$PackDir\zip.ps1" -ArchiveFile $ArchiveNupkg -CompressionLevel Optimal -Paths $FileA,$FileB
 }
 catch {
     Write-Error "Test failed with .nupkg extension: $_"

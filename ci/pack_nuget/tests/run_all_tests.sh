@@ -30,6 +30,9 @@ run_test() {
 # Array to store failed tests
 failed_tests=()
 
+# Speed up on windows, it has slow zip
+export ZIP_PS1_COMPRESSION_LEVEL=NoCompression
+
 # Run all bash tests
 for test_script in test_*.sh; do
     if [[ "$test_script" != "run_all_tests.sh" ]]; then
@@ -47,6 +50,7 @@ if [[ "$OSTYPE" == "msys"* ]] || [[ "$OSTYPE" == "mingw"* ]]; then
     fi
     echo
 fi
+export ZIP_PS1_COMPRESSION_LEVEL=Optimal
 
 # Report results
 echo "========================================="

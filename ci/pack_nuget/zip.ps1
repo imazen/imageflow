@@ -16,9 +16,28 @@ param(
     [Parameter(Mandatory=$true, Position=0)]
     [string] $ArchiveFile,
 
-    [Parameter(Mandatory=$true, Position=1, ValueFromRemainingArguments)]
+    [Parameter(Mandatory=$false, Position=1)]
+    [string] $CompressionLevel = "Default",
+
+    [Parameter(Mandatory=$true, Position=2, ValueFromRemainingArguments)]
     [string[]] $Paths
 )
+
+# if compression level is default, set to env var ZIP_PS1_COMPRESSION_LEVEL, falling back to "Optimal" if not set
+if ($CompressionLevel -eq "Default") {
+    $CompressionLevel = $env:ZIP_PS1_COMPRESSION_LEVEL
+    if (-not $CompressionLevel) {
+        $CompressionLevel = "Optimal"
+    }else{
+        Write-Host "Using compression level from ZIP_PS1_COMPRESSION_LEVEL environment variable: $CompressionLevel"
+    }
+    if ($CompressionLevel -ne "Optimal" -and $CompressionLevel -ne "Fastest" -and $CompressionLevel -ne "NoCompression") {
+        Write-Error "Invalid compression level: $CompressionLevel, setting to Optimal"
+        $CompressionLevel = "Optimal"
+    }
+}
+
+
 
 # Slashes don't matter, but /c/ needs to be C:/
 $ArchiveFile = $ArchiveFile -replace '/c/', 'C:/'
@@ -52,12 +71,13 @@ foreach ($path in $Paths) {
 }
 $PathsCommaSeparated = $ExpandedPaths -join ', '
 
-Write-Host "Compressing the following items: $PathsCommaSeparated"
+Write-Host "Compressing ($CompressionLevel) the following items: $PathsCommaSeparated"
 
 try {
     $compress = @{
         Path = $ExpandedPaths
         DestinationPath = $ArchiveFile
+        CompressionLevel = $CompressionLevel
     }
     Compress-Archive @compress
     if (Test-Path $ArchiveFile) {

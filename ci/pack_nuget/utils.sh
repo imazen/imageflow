@@ -142,6 +142,7 @@ create_package() {
                 cat "${ps_log}"
                 return 1
             fi
+            cat "${ps_log}"
             return 0
         fi
         
