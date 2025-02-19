@@ -423,8 +423,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.DOCKERHUB_REPO }}
-            ${{ env.GHCR_REPO }}
+            imazen/imageflow_tool
           labels: |
             org.opencontainers.image.title=imageflow_tool
             org.opencontainers.image.description=imageflow_tool - Secure, high performance image optimization and manipulation for web servers.
@@ -447,7 +446,8 @@ jobs:
         run: cp ${{ env.IMAGEFLOW_TOOL_PATH }} ./docker/imageflow_tool/imageflow_tool
         shell: bash
 
-      - name: "Build and push imageflow_tool Docker image"
+      - name: "Build and push imageflow_tool Docker image (allow failure)"
+        continue-on-error: true
         if: ${{ contains(matrix.target, 'musl') }}
         uses: docker/build-push-action@v6
         with:
