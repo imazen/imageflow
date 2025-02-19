@@ -42,7 +42,7 @@ if (-not $ArchiveFile.EndsWith('.zip', [System.StringComparison]::InvariantCultu
 $ExpandedPaths = @()
 foreach ($path in $Paths) {
     $path = $path -replace '/', '\'
-    if ($path -eq "." || $path -eq "*") {
+    if ($path -eq ".") {
         # When "." is specified, add all items in current directory
         $ExpandedPaths += "*"# Get-ChildItem -Path "." | ForEach-Object { $_.FullName }
     } else {
