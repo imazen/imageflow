@@ -483,6 +483,16 @@ jobs:
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
           REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
 
+      - name: Upload ${{ env.REL_NUGET_OUTPUT_DIR }} to S3 nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/
+        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
+        uses: shallwefootball/s3-upload-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ env.IMAGEFLOW_RELEASE_BUCKET }}
+          source_dir: ./${{ env.REL_NUGET_OUTPUT_DIR }}
+          destination_dir: "nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/"
+
       - name: Publish to nuget.pkg.github.com
         if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
         run: |
