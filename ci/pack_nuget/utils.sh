@@ -246,9 +246,10 @@ get_latest_version() {
     return 1
 }
 
-# Function to verify NuGet package structure
+# Function to verify NuGet package structure. 2nd and later parameters are strings that should be present in the .nuspec file.
 verify_nupkg() {
     local nupkg_path="$1"
+    local expected_strings=("${@:2}")
     
     # Validate input
     if [ ! -f "$nupkg_path" ]; then
@@ -276,28 +277,14 @@ verify_nupkg() {
     trap cleanup 1 2 3 6 ERR EXIT
     
     echo "Extracting package to verify structure..."
+
+    local extraction_success=false
     
     # Try unzip first
     if command -v unzip >/dev/null 2>&1; then
         echo "Using unzip..."
         if unzip -q "$nupkg_path" -d "$temp_dir"; then
-            local nuspec_count
-            nuspec_count=$(find "$temp_dir" -maxdepth 1 -name "*.nuspec" | wc -l)
-            
-            if [ "$nuspec_count" -eq 0 ]; then
-                echo "Error: No .nuspec file found in package root" >&2
-                echo "unzip -l $nupkg_path"
-                unzip -l "$nupkg_path"
-                echo "Contents of temp directory:"
-                ls -R "$temp_dir"
-                return 1
-            elif [ "$nuspec_count" -gt 1 ]; then
-                echo "Error: Multiple .nuspec files found in package root" >&2
-                return 1
-            fi
-            
-            echo "Found .nuspec file: $(find "$temp_dir" -maxdepth 1 -name "*.nuspec" -exec basename {} \;)"
-            return 0
+            extraction_success=true
         fi
     fi
     
@@ -305,22 +292,39 @@ verify_nupkg() {
     if command -v 7z >/dev/null 2>&1; then
         echo "Using 7z..."
         if 7z x "$nupkg_path" -o"$temp_dir" >/dev/null; then
-            local nuspec_count
-            nuspec_count=$(find "$temp_dir" -maxdepth 1 -name "*.nuspec" | wc -l)
-            
-            if [ "$nuspec_count" -eq 0 ]; then
-                echo "Error: No .nuspec file found in package root" >&2
-                echo "Contents of temp directory:"
-                ls -R "$temp_dir"
-                return 1
-            elif [ "$nuspec_count" -gt 1 ]; then
-                echo "Error: Multiple .nuspec files found in package root" >&2
+            extraction_success=true
+        fi
+    fi
+
+    if [ "$extraction_success" = true ]; then
+        local nuspec_count
+        nuspec_count=$(find "$temp_dir" -maxdepth 1 -name "*.nuspec" | wc -l)
+        
+        if [ "$nuspec_count" -eq 0 ]; then
+            echo "Error: No .nuspec file found in package root" >&2
+            echo "unzip -l $nupkg_path"
+            unzip -l "$nupkg_path"
+            echo "Contents of temp directory:"
+            ls -R "$temp_dir"
+            return 1
+        elif [ "$nuspec_count" -gt 1 ]; then
+            echo "Error: Multiple .nuspec files found in package root" >&2
+            return 1
+        fi
+      
+        echo "Found .nuspec file: $(find "$temp_dir" -maxdepth 1 -name "*.nuspec" -exec basename {} \;)"
+
+        # Check if all expected strings are present in the .nuspec file
+        local nuspec_file="$temp_dir/$(find "$temp_dir" -maxdepth 1 -name "*.nuspec" -exec basename {} \;)"
+        for expected_string in "${expected_strings[@]}"; do
+            if ! grep -q "$expected_string" "$nuspec_file"; then
+                echo "Error: Expected string '$expected_string' not found in .nuspec file:" >&2
+                cat "$nuspec_file" >&2
                 return 1
             fi
-            
-            echo "Found .nuspec file: $(find "$temp_dir" -maxdepth 1 -name "*.nuspec" -exec basename {} \;)"
-            return 0
-        fi
+        done
+
+        return 0
     fi
     
     # Fallback to PowerShell on Windows
@@ -336,6 +340,8 @@ verify_nupkg() {
             return 0
         fi
     fi
+
+
     
     echo "Error: No suitable extraction method found (unzip, 7z, or PowerShell required)" >&2
     return 1

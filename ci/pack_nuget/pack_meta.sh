@@ -99,18 +99,20 @@ PACKAGES_VALUES=( \
 # --------------------------------------------------------------------------------
 generate_dependencies() {
     local deps=($1)
-    IMAGEFLOW_NET_VERSION=$(get_latest_version "Imageflow.Net")
+    if [[ -z "$IMAGEFLOW_NET_VERSION" ]]; then
+        IMAGEFLOW_NET_VERSION=$(get_latest_version "Imageflow.Net")
+    fi
     local xml=""
     xml+='    <dependencies>\n'
     xml+='      <group targetFramework=".NETStandard2.0">'
     for dep in "${deps[@]}"; do
         if [[ "$dep" == "Imageflow.Net" ]]; then
             # Use the latest version of Imageflow.Net, it's published separately   
-            xml+="\n        <dependency id=\"$dep\" version=\"[${IMAGEFLOW_NET_VERSION}]\" />"
+            xml+="\n        <dependency id=\"$dep\" version=\"${IMAGEFLOW_NET_VERSION}\" />"
         elif [[ "$dep" =~ "Imageflow.NativeRuntime." ]]; then
-            xml+="\n        <dependency id=\"$dep\" version=\"[${NUGET_PACKAGE_VERSION}]\" />"
+            xml+="\n        <dependency id=\"$dep\" version=\"${NUGET_PACKAGE_VERSION}\" />"
         else
-            xml+="\n        <dependency id=\"Imageflow.NativeRuntime.${dep}\" version=\"[${NUGET_PACKAGE_VERSION}]\" />"
+            xml+="\n        <dependency id=\"Imageflow.NativeRuntime.${dep}\" version=\"${NUGET_PACKAGE_VERSION}\" />"
         fi
     done
     xml+="\n      </group>\n"
@@ -171,7 +173,7 @@ for (( i=0; i < ${#PACKAGES_KEYS[@]}; i++ )); do
         # Reasoning: Mirror pack.sh by escaping special characters and setting SED_REPO_NAME.
         # --------------------------------------------------------------------------------
         PACKAGE_DESCRIPTION="$(echo $PACKAGE_DESCRIPTION | sed -e 's/[\/&]/\\&/g')"
-        DEPENDENCIES="$(echo $DEPENDENCIES | sed -e 's/[\/&]/\\&/g')"
+        DEPS_XML="$(echo $DEPS_XML | sed -e 's/[\/&]/\\&/g')"
         #if REPO_NAME contains \, fail
         if [[ "$REPO_NAME" == *"\\"* ]]; then
             echo "REPO_NAME contains a backslash: $REPO_NAME"
@@ -206,8 +208,8 @@ for (( i=0; i < ${#PACKAGES_KEYS[@]}; i++ )); do
           || { echo "Failed to inject package_description (${PACKAGE_DESCRIPTION})"; exit 1; }
         
         # Step 4: Inject dependencies.
-        cat "${NUSPEC_NAME}.temp3" | sed -e "s/:dependencies:/${DEPENDENCIES}/g" > "${NUSPEC_NAME}.temp4" \
-          || { echo "Failed to inject dependencies (${DEPENDENCIES})"; exit 1; }
+        cat "${NUSPEC_NAME}.temp3" | sed -e "s/:dependencies:/${DEPS_XML}/g" > "${NUSPEC_NAME}.temp4" \
+          || { echo "Failed to inject dependencies (${DEPS_XML})"; exit 1; }
 
         # Finalize the nuspec file.
         mv "${NUSPEC_NAME}.temp4" "${NUSPEC_NAME}"
@@ -262,7 +264,7 @@ for (( i=0; i < ${#PACKAGES_KEYS[@]}; i++ )); do
         fi
 
         echo "Extracting and checking for .nuspec in ${NUGET_OUTPUT_FILE}"
-        verify_nupkg "${NUGET_OUTPUT_FILE}"
+        verify_nupkg "${NUGET_OUTPUT_FILE}" ${DEPENDENCIES}
     )
 
     rm -rf "$STAGING_DIR"
