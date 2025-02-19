@@ -31,25 +31,26 @@ fi
 while IFS= read -r package; do
     echo "Uploading $(basename "$package")..."
     
-    # Try to upload the package and capture the response
+    # First get the response body and true exit code
     RESPONSE=$(curl -L "https://www.nuget.org/api/v2/package" \
         -H "X-NuGet-ApiKey: $API_KEY" \
         -H "X-NuGet-Client-Version: 4.1.0" \
         -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" \
         --upload-file "$package" \
-        -w "\n%{http_code}" \
-        --silent || echo "CURL_ERROR")
-
-    # Split response into body and status code
-    BODY=$(echo "$RESPONSE" | sed '$d')
-    STATUS=$(echo "$RESPONSE" | tail -n1)
-
-    if [ "$STATUS" = "CURL_ERROR" ] || [ "$STATUS" -ge 400 ]; then
+        -v \
+        2>&1)
+    CURL_EXIT=$?
+    
+    # Get the status code from the response headers
+    STATUS=$(echo "$RESPONSE" | grep -i "< HTTP/" | tail -n1 | awk '{print $3}')
+    
+    if [ $CURL_EXIT -ne 0 ] || [ -z "$STATUS" ] || [ "$STATUS" -ge 400 ]; then
         FAILED_PACKAGES+=("$package")
-        FAILED_MESSAGES+=("$BODY")
+        FAILED_MESSAGES+=("$RESPONSE")
         echo "❌ Failed to upload $(basename "$package")"
-        echo "   Status: $STATUS"
-        echo "   Response: $BODY"
+        echo "   Status: ${STATUS:-CURL_ERROR}"
+        echo "   Response:"
+        echo "$RESPONSE"
     else
         echo "✅ Successfully uploaded $(basename "$package")"
     fi
