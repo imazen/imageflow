@@ -53,6 +53,16 @@ while IFS= read -r package; do
         echo "$RESPONSE"
     else
         echo "✅ Successfully uploaded $(basename "$package")"
+
+        if [ "${DELETE_FROM_NUGET_AFTER_UPLOAD:-}" = "true" ]; then
+            
+            # To parse the package ID, look for the first [0-9]+ that has a dot before and after it. 
+            #From that to the end is the version. Before that first dot is the package ID.
+            packageId=$(basename "$package" | sed -n 's/\([0-9]\+\.\)[^.]*/\1/p')
+            packageVersion=$(basename "$package" | sed -n 's/[0-9]\+\.\([0-9]\+\)\.nupkg/\1/p')
+            echo "Deleting $packageId $packageVersion from nuget.org"
+            dotnet nuget delete $packageId $packageVersion --source https://api.nuget.org/v3/index.json --non-interactive --api-key $API_KEY
+        fi
     fi
 done <<< "$PACKAGES"
 
