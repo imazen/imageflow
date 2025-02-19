@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+# Start-Process -FilePath 'C:\Program Files\Git\usr\bin\bash.exe' ./run_all_tests.sh
+
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"

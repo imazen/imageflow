@@ -25,8 +25,11 @@ $ArchiveFile = $ArchiveFile -replace '/c/', 'C:/'
 $Paths = $Paths | ForEach-Object { $_ -replace '/c/', 'C:/' }
 $ArchiveFile = $ArchiveFile -replace '\c\', 'C:/'
 $Paths = $Paths | ForEach-Object { $_ -replace '\c\', 'C:\' }
+$ArchiveFile = $ArchiveFile -replace '\/', '\'
 
 $ZipAdded = $false
+
+$OriginalArchiveFileName = [System.IO.Path]::GetFileName($ArchiveFile)
 
 # Reasoning: Ensure the archive file has a .zip extension to comply with Compress-Archive requirements.
 # Goal: Append .zip if the provided archive filename does not already end with .zip
@@ -39,33 +42,46 @@ if (-not $ArchiveFile.EndsWith('.zip', [System.StringComparison]::InvariantCultu
 $ExpandedPaths = @()
 foreach ($path in $Paths) {
     $path = $path -replace '/', '\'
-    if ($path -eq ".") {
+    if ($path -eq "." || $path -eq "*") {
         # When "." is specified, add all items in current directory
-        $ExpandedPaths += Get-ChildItem -Path "." | ForEach-Object { $_.FullName }
+        $ExpandedPaths += "*"# Get-ChildItem -Path "." | ForEach-Object { $_.FullName }
     } else {
+        # TODO: Verify that the path exists?
         $ExpandedPaths += $path
     }
 }
+$PathsCommaSeparated = $ExpandedPaths -join ', '
 
-Write-Host "Compressing the following items: $($ExpandedPaths -join ', ')"
+Write-Host "Compressing the following items: $PathsCommaSeparated"
 
 try {
+    $compress = @{
+        Path = $ExpandedPaths
+        DestinationPath = $ArchiveFile
+    }
+    Compress-Archive @compress
     if (Test-Path $ArchiveFile) {
-        Write-Host "Archive '$ArchiveFile' exists. Adding new files..."
-        Compress-Archive -Path $ExpandedPaths -DestinationPath $ArchiveFile -Update -ErrorAction Stop
+        Write-Host "Appending files to existing archive '$ArchiveFile'..."
+        $compress['Update'] = $true
+        Compress-Archive @compress -ErrorAction Stop
     }
     else {
-        Write-Host "Creating new archive '$ArchiveFile'..."
-        Compress-Archive -Path $ExpandedPaths -DestinationPath $ArchiveFile -ErrorAction Stop
+        Write-Host "Creating archive '$ArchiveFile'..."
+        Compress-Archive @compress -ErrorAction Stop
+    }
+    Write-Host "Compress-Archive completed."
+    
+    # Verify the file was created
+    if (-not (Test-Path $ArchiveFile)) {
+        Write-Error "Archive file '$ArchiveFile' was not created"
+        exit 1
     }
 
     # Reasoning: Rename the archive back to the original filename if it was modified.
     # Goal: Maintain the user's intended archive filename without the .zip extension in the final output.
     if ($ZipAdded) {
-        # Get just the filename from the archive file
-        $FinalArchiveFileName = [System.IO.Path]::GetFileName($ArchiveFile)
-        Write-Host "Renaming '$ArchiveFile' back to '$FinalArchiveFileName'..."
-        Rename-Item -Path $ArchiveFile -NewName $FinalArchiveFileName -ErrorAction Stop
+        Write-Host "Renaming '$ArchiveFile' back to '$OriginalArchiveFileName'..."
+        Rename-Item -Path $ArchiveFile -NewName $OriginalArchiveFileName -ErrorAction Stop
     }
 
     # Reasoning: Indicate successful completion of the compression and renaming process.
