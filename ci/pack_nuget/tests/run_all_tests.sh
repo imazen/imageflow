@@ -33,6 +33,14 @@ failed_tests=()
 # Speed up on windows, it has slow zip
 export ZIP_PS1_COMPRESSION_LEVEL=NoCompression
 
+# Run PowerShell test if on Windows
+if [[ "$OSTYPE" == "msys"* ]] || [[ "$OSTYPE" == "mingw"* ]]; then
+    if ! run_test "test_zip.ps1" "powershell.exe -ExecutionPolicy Bypass -File ./test_zip.ps1"; then
+        failed_tests+=("test_zip.ps1")
+    fi
+    echo
+fi
+
 # Run all bash tests
 for test_script in test_*.sh; do
     if [[ "$test_script" != "run_all_tests.sh" ]]; then
@@ -43,13 +51,7 @@ for test_script in test_*.sh; do
     fi
 done
 
-# Run PowerShell test if on Windows
-if [[ "$OSTYPE" == "msys"* ]] || [[ "$OSTYPE" == "mingw"* ]]; then
-    if ! run_test "test_zip.ps1" "powershell.exe -ExecutionPolicy Bypass -File ./test_zip.ps1"; then
-        failed_tests+=("test_zip.ps1")
-    fi
-    echo
-fi
+
 export ZIP_PS1_COMPRESSION_LEVEL=Optimal
 
 # Report results
