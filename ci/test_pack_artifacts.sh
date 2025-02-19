@@ -32,49 +32,52 @@ export HTTPS_UPLOAD_BASE="https://s3.us-west-1.amazonaws.com/imageflow-nightlies
 
 # ------------------------------------------------------------------------------
 # Define all matrix variants as a list with fields:
-# matrix_name | suffix | commit_suffix | target | os | static
+# matrix_name | suffix | target | os | static
 #
 # These values mirror the YAML matrix:
 #
 # 1. linux-x64:
-#      suffix: ubuntu-x86_64, commit_suffix: linux-x64, target: x86_64-unknown-linux-gnu, os: ubuntu-20.04
-# 2. linux-x64-ubuntu-24:
-#      suffix: ubuntu-x86_64-24, commit_suffix: linux64_24, target: x86_64-unknown-linux-gnu, os: ubuntu-24.04
-# 3. linux-arm64-ubuntu-22:
-#      suffix: ubuntu-arm64, commit_suffix: linux-arm64, target: aarch64-unknown-linux-gnu, os: ubuntu-22-arm-16gb
-# 4. osx-x64-13:
-#      suffix: osx-x86_64, commit_suffix: mac-x64, target: x86_64-apple-darwin, os: macos-13
-# 5. osx-arm64-14:
-#      suffix: osx-arm64, commit_suffix: mac-arm64, target: aarch64-apple-darwin, os: macos-14
-# 6. win-x64-2022:
-#      suffix: win-x86_64, commit_suffix: win-x64, target: x86_64-pc-windows-msvc, os: windows-2022
-# 7. win-x86-2022:
-#      suffix: win-x86, commit_suffix: win-x86, target: i686-pc-windows-msvc, os: windows-2022
-# 8. win-arm64-11:
-#      suffix: win-arm64, commit_suffix: win-arm64, target: aarch64-pc-windows-msvc, os: windows-11-arm-16gb
-# 9. linux-musl-x64:
-#      suffix: linux-musl-x64, commit_suffix: linux-musl-x64, target: x86_64-unknown-linux-musl, os: ubuntu-24.04, static: true
-# 10. linux-musl-arm64:
-#      suffix: linux-musl-arm64, commit_suffix: linux-musl-arm64, target: aarch64-unknown-linux-musl, os: ubuntu-22-arm-16gb, static: true
+#      suffix: linux-x64, target: x86_64-unknown-linux-gnu, os: ubuntu-20.04
+# 2. ubuntu-x64:
+#      suffix: ubuntu-x86_64, target: x86_64-unknown-linux-gnu, os: ubuntu-20.04
+# 3. linux-x64-ubuntu-24:
+#      suffix: ubuntu-x86_64-24-mistake, target: x86_64-unknown-linux-gnu, os: ubuntu-24.04
+# 4. linux-arm64-ubuntu-22:
+#      suffix: linux-arm64, target: aarch64-unknown-linux-gnu, os: ubuntu-22.04-arm
+# 5. osx-x64-13:
+#      suffix: osx-x86_64, target: x86_64-apple-darwin, os: macos-13
+# 6. osx-arm64-14:
+#      suffix: osx-arm64, target: aarch64-apple-darwin, os: macos-14
+# 7. win-x64-2022:
+#      suffix: win-x86_64, target: x86_64-pc-windows-msvc, os: windows-2022
+# 8. win-x86-2022:
+#      suffix: win-x86, target: i686-pc-windows-msvc, os: windows-2022
+# 9. win-arm64-11:
+#      suffix: win-arm64, target: aarch64-pc-windows-msvc, os: windows-11-arm-16gb
+# 10. linux-musl-x64:
+#      suffix: linux-musl-x64, target: x86_64-unknown-linux-musl, os: ubuntu-24.04, static: true
+# 11. linux-musl-arm64:
+#      suffix: linux-musl-arm64, target: aarch64-unknown-linux-musl, os: ubuntu-22.04-arm, static: true
 # ------------------------------------------------------------------------------
 matrices=(
-  "linux-x64|ubuntu-x86_64|linux64|x86_64-unknown-linux-gnu|ubuntu-20.04|false"
-  "linux-x64-ubuntu-24|ubuntu-x86_64-24|linux64_24|x86_64-unknown-linux-gnu|ubuntu-24.04|false"
-  "linux-arm64-ubuntu-22|ubuntu-arm64|linux-arm64|aarch64-unknown-linux-gnu|ubuntu-22-arm-16gb|false"
-  "osx-x64-13|osx-x86_64|osx-x64|x86_64-apple-darwin|macos-13|false"
-  "osx-arm64-14|osx-arm64|osx-arm64|aarch64-apple-darwin|macos-14|false"
-  "win-x64-2022|win-x86_64|win-x64|x86_64-pc-windows-msvc|windows-2022|false"
-  "win-x86-2022|win-x86|win-x86|i686-pc-windows-msvc|windows-2022|false"
-  "win-arm64-11|win-arm64|win-arm64|aarch64-pc-windows-msvc|windows-11-arm-16gb|false"
-  "linux-musl-x64|linux-musl-x64|linux-musl-x64|x86_64-unknown-linux-musl|ubuntu-24.04|true"
-  "linux-musl-arm64|linux-musl-arm64|linux-musl-arm64|aarch64-unknown-linux-musl|ubuntu-22-arm-16gb|true"
+  "linux-x64|linux-x64|x86_64-unknown-linux-gnu|ubuntu-20.04|false"
+  "ubuntu-x64|ubuntu-x86_64|x86_64-unknown-linux-gnu|ubuntu-20.04|false"
+  "linux-x64-ubuntu-24|ubuntu-x86_64-24-mistake|x86_64-unknown-linux-gnu|ubuntu-24.04|false"
+  "linux-arm64-ubuntu-22|linux-arm64|aarch64-unknown-linux-gnu|ubuntu-22.04-arm|false"
+  "osx-x64-13|osx-x86_64|x86_64-apple-darwin|macos-13|false"
+  "osx-arm64-14|osx-arm64|aarch64-apple-darwin|macos-14|false"
+  "win-x64-2022|win-x86_64|x86_64-pc-windows-msvc|windows-2022|false"
+  "win-x86-2022|win-x86|i686-pc-windows-msvc|windows-2022|false"
+  "win-arm64-11|win-arm64|aarch64-pc-windows-msvc|windows-11-arm-16gb|false"
+  "linux-musl-x64|linux-musl-x64|x86_64-unknown-linux-musl|ubuntu-24.04|true"
+  "linux-musl-arm64|linux-musl-arm64|aarch64-unknown-linux-musl|ubuntu-22.04-arm|true"
 )
 
 # ------------------------------------------------------------------------------
 # Loop through each matrix variant and perform a packaging test.
 # ------------------------------------------------------------------------------
 for matrix in "${matrices[@]}"; do
-    IFS="|" read -r matrix_name suffix commit_suffix target os static_flag <<< "$matrix"
+    IFS="|" read -r matrix_name suffix target os static_flag <<< "$matrix"
     echo "========================================="
     echo "Testing matrix variant: $matrix_name"
     
@@ -90,7 +93,7 @@ for matrix in "${matrices[@]}"; do
     export TAG_SHA_SUFFIX="${GITHUB_REF_NAME}-${GITHUB_SHA_SHORT}-${suffix}"
     export REL_BINARIES_DIR="${TARGET_DIR}${PROFILE}/"
     export IMAGEFLOW_TAG_SHA_SUFFIX="imageflow-${TAG_SHA_SUFFIX}"
-    export MATRIX_COMMIT_SUFFIX="${commit_suffix}"
+    export MATRIX_COMMIT_SUFFIX="${suffix}"
     export MATRIX_TARGET="${target}"
     export TAG_SHA_SUFFIX  # (already set above)
 
