@@ -30,33 +30,43 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # name is just for display
+          # os is the runner
+          # package-suffix should never change
           - name: linux-x64
-            suffix: ubuntu-x86_64
+            package-suffix: linux-x64
             os: ubuntu-20.04
             target-cpu: x86-64
-            commit-suffix: linux64  # used only for s3 commits/{suffix} folder
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
             cross: 'true'
             force-cross: 'true'
             max-glibc: '2.17'
 
+          # Keep publishing .ubuntu-x64 to nuget for backwards compatibility - for now.
+          - name: ubuntu-x64
+            package-suffix: ubuntu-x86_64
+            os: ubuntu-20.04
+            target-cpu: x86-64
+            nuget-rid: linux-x64
+            target: x86_64-unknown-linux-gnu
+            cross: 'true'
+            force-cross: 'true'
+            max-glibc: '2.17'
 
           # skip-publish, for testing only.
           - name: linux-x64-ubuntu-24
-            suffix: ubuntu-x86_64-24
+            package-suffix: ubuntu-x86_64-24-mistake
             os: ubuntu-24.04
             target-cpu: x86-64
-            commit-suffix: linux64_24
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
             skip-publish: 'true'
 
           - name: linux-arm64-ubuntu-22
-            suffix: ubuntu-arm64
-            os: ubuntu-22.04-arm #ubunutu-latest #ubuntu-22-arm-16gb #ubuntu-22.04-arm is in public preview
+            package-suffix: linux-arm64
+            os: ubuntu-22.04-arm
             target-cpu: generic
-            commit-suffix: linux-arm64
             nuget-rid: linux-arm64
             target: aarch64-unknown-linux-gnu
             features: neon
@@ -65,49 +75,43 @@ jobs:
             max-glibc: '2.34'
 
           - name: osx-x64-13
-            suffix: osx-x86_64
+            package-suffix: osx-x86_64
             os: macos-13
             target-cpu: haswell
-            commit-suffix: osx-x64
             nuget-rid: osx-x64
             target: x86_64-apple-darwin
 
           - name: osx-arm64-14
-            suffix: osx-arm64
+            package-suffix: osx-arm64
             os: macos-14
             target-cpu: apple-m1
-            commit-suffix: osx-arm64
             nuget-rid: osx-arm64
             target: aarch64-apple-darwin
 
           - name: win-x64-2022
-            suffix: win-x86_64
+            package-suffix: win-x86_64
             os: windows-2022
             target-cpu: x86-64
-            commit-suffix: win-x64
             nuget-rid: win-x64
             target: x86_64-pc-windows-msvc
 
           - name: win-x86-2022
-            suffix: win-x86
+            package-suffix: win-x86
             os: windows-2022
             # target-cpu: generic # any target-cpu causes the build to fail
-            commit-suffix: win-x86
             nuget-rid: win-x86
             target: i686-pc-windows-msvc
 
           - name: win-arm64-11
-            suffix: win-arm64
+            package-suffix: win-arm64
             os: windows-11-arm-16gb
             target-cpu: generic
-            commit-suffix: win-arm64
             nuget-rid: win-arm64
             target: aarch64-pc-windows-msvc
             woa: 'true'
 
           - name: linux-musl-x64
-            suffix: linux-musl-x64
-            commit-suffix: linux-musl-x64
+            package-suffix: linux-musl-x64
             nuget-rid: linux-musl-x64
             os: ubuntu-24.04
             target-cpu: x86-64
@@ -119,8 +123,7 @@ jobs:
             docker-image: imazen/imageflow_tool
 
           - name: linux-musl-arm64
-            suffix: linux-musl-arm64
-            commit-suffix: linux-musl-arm64
+            package-suffix: linux-musl-arm64
             nuget-rid: linux-musl-arm64
             os: ubuntu-22.04-arm # ubuntu-latest #ubuntu-22-arm-16gb  #ubuntu-22.04-arm is in public preview
             target-cpu: generic
@@ -135,7 +138,7 @@ jobs:
     name: "${{ (matrix.cross == 'true') && 'cross ' || ''}}${{ matrix.name }}${{ matrix.target-cpu && format(' cpu: {0}', matrix.target-cpu) }}${{ matrix.target && format(' target: {0}', matrix.target) }}${{ matrix.features && format(' features: {0}', matrix.features) }} runs-on:${{ matrix.os }}"
 
     steps:
-      - name: "Goal: ${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'publish' || 'test' }} Imageflow.NativeRuntime.${{ matrix.suffix }} & Imageflow.NativeTool.${{ matrix.suffix }} with RID ${{ matrix.nuget-rid }}"
+      - name: "Goal: ${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'publish' || 'test' }} Imageflow.NativeRuntime.${{ matrix.package-suffix }} & Imageflow.NativeTool.${{ matrix.package-suffix }} with RID ${{ matrix.nuget-rid }}"
         run: echo "Hi"
 
       - name: Checkout code
@@ -190,7 +193,7 @@ jobs:
         shell: bash
         run: |
           echo "TARGET_DIR=target/${{ matrix.target }}/" >> $GITHUB_ENV
-          echo "TAG_SHA_SUFFIX=${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.suffix }}" >> $GITHUB_ENV
+          echo "TAG_SHA_SUFFIX=${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.package-suffix }}" >> $GITHUB_ENV
           echo "RUSTFLAGS=${{ matrix.target-cpu && format('-Ctarget-cpu={0}', matrix.target-cpu) }} ${{ matrix.target-feature && format('-Ctarget-feature={0}', matrix.target-feature) }}" >> $GITHUB_ENV
           echo "CARGO_PROFILE_TARGET_FEATURES_ARGS=--${{ env.PROFILE }} ${{ matrix.target && format('--target={0}',matrix.target) }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
           echo "CROSS_ARGS=--locked --${{ env.PROFILE }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
@@ -310,7 +313,7 @@ jobs:
           IMAGEFLOW_TAG_SHA_SUFFIX: ${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}
           LIBIMAGEFLOW_STATIC: ${{ env.LIBIMAGEFLOW_STATIC }}
           LIBIMAGEFLOW_DYNAMIC: ${{ env.LIBIMAGEFLOW_DYNAMIC }}
-          MATRIX_COMMIT_SUFFIX: ${{ matrix.commit-suffix }}
+          MATRIX_COMMIT_SUFFIX: ${{ matrix.package-suffix }}
           MATRIX_TARGET: ${{ matrix.target }}
           HTTPS_UPLOAD_BASE: ${{ env.HTTPS_IMAGEFLOW_BUCKET }}
           TAG_SHA_SUFFIX: ${{ env.TAG_SHA_SUFFIX }}
@@ -326,7 +329,7 @@ jobs:
         run: ./ci/pack_nuget/pack.sh tool
         env:
           CI_TAG: ${{ env.IMAGEFLOW_NUGET_VERSION }}
-          PACKAGE_SUFFIX: ${{ matrix.suffix }}
+          PACKAGE_SUFFIX: ${{ matrix.package-suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
           REL_BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
@@ -339,7 +342,7 @@ jobs:
         run: ./ci/pack_nuget/pack.sh
         env:
           CI_TAG: ${{ env.IMAGEFLOW_NUGET_VERSION }}
-          PACKAGE_SUFFIX: ${{ matrix.suffix }}
+          PACKAGE_SUFFIX: ${{ matrix.package-suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
           REL_BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
