@@ -381,14 +381,8 @@ jobs:
         shell: bash
 
       - name: Publish to nuget.org
-        if: ${{ env.ALLOW_PUBLISH == 'true' && env.NUGET_UPLOAD_NUGET == 'true' }}
-        run: |
-          for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
-          do
-            echo "Publishing $f to nuget.org..."
-            curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail-with-body \
-              || curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
-          done
+        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
+        run: ./ci/pack_nuget/upload_nuget.sh ${{ env.REL_NUGET_OUTPUT_DIR }} "${{ secrets.NUGET_API_KEY }}"
         shell: bash
 
       - name: "Verify artifacts are now on S3, and public"
@@ -508,14 +502,6 @@ jobs:
 
       - name: Publish to nuget.org
         if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
-        run: |
-          for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
-          do
-            echo "Publishing $f to nuget.org..."
-            curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail-with-body \
-              || curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
-          done
+        run: ./ci/pack_nuget/upload_nuget.sh ${{ env.REL_NUGET_OUTPUT_DIR }} "${{ secrets.NUGET_API_KEY }}"
         shell: bash
-
-
 
