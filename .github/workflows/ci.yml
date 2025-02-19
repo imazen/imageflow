@@ -482,7 +482,7 @@ jobs:
           REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
 
       - name: Upload ${{ env.REL_NUGET_OUTPUT_DIR }} to S3 nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/
-        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
+        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
         uses: shallwefootball/s3-upload-action@master
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
@@ -491,7 +491,12 @@ jobs:
           source_dir: ./${{ env.REL_NUGET_OUTPUT_DIR }}
           destination_dir: "nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/"
 
-      - name: Publish to nuget.pkg.github.com
+      - name: Publish to nuget.org (${{env.NUGET_UPLOAD_NUGET }})
+        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
+        run: ./ci/pack_nuget/upload_nuget.sh ${{ env.REL_NUGET_OUTPUT_DIR }} "${{ secrets.NUGET_API_KEY }}"
+        shell: bash
+
+      - name: Publish to nuget.pkg.github.com (${{env.NUGET_UPLOAD_GITHUB }})
         if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
         run: |
           for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
@@ -499,9 +504,3 @@ jobs:
             curl -vX PUT -u "${{github.repository_owner}}:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/${{github.repository_owner}}/
           done
         shell: bash
-
-      - name: Publish to nuget.org
-        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
-        run: ./ci/pack_nuget/upload_nuget.sh ${{ env.REL_NUGET_OUTPUT_DIR }} "${{ secrets.NUGET_API_KEY }}"
-        shell: bash
-
