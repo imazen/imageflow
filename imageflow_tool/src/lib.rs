@@ -2,9 +2,17 @@
 extern crate clap;
 extern crate imageflow_helpers;
 extern crate imageflow_types as s;
+#[macro_use]
+extern crate imageflow_core;
 extern crate imageflow_core as fc;
+use self::imageflow_core::for_other_imageflow_crates::preludes::default::*;
+
+
 extern crate serde_json;
 extern crate zip;
+
+extern crate smallvec;
+
 use std::{ffi::OsStr, fs::File, io::{Read, Write}};
 use imageflow_helpers as hlp;
 

@@ -1084,6 +1084,7 @@ dependencies = [
  "libc",
  "serde",
  "serde_json",
+ "smallvec",
  "threadpool",
  "time",
  "zip",

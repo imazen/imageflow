@@ -1,13 +1,9 @@
-extern crate std;
-extern crate imageflow_core;
-use self::imageflow_core::for_other_imageflow_crates::preludes::default::*;
-
-//extern crate imageflow_helpers;
+use ::imageflow_core::for_other_imageflow_crates::preludes::default::*;
 
 use imageflow_helpers::process_testing::*;
-use self::imageflow_core::test_helpers::*;
-use self::imageflow_core::test_helpers::process_testing::ProcTestContextExtras;
-use self::imageflow_core::test_helpers::process_testing::ProcOutputExtras;
+use ::imageflow_core::test_helpers::*;
+use ::imageflow_core::test_helpers::process_testing::ProcTestContextExtras;
+use ::imageflow_core::test_helpers::process_testing::ProcOutputExtras;
 
 
 
@@ -18,13 +14,15 @@ pub enum TestImageSource {
 }
 
 impl TestImageSource{
-    pub fn get_bytes(&self) -> Vec<u8>{
+    pub fn get_bytes(&self) -> Result<Vec<u8>>{
         match *self{
             TestImageSource::Url(ref url) => {
-                ::imageflow_http_helpers::fetch_bytes(url).unwrap()
+                ::imageflow_http_helpers::fetch_bytes(url)
+                    .map_err(|e| nerror!(ErrorKind::FetchError, "{}: {}", url, e))
+                    .map_err(|e| e.at(here!()))
             },
             TestImageSource::Blank(ref blank) => {
-                blank.generate().bytes
+                Ok(blank.generate().bytes)
             }
         }
     }
@@ -36,12 +34,13 @@ enum ReplacementInput{
     }
 }
 impl ReplacementInput{
-    pub fn prepare(&self, c: &ProcTestContext){
+    pub fn prepare(&self, c: &ProcTestContext) -> Result<()> {
         //#[cfg_attr(feature = "cargo-clippy", allow(single_match))]
         match *self{
             ReplacementInput::File{ref path, ref source} => {
-                let bytes = source.get_bytes();
+                let bytes = source.get_bytes().map_err(|e| e.at(here!()))?;
                 c.write_file(path, &bytes);
+                Ok(())
             }
         }
     }
@@ -119,11 +118,11 @@ impl BuildScenario{
             "run_recipe.sh"
         }
     }
-    fn prepare_scenario(&self, context: &ProcTestContext) -> ProcTestContext {
+    fn prepare_scenario(&self, context: &ProcTestContext) -> Result<ProcTestContext> {
         let c = context.subfolder_context(Path::new(self.slug));
         println!("Preparing example {} in \n{:?}\n\n{}", self.slug, c.working_dir(), self.description);
         for input in self.new_inputs.as_slice().iter(){
-            input.prepare(&c);
+            input.prepare(&c).map_err(|e| e.at(here!()))?;
         }
         let json_fname = format!("{}.json", self.slug);
         c.write_json(&json_fname, &self.recipe);
@@ -143,10 +142,10 @@ impl BuildScenario{
         }
 
         c.write_file(Self::default_script_name(), command.as_bytes());
-        c
+        Ok(c)
     }
 
-    fn run_scenario(&self, context: &ProcTestContext) -> ProcOutput {
+    fn run_scenario(&self, context: &ProcTestContext) -> Result<ProcOutput> {
         let c = context.subfolder_context(Path::new(self.slug));
         println!("Running example {} in \n{:?}\n\n{}", self.slug, c.working_dir(), self.description);
 
@@ -157,7 +156,7 @@ impl BuildScenario{
         if let Some(ScenarioExpectations{status_code}) = self.expectations{
             product.expect_status_code(status_code);
         }
-        product
+        Ok(product)
     }
 
 }
@@ -328,14 +327,29 @@ fn scenarios() -> Vec<BuildScenario>{
 
 pub fn export_examples(tool_location: Option<PathBuf>){
     let c = ProcTestContext::create("examples", tool_location);
+
     for example in scenarios(){
-        example.prepare_scenario(&c);
+        match example.prepare_scenario(&c).map_err(|e| e.at(here!())){
+            Ok(c) => {
+
+            }
+            Err(e) => {
+                eprintln!("Error preparing example {} (skipping): {}", example.slug, e);
+            }
+        }
     }
 }
 pub fn run_examples(tool_location: Option<PathBuf>){
     let c = ProcTestContext::create("examples", tool_location);
     for example in scenarios(){
-        example.run_scenario(&c);
+        match example.run_scenario(&c).map_err(|e| e.at(here!())){
+            Ok(product) => {
+
+            }
+            Err(e) => {
+                eprintln!("Error running example {} (skipping): {}", example.slug, e);
+            }
+        }
     }
 }
 
@@ -345,7 +359,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     let c = ProcTestContext::create_timestamp_subdir_within(std::env::current_dir().unwrap().join("self_tests"), tool_location);
     // encapsulate scenario/example for reuse
     for example in scenarios() {
-        example.prepare_scenario(&c);
+        example.prepare_scenario(&c).map_err(|e| e.at(here!())).unwrap();
         example.run_scenario(&c);
     }
     {

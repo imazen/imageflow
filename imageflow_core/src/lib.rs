@@ -105,7 +105,7 @@ mod internal_prelude {
         pub use crate::{Graph, Context, JsonResponse,
                    MethodRouter};
         #[doc(no_inline)]
-        pub use crate::{clients, FlowError, Result, ErrorKind};
+        pub use crate::{clients, FlowError, Result, ErrorKind, CodeLocation};
         #[doc(no_inline)]
         pub use crate::clients::fluent;
     }
