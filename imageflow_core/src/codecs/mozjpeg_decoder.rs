@@ -51,7 +51,9 @@ impl Decoder for MozJpegDecoder {
             image_width: w as i32,
             image_height: h as i32,
             preferred_mime_type: "image/jpeg".to_owned(),
-            preferred_extension: "jpg".to_owned()
+            preferred_extension: "jpg".to_owned(),
+            lossless: false,
+            multiple_frames: false
         })
     }
 
@@ -63,7 +65,9 @@ impl Decoder for MozJpegDecoder {
             image_width: w as i32,
             image_height: h as i32,
             preferred_mime_type: "image/jpeg".to_owned(),
-            preferred_extension: "jpg".to_owned()
+            preferred_extension: "jpg".to_owned(),
+            lossless: false,
+            multiple_frames: false
         })
     }
 

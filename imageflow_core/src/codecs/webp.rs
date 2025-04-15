@@ -54,6 +54,14 @@ impl WebPDecoder {
         }
     }
 
+    pub fn has_animation(&self) -> Option<bool>{
+        if self.features_read {
+            Some(self.config.input.has_animation == 1)
+        }else{
+            None
+        }
+    }
+
     pub fn has_alpha(&self) -> Option<bool>{
         if self.features_read {
             Some(self.config.input.has_alpha == 1)
@@ -61,7 +69,13 @@ impl WebPDecoder {
             None
         }
     }
-
+    pub fn is_lossless(&self) -> Option<bool>{
+        if self.features_read {
+            Some(self.config.input.format == 2) // 1= lossy, 0 = mixed/undefined
+        }else{
+            None
+        }
+    }
     pub fn input_height(&self) -> Option<i32>{
         if self.features_read {
             Some(self.config.input.height)
@@ -116,7 +130,9 @@ impl Decoder for WebPDecoder {
             image_width: self.output_width().unwrap(),
             image_height: self.output_height().unwrap(),
             preferred_mime_type: "image/webp".to_owned(),
-            preferred_extension: "webp".to_owned()
+            preferred_extension: "webp".to_owned(),
+            lossless: self.is_lossless().unwrap_or(false),
+            multiple_frames: self.has_animation().unwrap_or(false)
         })
     }
 
@@ -128,7 +144,9 @@ impl Decoder for WebPDecoder {
             image_width: self.input_width().unwrap(),
             image_height: self.input_height().unwrap(),
             preferred_mime_type: "image/webp".to_owned(),
-            preferred_extension: "webp".to_owned()
+            preferred_extension: "webp".to_owned(),
+            lossless: self.is_lossless().unwrap_or(false),
+            multiple_frames: self.has_animation().unwrap_or(false)
         })
     }
 
@@ -206,22 +224,32 @@ impl Decoder for WebPDecoder {
 
 
 pub struct WebPEncoder {
-    io: IoProxy
+    io: IoProxy,
+    quality: Option<f32>,
+    lossless: Option<bool>,
+    matte: Option<s::Color>,
+
 }
 
 impl WebPEncoder {
-    pub(crate) fn create(c: &Context, io: IoProxy) -> Result<Self> {
+    pub(crate) fn create(c: &Context, io: IoProxy, quality: Option<f32>, lossless: Option<bool>, matte: Option<s::Color>) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::WebPEncoder){
             return Err(nerror!(ErrorKind::CodecDisabledError, "The LodePNG encoder has been disabled"));
         }
+        if lossless == Some(true) && quality.is_some() {
+            return Err(nerror!(ErrorKind::InvalidState, "Cannot specify both lossless=true and quality"));
+        }
         Ok(WebPEncoder {
-            io
+            io,
+            quality,
+            lossless,
+            matte,
         })
     }
 }
 
 impl Encoder for WebPEncoder {
-    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<s::EncodeResult> {
+    fn write_frame(&mut self, c: &Context, _preset: &s::EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<s::EncodeResult> {
 
 
         let bitmaps = c.borrow_bitmaps()
@@ -229,7 +257,12 @@ impl Encoder for WebPEncoder {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
+        if self.matte.is_some() {
+            bitmap.apply_matte(self.matte.clone().unwrap())?;
+        }
+
         let mut window = bitmap.get_window_u8().unwrap();
+
         let (w, h) = window.size_i32();
         let layout = window.info().pixel_layout();
         let stride = window.info().t_stride() as i32;
@@ -238,30 +271,26 @@ impl Encoder for WebPEncoder {
         let mut_slice = window.slice_mut();
         let length = mut_slice.len();
 
+        let lossless = self.lossless.unwrap_or(false);
+        let quality = self.quality.unwrap_or(85.0).clamp(0.0, 100.0) as f32;
+
         unsafe {
             let mut output: *mut u8 = ptr::null_mut();
             let mut output_len: usize = 0;
-            match preset {
-                s::EncoderPreset::WebPLossy { quality } => {
-                    let quality = f32::min(100f32, f32::max(0f32, *quality));
-
-                    if layout == PixelLayout::BGRA {
-                        output_len = WebPEncodeBGRA(mut_slice.as_ptr(), w, h, stride, quality, &mut output);
-                    } else if layout == PixelLayout::BGR {
-                        output_len = WebPEncodeBGR(mut_slice.as_ptr(), w, h, stride, quality, &mut output);
-                    }
-                },
-                s::EncoderPreset::WebPLossless => {
-                    if layout == PixelLayout::BGRA {
-                        output_len = WebPEncodeLosslessBGRA(mut_slice.as_ptr(), w, h, stride, &mut output);
-                    } else if layout == PixelLayout::BGR {
+            if !lossless {
+                if layout == PixelLayout::BGRA {
+                    output_len = WebPEncodeBGRA(mut_slice.as_ptr(), w, h, stride, quality, &mut output);
+                } else if layout == PixelLayout::BGR {
+                    output_len = WebPEncodeBGR(mut_slice.as_ptr(), w, h, stride, quality, &mut output);
+                }
+            } else {
+                if layout == PixelLayout::BGRA {
+                    output_len = WebPEncodeLosslessBGRA(mut_slice.as_ptr(), w, h, stride, &mut output);
+                } else if layout == PixelLayout::BGR {
                         output_len = WebPEncodeLosslessBGR(mut_slice.as_ptr(), w, h, stride, &mut output);
-                    }
-                },
-                _ => {
-                    panic!("Incorrect encoder for encoder preset")
                 }
             }
+
             if output_len == 0 || output == ptr::null_mut() {
                 return Err(nerror!(ErrorKind::ImageEncodingError, "libwebp encoding error"));
             } else {

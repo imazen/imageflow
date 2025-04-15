@@ -50,8 +50,8 @@ Our new, more compact comma-delimited syntax. It lets you use the familiar srcse
 * `png-100` - PNG, 100% quality
 * `webp-100` - WebP, 100% quality
 * `webp` - WebP, default quality configured in the server
-* `webp-lossless` or `webp-l` - WebP, lossless
-* `png-lossless` or `png-l` or `png`  - PNG, lossless
+* `webp-lossless` - WebP, lossless
+* `png-lossless` or `png`  - PNG, lossless
 * `gif` - GIF
 * `2.5x` - 2.5x density/multiplier applied to width and height
 * `100w` - 100px wide (times the density multiplier, if specified)
@@ -73,5 +73,5 @@ Our new, more compact comma-delimited syntax. It lets you use the familiar srcse
 * `&srcset=png-90,2.5x,100w,100h,crop` - PNG, 90% quality, 250px wide, 250px tall, cropped to aspect ratio
 * `&srcset=png-lossless` - PNG, lossless
 * `&srcset=gif,crop-20-30-90-100,2.5x,100w,100h` - GIF, cropped to rectangle 20%,30%,90%,100%, 250px wide, 250px tall
-* `&srcset=webp-l,2.5x,100w,100h,crop` - WebP, lossless, cropped to aspect ratio, resized to 250px wide, 250px tall
+* `&srcset=webp-lossless,2.5x,100w,100h,crop` - WebP, lossless, cropped to aspect ratio, resized to 250px wide, 250px tall
 * `&srcset=webp-lossless,2.5x,100w,100h,upscale` - WebP, lossless, 250x250px, upscale to width & height if original image is smaller.

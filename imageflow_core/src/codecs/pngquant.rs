@@ -2,7 +2,7 @@ use super::Encoder;
 use super::s::{EncoderPreset, EncodeResult};
 use crate::io::IoProxy;
 
-use imageflow_types::PixelFormat;
+use imageflow_types::{Color, PixelFormat};
 use crate::{Context, Result, ErrorKind};
 use std::result::Result as StdResult;
 use crate::io::IoProxyRef;
@@ -19,25 +19,28 @@ pub struct PngquantEncoder {
     liq: imagequant::Attributes,
     io: IoProxy,
     maximum_deflate: Option<bool>,
+    matte: Option<Color>,
 }
 
 impl PngquantEncoder {
-    pub(crate) fn create(c: &Context, speed: Option<u8>, quality: Option<u8>, minimum_quality: Option<u8>, maximum_deflate: Option<bool>, io: IoProxy) -> Result<Self> {
+    pub(crate) fn create(c: &Context,io: IoProxy, speed: Option<u8>, quality: Option<u8>, minimum_quality: Option<u8>,
+        maximum_deflate: Option<bool>, matte: Option<Color>) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::PngQuantEncoder){
             return Err(nerror!(ErrorKind::CodecDisabledError, "The PNGQuant encoder has been disabled"));
         }
         let mut liq = imagequant::new();
         if let Some(speed) = speed {
-            liq.set_speed(u8::min(10, u8::max(1, speed)).into()).unwrap();
+            liq.set_speed(speed.clamp(1, 10).into()).unwrap();
         }
-        let min = u8::min(100, minimum_quality.unwrap_or(0));
-        let max = u8::min(100,quality.unwrap_or(100));
-        liq.set_quality(min.into(), max.into()).unwrap();
+        let min = minimum_quality.unwrap_or(0).clamp(0, 100);
+        let max = quality.unwrap_or(100).clamp(0, 100);
+        liq.set_quality(min, max).unwrap();
 
         Ok(PngquantEncoder {
             liq,
             io,
-            maximum_deflate
+            maximum_deflate,
+            matte,
         })
     }
 }
@@ -48,13 +51,17 @@ impl PngquantEncoder{
     }
 }
 impl Encoder for PngquantEncoder {
-    fn write_frame(&mut self, c: &Context, preset: &EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
+    fn write_frame(&mut self, c: &Context, _preset: &EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
 
         let bitmaps = c.borrow_bitmaps()
             .map_err(|e| e.at(here!()))?;
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
+
+        if self.matte.is_some() {
+            bitmap.apply_matte(self.matte.clone().unwrap()).map_err(|e| e.at(here!()))?;
+        }
 
         bitmap.get_window_u8().unwrap().normalize_unused_alpha()
         .map_err(|e| e.at(here!()))?;

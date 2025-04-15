@@ -42,7 +42,8 @@ fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<::imageflow_riapi::ir
                         w: input.w,
                         h: input.h,
                         fmt: input.fmt,
-                        original_mime: get_decoder_mime(ctx,ix)?
+                        original_mime: get_decoder_mime(ctx,ix)?,
+                        lossless: image_info.as_ref().map(|i| i.lossless).unwrap_or(false),
                     },
                     reference_width: image_info.as_ref().map(|i| i.image_width).unwrap_or(input.w),
                     reference_height: image_info.as_ref().map(|i| i.image_height).unwrap_or(input.h),

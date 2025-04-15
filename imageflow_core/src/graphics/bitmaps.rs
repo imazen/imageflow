@@ -505,6 +505,20 @@ impl Bitmap{
             None
         }
     }
+
+    pub fn apply_matte(&mut self, matte: imageflow_types::Color) -> Result<(), FlowError> {
+        if self.info().pixel_layout() != PixelLayout::BGRA {
+            return Err(nerror!(ErrorKind::InvalidState, "Cannot apply matte to non-BGRA bitmap"));
+        }
+        if self.info().alpha_meaningful() {
+            let mut window = self.get_window_bgra32().unwrap();
+            crate::graphics::blend::apply_matte(&mut window, matte.clone()).map_err(|e| e.at(here!()))?;
+            if matte.is_opaque() {
+                self.set_alpha_meaningful(false);
+            }
+        }
+        Ok(())
+    }
 }
 
 

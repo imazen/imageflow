@@ -43,14 +43,16 @@ impl Decoder for LibPngDecoder {
     }
 
     fn get_unscaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
-        let (w,h,fmt) = self.decoder.get_info()?;
+        let (w,h,fmt, palette) = self.decoder.get_info()?;
 
         Ok(s::ImageInfo {
             frame_decodes_into: fmt,
             image_width: w as i32,
             image_height: h as i32,
             preferred_mime_type: "image/png".to_owned(),
-            preferred_extension: "png".to_owned()
+            preferred_extension: "png".to_owned(),
+            lossless: !palette, // A palette image might be lossless and just have fewer colors, no way to know really
+            multiple_frames: false
         })
     }
 
@@ -75,7 +77,7 @@ impl Decoder for LibPngDecoder {
 
     fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
 
-        let (w,h, fmt) = self.decoder.get_info()?;
+        let (w,h, fmt, uses_palette) = self.decoder.get_info()?;
 
         let mut bitmaps = c.borrow_bitmaps_mut()
             .map_err(|e| e.at(here!()))?;
@@ -113,6 +115,7 @@ struct PngDec{
     w: u32,
     h: u32,
     pixel_format: ffi::PixelFormat,
+    uses_palette: bool,
     pub ignore_color_profile: bool,
     pub ignore_color_profile_errors: bool,
     color_profile: Option<Vec<u8>>,
@@ -205,6 +208,7 @@ impl PngDec{
             w: 0,
             h: 0,
             pixel_format: ffi::PixelFormat::Bgra32,
+            uses_palette: false,
             ignore_color_profile: false,
             ignore_color_profile_errors: false,
             color_profile: None,
@@ -256,13 +260,15 @@ impl PngDec{
         let mut w: u32 = 0;
         let mut h: u32 = 0;
         let mut uses_alpha = true;
-        if unsafe {!ffi::wrap_png_decoder_get_info(c_state, &mut w, &mut h, &mut uses_alpha)}
+        let mut uses_palette = false;
+        if unsafe {!ffi::wrap_png_decoder_get_info(c_state, &mut w, &mut h, &mut uses_alpha, &mut uses_palette)}
         {
             return Err(self.error.clone().expect("error missing").at(here!()));
         }
         self.w = w;
         self.h = h;
         self.pixel_format = if uses_alpha { ffi::PixelFormat::Bgra32 } else { ffi::PixelFormat::Bgr32 };
+        self.uses_palette = uses_palette;
 
 
         self.header_read = true;
@@ -270,9 +276,9 @@ impl PngDec{
     }
 
 
-    fn get_info(&mut self) -> Result<(u32,u32, ffi::PixelFormat)>{
+    fn get_info(&mut self) -> Result<(u32,u32, ffi::PixelFormat, bool)>{
         self.read_header()?;
-        Ok((self.w, self.h, self.pixel_format))
+        Ok((self.w, self.h, self.pixel_format, self.uses_palette))
     }
 
     fn read_frame(&mut self, canvas: &mut Bitmap) -> Result<()> {

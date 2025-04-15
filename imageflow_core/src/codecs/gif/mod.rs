@@ -30,6 +30,15 @@ pub struct GifDecoder{
 }
 
 impl GifDecoder {
+    fn is_animated(&self) -> Option<bool>{
+        match (self.last_frame.is_some(), self.next_frame.is_some()){
+            (true, true) => Some(true),
+            (false, false) => None, // No frames read yet
+            (true, false) => Some(false),
+            (false, true) => panic!("GifDecoder::is_animated called during the middle of read_frame"),
+        }
+    }
+
     pub fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<GifDecoder> {
 
 
@@ -83,6 +92,8 @@ impl GifDecoder {
             .try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
+
+
         let mut window = bitmap.get_window_u8().unwrap();
 
         for mut line in window.scanlines_bgra().unwrap(){
@@ -120,9 +131,13 @@ impl Decoder for GifDecoder {
 //            frame_count: 1,
             // We would have to read in the entire GIF to know!
             preferred_mime_type: "image/gif".to_owned(),
-            preferred_extension: "gif".to_owned()
+            preferred_extension: "gif".to_owned(),
+            lossless: false,
+            multiple_frames: self.is_animated().unwrap_or(false) //false if we didn't read any frames yet
         })
     }
+
+
 
     fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<Option<i32>> {
         Ok(None)
@@ -229,7 +244,7 @@ pub struct GifEncoder{
 }
 
 impl GifEncoder{
-    pub(crate) fn create(c: &Context, preset: &s::EncoderPreset, io: IoProxy, first_frame_key: BitmapKey) -> Result<GifEncoder>{
+    pub(crate) fn create(c: &Context, io: IoProxy, first_frame_key: BitmapKey) -> Result<GifEncoder>{
         let bitmaps = c.borrow_bitmaps()
             .map_err(|e| e.at(here!()))?;
 

@@ -43,6 +43,8 @@ extern crate serde_json;
 extern crate rgb;
 extern crate imgref;
 
+use std::fmt;
+
 use imgref::ImgRef;
 //use std::str::FromStr;
 pub mod collections;
@@ -251,10 +253,467 @@ pub enum ScalingFloatspace {
     Linear, // gamma = 2,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum OutputImageFormat{
+    Webp,
+    Jpeg,
+    Jpg,
+    Png,
+    Avif,
+    Jxl,
+    Gif,
+    Keep
+}
+
+impl fmt::Display for OutputImageFormat{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self{
+            OutputImageFormat::Webp => write!(f, "webp"),
+            OutputImageFormat::Jpeg => write!(f, "jpg"),
+            OutputImageFormat::Jpg => write!(f, "jpg"),
+            OutputImageFormat::Png => write!(f, "png"),
+            OutputImageFormat::Avif => write!(f, "avif"),
+            OutputImageFormat::Jxl => write!(f, "jxl"),
+            OutputImageFormat::Gif => write!(f, "gif"),
+            OutputImageFormat::Keep => write!(f, "keep"),
+        }
+    }
+}
+
+impl OutputImageFormat{
+    pub fn from_str(s: &str) -> Option<OutputImageFormat>{
+        // case insensitive
+        match s{
+            _ if s.eq_ignore_ascii_case("webp") => Some(OutputImageFormat::Webp),
+            _ if s.eq_ignore_ascii_case("image/webp") => Some(OutputImageFormat::Webp),
+            _ if s.eq_ignore_ascii_case("jpg") => Some(OutputImageFormat::Jpeg),
+            _ if s.eq_ignore_ascii_case("image/jpg") => Some(OutputImageFormat::Jpeg),
+            _ if s.eq_ignore_ascii_case("jpeg") => Some(OutputImageFormat::Jpeg),
+            _ if s.eq_ignore_ascii_case("png") => Some(OutputImageFormat::Png),
+            _ if s.eq_ignore_ascii_case("image/png") => Some(OutputImageFormat::Png),
+            _ if s.eq_ignore_ascii_case("avif") => Some(OutputImageFormat::Avif),
+            _ if s.eq_ignore_ascii_case("image/avif") => Some(OutputImageFormat::Avif),
+            _ if s.eq_ignore_ascii_case("jxl") => Some(OutputImageFormat::Jxl),
+            _ if s.eq_ignore_ascii_case("image/jxl") => Some(OutputImageFormat::Jxl),
+            _ if s.eq_ignore_ascii_case("gif") => Some(OutputImageFormat::Gif),
+            _ if s.eq_ignore_ascii_case("image/gif") => Some(OutputImageFormat::Gif),
+            _ if s.eq_ignore_ascii_case("keep") => Some(OutputImageFormat::Keep),
+            _ => None,
+        }
+    }
+}
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub struct EncoderHints{
+    //pub jxl: Option<JxlEncoderHints>,
+    pub webp: Option<WebpEncoderHints>,
+    pub jpeg: Option<JpegEncoderHints>,
+    pub png: Option<PngEncoderHints>,
+    //pub avif: Option<AvifEncoderHints>,
+    pub gif: Option<GifEncoderHints>,
+}
+
+// #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+// #[serde(rename_all = "lowercase")]
+// pub struct JxlEncoderHints{
+//     pub quality: Option<f32>,
+//     pub lossless: Option<bool>,
+//     //pub effort: Option<u8>,
+//     pub distance: Option<f32>,
+// }
+
+// #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+// #[serde(rename_all = "lowercase")]
+// pub struct AvifEncoderHints{
+//     pub quality: Option<f32>,
+//     pub speed: Option<u8>,
+// }
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub struct GifEncoderHints{
+
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub struct WebpEncoderHints{
+    pub quality: Option<f32>,
+    pub lossless: Option<BoolKeep>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub struct JpegEncoderHints{
+    pub quality: Option<f32>,
+    pub progressive: Option<bool>, // Default to allow {jpeg_progressive}
+    pub mimic: Option<JpegEncoderStyle>,
+    // mozjpeg always optimizes huffman
+    // And we don't use libjpeg turbo anymore
+    // We don't allow custom subsampling do we?
+    //pub hint_optimize_huffman_coding: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum JpegEncoderStyle{
+    Jpegli,
+    LibjpegTurbo,
+    Mozjpeg,
+    /// Default is mozjpeg now, might be jpegli later
+    Default,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub struct PngEncoderHints{
+    pub quality: Option<f32>,
+    pub min_quality: Option<f32>,
+    pub quantization_speed: Option<u8>,
+    pub mimic: Option<PngEncoderStyle>,
+    pub hint_max_deflate: Option<bool>,
+    pub lossless: Option<BoolKeep>,
+    // We are dropping libpng, thus dropping zlib_compression: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum PngEncoderStyle{
+    Libpng,
+    Lodepng,
+    Pngquant,
+    Default,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub struct AllowedFormats{
+    pub webp: Option<bool>,
+    pub jxl: Option<bool>,
+    //pub jxl_animated: Option<bool>,
+    pub avif: Option<bool>,
+    pub jpeg: Option<bool>,
+    pub jpeg_progressive: Option<bool>,
+    pub jpeg_xyb: Option<bool>,
+    pub png: Option<bool>,
+    // pub png_animated: Option<bool>,
+    pub gif: Option<bool>,
+    pub all: Option<bool>,
+    /// Enables all formats that are 'safe' to display for all browsers.
+    /// Enables jpeg, gif, png.
+    /// WebP is at 97%, but is still excluded.
+    pub web_safe: Option<bool>,
+    /// Enables jpeg, gif, png, webp, color_profiles
+    pub modern_web_safe: Option<bool>,
+    /// Allows use of color profiles other than sRGB. This is now widely supported.
+    pub color_profiles: Option<bool>,
+}
+
+impl AllowedFormats{
+    pub fn expand_sets(self) -> AllowedFormats{
+        if self.all == Some(true) {
+            return AllowedFormats::all();
+        }
+        if self.web_safe == Some(true) {
+            return self.merge(AllowedFormats::web_safe());
+        }
+        if self.modern_web_safe == Some(true) {
+            return self.merge(AllowedFormats::modern_web_safe());
+        }
+        self
+    }
+    fn and(a: Option<bool>, b: Option<bool>) -> Option<bool>{
+        match (a, b) {
+            (Some(a), Some(b)) => Some(a && b),
+            _ => None,
+        }
+    }
+    fn or(a: Option<bool>, b: Option<bool>) -> Option<bool>{
+        match (a, b) {
+            (Some(a), Some(b)) => Some(a || b),
+            _ => None,
+        }
+    }
+    pub fn merge(self, other: AllowedFormats) -> Self{
+        AllowedFormats{
+            webp: Self::or(self.webp, other.webp),
+            jxl: Self::or(self.jxl, other.jxl),
+            avif: Self::or(self.avif, other.avif),
+            jpeg: Self::or(self.jpeg, other.jpeg),
+            jpeg_xyb: Self::or(self.jpeg_xyb, other.jpeg_xyb),
+            jpeg_progressive: Self::or(self.jpeg_progressive, other.jpeg_progressive),
+            png: Self::or(self.png, other.png),
+            gif: Self::or(self.gif, other.gif),
+            all: Self::or(self.all, other.all),
+            web_safe: Self::or(self.web_safe, other.web_safe),
+            modern_web_safe: Self::or(self.modern_web_safe, other.modern_web_safe),
+            color_profiles: Self::or(self.color_profiles, other.color_profiles),
+        }
+    }
+    pub fn intersect(self, other: AllowedFormats) -> Self{
+        AllowedFormats{
+            webp: Self::and(self.webp, other.webp),
+            jxl: Self::and(self.jxl, other.jxl),
+            avif: Self::and(self.avif, other.avif),
+            jpeg: Self::and(self.jpeg, other.jpeg),
+            jpeg_xyb: Self::and(self.jpeg_xyb, other.jpeg_xyb),
+            jpeg_progressive: Self::and(self.jpeg_progressive, other.jpeg_progressive),
+            png: Self::and(self.png, other.png),
+            gif: Self::and(self.gif, other.gif),
+            all: None,
+            web_safe: None,
+            modern_web_safe: None,
+            color_profiles: Self::and(self.color_profiles, other.color_profiles),
+        }
+    }
+    pub fn any_formats_enabled(&self) -> bool{
+        self.webp == Some(true) || self.jxl == Some(true) || self.avif == Some(true) || self.jpeg == Some(true)  || self.png == Some(true) || self.gif == Some(true)
+    }
+    pub fn none() -> Self{
+        AllowedFormats{
+            webp: None,
+            jxl: None,
+            avif: None,
+            jpeg: None,
+            jpeg_progressive: None,
+            jpeg_xyb: None,
+            png: None,
+            gif: None,
+            all: None,
+            web_safe: None,
+            modern_web_safe: None,
+            color_profiles: None,
+        }
+    }
+    pub fn all() -> Self{
+        AllowedFormats{
+            webp: Some(true),
+            avif: Some(true),
+            jpeg: Some(true),
+            png: Some(true),
+            gif: Some(true),
+            all: Some(true),
+            web_safe: Some(true),
+            modern_web_safe: Some(true),
+            color_profiles: Some(true),
+            jpeg_progressive: Some(true),
+            jxl: Some(true),
+            jpeg_xyb: Some(true),
+        }
+    }
+    pub fn modern_web_safe() -> Self{
+        AllowedFormats{
+            webp: Some(true),
+            modern_web_safe: Some(true),
+            color_profiles: Some(true),
+            jpeg_progressive: Some(true),
+            jpeg_xyb: Some(true),
+            ..AllowedFormats::web_safe()
+        }
+    }
+    pub fn web_safe() -> Self{
+        AllowedFormats{
+            jpeg: Some(true),
+            png: Some(true),
+            gif: Some(true),
+            web_safe: Some(true),
+            ..AllowedFormats::none()
+        }
+    }
+    pub fn lossless() -> Self{
+        AllowedFormats{
+            webp: Some(true),
+            png: Some(true),
+            jxl: Some(true),
+            color_profiles: Some(true),
+            ..AllowedFormats::none()
+        }
+    }
+    pub fn lossy() -> Self{
+        AllowedFormats::all() // Every format, even png, can be lossy
+    }
+    pub fn png() -> Self{
+        AllowedFormats{
+            png: Some(true),
+            ..AllowedFormats::none()
+        }
+    }
+    pub fn jpeg(allow_progressive: Option<bool>, allow_xyb: Option<bool>) -> Self{
+        AllowedFormats{
+            jpeg: Some(true),
+            jpeg_progressive: allow_progressive,
+            jpeg_xyb: allow_xyb,
+            ..AllowedFormats::none()
+        }
+    }
+    pub fn gif() -> Self{
+        AllowedFormats{
+            gif: Some(true),
+            ..AllowedFormats::none()
+        }
+    }
+    pub fn webp() -> Self{
+        AllowedFormats{
+            webp: Some(true),
+            color_profiles: Some(true),
+            ..AllowedFormats::none()
+        }
+    }
+    pub fn jxl() -> Self{
+        AllowedFormats{
+            jxl: Some(true),
+            color_profiles: Some(true),
+            ..AllowedFormats::none()
+        }
+    }
+    pub fn avif() -> Self{
+        AllowedFormats{
+            avif: Some(true),
+            color_profiles: Some(true),
+            ..AllowedFormats::none()
+        }
+    }
+
+    pub fn set_color_profiles(mut self, value: bool) -> Self{
+        self.color_profiles = Some(value);
+        self
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum BoolKeep{
+    Keep,
+    True,
+    False
+}
+impl std::fmt::Display for BoolKeep{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BoolKeep::Keep => write!(f, "keep"),
+            BoolKeep::True => write!(f, "true"),
+            BoolKeep::False => write!(f, "false"),
+        }
+    }
+}
+//impl bool to BoolKeep
+impl From<bool> for BoolKeep{
+    fn from(value: bool) -> Self {
+        if value { BoolKeep::True } else { BoolKeep::False }
+    }
+}
+impl BoolKeep{
+    pub fn resolve(self, default: bool) -> bool{
+        match self{
+            BoolKeep::Keep => default,
+            BoolKeep::True => true,
+            BoolKeep::False => false,
+        }
+    }
+}
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum QualityProfile{
+    Lowest,
+    Low,
+    MediumLow,
+    Medium,
+    Good, //TODO rename to MediumHigh?
+    High,
+    Highest,
+    Lossless,
+    Percent(f32)
+}
+
+impl fmt::Display for QualityProfile{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self{
+            QualityProfile::Lowest => write!(f, "lowest"),
+            QualityProfile::Low => write!(f, "low"),
+            QualityProfile::MediumLow => write!(f, "medium-low"),
+            QualityProfile::Medium => write!(f, "medium"),
+            QualityProfile::Good => write!(f, "good"),
+            QualityProfile::High => write!(f, "high"),
+            QualityProfile::Highest => write!(f, "highest"),
+            QualityProfile::Lossless => write!(f, "lossless"),
+            QualityProfile::Percent(v) => write!(f, "{:.0}", v)
+        }
+    }
+}
+
+impl QualityProfile{
+
+    /// Returns the quality profile as a string, or None if it is not a valid quality profile
+    pub fn from_str(text: &str) -> Option<QualityProfile> {
+
+        match text{
+            _ if text.eq_ignore_ascii_case("lowest") => Some(QualityProfile::Lowest),
+            _ if text.eq_ignore_ascii_case("low") => Some(QualityProfile::Low),
+            _ if text.eq_ignore_ascii_case("medium-low") => Some(QualityProfile::MediumLow),
+            _ if text.eq_ignore_ascii_case("mediumlow") => Some(QualityProfile::MediumLow),
+            _ if text.eq_ignore_ascii_case("medium") => Some(QualityProfile::Medium),
+            _ if text.eq_ignore_ascii_case("good") => Some(QualityProfile::Good),
+            _ if text.eq_ignore_ascii_case("medium-high") => Some(QualityProfile::Good),
+            _ if text.eq_ignore_ascii_case("mediumhigh") => Some(QualityProfile::Good),
+            _ if text.eq_ignore_ascii_case("high") => Some(QualityProfile::High),
+            _ if text.eq_ignore_ascii_case("highest") => Some(QualityProfile::Highest),
+            _ if text.eq_ignore_ascii_case("lossless") => Some(QualityProfile::Lossless),
+            v =>{
+                if let Ok(v) = v.parse::<f32>() {
+                    return Some(QualityProfile::Percent(f32::min(100.0,f32::max(0.0,v))))
+                }
+                None
+            }
+        }
+    }
+
+    // Const error string
+    pub const HELP_TEXT: &'static str = "Quality profile (qp) must be a number (0..100) or one of the following: lowest, low, med, medium, good, high, highest, lossless";
+
+}
+
 /// Encoder presets (each with optional configuration). These are exposed by the JSON API.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum EncoderPreset {
+    /// Requires a quality profile to be specified
+    /// Specify "allow" to enable specific formats (like webp, avif, jxl) and features
+    /// (like jpeg_progressive, jpeg_xyb, color_profiles), (or sets thereof, like web_safe and modern_web_safe).
+    Auto{
+        /// A quality profile to use. Will provide default 'allowed' formats, but 'allowed' takes priority.
+        quality_profile: QualityProfile,
+        /// Adjusts the quality profile, assuming a 150ppi display and 3x CSS pixel ratio. 3 is the default.
+        /// lower values will increase quality, higher values will decrease quality.
+        /// Useful when not using srcset/picture, just img src. Ex. <img width=400 src="img.jpg?srcset=qp-dpr-2,800w" />
+        quality_profile_dpr: Option<f32>,
+        /// Applies a matte - background color to the image to eliminate transparency.
+        matte: Option<Color>,
+        /// Whether to use, disable, or keep lossless encoding.
+        lossless: Option<BoolKeep>,
+        // Which formats and features can be used
+        allow: Option<AllowedFormats>,
+        // max_effort, or budget, someday
+    },
+    /// Requires a file format to be specified, and allows for specific encoder hints.
+    /// Specific format features can be specified in 'allow', such as jxl_animation, avif_animation, etc.
+    Format{
+        format: OutputImageFormat,
+        /// A quality profile to use..
+        quality_profile: Option<QualityProfile>,
+        /// Adjusts the quality profile, assuming a 150ppi display and 3x CSS pixel ratio. 3 is the default.
+        /// lower values will increase quality, higher values will decrease quality.
+        /// Useful when not using srcset/picture, just img src. Ex. <img width=400 src="img.jpg?srcset=qp-dpr-2,800w" />
+        quality_profile_dpr: Option<f32>,
+        /// Applies a matte - background color to the image to eliminate transparency.
+        matte: Option<Color>,
+        /// Whether to use, disable, or keep lossless encoding.
+        lossless: Option<BoolKeep>,
+        // Which formats and features can be used
+        allow: Option<AllowedFormats>,
+        // max_effort, or budget, someday
+        encoder_hints: Option<EncoderHints>,
+    },
     LibjpegTurbo {
         quality: Option<i32>,
         progressive: Option<bool>,
@@ -1310,7 +1769,9 @@ pub struct ImageInfo {
 //    pub current_frame_index: i64,
     pub image_width: i32,
     pub image_height: i32,
-    pub frame_decodes_into: PixelFormat
+    pub frame_decodes_into: PixelFormat,
+    pub lossless: bool,
+    pub multiple_frames: bool
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResultBytes {
@@ -1457,6 +1918,7 @@ impl Response001 {
             success: true,
             message: None,
             data: ResponsePayload::ImageInfo(ImageInfo {
+                multiple_frames: false,
 //                current_frame_index: 0,
 //                frame_count: 1,
                 image_height: 480,
@@ -1464,6 +1926,7 @@ impl Response001 {
                 frame_decodes_into: PixelFormat::Bgr24,
                 preferred_mime_type: "image/png".to_owned(),
                 preferred_extension: "png".to_owned(),
+                lossless: true,
 
             }),
         }

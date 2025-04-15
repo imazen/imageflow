@@ -27,6 +27,7 @@ mod libpng_encoder;
 mod mozjpeg_decoder_helpers;
 mod jpeg_decoder;
 mod webp;
+mod auto;
 mod color_transform_cache;
 use crate::io::IoProxyRef;
 use crate::codecs::color_transform_cache::ColorTransformCache;
@@ -206,39 +207,15 @@ impl CodecInstanceContainer {
 
 impl CodecInstanceContainer{
 
-     pub fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>{
+    pub fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>{
 
          // Pick encoder
          if let CodecKind::EncoderPlaceholder = self.codec {
 
              let io = self.encode_io.take().unwrap();
+             let encoder = auto::create_encoder(c, io, preset, bitmap_key, decoder_io_ids).map_err(|e| e.at(here!()))?;
 
-             let codec = match *preset {
-                 s::EncoderPreset::Gif => {
-                     //TODO: enforce killbits - if c.enabled_codecs.encoders.contains()
-                     CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, preset, io, bitmap_key)?))
-                 },
-                 s::EncoderPreset::Pngquant {speed, quality , minimum_quality, maximum_deflate} => {
-                     CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, minimum_quality, maximum_deflate, io)?))
-                 },
-                 s::EncoderPreset::Mozjpeg {quality, progressive, ref matte} => {
-                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create(c, quality, progressive, matte.clone(), io)?))
-                 },
-                 s::EncoderPreset::LibjpegTurbo {quality, progressive, optimize_huffman_coding, ref matte} => {
-                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create_classic(c, quality.map(|q| q as u8), progressive, optimize_huffman_coding, matte.clone(), io)?))
-                 },
-                 s::EncoderPreset::Lodepng { maximum_deflate }=> {
-                     CodecKind::Encoder(Box::new(lode::LodepngEncoder::create(c, io, maximum_deflate)?))
-                 },
-                 s::EncoderPreset::Libpng {..}  => {
-                     CodecKind::Encoder(Box::new(
-                         libpng_encoder::LibPngEncoder::create(c, io)?))
-                 },
-                 s::EncoderPreset::WebPLossless => CodecKind::Encoder(Box::new(webp::WebPEncoder::create(c, io)?)),
-                 s::EncoderPreset::WebPLossy {quality}=> CodecKind::Encoder(Box::new(webp::WebPEncoder::create(c, io)?)),
-
-             };
-             self.codec = codec;
+             self.codec = CodecKind::Encoder(encoder);
          };
 
 

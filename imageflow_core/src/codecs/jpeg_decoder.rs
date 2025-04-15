@@ -65,7 +65,9 @@ impl Decoder for JpegDecoder {
             image_width: i32::from(info.width),
             image_height: i32::from(info.height),
             preferred_mime_type: "image/jpeg".to_owned(),
-            preferred_extension: "jpg".to_owned()
+            preferred_extension: "jpg".to_owned(),
+            lossless: false,
+            multiple_frames: false
         })
     }
 

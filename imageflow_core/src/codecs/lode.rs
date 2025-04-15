@@ -2,7 +2,7 @@ use super::Encoder;
 use super::s::{EncoderPreset, EncodeResult};
 use crate::io::IoProxy;
 
-use imageflow_types::PixelFormat;
+use imageflow_types::{Color, PixelFormat};
 use crate::{Context, Result, ErrorKind, FlowError};
 use crate::io::IoProxyRef;
 use std::slice;
@@ -20,17 +20,19 @@ use crate::graphics::bitmaps::BitmapKey;
 
 pub struct LodepngEncoder {
     io: IoProxy,
-    use_highest_compression: Option<bool>
+    use_highest_compression: Option<bool>,
+    matte: Option<Color>,
 }
 
 impl LodepngEncoder {
-    pub(crate) fn create(c: &Context, io: IoProxy, use_highest_compression: Option<bool>) -> Result<Self> {
+    pub(crate) fn create(c: &Context, io: IoProxy, use_highest_compression: Option<bool>, matte: Option<Color>) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::LodePngEncoder){
             return Err(nerror!(ErrorKind::CodecDisabledError, "The LodePNG encoder has been disabled"));
         }
         Ok(LodepngEncoder {
             io,
-            use_highest_compression
+            use_highest_compression,
+            matte,
         })
     }
 }
@@ -44,6 +46,9 @@ impl Encoder for LodepngEncoder {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
+        if self.matte.is_some() {
+            bitmap.apply_matte(self.matte.clone().unwrap()).map_err(|e| e.at(here!()))?;
+        }
             // check if the top-right pixel is transparent
             // let x= bitmap.w() - 1;
             // let y= 0;
@@ -151,6 +156,7 @@ impl LodepngEncoder {
         lode.info_png_mut().color.colortype = lodepng::ColorType::PALETTE;
         lode.info_png_mut().color.set_bitdepth(8);
         lode.set_auto_convert(false);
+        //TODO: is this filter strategy right?
         lode.set_filter_strategy(lodepng::FilterStrategy::ZERO, false);
 
         if use_highest_compression.unwrap_or(false){

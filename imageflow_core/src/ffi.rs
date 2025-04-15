@@ -175,7 +175,7 @@ mod long_term{
 
         pub fn wrap_png_decoder_destroy(state: *mut c_void) -> bool;
 
-        pub fn wrap_png_decoder_get_info(state: *mut c_void, w: &mut u32, h: &mut u32, uses_alpha: &mut bool) -> bool;
+        pub fn wrap_png_decoder_get_info(state: *mut c_void, w: &mut u32, h: &mut u32, uses_alpha: &mut bool, uses_palette: &mut bool) -> bool;
 
         pub fn wrap_png_encoder_write_png(custom_state: *mut c_void,
                                           error_handler: WrapPngErrorHandler,

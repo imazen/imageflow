@@ -4,6 +4,7 @@ use imageflow_types as s;
 pub mod parsing;
 mod layout;
 mod srcset;
+mod encoder;
 
 use crate::sizing;
 use crate::sizing::prelude::*;
@@ -90,7 +91,7 @@ impl Ir4Translate{
         if r.parsed.trim_whitespace_threshold.is_some(){
             b.add(s::Node::CropWhitespace {
                 threshold: cmp::max(0,r.parsed.trim_whitespace_threshold.unwrap()) as u32,
-                percent_padding: r.parsed.trim_whitespace_padding_percent.unwrap_or(0f64) as f32
+                percent_padding: r.parsed.trim_whitespace_padding_percent.unwrap_or(0f32)
             });
         }
 
@@ -118,27 +119,9 @@ pub struct Ir4SourceFrameInfo{
     pub h: i32,
     pub fmt: s::PixelFormat,
     pub original_mime: Option<String>,
+    pub lossless: bool,
 }
 
-impl Ir4SourceFrameInfo{
-
-    fn get_format_from_mime(&self) -> Option<OutputFormat>{
-        self.original_mime.as_ref().and_then(|f|
-                    match f.as_str(){
-                        "image/jpeg" => Some(OutputFormat::Jpeg),
-                        "image/png" => Some(OutputFormat::Png),
-                        "image/gif" => Some(OutputFormat::Gif),
-                        "image/webp" => Some(OutputFormat::Webp),
-                        _ => None
-                    })
-    }
-    fn get_format_from_frame(&self) -> OutputFormat{
-        match self.fmt{
-            s::PixelFormat::Bgr24 | s::PixelFormat::Bgr32 => OutputFormat::Jpeg,
-            _ => OutputFormat::Png
-        }
-    }
-}
 
 /// Cannot expand decoder. use `Ir4Translate` for that.
 #[derive(Debug, Clone)]
@@ -163,7 +146,7 @@ impl Ir4Expand{
 
         let downscale_ratio = (f64::from(from.w) / f64::from(to.w)).min(f64::from(from.h) / f64::from(to.w));
 
-        Ok(i.min_precise_scaling_ratio.unwrap_or(2.1f64) / downscale_ratio)
+        Ok(i.min_precise_scaling_ratio.unwrap_or(2.1f32) as f64 / downscale_ratio)
     }
 
     pub fn get_decode_commands(&self) -> sizing::Result<Option<Vec<s::DecoderCommand>>> { //TODO: consider smallvec or generalizing decoder hints
@@ -239,48 +222,8 @@ impl Ir4Expand{
 
         if let Some(id) = self.encode_id {
 
-            let format = i.format.or_else(|| self.source.get_format_from_mime())
-                .unwrap_or_else(|| self.source.get_format_from_frame());
-
-            let png_lossless = i.png_lossless.unwrap_or(i.png_libpng == Some(true) ||
-                i.png_quality.is_none());
-
-
-
-            let encoder = match format {
-                OutputFormat::Gif => s::EncoderPreset::Gif,
-                OutputFormat::Jpeg if Some(true) == i.jpeg_turbo => s::EncoderPreset::LibjpegTurbo {
-                    quality: Some(i.quality.unwrap_or(90)),
-                    progressive: i.jpeg_progressive,
-                    optimize_huffman_coding:  i.jpeg_progressive,
-                    matte: None
-                },
-                OutputFormat::Jpeg=> s::EncoderPreset::Mozjpeg {
-                    quality: Some(i.quality.unwrap_or(90) as u8),
-                    progressive: i.jpeg_progressive,
-                    matte: None
-                },
-                OutputFormat::Png if !png_lossless => s::EncoderPreset::Pngquant {
-                    quality: Some(i.png_quality.unwrap_or(100)),
-                    minimum_quality: Some(i.png_min_quality.unwrap_or(0)),
-                    speed: i.png_quantization_speed,
-                    maximum_deflate: i.png_max_deflate
-                },
-                OutputFormat::Png if i.png_libpng == Some(true) => s::EncoderPreset::Libpng {
-                    depth: Some(if i.bgcolor_srgb.is_some() { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 }),
-                    zlib_compression: if i.png_max_deflate == Some(true) { Some(9) } else { None },
-                    matte: i.bgcolor_srgb.map(|sr| s::Color::Srgb(s::ColorSrgb::Hex(sr.to_rrggbbaa_string())))
-                },
-                OutputFormat::Png => s::EncoderPreset::Lodepng{
-                    maximum_deflate: i.png_max_deflate
-                },
-                OutputFormat::Webp if i.webp_lossless == Some(true) => s::EncoderPreset::WebPLossless,
-                OutputFormat::Webp => s::EncoderPreset::WebPLossy {
-                    //Fall back to using quality value
-                    quality: i.webp_quality.unwrap_or(i.quality.unwrap_or(80i32).into()) as f32
-                },
-            };
-            Some(s::Node::Encode { io_id: id, preset: encoder })
+            let preset = crate::ir4::encoder::calculate_encoder_preset(i);
+            Some(s::Node::Encode { io_id: id, preset: preset })
         }else{
             None
         }

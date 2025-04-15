@@ -63,7 +63,7 @@ PUB void * wrap_png_decoder_get_info_ptr(struct wrap_png_decoder_state * state);
 
 PUB bool wrap_png_decoder_destroy(struct wrap_png_decoder_state * state);
 
-PUB bool wrap_png_decoder_get_info(struct wrap_png_decoder_state * state, uint32_t * w, uint32_t * h, bool * uses_alpha);
+PUB bool wrap_png_decoder_get_info(struct wrap_png_decoder_state * state, uint32_t * w, uint32_t * h, bool * uses_alpha, bool * uses_palette);
 
 PUB struct flow_decoder_color_info * wrap_png_decoder_get_color_info(struct wrap_png_decoder_state * state);
 

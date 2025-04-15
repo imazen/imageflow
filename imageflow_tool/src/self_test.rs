@@ -330,7 +330,7 @@ pub fn export_examples(tool_location: Option<PathBuf>){
 
     for example in scenarios(){
         match example.prepare_scenario(&c).map_err(|e| e.at(here!())){
-            Ok(c) => {
+            Ok(_c) => {
 
             }
             Err(e) => {
@@ -343,7 +343,7 @@ pub fn run_examples(tool_location: Option<PathBuf>){
     let c = ProcTestContext::create("examples", tool_location);
     for example in scenarios(){
         match example.run_scenario(&c).map_err(|e| e.at(here!())){
-            Ok(product) => {
+            Ok(_product) => {
 
             }
             Err(e) => {
@@ -360,7 +360,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     // encapsulate scenario/example for reuse
     for example in scenarios() {
         example.prepare_scenario(&c).map_err(|e| e.at(here!())).unwrap();
-        example.run_scenario(&c);
+        example.run_scenario(&c).map_err(|e| e.at(here!())).unwrap();
     }
     {
         c.exec("diagnose --show-compilation-info").expect_status_code(Some(0));

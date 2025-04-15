@@ -253,10 +253,31 @@ bool wrap_png_decoder_destroy(struct wrap_png_decoder_state * state){
     return true;
 }
 
-bool wrap_png_decoder_get_info(struct wrap_png_decoder_state * state, uint32_t * w, uint32_t * h, bool * uses_alpha){
+bool wrap_png_decoder_get_info(struct wrap_png_decoder_state * state, uint32_t * w, uint32_t * h, bool * uses_alpha, bool * uses_palette){
     *w = state->w;
     *h = state->h;
     *uses_alpha = state->alpha_used;
+    *uses_palette = (state->color_type & 1) != 0;
+
+//
+//    bit_depth      - holds the bit depth of one of the
+//                     image channels.  (valid values are
+//                     1, 2, 4, 8, 16 and depend also on
+//                     the color_type.  See also
+//                     significant bits (sBIT) below).
+//    color_type     - describes which color/alpha channels
+//                         are present.
+//                     PNG_COLOR_TYPE_GRAY
+//                        (bit depths 1, 2, 4, 8, 16)
+//                     PNG_COLOR_TYPE_GRAY_ALPHA
+//                        (bit depths 8, 16)
+//                     PNG_COLOR_TYPE_PALETTE
+//                        (bit depths 1, 2, 4, 8)
+//                     PNG_COLOR_TYPE_RGB
+//                        (bit_depths 8, 16)
+//                     PNG_COLOR_TYPE_RGB_ALPHA
+//                        (bit_depths 8, 16)
+
     return true;
 }
 

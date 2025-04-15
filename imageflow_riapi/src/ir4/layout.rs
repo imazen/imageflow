@@ -43,7 +43,7 @@ impl Ir4Layout{
 
 
     fn get_preshrink_ratio(&self) ->f64{
-        return f64::from(self.w) / f64::from(self.reference_width)
+        f64::from(self.w) / f64::from(self.reference_width)
     }
 
 
@@ -91,10 +91,10 @@ impl Ir4Layout{
 
     fn get_ideal_target_size(&self, source: AspectRatio, preshrink_ratio: f64) -> sizing::Result<AspectRatio>{
 
-        // When no w/h is specified, we should apply zoom relative to the original image dimensions. 
+        // When no w/h is specified, we should apply zoom relative to the original image dimensions.
         let unshrunk_w = (f64::from(source.w) / preshrink_ratio) as i32;
         let unshrunk_h = (f64::from(source.h) / preshrink_ratio) as i32;
-        
+
 
         let (w,h) = match self.get_wh_from_all(source)? {
             (Some(w), Some(h)) => (w,h),
@@ -106,11 +106,11 @@ impl Ir4Layout{
         //if all dimensions are absent, support zoom=x + scale=canvas | scale=both
         // and exit
         //No more than 1/80000 or 80000/1
-        let zoom = Self::float_max(0.000_08f64, Self::float_min(self.i.zoom.unwrap_or(1f64), 80_000f64).unwrap()).unwrap();
+        let zoom = Self::float_max(0.000_08f64, Self::float_min(self.i.zoom.map(|v| v as f64).unwrap_or(1f64), 80_000f64).unwrap()).unwrap();
 
         //Apply zoom directly to target dimensions. This differs from IR4 but should be easier to reason about.
-        let w = Self::float_max(1f64, Self::float_min((f64::from(w) * zoom).round(), f64::from(std::i32::MAX)).unwrap()).unwrap() as i32;
-        let h = Self::float_max(1f64, Self::float_min((f64::from(h) * zoom).round(), f64::from(std::i32::MAX)).unwrap()).unwrap() as i32;
+        let w = Self::float_max(1f64, Self::float_min((f64::from(w) * zoom).round(), f64::from(i32::MAX)).unwrap()).unwrap() as i32;
+        let h = Self::float_max(1f64, Self::float_min((f64::from(h) * zoom).round(), f64::from(i32::MAX)).unwrap()).unwrap() as i32;
 
         AspectRatio::create(w,h)
     }
@@ -377,9 +377,13 @@ impl Ir4Layout{
         //println!("executed constraints {:?} to get layout {:?} from target {:?}", &constraints, &layout, &target);
         let new_crop = layout.get_source_crop();
 
-        let align = self.i.anchor.unwrap_or((Anchor1D::Center, Anchor1D::Center));
+        let crop_align =
+            self.i.c_gravity.map(|[x,y]|
+                (Anchor1D::Percent(x as f32), Anchor1D::Percent(y as f32)))
+            .or(self.i.anchor).
+                unwrap_or((Anchor1D::Center, Anchor1D::Center));
         //align crop
-        let (inner_crop_x1, inner_crop_y1) = Self::align(align, new_crop, initial_size).expect("Outer box should never be smaller than inner box. All values must > 0");
+        let (inner_crop_x1, inner_crop_y1) = Self::align(crop_align, new_crop, initial_size).expect("Outer box should never be smaller than inner box. All values must > 0");
         //add manual crop offset
         let (crop_x1, crop_y1) = ((initial_crop[0] + inner_crop_x1) as u32, (initial_crop[1] + inner_crop_y1) as u32);
 
@@ -405,7 +409,7 @@ impl Ir4Layout{
         let new_crop = layout.get_source_crop();
         let canvas = layout.get_box(BoxTarget::CurrentCanvas);
         let image = layout.get_box(BoxTarget::CurrentImage);
-        let align = self.i.anchor.unwrap_or((Anchor1D::Center, Anchor1D::Center));
+        let pad_anchor = self.i.anchor.unwrap_or((Anchor1D::Center, Anchor1D::Center));
 
         if let Some(c) = crop{
             b.add(s::Node::Crop { x1: c[0], y1: c[1], x2: c[2], y2: c[3] });
@@ -522,7 +526,7 @@ impl Ir4Layout{
             }
         }
 
-        let (left, top) = Self::align(align, image, canvas).expect("Outer box should never be smaller than inner box. All values must > 0");
+        let (left, top) = Self::align(pad_anchor, image, canvas).expect("Outer box should never be smaller than inner box. All values must > 0");
 
         let (right, bottom) = (canvas.width() - image.width() - left, canvas.height() - image.height() - top);
         //Add padding. This may need to be revisited - how do jpegs behave with transparent padding?
@@ -566,11 +570,14 @@ impl Ir4Layout{
         if outer < inner && inner < 1 || outer < 1 {
             Err(())
         }else{
-            Ok(match a{
-                Anchor1D::Near => 0,
-                Anchor1D::Center => (outer - inner) /2,
-                Anchor1D::Far => outer - inner
-            })
+            match a{
+                Anchor1D::Near => Ok(0),
+                Anchor1D::Center => Ok((outer - inner) /2),
+                Anchor1D::Far => Ok(outer - inner),
+                Anchor1D::Percent(p) => {
+                    Self::gravity1d(p, inner, outer)
+                }
+            }
         }
     }
     fn align(alignment: (Anchor1D, Anchor1D), inner: AspectRatio, outer: AspectRatio) -> std::result::Result<(i32,i32),()>{
@@ -583,7 +590,7 @@ impl Ir4Layout{
         if outer < inner && inner < 1 || outer < 1 {
             Err(())
         }else{
-            Ok(((outer-inner) as f32 * ratio).round() as i32)
+            Ok(i32::max(0,i32::min(((outer-inner) as f32 * ratio).round() as i32, outer-inner)))
         }
     }
 

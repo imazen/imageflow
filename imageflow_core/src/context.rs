@@ -235,7 +235,7 @@ impl Context {
         Ok(())
     }
 
-    pub fn get_unscaled_unrotated_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+    pub fn get_unscaled_unrotated_image_info(&self, io_id: i32) -> Result<s::ImageInfo> {
         self.get_codec(io_id)
             .map_err(|e| e.at(here!()))?
             .get_decoder()
