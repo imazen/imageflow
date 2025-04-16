@@ -1,6 +1,7 @@
 ---
 description: Rules for working on bash scripts and their tests
 globs: *.sh, *.yml
+alwaysApply: false
 ---
 # Goal: Enforce cross-platform bash script guidelines
 # Reasoning:
@@ -11,6 +12,7 @@ globs: *.sh, *.yml
 #   5. Use set -e and set -o pipefail for bash. Avoid silent failure. 
 #   6. For both powerhshell files and bash files, use functions and DRY things as much as possible. 
 #   7. Add verification checks for all inputs, whether files, dirs, or variables, and make contractual boundaries and division of responsibility clear.
+#   8. Remember to run git update-index --chmod=+x filename.sh
 
 <rule>
 name: cross_platform_bash_scripts
