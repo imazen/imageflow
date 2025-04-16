@@ -36,7 +36,7 @@ jobs:
           # package-suffix should never change
           - name: linux-x64
             package-suffix: linux-x64
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             target-cpu: x86-64
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
@@ -47,7 +47,7 @@ jobs:
           # Keep publishing .ubuntu-x64 to nuget for backwards compatibility - for now.
           - name: ubuntu-x64
             package-suffix: ubuntu-x86_64
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             target-cpu: x86-64
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
@@ -153,6 +153,15 @@ jobs:
         with:
           key: ${{ matrix.name }}
         if: matrix.cross != 'true'
+
+      - name: Install rustup (Windows 11 ARM64)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe" -OutFile rustup-init.exe
+          .\rustup-init.exe --default-toolchain none -y
+          "$env:USERPROFILE\.cargo\bin" | Out-File -Append -Encoding ascii $env:GITHUB_PATH
+          "CARGO_HOME=$env:USERPROFILE\.cargo" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+        if: matrix.woa == 'true'
 
       - uses: dtolnay/rust-toolchain@stable
         if: matrix.cross != 'true'
