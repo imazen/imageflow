@@ -2,68 +2,15 @@
 set -e
 set -o pipefail
 
-# Function to create an archive (.zip or .tar.gz) from a specific directory
-# Usage: create_archive <output_archive_path> <base_directory> <path_to_include>
-#   output_archive_path: Absolute or relative path for the final archive file.
-#   base_directory: The directory to change into before archiving. Paths inside the archive will be relative to this.
-#   path_to_include: The specific file or directory (or '.') within base_directory to add to the archive.
-create_archive() {
-    local output_archive_path="$1"
-    local base_directory="$2"
-    local path_to_include="$3"
-    local original_dir=$(pwd)
-    local absolute_output_path
+# Get the directory of the current script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ZIPIT_SCRIPT="${SCRIPT_DIR}/pack_nuget/zipit.sh"
 
-    # Resolve absolute path for the output archive
-    if [[ "$output_archive_path" == /* ]]; then
-        absolute_output_path="$output_archive_path"
-    else
-        absolute_output_path="$original_dir/$output_archive_path"
-    fi
-
-    # Ensure base directory exists
-    if [ ! -d "$base_directory" ]; then
-        echo "Error: Base directory '$base_directory' does not exist." >&2
-        return 1
-    fi
-
-    echo "Creating archive '$absolute_output_path' from base '$base_directory' including '$path_to_include'"
-
-    # Change into the base directory
-    cd "$base_directory" || { echo "Error: Failed to cd into '$base_directory'." >&2; cd "$original_dir"; return 1; }
-
-    # Create archive based on extension
-    if [[ "$absolute_output_path" == *.zip ]]; then
-        echo "Using zip..."
-        if ! zip -r -q "$absolute_output_path" "$path_to_include"; then
-            echo "Error: zip command failed for '$absolute_output_path'" >&2
-            cd "$original_dir"
-            return 1
-        fi
-    elif [[ "$absolute_output_path" == *.tar.gz ]]; then
-        echo "Using tar..."
-        # Use --transform to remove leading ./ if path_to_include is '.'
-        local tar_opts=""
-        if [[ "$path_to_include" == "." ]]; then
-            tar_opts="--transform=s/^\.\///"
-        fi
-        if ! tar $tar_opts -czf "$absolute_output_path" "$path_to_include"; then
-            echo "Error: tar command failed for '$absolute_output_path'" >&2
-            cd "$original_dir"
-            return 1
-        fi
-    else
-        echo "Error: Unsupported archive extension for '$absolute_output_path'. Use .zip or .tar.gz." >&2
-        cd "$original_dir"
-        return 1
-    fi
-
-    # Return to the original directory
-    cd "$original_dir" || { echo "Error: Failed to cd back to original directory '$original_dir'." >&2; return 1; }
-
-    echo "Successfully created archive '$absolute_output_path'"
-    return 0
-}
+# Check if zipit.sh exists and is executable
+if [ ! -x "$ZIPIT_SCRIPT" ]; then
+    echo "Error: Archiving script '$ZIPIT_SCRIPT' not found or not executable." >&2
+    exit 1
+fi
 
 # ------------------------------------------------------------------------------
 # Required environment variables (should be passed from the workflow):
@@ -173,7 +120,7 @@ rm ./artifacts/staging/*-* 2>/dev/null || true
 # ------------------------------------------------------------------------------
 TEMP_ARCHIVE_NAME="./artifacts/temp/archive.${EXTENSION}"
 # Use '.' to include all content relative to the staging directory
-create_archive "$TEMP_ARCHIVE_NAME" "./artifacts/staging" "."
+"$ZIPIT_SCRIPT" "$TEMP_ARCHIVE_NAME" "./artifacts/staging" "."
 
 # ------------------------------------------------------------------------------
 # Create release archives
@@ -191,7 +138,7 @@ if [ -f "${TEMP_STATIC_LIB_PATH}" ]; then
     TEMP_STATIC_ARCHIVE="./artifacts/temp/staticlib-${LIBIMAGEFLOW_STATIC}.${EXTENSION}"
     FILE_NAME="staticlib-${LIBIMAGEFLOW_STATIC}.${EXTENSION}" # Renamed variable for clarity
     # Archive just the static library file, relative to its directory
-    create_archive "$TEMP_STATIC_ARCHIVE" "./artifacts/static-staging" "${LIBIMAGEFLOW_STATIC}"
+    "$ZIPIT_SCRIPT" "$TEMP_STATIC_ARCHIVE" "./artifacts/static-staging" "${LIBIMAGEFLOW_STATIC}"
 
     # Create static archive directories and copy files
     # Note: File name for copy includes 'staticlib-' prefix from FILE_NAME variable
@@ -209,7 +156,7 @@ if [ -f "${TEMP_TOOL_PATH}" ]; then
     TEMP_TOOL_ARCHIVE="./artifacts/temp/tool-${IMAGEFLOW_TOOL}.${EXTENSION}" # Store archive elsewhere
     FILE_NAME="${IMAGEFLOW_TOOL}.${EXTENSION}" #imageflow_tool.tar.gz or imageflow_tool.exe.zip
     # Archive just the tool, relative to the staging directory
-    create_archive "$TEMP_TOOL_ARCHIVE" "./artifacts/staging" "${IMAGEFLOW_TOOL}"
+    "$ZIPIT_SCRIPT" "$TEMP_TOOL_ARCHIVE" "./artifacts/staging" "${IMAGEFLOW_TOOL}"
 
     # Create static archive directories and copy files
     # Note: File name for copy includes 'tool-' prefix
