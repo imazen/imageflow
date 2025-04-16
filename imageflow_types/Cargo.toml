@@ -20,6 +20,7 @@ imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 chrono = "0.4"
 imgref = "1.10"
 rgb = "0.8"
+schemars = { version = "1.0.0-alpha.17", features = ["derive"], optional = true }
 
 [build-dependencies]
 quick-error = "2"
@@ -28,4 +29,5 @@ rayon = "1"
 
 [features]
 nightly = ["imageflow_helpers/nightly"]
+json-schema = ["schemars"]
 
