@@ -1,0 +1,5 @@
+---
+description: 
+globs: *.sh,*.yml,Dockerfile,*.bat,*.ps1
+alwaysApply: false
+---

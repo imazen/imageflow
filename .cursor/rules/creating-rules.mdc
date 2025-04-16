@@ -1,6 +1,7 @@
 ---
 description: Cursor Rules Location
 globs: *.mdc
+alwaysApply: false
 ---
 # Cursor Rules Location
 
@@ -30,7 +31,7 @@ actions:
     message: |
       When creating Cursor rules:
 
-      1. Always place rule files in PROJECT_ROOT/.cursor/rules/:
+      1. Always place rule files in /.cursor/rules/:
          ```
          .cursor/rules/
          ├── your-rule-name.mdc
