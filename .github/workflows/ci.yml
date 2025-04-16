@@ -24,6 +24,7 @@ env:
     NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
     REL_NUGET_OUTPUT_DIR: "artifacts/nuget/"
     PROFILE: release
+    DELETE_ALL_FROM_NUGET_AFTER_FAILURE: true
 jobs:
   build:
     strategy:
@@ -104,7 +105,7 @@ jobs:
 
           - name: win-arm64-11
             package-suffix: win-arm64
-            os: windows-11-arm-16gb
+            os: windows-11-arm
             target-cpu: generic
             nuget-rid: win-arm64
             target: aarch64-pc-windows-msvc
@@ -144,14 +145,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: "WOA: Setup Git and GNU tools for Windows ARM64"
-        uses: ./.github/actions/setup-git-win-arm64
-        if: matrix.woa == 'true'
-
-      - name: "WOA: Checkout code again with git, so git commands work."
-        uses: actions/checkout@v4
-        if: matrix.woa == 'true'
-
       - name: Test NuGet Package creation early
         shell: bash
         run: ./ci/pack_nuget/tests/run_all_tests.sh
@@ -161,16 +154,12 @@ jobs:
           key: ${{ matrix.name }}
         if: matrix.cross != 'true'
 
-      - name: "WOA: Install MSBUILD + Rust + Nasm + Git for Windows ARM64"
-        uses: ./.github/actions/setup-win-arm64
-        if: matrix.woa == 'true'
-
       - uses: dtolnay/rust-toolchain@stable
-        if: matrix.cross != 'true' && matrix.woa != 'true'
+        if: matrix.cross != 'true'
 
       - name: Install NASM
         uses: ./.github/actions/install-nasm
-        if: matrix.cross != 'true' && matrix.woa != 'true'
+        if: matrix.cross != 'true'
 
       - name: Install i686 target
         if: ${{ matrix.target == 'i686-pc-windows-msvc' && matrix.cross != 'true' }}
@@ -246,12 +235,12 @@ jobs:
       # TESTS ---------------------------------------------------------------------
       - name: "cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
         run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
-        if: matrix.cross != 'true' && matrix.woa != 'true'
+        if: matrix.cross != 'true' # && matrix.woa != 'true'
 
-      - name: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-        run: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-        shell: powershell
-        if: matrix.woa == 'true'
+      # - name: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
+      #   run: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
+      #   shell: powershell
+      #   if: matrix.woa == 'true'
 
       - name: "cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
         uses: houseabsolute/actions-rust-cross@v1.0.2
@@ -264,13 +253,13 @@ jobs:
 
       # BUILD ---------------------------------------------------------------------
       - name: "cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-        if: matrix.cross != 'true' && matrix.woa != 'true'
+        if: matrix.cross != 'true' # && matrix.woa != 'true'
         run: cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
 
-      - name: "& Launch-VsDevShell.ps1 | cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-        if: matrix.woa == 'true'
-        run: "& Launch-VsDevShell.ps1 | cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-        shell: powershell
+      # - name: "& Launch-VsDevShell.ps1 | cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
+      #   if: matrix.woa == 'true'
+      #   run: "& Launch-VsDevShell.ps1 | cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
+      #   shell: powershell
 
       - name: "cross cargo build --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
         uses: houseabsolute/actions-rust-cross@v1.0.2
@@ -371,19 +360,6 @@ jobs:
           source_dir: ./artifacts/upload
           destination_dir: ''
 
-      - name: Publish to nuget.pkg.github.com
-        if: ${{ env.ALLOW_PUBLISH == 'true' && env.NUGET_UPLOAD_GITHUB == 'true' }}
-        run: |
-          for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
-          do
-            curl -vX PUT -u "${{github.repository_owner}}:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/${{github.repository_owner}}/
-          done
-        shell: bash
-
-      - name: Publish to nuget.org
-        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
-        run: ./ci/pack_nuget/upload_nuget.sh ${{ env.REL_NUGET_OUTPUT_DIR }} "${{ secrets.NUGET_API_KEY }}"
-        shell: bash
 
       - name: "Verify artifacts are now on S3, and public"
         if: ${{ env.ALLOW_PUBLISH == 'true' }}
@@ -458,6 +434,15 @@ jobs:
           labels:  ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
 
+      # In the build job, after creating NuGet packages:
+      - name: Upload NuGet packages to GitHub artifacts
+        if: ${{ !matrix.static }}  # Skip for static builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-${{ matrix.package-suffix }}
+          path: ${{ env.REL_NUGET_OUTPUT_DIR }}
+          retention-days: 1
+
   nuget-meta-packages:
     needs: [build]
     runs-on: ubuntu-latest
@@ -491,10 +476,19 @@ jobs:
           source_dir: ./${{ env.REL_NUGET_OUTPUT_DIR }}
           destination_dir: "nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/"
 
+      - name: Download all NuGet packages from builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: nuget-packages-*
+          path: ${{ env.REL_NUGET_OUTPUT_DIR }}
+          merge-multiple: true
+
       - name: Publish to nuget.org (${{env.NUGET_UPLOAD_NUGET }})
         if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
-        run: ./ci/pack_nuget/upload_nuget.sh ${{ env.REL_NUGET_OUTPUT_DIR }} "${{ secrets.NUGET_API_KEY }}"
+        run:  ./ci/pack_nuget/upload_nuget.sh ${{ env.REL_NUGET_OUTPUT_DIR }} "${{ secrets.NUGET_API_KEY }}"
         shell: bash
+        env:
+          DELETE_ALL_FROM_NUGET_AFTER_FAILURE: ${{ env.DELETE_ALL_FROM_NUGET_AFTER_FAILURE }}
 
       - name: Publish to nuget.pkg.github.com (${{env.NUGET_UPLOAD_GITHUB }})
         if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}

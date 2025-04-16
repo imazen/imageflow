@@ -107,4 +107,13 @@ for package in "${EXPECTED_PACKAGES[@]}"; do
     fi
 done
 
+
+# Attempt upload if NUGET_API_KEY and REALLY_UPLOAD_BAD_NUGET_FILES is set
+if [ -n "$NUGET_API_KEY" ] && [ "${REALLY_UPLOAD_BAD_NUGET_FILES:-}" = "true" ]; then
+    echo "Attempting to upload then delete packages to nuget.org..."
+    DELETE_FROM_NUGET_AFTER_UPLOAD=true ./ci/pack_nuget/upload_nuget.sh "${TEST_DIR}/artifacts/nuget/" "$NUGET_API_KEY" 2>&1
+else
+    echo "NUGET_API_KEY and REALLY_UPLOAD_BAD_NUGET_FILES=true are not set, skipping real upload"
+fi
+
 echo "All packages created successfully" 

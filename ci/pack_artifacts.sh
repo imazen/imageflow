@@ -1,5 +1,69 @@
 #!/bin/bash
 set -e
+set -o pipefail
+
+# Function to create an archive (.zip or .tar.gz) from a specific directory
+# Usage: create_archive <output_archive_path> <base_directory> <path_to_include>
+#   output_archive_path: Absolute or relative path for the final archive file.
+#   base_directory: The directory to change into before archiving. Paths inside the archive will be relative to this.
+#   path_to_include: The specific file or directory (or '.') within base_directory to add to the archive.
+create_archive() {
+    local output_archive_path="$1"
+    local base_directory="$2"
+    local path_to_include="$3"
+    local original_dir=$(pwd)
+    local absolute_output_path
+
+    # Resolve absolute path for the output archive
+    if [[ "$output_archive_path" == /* ]]; then
+        absolute_output_path="$output_archive_path"
+    else
+        absolute_output_path="$original_dir/$output_archive_path"
+    fi
+
+    # Ensure base directory exists
+    if [ ! -d "$base_directory" ]; then
+        echo "Error: Base directory '$base_directory' does not exist." >&2
+        return 1
+    fi
+
+    echo "Creating archive '$absolute_output_path' from base '$base_directory' including '$path_to_include'"
+
+    # Change into the base directory
+    cd "$base_directory" || { echo "Error: Failed to cd into '$base_directory'." >&2; cd "$original_dir"; return 1; }
+
+    # Create archive based on extension
+    if [[ "$absolute_output_path" == *.zip ]]; then
+        echo "Using zip..."
+        if ! zip -r -q "$absolute_output_path" "$path_to_include"; then
+            echo "Error: zip command failed for '$absolute_output_path'" >&2
+            cd "$original_dir"
+            return 1
+        fi
+    elif [[ "$absolute_output_path" == *.tar.gz ]]; then
+        echo "Using tar..."
+        # Use --transform to remove leading ./ if path_to_include is '.'
+        local tar_opts=""
+        if [[ "$path_to_include" == "." ]]; then
+            tar_opts="--transform=s/^\.\///"
+        fi
+        if ! tar $tar_opts -czf "$absolute_output_path" "$path_to_include"; then
+            echo "Error: tar command failed for '$absolute_output_path'" >&2
+            cd "$original_dir"
+            return 1
+        fi
+    else
+        echo "Error: Unsupported archive extension for '$absolute_output_path'. Use .zip or .tar.gz." >&2
+        cd "$original_dir"
+        return 1
+    fi
+
+    # Return to the original directory
+    cd "$original_dir" || { echo "Error: Failed to cd back to original directory '$original_dir'." >&2; return 1; }
+
+    echo "Successfully created archive '$absolute_output_path'"
+    return 0
+}
 
 # ------------------------------------------------------------------------------
 # Required environment variables (should be passed from the workflow):
@@ -52,6 +116,7 @@ fi
 
 # Create required directories
 mkdir -p ./artifacts/github
+mkdir -p ./artifacts/temp
 mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
 mkdir -p ./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}
 mkdir -p ./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUFFIX}
@@ -106,11 +171,9 @@ rm ./artifacts/staging/*-* 2>/dev/null || true
 # ------------------------------------------------------------------------------
 # Create main archive
 # ------------------------------------------------------------------------------
-TEMP_ARCHIVE_NAME="./artifacts/staging/archive.${EXTENSION}"
-(
-    cd ./artifacts/staging
-    tar czf "./archive.${EXTENSION}" ./*
-)
+TEMP_ARCHIVE_NAME="./artifacts/temp/archive.${EXTENSION}"
+# Use '.' to include all content relative to the staging directory
+create_archive "$TEMP_ARCHIVE_NAME" "./artifacts/staging" "."
 
 # ------------------------------------------------------------------------------
 # Create release archives
@@ -123,13 +186,15 @@ cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUF
 # ------------------------------------------------------------------------------
 # Handle static library if it exists
 # ------------------------------------------------------------------------------
-TEMP_STATIC_LIB="./artifacts/static-staging/${LIBIMAGEFLOW_STATIC}"
-if [ -f "${TEMP_STATIC_LIB}" ]; then
-    TEMP_STATIC_ARCHIVE="./artifacts/static-staging/${LIBIMAGEFLOW_STATIC}.${EXTENSION}"
-    FILE_NAME="staticlib-${LIBIMAGEFLOW_STATIC}.${EXTENSION}"
-    tar czf "${TEMP_STATIC_ARCHIVE}" "${TEMP_STATIC_LIB}"
+TEMP_STATIC_LIB_PATH="./artifacts/static-staging/${LIBIMAGEFLOW_STATIC}"
+if [ -f "${TEMP_STATIC_LIB_PATH}" ]; then
+    TEMP_STATIC_ARCHIVE="./artifacts/temp/staticlib-${LIBIMAGEFLOW_STATIC}.${EXTENSION}"
+    FILE_NAME="staticlib-${LIBIMAGEFLOW_STATIC}.${EXTENSION}" # Renamed variable for clarity
+    # Archive just the static library file, relative to its directory
+    create_archive "$TEMP_STATIC_ARCHIVE" "./artifacts/static-staging" "${LIBIMAGEFLOW_STATIC}"
+
     # Create static archive directories and copy files
-    # Create static archive directories and copy files
+    # Note: File name for copy includes 'staticlib-' prefix from FILE_NAME variable
     cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/staticlib-${TAG_SHA_SUFFIX}.${FILE_NAME}"
     cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
     cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
@@ -139,14 +204,15 @@ fi
 # ------------------------------------------------------------------------------
 # Make a single-file imageflow_tool archive that extracts without a directory
 # ------------------------------------------------------------------------------
-TEMP_TOOL="./artifacts/staging/${IMAGEFLOW_TOOL}"
-if [ -f "${TEMP_TOOL}" ]; then
-    TEMP_TOOL_ARCHIVE="./artifacts/static-staging/imageflow_tool.${EXTENSION}"
+TEMP_TOOL_PATH="./artifacts/staging/${IMAGEFLOW_TOOL}" # Corrected path, tool is in staging
+if [ -f "${TEMP_TOOL_PATH}" ]; then
+    TEMP_TOOL_ARCHIVE="./artifacts/temp/tool-${IMAGEFLOW_TOOL}.${EXTENSION}" # Store archive elsewhere
     FILE_NAME="${IMAGEFLOW_TOOL}.${EXTENSION}" #imageflow_tool.tar.gz or imageflow_tool.exe.zip
-    tar czf "${TEMP_TOOL_ARCHIVE}" "${TEMP_TOOL}"
+    # Archive just the tool, relative to the staging directory
+    create_archive "$TEMP_TOOL_ARCHIVE" "./artifacts/staging" "${IMAGEFLOW_TOOL}"
 
     # Create static archive directories and copy files
-
+    # Note: File name for copy includes 'tool-' prefix
     cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/tool-${TAG_SHA_SUFFIX}.${FILE_NAME}"
     cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
     cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
