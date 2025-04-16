@@ -1775,6 +1775,17 @@ pub struct GetVersionInfo{
 
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct GetQueryStringSchema{
+
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct ValidateQueryString{
+    pub query_string: String,
+}
+
 impl GetImageInfo001 {
     pub fn example_get_image_info() -> GetImageInfo001 {
         GetImageInfo001 { io_id: 0 }
@@ -1933,8 +1944,153 @@ pub enum ResponsePayload {
     BuildResult(JobResult),
     #[serde(rename="version_info")]
     VersionInfo(VersionInfo),
+    #[serde(rename="query_string_schema")]
+    QueryStringSchema(json_messages::QueryStringSchema),
+    #[serde(rename="query_string_validation_results")]
+    QueryStringValidationResults(json_messages::QueryStringValidationResults),
     #[serde(rename="none")]
     None,
+}
+
+/// Contains the types that are exclusively used in the JSON endpoints
+/// To prevent name collisions with other types
+pub mod json_messages{
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub struct QueryStringValidationResults{
+        pub issues: Vec<QueryStringValidationIssue>,
+    }
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub struct QueryStringValidationIssue{
+        pub message: String,
+        pub key: String,
+        pub value: String,
+        pub kind: QueryStringValidationIssueKind,
+    }
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub enum QueryStringValidationIssueKind{
+        DuplicateKeyError,
+        UnrecognizedKey,
+        IgnoredKey,
+        InvalidValueError,
+        DeprecatedValueWarning,
+        DeprecatedKeyWarning,
+    }
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub struct QueryStringSchema{
+        pub key_names: Vec<String>,
+        // pub keys: Vec<QueryStringSchemaKey>,
+        // pub groups: Vec<QueryStringSchemaKeyGroup>,
+        // pub markdown_pages: Vec<QueryStringSchemaMarkdownPage>,
+    }
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub struct QueryStringSchemaMarkdownPage{
+        pub slug: String,
+        pub title: String,
+        pub markdown: String,
+    }
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub enum QueryStringDescription{
+        #[serde(rename="markdown")]
+        Markdown(String),
+        #[serde(rename="text")]
+        Text(String),
+    }
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub struct QueryStringSchemaKeyGroup{
+        pub id: String,
+        pub name: String,
+        pub description: QueryStringDescription,
+        pub generated_markdown: Option<String>, // gener
+        pub keys: Vec<String>,
+        pub examples: Option<Vec<QueryStringSchemaExample>>,
+    }
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub struct QueryStringSchemaKey{
+        pub key: String,
+        pub aliases: Option<Vec<String>>,
+        pub description: QueryStringDescription,
+        pub ignored_reason: Option<String>,
+        pub deprecation_message: Option<String>,
+        pub interacts_with: Option<Vec<String>>,
+        pub related_keys: Option<Vec<String>>,
+        pub conflicts_with_keys: Option<Vec<String>>,
+        pub allowed_values: Vec<QueryStringSchemaValue>,
+        pub examples: Option<Vec<QueryStringSchemaExample>>,
+        pub generated_markdown: Option<String>,
+    }
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub struct QueryStringSchemaValue{
+        pub example_value: Option<String>,
+        pub value_syntax: Option<String>,
+        pub data_validation: Option<QueryStringSchemaValueValidation>,
+        pub description: QueryStringDescription,
+        pub is_default: Option<bool>,
+        pub ignored_reason: Option<String>,
+        pub deprecation_message: Option<String>,
+        pub examples: Option<Vec<QueryStringSchemaExample>>,
+    }
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub enum QueryStringSchemaValueValidation{
+        // float, integer (both with optionalrange)
+        // enum of strings
+        // boolean
+        // list of floats, specific count, optional range
+        #[serde(rename="enum")]
+        Enum { options: Vec<String>, case_sensitive: Option<bool> },
+        // list of floats, specific count, optional range
+        #[serde(rename="numeric_list")]
+        NumberList { count: Option<usize>, ranges: Option<Vec<QueryStringSchemaValueRange>> },
+        /// boolean values like 1, 0, true, false
+        #[serde(rename="bool")]
+        Bool,
+
+        #[serde(rename="number")]
+        Number(QueryStringSchemaValueRange),
+
+        #[serde(rename="regex")]
+        Regex { pattern: String },
+
+        #[serde(rename="equals")]
+        Equals { value: String, case_sensitive: Option<bool> },
+    }
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub struct QueryStringSchemaValueRange{
+        pub min: Option<f32>,
+        pub max: Option<f32>,
+        pub step_hint: Option<f32>,
+        pub integer: Option<bool>,
+    }
+
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    pub struct QueryStringSchemaExample{
+        pub querystring: String,
+        pub html_fragment: Option<String>,
+        pub description: QueryStringDescription,
+        pub generated_markdown: Option<String>,
+    }
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]

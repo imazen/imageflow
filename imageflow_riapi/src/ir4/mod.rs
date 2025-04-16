@@ -5,6 +5,7 @@ pub mod parsing;
 mod layout;
 mod srcset;
 mod encoder;
+mod schema;
 
 use crate::sizing;
 use crate::sizing::prelude::*;
@@ -12,6 +13,21 @@ use crate::ir4::parsing::*;
 use crate::ir4::layout::*;
 
 pub use layout::ConstraintResults;
+
+
+pub fn get_query_string_schema() -> Result<s::json_messages::QueryStringSchema, String>{
+    schema::get_query_string_schema()
+}
+
+pub fn validate_query_string(query_string: String) -> Result<s::json_messages::QueryStringValidationResults, String>{
+    let url = format!("http://localhost/image.jpg?{}", query_string);
+    let a = url::Url::from_str(&url).unwrap();
+    let (i, warns) = parse_url(&a);
+
+    Ok(s::json_messages::QueryStringValidationResults{
+        issues: warns.into_iter().map(|w| w.to_query_string_validation_issue()).collect(),
+    })
+}
 
 pub fn process_constraint(source_w: i32, source_h: i32, constraint: &imageflow_types::Constraint) -> sizing::Result<ConstraintResults>{
     layout::Ir4Layout::process_constraint(source_w,source_h, constraint)

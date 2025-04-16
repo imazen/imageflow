@@ -53,10 +53,23 @@ fn create_context_router() -> MethodRouter<'static, Context> {
                     Box::new(move |context: &mut Context, parsed: s::Execute001| {
                         context.execute_1(parsed).map_err(|e| e.at(here!()))
                     }));
+
     r.add_responder("v1/get_version_info",
                     Box::new(move |context: &mut Context, data: s::GetVersionInfo| {
                         Ok(s::ResponsePayload::VersionInfo(context.get_version_info().map_err(|e| e.at(here!()))?))
                     }));
+
+
+    r.add_responder("v1/query_string/latest/get_schema",
+        Box::new(move |context: &mut Context, data: s::GetQueryStringSchema| {
+            Ok(s::ResponsePayload::QueryStringSchema(imageflow_riapi::ir4::get_query_string_schema().map_err(|e| nerror!(ErrorKind::InternalError, "{}", e))?))
+        }));
+
+    r.add_responder("v1/query_string/latest/validate",
+        Box::new(move |context: &mut Context, data: s::ValidateQueryString| {
+            Ok(s::ResponsePayload::QueryStringValidationResults(imageflow_riapi::ir4::validate_query_string(data.query_string)
+            .map_err(|e| nerror!(ErrorKind::InternalError, "{}", e))?))
+        }));
     r.add("brew_coffee",
           Box::new(move |context: &mut Context, bytes: &[u8]| (JsonResponse::teapot(), Ok(()))));
     r

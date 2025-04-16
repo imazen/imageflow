@@ -1,4 +1,5 @@
 use imageflow_helpers::preludes::from_std::*;
+use imageflow_types::json_messages::*;
 use imageflow_types::BoolKeep;
 use imageflow_types::OutputImageFormat;
 use imageflow_types::QualityProfile;
@@ -11,7 +12,6 @@ use imageflow_types::Filter;
 use imageflow_helpers::preludes::from_std::fmt::Formatter;
 use std::num;
 use std::result;
-
 use super::srcset::apply_srcset_string;
 
 macro_attr! {
@@ -268,7 +268,36 @@ pub enum ParseWarning{
     ValueInvalid((&'static str, String))
 }
 
-
+impl ParseWarning{
+    pub fn to_query_string_validation_issue(&self) -> QueryStringValidationIssue{
+        match self{
+            ParseWarning::DuplicateKey((k, v)) => QueryStringValidationIssue{
+                message: format!("Duplicate key: {}", k),
+                key: k.clone(),
+                value: v.clone(),
+                kind: QueryStringValidationIssueKind::DuplicateKeyError,
+            },
+            ParseWarning::KeyNotRecognized((k, v)) => QueryStringValidationIssue{
+                message: format!("Key not recognized: {}", k),
+                key: k.clone(),
+                value: v.clone(),
+                kind: QueryStringValidationIssueKind::UnrecognizedKey,
+            },
+            ParseWarning::KeyNotSupported((k, v)) => QueryStringValidationIssue{
+                message: format!("Key not supported: {}", k),
+                key: k.clone(),
+                value: v.clone(),
+                kind: QueryStringValidationIssueKind::IgnoredKey,
+            },
+            ParseWarning::ValueInvalid((k, v)) => QueryStringValidationIssue{
+                message: format!("Value invalid: {}", v),
+                key: k.to_string(),
+                value: v.clone(),
+                kind: QueryStringValidationIssueKind::InvalidValueError,
+            },
+        }
+    }
+}
 pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
     let mut warnings = Vec::new();
     let mut map = HashMap::new();
