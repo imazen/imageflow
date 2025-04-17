@@ -221,33 +221,73 @@ verify_nupkg() {
     # Ensure cleanup happens even on failure
     cleanup() {
         local exit_code=$?
-        echo "Cleaning up temp directory" >&2
+        echo "Cleaning up temp directory $temp_dir" >&2
         rm -rf "$temp_dir"
         return 0 # Explicit return
     }
     trap cleanup 1 2 3 6 ERR EXIT
     
-    echo "Extracting package to verify structure..."
+    echo "Extracting package to verify structure using 7z..."
 
     local extraction_success=false
-    
-    # Try unzip first
-    if command -v unzip >/dev/null 2>&1; then
-        echo "Using unzip..."
-        if unzip -q "$nupkg_path" -d "$temp_dir"; then
-            extraction_success=true
-        fi
-    fi
-    
-    # Try 7z if available
-    if command -v 7z >/dev/null 2>&1; then
+
+    # Try 7z first (now the primary method for non-Windows)
+    if [[ "$PLATFORM" != "windows" ]] && command -v 7z >/dev/null 2>&1; then
         echo "Using 7z..."
-        if 7z x "$nupkg_path" -o"$temp_dir" >/dev/null; then
+        sevenz_exit_code=1
+        # Use -y to assume Yes to prompts, redirect output
+        if 7z x "$nupkg_path" -o"$temp_dir" -y >&2; then
+            sevenz_exit_code=0
             extraction_success=true
+            echo "7z succeeded."
+        else
+            sevenz_exit_code=$?
+            echo "7z failed with exit code $sevenz_exit_code." >&2
+        fi
+    elif [[ "$PLATFORM" != "windows" ]]; then
+         echo "7z command not found on non-Windows platform." >&2
+    fi
+
+    # Fallback to PowerShell on Windows if 7z wasn't tried or failed (or wasn't found)
+    if [ "$extraction_success" = false ] && [[ "$PLATFORM" == "windows" ]]; then
+        echo "Attempting PowerShell extraction fallback..."
+        # Convert path to Windows format
+        local win_nupkg_path
+        win_nupkg_path=$(echo "$nupkg_path" | sed 's/\/c\//C:\//g')
+        local win_script_dir
+        win_script_dir=$(echo "$UTILS_SCRIPT_DIR" | sed 's/\/c\//C:\//g')
+        local ps_script="${win_script_dir}/verify_nupkg.ps1" # Path to verify script
+
+        # Need Expand-Archive directly here, or call verify_nupkg.ps1 which does more
+        # Let's try Expand-Archive first for simplicity
+        echo "Using PowerShell Expand-Archive..."
+        local win_temp_dir=$(echo "$temp_dir" | sed 's/\/c\//C:\//g') # Need windows path for dest
+        if powershell.exe -ExecutionPolicy Bypass -NoProfile -Command "Expand-Archive -LiteralPath '$win_nupkg_path' -DestinationPath '$win_temp_dir' -Force"; then
+            echo "PowerShell Expand-Archive succeeded."
+            extraction_success=true
+        else
+            echo "PowerShell Expand-Archive failed. Trying verify_nupkg.ps1..." >&2
+            # Fallback to the dedicated verification script if direct Expand-Archive fails
+            if [ -f "${UTILS_SCRIPT_DIR}/verify_nupkg.ps1" ]; then # Check if the PS script exists in original path
+                if powershell.exe -ExecutionPolicy Bypass -NoProfile -File "${win_script_dir}/verify_nupkg.ps1" -NupkgPath "$win_nupkg_path"; then
+                   echo "PowerShell verify_nupkg.ps1 script succeeded in extraction/verification."
+                   # Note: This script also does the nuspec check, so we might need to adjust flow
+                   # For now, assume it extracted correctly if it exited 0
+                   extraction_success=true
+                else
+                   echo "PowerShell verify_nupkg.ps1 script failed." >&2
+                fi
+            else
+                 echo "verify_nupkg.ps1 script not found." >&2
+            fi
         fi
     fi
 
     if [ "$extraction_success" = true ]; then
+        echo "Extraction successful. Contents of temp directory ($temp_dir):"
+        ls -R "$temp_dir"
+        echo "----------------------------------------"
+
         local nuspec_count
         nuspec_count=$(find "$temp_dir" -maxdepth 1 -name "*.nuspec" | wc -l)
         
@@ -278,22 +318,6 @@ verify_nupkg() {
         return 0
     fi
     
-    # Fallback to PowerShell on Windows
-    if [[ "$PLATFORM" == "windows" ]]; then
-        echo "Using PowerShell..."
-        # Convert path to Windows format
-        local win_nupkg_path
-        win_nupkg_path=$(echo "$nupkg_path" | sed 's/\/c\//C:\//g')
-        local win_script_dir
-        win_script_dir=$(echo "$UTILS_SCRIPT_DIR" | sed 's/\/c\//C:\//g')
-        
-        if powershell.exe -ExecutionPolicy Bypass -File "${win_script_dir}/verify_nupkg.ps1" -NupkgPath "$win_nupkg_path"; then
-            return 0
-        fi
-    fi
-
-
-    
-    echo "Error: No suitable extraction method found (unzip, 7z, or PowerShell required)" >&2
+    echo "Error: No suitable extraction method found (7z or PowerShell required)" >&2
     return 1
 }
