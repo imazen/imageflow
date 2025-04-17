@@ -46,17 +46,13 @@ echo "Creating test environment in: ${TEST_DIR}"
 mkdir -p "${TEST_DIR}/artifacts/nuget"
 
 # Set up environment variables
-export CI_TAG="v0.9-rc1-1"
+export CI_TAG="v0.9.0-rc1"
 export REPO_NAME="imazen/imageflow"
+export NUGET_PACKAGE_VERSION="${CI_TAG#v}"
 export REL_NUGET_OUTPUT_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/artifacts/nuget/"
 export REL_NUGET_ARCHIVE_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/archive/"
 # Create mock dependency packages
-echo "Creating mock dependency packages..."
-for rid in win-x64 win-x86 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64; do
-    mock_package="${TEST_DIR}/artifacts/nuget/Imageflow.NativeRuntime.${rid}.${CI_TAG#v}.nupkg"
-    echo "Creating $mock_package"
-    touch "$mock_package"
-done
+echo "(Skipping mock NativeRuntime package creation - not needed by pack_meta_dotnet.sh)"
 
 echo "Test environment:"
 echo "CI_TAG: ${CI_TAG}"
@@ -75,7 +71,7 @@ fi
 
 # Run pack_meta.sh with modified paths
 echo "Running pack_meta.sh..."
-./ci/pack_nuget/pack_meta.sh
+./ci/pack_nuget/pack_meta_dotnet.sh
 
 # Verify all expected packages were created
 EXPECTED_PACKAGES=(
@@ -95,12 +91,14 @@ EXPECTED_PACKAGES=(
 
 echo -e "\nVerifying created packages:"
 for package in "${EXPECTED_PACKAGES[@]}"; do
-    package_file="${TEST_DIR}/artifacts/nuget/${package}.${CI_TAG#v}.nupkg"
-    if [[ -f "$package_file" ]] && [[ -s "$package_file" ]]; then
-        echo "✓ $package created successfully"
+    # Find the package file using a pattern to handle potential version normalization
+    found_package=$(find "${TEST_DIR}/artifacts/nuget/" -maxdepth 1 -name "${package}.*.nupkg" -print -quit || true)
+
+    if [[ -n "$found_package" && -f "$found_package" && -s "$found_package" ]]; then
+        echo "✓ $package created successfully ($(basename "$found_package"))"
     else
         echo "❌ Failed to create $package"
-        echo "Expected file: $package_file"
+        echo "Expected file pattern: ${package}.*.nupkg in ${TEST_DIR}/artifacts/nuget/"
         echo "Directory contents:"
         ls -la "${TEST_DIR}/artifacts/nuget/"
         exit 1

@@ -340,9 +340,9 @@ jobs:
       # CREATE NUGET PACKAGE ---------------------------------------------------------------------
       - name: "Create NuGet Package Imageflow.NativeTool.${{ matrix.nuget-rid }}"
         shell: bash
-        run: ./ci/pack_nuget/pack.sh tool
+        run: ./ci/pack_nuget/pack_native_dotnet.sh tool
         env:
-          CI_TAG: ${{ env.IMAGEFLOW_NUGET_VERSION }}
+          NUGET_PACKAGE_VERSION: ${{ env.IMAGEFLOW_NUGET_VERSION }}
           PACKAGE_SUFFIX: ${{ matrix.package-suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
@@ -353,9 +353,9 @@ jobs:
       - name: "Create NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }}"
         if: ${{ !matrix.static }}
         shell: bash
-        run: ./ci/pack_nuget/pack.sh
+        run: ./ci/pack_nuget/pack_native_dotnet.sh
         env:
-          CI_TAG: ${{ env.IMAGEFLOW_NUGET_VERSION }}
+          NUGET_PACKAGE_VERSION: ${{ env.IMAGEFLOW_NUGET_VERSION }}
           PACKAGE_SUFFIX: ${{ matrix.package-suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
@@ -483,11 +483,14 @@ jobs:
         shell: bash
         run: mkdir -p ${{ env.REL_NUGET_OUTPUT_DIR }}
 
-      - name: Create nuget packages
-        shell: bash
-        run: ./ci/pack_nuget/pack_meta.sh
+      - name: Pack Meta Packages
+        run: |
+          dotnet --version
+          ./ci/pack_nuget/pack_meta_dotnet.sh
         env:
-          CI_TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}
+          # IMAGEFLOW_NUGET_VERSION should be available from the build job context if needed,
+          # but pack_meta_dotnet.sh now reads NUGET_PACKAGE_VERSION
+          NUGET_PACKAGE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
           REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
 

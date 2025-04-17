@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Properties passed via /p: -->
+    <PackageId>$(PackageId)</PackageId> <!-- e.g., Imageflow.NativeRuntime.win-x64 -->
+    <Version>$(Version)</Version>     <!-- e.g., 0.9.0 -->
+    <Authors>Imazen, lilith</Authors>
+    <Owners>Imazen, lilith</Owners>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Description>$(PackageDescription)</Description> <!-- Set dynamically -->
+    <Copyright>AGPLv3 or commercial</Copyright>
+    <PackageProjectUrl>https://imageflow.io</PackageProjectUrl>
+    <PackageTags>imageflow imazen nativeruntime webp image resizing imageresizer</PackageTags>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>$(RepositoryUrl)</RepositoryUrl> <!-- e.g., https://github.com/imazen/imageflow -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <IncludeBuildOutput>false</IncludeBuildOutput> <!-- This is a native-only package -->
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking> <!-- No managed dependencies -->
+    <!-- Add target framework for compatibility, even if no managed code -->
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <!-- Property for the RID, passed via /p:ImageflowNugetRid=... -->
+    <ImageflowNugetRid>$(ImageflowNugetRid)</ImageflowNugetRid>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Include the native binary -->
+    <Content Include="runtimes\$(ImageflowNugetRid)\native\$(NativeBinaryName)" Pack="true" PackagePath="runtimes\$(ImageflowNugetRid)\native\" CopyToOutputDirectory="PreserveNewest" />
+
+    <!-- Include README, LICENSE, ICON -->
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="LICENSE.md" Pack="true" PackagePath="\" />
+    <None Include="icon.png" Pack="true" PackagePath="\" />
+
+    <!-- Include .targets files conditionally for Windows x86/x64 -->
+    <None Include="build\net45\$(PackageId).targets" Pack="true" PackagePath="build\net45\" Condition="$(IncludeTargets) == 'true'" />
+    <None Include="buildTransitive\net45\$(PackageId).targets" Pack="true" PackagePath="buildTransitive\net45\" Condition="$(IncludeTargets) == 'true'" />
+  </ItemGroup>
+
+  <!-- Special case for win-arm64 needing a dummy lib file -->
+  <ItemGroup Condition="$(ImageflowNugetRid) == 'win-arm64'">
+     <None Include="lib\netstandard1.0\_._" Pack="true" PackagePath="lib\netstandard1.0\" />
+  </ItemGroup>
+
+</Project> 

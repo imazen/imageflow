@@ -51,8 +51,9 @@ touch "${TEST_DIR}/binaries/imageflow_tool.exe"
 export REL_BINARIES_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/binaries/"
 export REL_NUGET_OUTPUT_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/nuget/"
 export REL_NUGET_ARCHIVE_DIR="ci/pack_nuget/tests/${TEST_DIR_REL}/archive/"
-export CI_TAG="v0.9-rc1-1"
+export CI_TAG="v0.9.0-rc1"
 export REPO_NAME="imazen/imageflow"
+export NUGET_PACKAGE_VERSION="${CI_TAG#v}"
 
 # Note: PACKAGE_SUFFIX and NUGET_RUNTIME will be set per runtime in the loop below.
 echo "Test environment:"
@@ -122,7 +123,7 @@ for runtime in "${RUNTIMES[@]}"; do
     echo "PACKAGE_SUFFIX: $PACKAGE_SUFFIX, NUGET_RUNTIME: $NUGET_RUNTIME"
     echo "---------------------------------------------------"
     
-    # Reasoning: Invoke the pack.sh script. If it fails for any runtime, exit the test.
-    ./ci/pack_nuget/pack.sh || { echo "Failed for lib - runtime $runtime"; exit 1; }
-    ./ci/pack_nuget/pack.sh tool || { echo "Failed for tool - runtime $runtime"; exit 1; }
+    # Reasoning: Invoke the NEW dotnet pack script. If it fails for any runtime, exit the test.
+    ./ci/pack_nuget/pack_native_dotnet.sh || { echo "Failed for lib - runtime $runtime"; exit 1; }
+    ./ci/pack_nuget/pack_native_dotnet.sh tool || { echo "Failed for tool - runtime $runtime"; exit 1; }
 done

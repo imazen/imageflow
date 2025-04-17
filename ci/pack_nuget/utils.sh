@@ -197,127 +197,190 @@ get_latest_version() {
     return 1
 }
 
-# Function to verify NuGet package structure. 2nd and later parameters are strings that should be present in the .nuspec file.
-verify_nupkg() {
-    local nupkg_path="$1"
-    local expected_strings=("${@:2}")
-    
-    # Validate input
-    if [ ! -f "$nupkg_path" ]; then
-        echo "Error: Package file not found: $nupkg_path" >&2
-        return 1
-    fi
-    
-    if [[ ! "$nupkg_path" =~ \.nupkg$ ]]; then
-        echo "Error: File must have .nupkg extension: $nupkg_path" >&2
-        return 1
-    fi
-    
-    # Create temp directory with unique name
-    local temp_dir="${TMPDIR:-/tmp}/nupkg-verify-$(date +%s)-${RANDOM}-${RANDOM}-$$"
-    echo "Creating temp directory: $temp_dir"
-    mkdir -p "$temp_dir"
-    
-    # Ensure cleanup happens even on failure
-    cleanup() {
-        local exit_code=$?
-        echo "Cleaning up temp directory $temp_dir" >&2
-        rm -rf "$temp_dir"
-        return 0 # Explicit return
-    }
-    trap cleanup 1 2 3 6 ERR EXIT
-    
-    echo "Extracting package to verify structure using 7z..."
-
-    local extraction_success=false
-
-    # Try 7z first (now the primary method for non-Windows)
-    if [[ "$PLATFORM" != "windows" ]] && command -v 7z >/dev/null 2>&1; then
-        echo "Using 7z..."
-        sevenz_exit_code=1
-        # Use -y to assume Yes to prompts, redirect output
-        if 7z x "$nupkg_path" -o"$temp_dir" -y >&2; then
-            sevenz_exit_code=0
-            extraction_success=true
-            echo "7z succeeded."
-        else
-            sevenz_exit_code=$?
-            echo "7z failed with exit code $sevenz_exit_code." >&2
-        fi
-    elif [[ "$PLATFORM" != "windows" ]]; then
-         echo "7z command not found on non-Windows platform." >&2
-    fi
-
-    # Fallback to PowerShell on Windows if 7z wasn't tried or failed (or wasn't found)
-    if [ "$extraction_success" = false ] && [[ "$PLATFORM" == "windows" ]]; then
-        echo "Attempting PowerShell extraction fallback..."
-        # Convert path to Windows format
-        local win_nupkg_path
-        win_nupkg_path=$(echo "$nupkg_path" | sed 's/\/c\//C:\//g')
-        local win_script_dir
-        win_script_dir=$(echo "$UTILS_SCRIPT_DIR" | sed 's/\/c\//C:\//g')
-        local ps_script="${win_script_dir}/verify_nupkg.ps1" # Path to verify script
-
-        # Need Expand-Archive directly here, or call verify_nupkg.ps1 which does more
-        # Let's try Expand-Archive first for simplicity
-        echo "Using PowerShell Expand-Archive..."
-        local win_temp_dir=$(echo "$temp_dir" | sed 's/\/c\//C:\//g') # Need windows path for dest
-        if powershell.exe -ExecutionPolicy Bypass -NoProfile -Command "Expand-Archive -LiteralPath '$win_nupkg_path' -DestinationPath '$win_temp_dir' -Force"; then
-            echo "PowerShell Expand-Archive succeeded."
-            extraction_success=true
-        else
-            echo "PowerShell Expand-Archive failed. Trying verify_nupkg.ps1..." >&2
-            # Fallback to the dedicated verification script if direct Expand-Archive fails
-            if [ -f "${UTILS_SCRIPT_DIR}/verify_nupkg.ps1" ]; then # Check if the PS script exists in original path
-                if powershell.exe -ExecutionPolicy Bypass -NoProfile -File "${win_script_dir}/verify_nupkg.ps1" -NupkgPath "$win_nupkg_path"; then
-                   echo "PowerShell verify_nupkg.ps1 script succeeded in extraction/verification."
-                   # Note: This script also does the nuspec check, so we might need to adjust flow
-                   # For now, assume it extracted correctly if it exited 0
-                   extraction_success=true
-                else
-                   echo "PowerShell verify_nupkg.ps1 script failed." >&2
-                fi
+# Use realpath for robustness if available, otherwise use cd/pwd fallback
+resolve_path() {
+    if command -v realpath > /dev/null; then
+        realpath "$1"
+    else
+        # Ensure the directory exists before trying to cd into it
+        if [[ -d "$1" ]]; then
+            (cd "$1" && pwd)
+        elif [[ -f "$1" ]]; then
+            # Handle file path: get dir, cd, then append filename
+            local dir
+            dir=$(dirname "$1")
+            local base
+            base=$(basename "$1")
+            if [[ -d "$dir" ]]; then
+                echo "$(cd "$dir" && pwd)/$base"
             else
-                 echo "verify_nupkg.ps1 script not found." >&2
+                 echo "Error: Cannot resolve directory for path '$1'" >&2
+                 return 1
             fi
-        fi
-    fi
-
-    if [ "$extraction_success" = true ]; then
-        echo "Extraction successful. Contents of temp directory ($temp_dir):"
-        ls -R "$temp_dir"
-        echo "----------------------------------------"
-
-        local nuspec_count
-        nuspec_count=$(find "$temp_dir" -maxdepth 1 -name "*.nuspec" | wc -l)
-        
-        if [ "$nuspec_count" -eq 0 ]; then
-            echo "Error: No .nuspec file found in package root" >&2
-            echo "unzip -l $nupkg_path"
-            unzip -l "$nupkg_path"
-            echo "Contents of temp directory:"
-            ls -R "$temp_dir"
-            return 1
-        elif [ "$nuspec_count" -gt 1 ]; then
-            echo "Error: Multiple .nuspec files found in package root" >&2
+        else
+            echo "Error: Path '$1' not found for resolve_path" >&2
             return 1
         fi
-      
-        echo "Found .nuspec file: $(find "$temp_dir" -maxdepth 1 -name "*.nuspec" -exec basename {} \;)"
-
-        # Check if all expected strings are present in the .nuspec file
-        local nuspec_file="$temp_dir/$(find "$temp_dir" -maxdepth 1 -name "*.nuspec" -exec basename {} \;)"
-        for expected_string in "${expected_strings[@]}"; do
-            if ! grep -q "$expected_string" "$nuspec_file"; then
-                echo "Error: Expected string '$expected_string' not found in .nuspec file:" >&2
-                cat "$nuspec_file" >&2
-                return 1
-            fi
-        done
-
-        return 0
     fi
+}
+
+# Function to verify NuGet package structure. (REMOVED - Use verify_nupkg.ps1 instead)
+# verify_nupkg() { ... removed ... }
+
+# Function to safely create a staging directory and set up cleanup trap
+# Usage: STAGING_DIR=$(create_staging_dir "${SCRIPT_DIR}/staging" "some_prefix")
+# Returns the absolute path to the created directory
+create_staging_dir() {
+    local base_dir="$1"
+    local prefix="$2"
+    local random_suffix
+    random_suffix=$(date +%s)_$RANDOM
+    local staging_path
+    staging_path="${base_dir}/${prefix}_${random_suffix}"
+
+    # Redirect diagnostic messages to stderr
+    echo "Creating staging directory: ${staging_path}" >&2
+    mkdir -p "${staging_path}" || {
+        echo "Error: Failed to create staging directory '${staging_path}'" >&2
+        return 1
+    }
+
+    # Resolve to absolute path
+    local absolute_staging_path
+    absolute_staging_path=$(resolve_path "${staging_path}") || return 1
+
+    # Redirect diagnostic message to stderr
+    trap "echo 'Cleaning up staging directory: ${absolute_staging_path}' >&2; rm -rf '${absolute_staging_path}'" EXIT ERR INT TERM
+
+    # Only echo the final path to stdout
+    echo "${absolute_staging_path}"
+    return 0
+}
+
+# Common function to execute dotnet pack, find the output, and move/copy it
+# Usage: run_dotnet_pack "$staging_dir/project.csproj" "$NUGET_PACKAGE_NAME" "$NUGET_PACKAGE_VERSION" "$TEMP_PACKAGE_DIR" "$FINAL_OUTPUT_DIR" "$ARCHIVE_DIR_OR_EMPTY" "${PACK_ARGS[@]}"
+run_dotnet_pack() {
+    # Remove debug printing
+    # set -x
+
+    local csproj_path="$1"
+    local package_name="$2"
+    local package_version="$3" # Used for finding output, not passed to pack
+    local temp_output_dir="$4"
+    local final_output_dir="$5"
+    local archive_dir="$6" # Can be empty
+    shift 6 # Remove first 6 args, remaining are pack args
+    local pack_args=("$@")
+
+    echo "----------------------------------------"
+    echo "Executing dotnet restore --no-dependencies..."
+    # Add verbosity and a fixed RID for debugging
+    if ! dotnet restore "${csproj_path}" --no-dependencies -r linux-x64 -v detailed; then
+        echo "Error: dotnet restore --no-dependencies failed for ${csproj_path}."
+        return 1
+    fi
+
+    echo "----------------------------------------"
+    echo "Executing dotnet pack..."
+    echo "Command: dotnet pack \"${csproj_path}\" --no-build --no-restore ${pack_args[*]}"
+    if ! dotnet pack "${csproj_path}" --no-build --no-restore "${pack_args[@]}"; then
+        echo "Error: dotnet pack command failed for ${package_name}."
+        return 1
+    fi
+    echo "----------------------------------------"
+
+    # Find the created package file
+    # Search pattern allows for normalized versions (e.g., 1.0.0 instead of 1.0)
+    local created_nupkg_path
+    created_nupkg_path=$(find "${temp_output_dir}" -maxdepth 1 -name "${package_name}.${package_version}*.nupkg" -print -quit || find "${temp_output_dir}" -maxdepth 1 -name "${package_name}.*.nupkg" -print -quit || true)
+
+    if [[ -z "$created_nupkg_path" || ! -f "$created_nupkg_path" ]]; then
+        echo "Error: dotnet pack seemed to succeed, but failed to find a package matching '${package_name}.${package_version}*.nupkg' or '${package_name}.*.nupkg' in ${temp_output_dir}"
+        echo "Listing contents of staging output dir (${temp_output_dir}):"
+        ls -la "${temp_output_dir}"
+        return 1
+    fi
+
+    local nupkg_filename
+    nupkg_filename=$(basename "$created_nupkg_path")
+    echo "Package created successfully: ${nupkg_filename}"
+
+    mkdir -p "${final_output_dir}" || {
+        echo "Error: Failed to create final output directory '${final_output_dir}'" >&2
+        return 1
+    }
+    local final_nupkg_path="${final_output_dir}${nupkg_filename}"
+    echo "Moving package to final destination: ${final_nupkg_path}"
+    mv "$created_nupkg_path" "$final_nupkg_path" || {
+        echo "Error: Failed to move '${created_nupkg_path}' to '${final_nupkg_path}'" >&2
+        return 1
+    }
+
+    # Optional: Copy to archive directory
+    if [[ -n "$archive_dir" ]]; then
+        echo "Copying package to archive directory: ${archive_dir}"
+        mkdir -p "${archive_dir}" || {
+             echo "Error: Failed to create archive directory '${archive_dir}'" >&2
+             return 1
+        }
+        cp "$final_nupkg_path" "${archive_dir}${nupkg_filename}" || {
+            echo "Error: Failed to copy '${final_nupkg_path}' to '${archive_dir}${nupkg_filename}'" >&2
+            return 1
+        }
+    fi
+
+    # Return the final path for verification
+    echo "${final_nupkg_path}"
     
-    echo "Error: No suitable extraction method found (7z or PowerShell required)" >&2
-    return 1
+    # Remove debug printing
+    # set +x
+    return 0
+}
+
+# Common function to call verify_nupkg.ps1
+# Usage: run_verify_script "$final_nupkg_path" "$gold_nuspec_path_or_empty"
+run_verify_script() {
+    local nupkg_to_verify="$1"
+    local gold_nuspec_path="$2" # Optional
+
+    local verify_script_native="${UTILS_SCRIPT_DIR}/verify_nupkg.ps1"
+
+    if [[ ! -f "$verify_script_native" ]]; then
+        echo "Error: Verification script not found at ${verify_script_native}" >&2
+        return 1
+    fi
+    if [[ -n "$gold_nuspec_path" && ! -f "$gold_nuspec_path" ]]; then
+        echo "Error: Gold nuspec file specified but not found at ${gold_nuspec_path}" >&2
+        return 1
+    fi
+
+    # Convert paths to Windows format for powershell.exe if wslpath exists
+    local verify_script_win="$verify_script_native"
+    local nupkg_path_win="$nupkg_to_verify"
+    local gold_nuspec_path_win="$gold_nuspec_path"
+
+    if command -v wslpath &> /dev/null; then
+        verify_script_win=$(wslpath -w "$verify_script_native")
+        nupkg_path_win=$(wslpath -w "$nupkg_to_verify")
+        if [[ -n "$gold_nuspec_path" ]]; then
+             gold_nuspec_path_win=$(wslpath -w "$gold_nuspec_path")
+        fi
+        echo "Converted paths for PowerShell: Script='$verify_script_win', Package='$nupkg_path_win', Gold='$gold_nuspec_path_win'" >&2
+    else
+        echo "Warning: wslpath command not found. Assuming native Windows or compatible paths." >&2
+    fi
+
+    local powershell_args=("-ExecutionPolicy" "Bypass" "-File" "${verify_script_win}" "-NupkgPath" "${nupkg_path_win}")
+    if [[ -n "$gold_nuspec_path_win" ]]; then
+        powershell_args+=("-GoldNuspecPath" "${gold_nuspec_path_win}")
+    fi
+
+    echo "Executing: powershell.exe ${powershell_args[*]}" >&2
+    if ! powershell.exe "${powershell_args[@]}"; then
+        echo "Error: Package verification failed for ${nupkg_to_verify}"
+        return 1
+    fi
+
+    echo "Package verification succeeded for ${nupkg_to_verify}" >&2
+    return 0
 }
