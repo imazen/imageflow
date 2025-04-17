@@ -41,7 +41,7 @@ detect_platform() {
     fi
 }
 
-# Function for creating NuGet package with cross-platform compatibility
+# Function for creating NuGet package with cross-platform compatibility using 7z
 create_package() {
     local output_file="$1"
     local staging_dir="$2"
@@ -54,102 +54,53 @@ create_package() {
         output_file="$(pwd)/$output_file"
     fi
     
-    detect_platform
-    
-    # Ensure temp directory exists and is writable
-    local temp_dir="${TMPDIR:-/tmp}"
-    if [[ ! -d "$temp_dir" ]] || [[ ! -w "$temp_dir" ]]; then
-        temp_dir="."
-        echo "Warning: Using current directory for temporary files"
-    fi
-    # make random subdirectory in temp_dir
-    local temp_subdir="${temp_dir}/$(date +%s)_${RANDOM}"
-    mkdir -p "$temp_subdir"
-    
-    # Create unique temp files
-    local ps_log="${temp_subdir}/ps_$(date +%s)_${RANDOM}.log"
-    local ditto_log="${temp_subdir}/ditto_$(date +%s)_${RANDOM}.log"
-    local zip_log="${temp_subdir}/zip_$(date +%s)_${RANDOM}.log"
-    local sevenzip_log="${temp_subdir}/7z_$(date +%s)_${RANDOM}.log"
-    
-    # Cleanup function for temp files
-    cleanup_logs() {
-        rm -f "$ps_log" "$ditto_log" "$zip_log" "$sevenzip_log"
-        return 0 # Explicit return
-    }
-    trap cleanup_logs 1 2 3 6 ERR EXIT
-    
-    echo "Using temp directory: $temp_subdir"
-    echo "Creating package from folder: $staging_dir"
+    echo "Creating package (zip) using 7z from folder: $staging_dir"
     echo "Output file: $output_file"
     
-    ( cd "$staging_dir"
-
-
-        
-        # Try zip with different options
-        if command -v zip >/dev/null 2>&1; then
-            echo "Using zip..."
-            ls -la
-            echo "---------------"
-            if ! (zip -r -q "${output_file}" .) > "${zip_log}" 2>&1; then 
-                echo "Standard zip failed, trying without quiet flag..."
-                if ! (zip -r "${output_file}" .*) > "${zip_log}" 2>&1; then
-                    echo "zip failed with output:"
-                    cat "${zip_log}"
-                else
-                    return 0
-                fi
-            else
-                return 0
-            fi
-        fi
-        
-        # Try 7z with different options
-        if command -v 7z >/dev/null 2>&1; then
-            echo "Using 7z..."
-            if ! 7z a -tzip "${output_file}" * > "${sevenzip_log}" 2>&1; then  # Changed . to *
-                echo "7z failed with output:"
-                cat "${sevenzip_log}"
-                return 1
-            fi
-            return 0
-        fi
-
-        # macOS-specific handling
-        if [[ "$PLATFORM" == "macos" ]] && command -v ditto >/dev/null 2>&1; then
-            echo "Using macOS ditto..."
-            if ! ditto -c -k --sequesterRsrc . "${output_file}" > "${ditto_log}" 2>&1; then  # Removed --keepParent
-                echo "ditto failed with output:"
-                cat "${ditto_log}"
-                return 1
-            fi
-            return 0
-        fi
-        
-        # Windows-specific handling
-        if [[ "$PLATFORM" == "windows" ]]; then
-            
-            # replace /c/ with C:/
-            WIN_SCRIPT_DIR=$(echo "$UTILS_SCRIPT_DIR" | sed 's/\/c\//C:\//g')
-            echo "Using zip.ps1: $WIN_SCRIPT_DIR/zip.ps1"
-
-            # Convert paths to Windows format for PowerShell
-            
-            # Convert paths to Windows format for PowerShell
-            if ! powershell.exe -ExecutionPolicy Bypass -File "${WIN_SCRIPT_DIR}/zip.ps1" -ArchiveFile "${output_file}" -Paths . > "${ps_log}" 2>&1; then
-                echo "PowerShell compression failed with output:"
-                cat "${ps_log}"
-                return 1
-            fi
-            cat "${ps_log}"
-            return 0
-        fi
-        
-
-        echo "Error: No working compression method found"
+    # Ensure 7z is available
+    if ! command -v 7z >/dev/null 2>&1; then
+        echo "Error: 7z command is required by create_package but not found." >&2
         return 1
+    fi
+    
+    # Remove existing archive if it exists
+    rm -f "$output_file"
+    
+    (
+        cd "$staging_dir" || exit 1
+        # Use find piped to xargs to handle all files including dotfiles
+        echo "Archiving all content with 7z -tzip using find..."
+        # Check if find returns any files first
+        if find . -mindepth 1 -print -quit | grep -q .; then
+             # Use -mx=5 for reasonable compression, NuGet doesn't need max
+             if ! (find . -mindepth 1 -print0 | xargs -0 7z a -tzip -mx=5 "$output_file" -x'!.DS_Store' > /dev/null); then
+                echo "Error: 7z -tzip command failed for create_package."
+                exit 1
+             fi
+        else
+             echo "Warning: No files found to archive with 7z -tzip for create_package. Creating empty archive."
+             if ! 7z a -tzip "$output_file" -mx=0 > /dev/null; then
+                 echo "Error: Failed to create empty archive with 7z."
+                 exit 1
+             fi
+        fi
+        exit 0
     )
+    local subshell_exit_code=$?
+    
+    if [ $subshell_exit_code -ne 0 ]; then
+        echo "Error: Failed to create package $output_file in subshell."
+        rm -f "$output_file" # Clean up potentially broken archive
+        return 1
+    fi
+    
+    if [ ! -f "$output_file" ]; then
+         echo "Error: 7z reported success, but output file $output_file not found."
+         return 1
+    fi
+    
+    echo "Package $output_file created successfully."
+    return 0
 }
 
 # Function to get last version from a JSON response

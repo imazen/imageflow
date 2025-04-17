@@ -17,6 +17,11 @@ if [ "$#" -ne 3 ]; then
     exit 1
 fi
 
+if ! command -v 7z >/dev/null 2>&1; then
+    echo "Error: 7z command is required but not found in PATH." >&2
+    exit 1
+fi
+
 output_archive_path="$1"
 base_directory="$2"
 path_to_include="$3"
@@ -48,9 +53,12 @@ else
     exit 1
 fi
 
-echo "Attempting to create archive '$absolute_output_path' (type: $archive_type) from base '$base_directory' including '$path_to_include'"
+echo "Attempting to create archive '$absolute_output_path' (type: $archive_type) using 7z from base '$base_directory' including '$path_to_include'"
 
-# --- Archiving Logic ---
+# Remove existing archive if it exists
+rm -f "$absolute_output_path"
+
+# --- Archiving Logic (using 7z exclusively) ---
 (
     # Change into the base directory
     cd "$base_directory" || { echo "Error: Failed to cd into '$base_directory'." >&2; exit 1; }
@@ -58,128 +66,95 @@ echo "Attempting to create archive '$absolute_output_path' (type: $archive_type)
 
     # Ensure the path to include exists within the base directory
     if [ ! -e "$path_to_include" ]; then
-        echo "Error: Path to include '$path_to_include' does not exist within '$base_directory'." >&2
+        echo "Error: Path to include '$path_to_include' does not exist within '$base_directory' ('$(pwd)')." >&2
         exit 1
+    fi
+
+    # --- ZIP Creation ---
+    if [[ "$archive_type" == "zip" ]]; then
+        sevenz_exit_code=1
+        if [[ "$path_to_include" == "." ]]; then
+            echo "Archiving all content (including dotfiles) with 7z -tzip using find..."
+            # Use find piped to xargs to handle all files including dotfiles
+            # Check if find returns any files first
+            if find . -mindepth 1 -print -quit | grep -q .; then
+                if find . -mindepth 1 -print0 | xargs -0 7z a -tzip -mx=9 "$absolute_output_path" -x'!.DS_Store' > /dev/null; then
+                    sevenz_exit_code=0
+                else
+                     sevenz_exit_code=$?
+                     echo "7z -tzip (find) command failed with exit code $sevenz_exit_code." >&2
+                fi
+            else
+                echo "Warning: No files found to archive with 7z -tzip. Creating empty archive."
+                # Create an empty zip archive
+                7z a -tzip "$absolute_output_path" -mx=0 > /dev/null # Add nothing, creates empty zip
+                sevenz_exit_code=0 # Consider empty archive creation a success
+            fi
+        else
+            echo "Archiving specific path with 7z -tzip: $path_to_include"
+            if 7z a -tzip -mx=9 "$absolute_output_path" "$path_to_include" -x'!.DS_Store' > /dev/null; then
+                 sevenz_exit_code=0
+            else
+                 sevenz_exit_code=$?
+                 echo "7z -tzip (specific path) command failed with exit code $sevenz_exit_code." >&2
+            fi
+        fi
+        exit $sevenz_exit_code
     fi
 
     # --- TAR.GZ Creation ---
     if [[ "$archive_type" == "tar.gz" ]]; then
-        echo "Attempting tar..."
-        tar_opts="--exclude=.DS_Store --ignore-failed-read --no-ignore-command-error"
-        files_to_tar=""
+        intermediate_tar="${absolute_output_path%.tar.gz}.intermediate.tar"
+        rm -f "$intermediate_tar"
+        sevenz_tar_exit_code=1
+        sevenz_gzip_exit_code=1
 
+        # Step 1: Create .tar
         if [[ "$path_to_include" == "." ]]; then
-            # Using '* .[!.]*' should grab normal files and dotfiles except . and ..
-            echo "Archiving all content (including dotfiles)..."
-            # Note: We capture the list of files first to handle the case where no dotfiles exist, which would cause '.[!.]*' to fail.
-            files_to_tar=$(ls -d .[!.]* * 2>/dev/null || true)
-        else
-            # Archiving a specific path
-            echo "Archiving specific path: $path_to_include"
-            files_to_tar="$path_to_include"
-        fi
-
-        if [ -z "$files_to_tar" ]; then
-            echo "Warning: No files found to tar in $(pwd) for pattern/path '$path_to_include'" >&2
-            # Create empty tarball as tar would
-            tar $tar_opts -czf "$absolute_output_path" --files-from /dev/null
-        elif tar $tar_opts -czf "$absolute_output_path" $files_to_tar; then
-            echo "tar succeeded."
-        else
-            echo "tar failed." >&2
-            exit 1 # If tar fails, there's no standard fallback for .tar.gz
-        fi
-        exit 0 # Success (or handled empty case)
-    fi
-
-    # --- ZIP Creation (with fallbacks) ---
-    if [[ "$archive_type" == "zip" ]]; then
-
-        # Priority 1: PowerShell on Windows-like environments (including Git Bash/WSL from PS)
-        if command -v powershell.exe >/dev/null 2>&1; then
-            ps_script_path="${UTILS_SCRIPT_DIR}/zip.ps1"
-            if [ -f "$ps_script_path" ]; then
-                # Check for wslpath before attempting conversion
-                if command -v wslpath >/dev/null 2>&1; then
-                    echo "Attempting PowerShell zip.ps1 script (Priority 1)..."
-                    win_script_path="$(wslpath -w "$ps_script_path")"
-                    win_output_path="$(wslpath -w "$absolute_output_path")"
-                    if [[ "$path_to_include" == "." ]]; then
-                         win_include_path="."
-                    else
-                         # Need the absolute path of the include path for wslpath
-                         abs_include_path="$(pwd)/$path_to_include" # pwd is base_directory here
-                         win_include_path="$(wslpath -w "$abs_include_path")"
-                    fi
-
-                    echo "Running: powershell.exe -ExecutionPolicy Bypass -NoProfile -File \"${win_script_path}\" -ArchiveFile \"${win_output_path}\" -Paths \"${win_include_path}\""
-                    if powershell.exe -ExecutionPolicy Bypass -NoProfile -File "${win_script_path}" -ArchiveFile "${win_output_path}" -Paths "${win_include_path}"; then
-                        echo "PowerShell zip.ps1 succeeded."
-                        # Verify file exists after success, PS script might not error correctly
-                        if [ -f "$absolute_output_path" ]; then
-                           exit 0 # Success
-                        else
-                           echo "PowerShell script reported success, but output file missing. Trying other methods..." >&2
-                        fi
-                    else
-                        echo "PowerShell zip.ps1 failed. Trying other methods..." >&2
-                    fi
+            echo "Creating intermediate tar (all content, incl dotfiles) with 7z -ttar using find..."
+            if find . -mindepth 1 -print -quit | grep -q .; then
+                if find . -mindepth 1 -print0 | xargs -0 7z a -ttar "$intermediate_tar" -x'!.DS_Store' > /dev/null; then
+                    sevenz_tar_exit_code=0
                 else
-                     echo "wslpath command not found. Skipping PowerShell fallback." >&2
-                fi # end wslpath check
+                    sevenz_tar_exit_code=$?
+                    echo "7z -ttar (find) command failed with exit code $sevenz_tar_exit_code." >&2
+                fi
             else
-                echo "PowerShell script '$ps_script_path' not found. Trying other methods..." >&2
-            fi
-        fi
-
-        # Fallback 1: Standard zip command
-        if command -v zip >/dev/null 2>&1; then
-            echo "Attempting zip command (Fallback 1)..."
-            if zip -r -q --exclude ".DS_Store" "$absolute_output_path" "$path_to_include"; then
-                echo "zip command succeeded."
-                exit 0 # Success
-            else
-                echo "zip command failed." >&2
+                echo "Warning: No files found to archive with 7z -ttar. Creating empty archive."
+                7z a -ttar "$intermediate_tar" > /dev/null # Creates empty tar
+                sevenz_tar_exit_code=0
             fi
         else
-             echo "zip command not found."
+            echo "Creating intermediate tar (specific path) with 7z -ttar: $path_to_include"
+            if 7z a -ttar "$intermediate_tar" "$path_to_include" -x'!.DS_Store' > /dev/null; then
+                 sevenz_tar_exit_code=0
+            else
+                 sevenz_tar_exit_code=$?
+                 echo "7z -ttar (specific path) command failed with exit code $sevenz_tar_exit_code." >&2
+            fi
         fi
 
-        # Fallback 2: 7z command
-        if command -v 7z >/dev/null 2>&1; then
-            echo "Attempting 7z command (Fallback 2)..."
-            content_to_add_7z="$path_to_include"
-            if [[ "$content_to_add_7z" == "." ]]; then
-                content_to_add_7z="*"
-            fi
-            if 7z a -tzip -mx=9 "$absolute_output_path" $content_to_add_7z -x'!.DS_Store' > /dev/null; then
-                echo "7z command succeeded."
-                exit 0 # Success
+        # Step 2: Compress .tar to .tar.gz if .tar creation succeeded
+        if [ $sevenz_tar_exit_code -eq 0 ]; then
+            echo "Compressing intermediate tar to gzip with 7z -tgzip..."
+            if 7z a -tgzip "$absolute_output_path" "$intermediate_tar" > /dev/null; then
+                sevenz_gzip_exit_code=0
             else
-                echo "7z command failed." >&2
+                sevenz_gzip_exit_code=$?
+                echo "7z -tgzip command failed with exit code $sevenz_gzip_exit_code." >&2
             fi
+        fi
+
+        # Step 3: Clean up intermediate tar
+        rm -f "$intermediate_tar"
+
+        # Exit with success only if both steps succeeded
+        if [ $sevenz_tar_exit_code -eq 0 ] && [ $sevenz_gzip_exit_code -eq 0 ]; then
+            exit 0
         else
-            echo "7z command not found."
+            exit 1
         fi
-
-        # Fallback 3: macOS ditto (Only if PowerShell wasn't tried/failed AND platform is macOS)
-        detect_platform # Sets $PLATFORM
-        if [[ "$PLATFORM" == "macos" ]] && command -v ditto >/dev/null 2>&1; then
-             # Check if powershell was available - if so, it was tried and failed, so don't try ditto as redundant?
-             # Or maybe ditto works better? Let's keep it as a final fallback on macOS.
-            echo "Attempting macOS ditto command (Fallback 3)..."
-            if ditto -c -k --sequesterRsrc "$path_to_include" "$absolute_output_path"; then
-                echo "ditto command succeeded."
-                exit 0 # Success
-            else
-                echo "ditto command failed." >&2
-            fi
-        fi
-
-        # If we reach here, all methods failed for zip
-        echo "Error: Failed to create zip archive '$absolute_output_path' using any available method." >&2
-        exit 1
-    fi # End zip creation block
+    fi # End tar.gz creation block
 
 ) # End subshell for cd
 
