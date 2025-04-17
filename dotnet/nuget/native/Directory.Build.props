@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <!-- Set a unique intermediate output path for each project based on project name -->
+    <!-- Place obj folders in a central location outside the nuget/native directory -->
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <!-- same for bin -->
+    <BaseOutputPath>$(MSBuildThisFileDirectory)/bin/$(MSBuildProjectName)/</BaseOutputPath>
+    
+    <!-- Disable AssemblyInfo generation for these projects -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+</Project> 

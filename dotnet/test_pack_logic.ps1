@@ -29,25 +29,17 @@ if (-not (Test-Path $packScript)) {
     exit 1
 }
 
-# Fetch latest Imageflow.Net version
-$latestImageflowNetVersion = Get-LatestImageflowNetVersion
-if (-not $latestImageflowNetVersion) {
-    Write-Error "Failed to obtain latest Imageflow.Net version. Aborting test."
-    exit 1
-}
 
 Write-Host "--- Testing Pack Logic with Placeholders ---`n" -ForegroundColor Yellow
 
 try {
     # 1. Create placeholder artifacts
-    Write-Host "Running: $placeholderScript -StagingDirectory $tempStagingDir"
     & $placeholderScript -StagingDirectory $tempStagingDir
-    Write-Host "Placeholder creation completed."
 
     # 2. Run the pack script in pack-only mode using the placeholders and fetched version
     Write-Host "`nRunning: $packScript (Pack only mode)"
     & $packScript -PackageVersion $PackageVersion `
-                   -ImageflowNetVersion $latestImageflowNetVersion `
+                   -ImageflowNetVersion 0.13.2 `
                    -NativeArtifactBasePath $tempStagingDir `
                    -PushToNuGet:$false # Explicitly false
     

@@ -10,8 +10,7 @@ $ErrorActionPreference = "Stop"
 # Get script directory (optional, may not be needed if $StagingDirectory is absolute)
 # $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
-Write-Host "--- Creating Placeholder Native Artifacts ---`n" -ForegroundColor Yellow
-Write-Host "Target Staging Directory: $StagingDirectory"
+Write-Host "--- Creating Placeholder Native binaries in $StagingDirectory ---" -ForegroundColor Yellow
 
 $rids = @(
     "win-x64",
@@ -42,7 +41,6 @@ function Get-NativeBinaryNames($rid) {
 try {
     # Ensure base staging directory exists
     if (-not (Test-Path $StagingDirectory)) {
-        Write-Host "Creating base directory: $StagingDirectory"
         New-Item -ItemType Directory -Path $StagingDirectory | Out-Null
     } elseif ((Get-Item $StagingDirectory).PSIsContainer -eq $false) {
         Write-Error "Specified StagingDirectory path exists but is not a directory: $StagingDirectory"
@@ -50,7 +48,6 @@ try {
     }
 
     # Create placeholder native files for all RIDs
-    Write-Host "Creating placeholder native artifacts structure..."
     foreach ($rid in $rids) {
         $nativeDir = Join-Path $StagingDirectory $rid "native"
         # Create RID/native structure, removing existing content if necessary
@@ -65,7 +62,7 @@ try {
 
         # Create empty files
         if ($binaries.Lib) {
-             New-Item -ItemType File -Path $libPath -Force | Out-Null 
+             New-Item -ItemType File -Path $libPath -Force | Out-Null
         }
         if ($binaries.Tool) {
             New-Item -ItemType File -Path $toolPath -Force | Out-Null
@@ -74,6 +71,8 @@ try {
         # Write-Host "  Created placeholders for $rid in $nativeDir"
     }
     Write-Host "Finished creating placeholders in $StagingDirectory." -ForegroundColor Green
+    # recursive list of files in the staging directory
+    # Get-ChildItem -Path $StagingDirectory -Recurse | Select-Object -Property FullName, Length, LastWriteTime
 
 } catch {
     Write-Error "Failed to create placeholder structure: $($_.Exception.Message)"

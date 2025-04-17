@@ -31,5 +31,4 @@ function Get-LatestImageflowNetVersion {
     return $latestVersion
 }
 
-# Export the function to make it available when dot-sourced
-Export-ModuleMember -Function Get-LatestImageflowNetVersion 
+# Export-ModuleMember -Function Get-LatestImageflowNetVersion 

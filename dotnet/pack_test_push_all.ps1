@@ -3,7 +3,7 @@
 param(
     [Parameter(Mandatory=$true)]
     [string]$PackageVersion,
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$false)]
     [string]$ImageflowNetVersion,
     [Parameter(Mandatory=$true)]
     [string]$NativeArtifactBasePath, # Path to REAL native artifacts
@@ -26,6 +26,16 @@ if (-not (Test-Path $NativeArtifactBasePath -PathType Container)) {
     Write-Error "NativeArtifactBasePath does not exist or is not a directory: $NativeArtifactBasePath"
     exit 1
 }
+
+# If ImageflowNetVersion is not provided, use the latest version
+if (-not $ImageflowNetVersion) {
+    $ImageflowNetVersion = Get-LatestImageflowNetVersion
+}# Fetch latest Imageflow.Net version
+if (-not $ImageflowNetVersion) {
+    Write-Error "Failed to obtain latest Imageflow.Net version. Aborting."
+    exit 1
+}
+
 
 # Get script directory and workspace root
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
@@ -51,20 +61,39 @@ if (Test-Path $packOutputDirectory) {
 New-Item -ItemType Directory -Path $packOutputDirectory | Out-Null
 
 try {
-    Write-Host "Running: dotnet pack $solutionFile ..."
+    # Ensure we are in the workspace root for the pack relative paths
+    Set-Location $WorkspaceRoot
+
+    # Clean first
+    Write-Host "`nCleaning solution $solutionFile ..."
+    dotnet clean $solutionFile
+
+    # delete the bin and obj folders, skipping missing
+    Remove-Item -Recurse -Force $WorkspaceRoot/dotnet/nuget/bin -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $WorkspaceRoot/dotnet/nuget/obj -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $WorkspaceRoot/dotnet/nuget/native/bin -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $WorkspaceRoot/dotnet/nuget/native/obj -ErrorAction SilentlyContinue  
+    Remove-Item -Recurse -Force $WorkspaceRoot/dotnet/nuget/meta/bin -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $WorkspaceRoot/dotnet/nuget/meta/obj -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $WorkspaceRoot/dotnet/nuget/test/bin -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $WorkspaceRoot/dotnet/nuget/test/obj -ErrorAction SilentlyContinue
+
+    # Restore solution first
+    Write-Host "`nRestoring solution packages..."
+    dotnet restore $solutionFile
+    
+    Write-Host "`nPacking solution $solutionFile ..."
     Write-Host "  PackageVersion (Native): $PackageVersion"
     Write-Host "  ImageflowNetVersion: $ImageflowNetVersion"
     Write-Host "  NativeArtifactBasePath: $NativeArtifactBasePath"
     Write-Host "  Output Directory: $packOutputDirectory"
 
-    # Ensure we are in the workspace root for the pack relative paths
-    Set-Location $WorkspaceRoot
-
     # Use -o to specify output directory explicitly, ensuring it matches expectations
     dotnet pack $solutionFile -c Release -o $packOutputDirectory `
         /p:Version=$PackageVersion `
         /p:ImageflowNetVersion=$ImageflowNetVersion `
-        /p:NativeArtifactBasePath=$NativeArtifactBasePath
+        /p:NativeArtifactBasePath=$NativeArtifactBasePath `
+        --no-restore # No need to restore again during pack
 
     Write-Host "`nPack Solution SUCCEEDED." -ForegroundColor Green
 
@@ -133,7 +162,9 @@ if ($pushFailed) {
                     } catch {
                         Write-Host " FAILED" -ForegroundColor Red
                         $errorMessage = $_.Exception.Message
-                        Write-Warning "Failed to delete $packageIdToDelete $packageVersionToDelete: $errorMessage"
+                        # Use -f format operator for robust string construction
+                        $warningMessage = "Failed to delete {0} version {1}: {2}" -f $packageIdToDelete, $packageVersionToDelete, $errorMessage
+                        Write-Warning $warningMessage
                         # Continue trying to delete others
                     }
                 } else {

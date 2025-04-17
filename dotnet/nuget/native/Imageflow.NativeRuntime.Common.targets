@@ -7,7 +7,12 @@
     <Description Condition="'$(Description)' == ''">Imageflow native runtime library for $(ImageflowNugetRid). Part of the Imageflow image processing suite.</Description>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <IsPackable>true</IsPackable>
+    <BuildProjectReferences>false</BuildProjectReferences>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
     
     <!-- Determine if .targets file should be included (Windows x86/x64/arm64) -->
     <IncludeTargets Condition=" '$(ImageflowNugetRid)' == 'win-x64' OR '$(ImageflowNugetRid)' == 'win-x86' OR '$(ImageflowNugetRid)' == 'win-arm64' ">true</IncludeTargets>
@@ -51,10 +56,14 @@
 
     <!-- Include dummy file for win-arm64 -->
     <!-- Dummy file lives in ../shared relative to this file's directory (native/) -->
-    <None Include="$(MSBuildThisFileDirectory)../../shared/_._"
+    <None Include="$(MSBuildThisFileDirectory)../shared/_._"
           Condition="'$(ImageflowNugetRid)' == 'win-arm64'"
           Pack="true"
           PackagePath="lib/netstandard1.0/" />
+
+    <None Include="$(MSBuildThisFileDirectory)../shared/_._"
+          Pack="true"
+          PackagePath="lib/netstandard2.0/" />
   </ItemGroup>
   
   <!-- Error check specific to library binary -->
