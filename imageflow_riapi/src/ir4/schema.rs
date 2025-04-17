@@ -1,5 +1,5 @@
 use imageflow_types::json_messages::*;
-use imageflow_helpers::preludes::from_std::*;
+// use imageflow_helpers::preludes::from_std::*;
 // Reference @riapi.mdc, parsing.rs, encoder.rs, the docs, and srcset.rs. Read all of imageflow_types::json_messages::*
 // Create builder functions to make structuring the schema as easy as possible
 // Group keys the way they're grouped in docs/src/querystring/*, and bring in all the knoweldge from the docs
@@ -24,6 +24,15 @@ use imageflow_helpers::preludes::from_std::*;
 //     "avif.speed", "avif.quality", "jxl.effort", "jxl.distance", "jxl.quality", "jxl.lossless", "jpeg.li", "lossless"];
 
 pub fn get_query_string_schema() -> Result<QueryStringSchema, String> {
+    Ok(QueryStringSchema {
+        key_names: crate::ir4::parsing::IR4_KEYS.iter().map(|s| s.to_string()).collect(),
+        // keys: vec![],
+        // groups: vec![],
+        // markdown_pages: vec![],
+    })
+}
+
+pub fn get_query_string_keys() -> Result<QueryStringSchema, String> {
     Ok(QueryStringSchema {
         key_names: crate::ir4::parsing::IR4_KEYS.iter().map(|s| s.to_string()).collect(),
         // keys: vec![],

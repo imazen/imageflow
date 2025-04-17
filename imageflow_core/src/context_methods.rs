@@ -64,7 +64,10 @@ fn create_context_router() -> MethodRouter<'static, Context> {
         Box::new(move |context: &mut Context, data: s::GetQueryStringSchema| {
             Ok(s::ResponsePayload::QueryStringSchema(imageflow_riapi::ir4::get_query_string_schema().map_err(|e| nerror!(ErrorKind::InternalError, "{}", e))?))
         }));
-
+    r.add_responder("v1/query_string/latest/list_supported_keys",
+        Box::new(move |context: &mut Context, data: s::ListQueryStringKeys| {
+            Ok(s::ResponsePayload::QueryStringSchema(imageflow_riapi::ir4::get_query_string_keys().map_err(|e| nerror!(ErrorKind::InternalError, "{}", e))?))
+        }));
     r.add_responder("v1/query_string/latest/validate",
         Box::new(move |context: &mut Context, data: s::ValidateQueryString| {
             Ok(s::ResponsePayload::QueryStringValidationResults(imageflow_riapi::ir4::validate_query_string(data.query_string)

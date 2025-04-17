@@ -91,20 +91,20 @@ pub struct DecoderColorInfo {
 
 
 
-type WrapJpegErrorHandler = extern fn(*mut c_void, *mut mozjpeg_sys::jpeg_common_struct, *mut mozjpeg_sys::jpeg_error_mgr, i32, *const u8, i32) -> bool;
+type WrapJpegErrorHandler = extern "C" fn(*mut c_void, *mut mozjpeg_sys::jpeg_common_struct, *mut mozjpeg_sys::jpeg_error_mgr, i32, *const u8, i32) -> bool;
 
-type WrapJpegSourceManagerFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void) -> bool;
-type WrapJpegSourceManagerFillBufferFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, &mut bool) -> bool;
-type WrapJpegSourceManagerSkipBytesFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, c_long) -> bool;
+type WrapJpegSourceManagerFunc = extern "C" fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void) -> bool;
+type WrapJpegSourceManagerFillBufferFunc = extern "C" fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, &mut bool) -> bool;
+type WrapJpegSourceManagerSkipBytesFunc = extern "C" fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, c_long) -> bool;
 
 
 // typedef  bool (*wrap_png_custom_read_function) (png_structp png_ptr, void * custom_state, uint8_t * buffer, size_t bytes_requested, size_t * out_bytes_read);
-type WrapPngCustomReadFunction = extern fn(*mut c_void, *mut c_void, *mut u8, usize, &mut usize) -> bool;
+type WrapPngCustomReadFunction = extern "C" fn(*mut c_void, *mut c_void, *mut u8, usize, &mut usize) -> bool;
 //typedef void (*wrap_png_error_handler) (png_structp png_ptr, void * custom_state, char * error_message);
-type WrapPngErrorHandler = extern fn(*mut c_void, *mut c_void, *const c_char);
+type WrapPngErrorHandler = extern "C" fn(*mut c_void, *mut c_void, *const c_char);
 
 //typedef  bool (*wrap_png_custom_write_function) (png_structp png_ptr, void * custom_state, uint8_t * buffer, size_t buffer_length);
-type WrapPngCustomWriteFunction = extern fn(*mut c_void, *mut c_void, *mut u8, usize) -> bool;
+type WrapPngCustomWriteFunction = extern "C" fn(*mut c_void, *mut c_void, *mut u8, usize) -> bool;
 
 #[repr(C)]
 pub struct WrapJpegSourceManager {

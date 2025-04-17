@@ -19,10 +19,14 @@ pub fn get_query_string_schema() -> Result<s::json_messages::QueryStringSchema, 
     schema::get_query_string_schema()
 }
 
+pub fn get_query_string_keys() -> Result<s::json_messages::QueryStringSchema, String>{
+    schema::get_query_string_keys()
+}
+
 pub fn validate_query_string(query_string: String) -> Result<s::json_messages::QueryStringValidationResults, String>{
     let url = format!("http://localhost/image.jpg?{}", query_string);
     let a = url::Url::from_str(&url).unwrap();
-    let (i, warns) = parse_url(&a);
+    let (_i, warns) = parse_url(&a);
 
     Ok(s::json_messages::QueryStringValidationResults{
         issues: warns.into_iter().map(|w| w.to_query_string_validation_issue()).collect(),

@@ -1780,6 +1780,13 @@ pub struct GetVersionInfo{
 pub struct GetQueryStringSchema{
 
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+pub struct ListQueryStringKeys{
+
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 pub struct ValidateQueryString{

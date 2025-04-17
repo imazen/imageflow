@@ -464,7 +464,7 @@ pub extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut Contex
 /// Most errors are not recoverable; you must destroy the context and retry.
 ///
 #[no_mangle]
-pub extern fn imageflow_json_response_read(context: *mut Context,
+pub extern "C" fn imageflow_json_response_read(context: *mut Context,
                                                   response_in: *const JsonResponse,
                                                   status_as_http_code_out: *mut i64,
                                                   buffer_utf8_no_nulls_out: *mut *const u8,

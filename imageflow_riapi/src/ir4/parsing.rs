@@ -357,7 +357,7 @@ impl Instructions{
         s
     }
 
-
+    #[allow(deprecated)]
     pub fn to_map(&self) -> HashMap<&'static str,String>{
         let mut m = HashMap::new();
         fn add<T>(m: &mut HashMap<&'static str,String>, key: &'static str, value: Option<T>) where T: fmt::Display{
@@ -464,7 +464,7 @@ impl Instructions{
         m
     }
 
-
+    #[allow(deprecated)]
     pub fn delete_from_map(map: &mut HashMap<String,String>, warnings: Option<&mut Vec<ParseWarning>>) -> Instructions {
         let mut p = Parser { m: map, w: warnings, delete_supported: true };
         let mut i = Instructions::new();
@@ -555,6 +555,8 @@ impl Instructions{
 
         // Format-specific tuning
         i.jpeg_quality = p.parse_i32("jpeg.quality");
+        // ignore deprecation warning
+
         i.jpeg_subsampling = p.parse_subsampling("subsampling");
         i.jpeg_progressive = p.parse_bool("jpeg.progressive");
         i.jpeg_turbo = p.parse_bool("jpeg.turbo");
