@@ -56,7 +56,7 @@ function Get-HostRid {
 }
 
 # Fetch latest Imageflow.Net version
-$latestImageflowNetVersion = Get-LatestImageflowNetVersion
+$latestImageflowNetVersion = "0.13.2" #Get-LatestImageflowNetVersion
 if (-not $latestImageflowNetVersion) {
     Write-Error "Failed to obtain latest Imageflow.Net version. Aborting test."
     exit 1
@@ -77,15 +77,23 @@ if (-not (Test-Path $testProject)) {
 
 try {
     Write-Host "Detected Host RID: $hostRid"
-    Write-Host "Running: dotnet build $testProject -r $hostRid ..."
+    # Write-Host "Running: dotnet build $testProject -r $hostRid ..."
     Write-Host "  Using ImageflowNetVersion: $latestImageflowNetVersion"
 
     # Ensure we are in the workspace root for the build relative paths
     Set-Location $WorkspaceRoot
     
-    dotnet build $testProject -c Release -r $hostRid /p:ImageflowNetVersion=$latestImageflowNetVersion
+    dotnet build $testProject -c Release  /p:ImageflowNetVersion=$latestImageflowNetVersion
 
     Write-Host "`nTest: Build EndToEnd Test SUCCEEDED for RID $hostRid" -ForegroundColor Green
+
+    # Run the test
+    dotnet run -c Release --project $testProject
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Test: EndToEnd Test FAILED with exit code $LASTEXITCODE"
+        exit 1
+    }
+    Write-Host "`nTest: EndToEnd Test SUCCEEDED" -ForegroundColor Green
 
 } catch {
     Write-Error "Test: Build EndToEnd Test FAILED for RID $($hostRid): $($_.Exception.Message)"

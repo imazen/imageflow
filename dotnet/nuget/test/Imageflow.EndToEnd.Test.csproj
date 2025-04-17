@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
+    <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -8,10 +8,10 @@
     <IsPackable>false</IsPackable> <!-- This project is for testing only -->
 
     <!-- Define RID based on build properties - $(RuntimeIdentifier) is usually set by dotnet build -r -->
-    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier> <!-- Default for local dev -->
+    <!-- <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier> -->
 
     <!-- Define Imageflow.Net version - expecting override via /p:ImageflowNetVersion=... -->
-    <ImageflowNetVersion Condition="'$(ImageflowNetVersion)' == ''">0.13.2</ImageflowNetVersion> 
+    <ImageflowNetVersion Condition="'$(ImageflowNetVersion)' == ''">0.14.0-rc01</ImageflowNetVersion> 
   </PropertyGroup>
 
   <!-- Reference the main managed library -->
