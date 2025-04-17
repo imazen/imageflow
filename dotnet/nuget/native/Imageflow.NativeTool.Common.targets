@@ -10,7 +10,7 @@
     <!-- <ToolCommandName>imageflow_tool</ToolCommandName> --> <!-- Only needed if PackAsTool is true -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <IsPackable>true</IsPackable>
     <BuildProjectReferences>false</BuildProjectReferences>

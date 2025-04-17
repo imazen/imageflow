@@ -49,7 +49,7 @@ $packOutputDirectory = Join-Path $WorkspaceRoot "artifacts/nuget" # Default pack
 Write-Host "--- Packing Solution ---`n" -ForegroundColor Yellow
 
 if (-not (Test-Path $solutionFile)) {
-    Write-Error "Solution file not found at $solutionFile"
+    Write-Error "❌ Solution file not found at $solutionFile" -ForegroundColor Red
     exit 1
 }
 
@@ -81,6 +81,12 @@ try {
     # Restore solution first
     Write-Host "`nRestoring solution packages..."
     dotnet restore $solutionFile
+    # If it fails, print the error and exit
+    if ($LASTEXITCODE -ne 0) {
+
+        Write-Error "❌ Restore Solution FAILED with exit code $LASTEXITCODE" -ForegroundColor Red
+        exit 1
+    }
     
     Write-Host "`nPacking solution $solutionFile ..."
     Write-Host "  PackageVersion (Native): $PackageVersion"
@@ -94,11 +100,16 @@ try {
         /p:ImageflowNetVersion=$ImageflowNetVersion `
         /p:NativeArtifactBasePath=$NativeArtifactBasePath `
         --no-restore # No need to restore again during pack
+    # If it fails, print the error and exit
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "❌ Pack Solution FAILED with exit code $LASTEXITCODE" -ForegroundColor Red
+        exit 1
+    }
 
-    Write-Host "`nPack Solution SUCCEEDED." -ForegroundColor Green
+    Write-Host "✅ Pack Solution SUCCEEDED." -ForegroundColor Green
 
 } catch {
-    Write-Error "Pack Solution FAILED: $($_.Exception.Message)"
+    Write-Error "❌ Pack Solution FAILED: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 

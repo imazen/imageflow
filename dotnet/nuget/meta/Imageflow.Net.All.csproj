@@ -5,6 +5,7 @@
     <Description>Meta-package for Imageflow.Net that bundles all required native runtime dependencies.</Description>
     <TargetFrameworks>netstandard2.0</TargetFrameworks> <!-- Target framework for dependency resolution -->
     <IncludeBuildOutput>false</IncludeBuildOutput> <!-- Meta package has no build output -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo> <!-- Disable assembly info generation -->
     
     <!-- Assume Version is passed via /p:Version=... (for NativeRuntime dependency) -->
     <!-- Assume ImageflowNetVersion is passed via /p:ImageflowNetVersion=... -->

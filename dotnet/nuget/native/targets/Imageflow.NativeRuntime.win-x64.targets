@@ -6,18 +6,18 @@
   <!-- When the consuming project targets AnyCPU or x64 -->
   <ItemGroup Condition="('$(Platform)' == 'AnyCPU' or '$(Platform)' == 'x64')">
     <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-x64/native/*">
-      <Link>runtimes/win-x64/native/%(Filename)%(Extension)</Link>
+      <Link>runtimes/win-x64/native/imageflow.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>False</Visible>
       <Pack>true</Pack>
-      <PackagePath>runtimes/win-x64/native/%(Filename)%(Extension)</PackagePath>
+      <PackagePath>runtimes/win-x64/native/imageflow.dll</PackagePath>
     </Content>
   </ItemGroup>
 
   <!-- Legacy linking for AnyCPU (might not be strictly necessary with PackagePath) -->
   <ItemGroup Condition="'$(Platform)' == 'AnyCPU'">
      <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-x64/native/*">
-       <Link>x64/%(Filename)%(Extension)</Link>
+       <Link>x64/imageflow.dll</Link>
        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
        <Visible>False</Visible>
     </Content>
@@ -26,7 +26,7 @@
   <!-- Legacy linking for x64 (might not be strictly necessary with PackagePath) -->
   <ItemGroup Condition="'$(Platform)' == 'x64'">
      <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-x64/native/*">
-       <Link>%(Filename)%(Extension)</Link>
+       <Link>imageflow.dll</Link>
        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
        <Visible>False</Visible>
     </Content>

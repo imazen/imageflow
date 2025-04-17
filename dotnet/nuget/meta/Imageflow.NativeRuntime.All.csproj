@@ -5,9 +5,8 @@
     <Description>Meta-package referencing all Imageflow native runtime libraries (DLL/SO/DYLIB). Provides the native library for all supported RIDs.</Description>
     <TargetFrameworks>netstandard2.0</TargetFrameworks> <!-- Target framework for dependency resolution -->
     <IncludeBuildOutput>false</IncludeBuildOutput> <!-- Meta package has no build output -->
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo> <!-- Meta package doesn't need AssemblyInfo -->
+    <DisableImplicitFrameworkReferences>false</DisableImplicitFrameworkReferences>
     <GenerateDependencyFile>false</GenerateDependencyFile>
-    <BuildProjectReferences>false</BuildProjectReferences> <!-- Don't build refs, rely on package dependencies -->
     
     <!-- Assume Version is passed via /p:Version=... -->
     <!-- Add ImageflowNetVersion property, even if unused here, for consistency? Or omit? Let's omit for now. -->

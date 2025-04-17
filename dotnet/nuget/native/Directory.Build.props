@@ -7,6 +7,6 @@
     <BaseOutputPath>$(MSBuildThisFileDirectory)/bin/$(MSBuildProjectName)/</BaseOutputPath>
     
     <!-- Disable AssemblyInfo generation for these projects -->
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 </Project> 

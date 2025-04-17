@@ -6,10 +6,11 @@
     <!-- Runtime-specific properties -->
     <Description Condition="'$(Description)' == ''">Imageflow native runtime library for $(ImageflowNugetRid). Part of the Imageflow image processing suite.</Description>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+   
+    <SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
     <IsPackable>true</IsPackable>
     <BuildProjectReferences>false</BuildProjectReferences>
     <EnableDefaultContentItems>false</EnableDefaultContentItems>
@@ -61,11 +62,13 @@
           Pack="true"
           PackagePath="lib/netstandard1.0/" />
 
-    <None Include="$(MSBuildThisFileDirectory)../shared/_._"
+        <!-- dummy file in lib/netstandard2.0/ -->
+        <None Include="$(MSBuildThisFileDirectory)../shared/_._"
           Pack="true"
           PackagePath="lib/netstandard2.0/" />
+
   </ItemGroup>
-  
+
   <!-- Error check specific to library binary -->
   <Target Name="CheckNativeBinaryExists" BeforeTargets="GenerateNuspec">
     <Error Condition="'$(NativeArtifactBasePath)' == ''" Text="The NativeArtifactBasePath property must be set via /p:NativeArtifactBasePath=..." />
