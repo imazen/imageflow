@@ -1,0 +1,34 @@
+<Project>
+  <!-- Import shared common properties first -->
+  <Import Project="../shared/Imageflow.Common.targets" />
+
+  <PropertyGroup>
+    <!-- Tool-specific properties -->
+    <Description Condition="'$(Description)' == ''">Imageflow command-line tool for $(ImageflowNugetRid). Part of the Imageflow image processing suite.</Description>
+    <TargetFrameworks>net8.0</TargetFrameworks> <!-- .NET Tool requires a specific TFM -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>imageflow_tool</ToolCommandName> 
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Tool-specific tags -->
+    <PackageTags Include="dotnet-tool;$(ImageflowNugetRid)" />
+
+    <!-- Include the native tool binary from the calculated path into the tools folder -->
+    <Content Include="$(FullNativeToolPath)" 
+             Condition="Exists('$(FullNativeToolPath)')"
+             Pack="true" 
+             PackagePath="tools/$(TargetFramework)/any/" 
+             CopyToOutputDirectory="PreserveNewest" />
+             
+  </ItemGroup>
+  
+  <!-- Error check specific to tool binary -->
+  <Target Name="CheckNativeBinaryExists" BeforeTargets="GenerateNuspec">
+    <Error Condition="'$(NativeArtifactBasePath)' == ''" Text="The NativeArtifactBasePath property must be set via /p:NativeArtifactBasePath=..." />
+    <Error Condition="!Exists('$(FullNativeToolPath)')" Text="The native tool binary '$(FullNativeToolPath)' (derived from NativeArtifactBasePath='$(NativeArtifactBasePath)', RID='$(ImageflowNugetRid)', Name='$(ExpectedNativeToolBinaryName)') was not found." />
+  </Target>
+  
+</Project> 

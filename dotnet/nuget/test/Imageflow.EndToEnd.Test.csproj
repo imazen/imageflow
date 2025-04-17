@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable> <!-- This project is for testing only -->
+
+    <!-- Define RID based on build properties - $(RuntimeIdentifier) is usually set by dotnet build -r -->
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier> <!-- Default for local dev -->
+
+    <!-- Define Imageflow.Net version - expecting override via /p:ImageflowNetVersion=... -->
+    <ImageflowNetVersion Condition="'$(ImageflowNetVersion)' == ''">0.0.1-local</ImageflowNetVersion> 
+  </PropertyGroup>
+
+  <!-- Reference the main managed library -->
+  <ItemGroup>
+    <PackageReference Include="Imageflow.Net" Version="$(ImageflowNetVersion)" />
+  </ItemGroup>
+
+  <!-- 
+    Conditionally reference the corresponding NATIVE RUNTIME project.
+    This ensures that when this test project is built for a specific RID (e.g., dotnet build -r win-x64),
+    it includes the build output/assets from ONLY the required native runtime project.
+    This simulates how a consumer project would behave when restoring/building against the NuGet packages.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-x64.csproj" Condition="'$(RuntimeIdentifier)' == 'win-x64'" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-x86.csproj" Condition="'$(RuntimeIdentifier)' == 'win-x86'" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-arm64.csproj" Condition="'$(RuntimeIdentifier)' == 'win-arm64'" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.linux-x64.csproj" Condition="'$(RuntimeIdentifier)' == 'linux-x64'" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.linux-arm64.csproj" Condition="'$(RuntimeIdentifier)' == 'linux-arm64'" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.osx-x64.csproj" Condition="'$(RuntimeIdentifier)' == 'osx-x64'" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.osx-arm64.csproj" Condition="'$(RuntimeIdentifier)' == 'osx-arm64'" />
+    <!-- Add any other supported RIDs here -->
+  </ItemGroup>
+
+  <!-- Placeholder for actual test execution logic if needed later -->
+
+</Project> 

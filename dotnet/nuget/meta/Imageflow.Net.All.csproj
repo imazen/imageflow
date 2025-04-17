@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Imageflow.Net.All</PackageId>
+    <Description>Meta-package for Imageflow.Net that bundles all required native runtime dependencies.</Description>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks> <!-- Target framework for dependency resolution -->
+    <IncludeBuildOutput>false</IncludeBuildOutput> <!-- Meta package has no build output -->
+    
+    <!-- Assume Version is passed via /p:Version=... (for NativeRuntime dependency) -->
+    <!-- Assume ImageflowNetVersion is passed via /p:ImageflowNetVersion=... -->
+    <ImageflowNetVersion Condition="'$(ImageflowNetVersion)' == ''">0.0.1-local</ImageflowNetVersion> <!-- Default if not passed -->
+
+  </PropertyGroup>
+
+  <!-- Import common properties and items -->
+  <Import Project="../shared/Imageflow.Common.targets" />
+
+  <ItemGroup>
+    <!-- Add specific tags -->
+    <PackageTags Include="Imageflow.Net;managed;meta;all-platforms" />
+  </ItemGroup>
+
+  <!-- Dependencies -->
+  <ItemGroup>
+    <!-- Depends on the main managed library -->
+    <!-- Use ProjectReference so build/pack within the solution works correctly -->
+    <ProjectReference Include="../../src/Imageflow.Net/Imageflow.Net.csproj" PrivateAssets="All" />
+    
+    <!-- Depends on the meta-package containing all native runtimes -->
+    <!-- Use ProjectReference so build/pack within the solution works correctly -->
+    <ProjectReference Include="Imageflow.NativeRuntime.All.csproj" PrivateAssets="All" />
+  </ItemGroup>
+
+  <!-- Target to ensure ImageflowNetVersion is provided -->
+  <Target Name="CheckImageflowNetVersion" BeforeTargets="GenerateNuspec">
+    <Error Condition="'$(ImageflowNetVersion)' == '' OR '$(ImageflowNetVersion)' == '0.0.1-local'" Text="The ImageflowNetVersion property must be set via /p:ImageflowNetVersion=... when packing $(PackageId). Current value is '$(ImageflowNetVersion)'." />
+  </Target>
+
+  <!-- Target to ensure ImageflowNetVersion is provided when packing -->
+  <Target Name="EnsureImageflowNetVersionIsSet" BeforeTargets="GenerateNuspec">
+    <Error Condition="'$(ImageflowNetVersion)' == '' OR '$(ImageflowNetVersion)' == '0.0.1-local'" 
+           Text="The 'ImageflowNetVersion' property must be set via /p:ImageflowNetVersion=... when packing this project." />
+  </Target>
+
+</Project> 

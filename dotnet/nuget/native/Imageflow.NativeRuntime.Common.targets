@@ -1,0 +1,66 @@
+<Project>
+  <!-- Import shared common properties first -->
+  <Import Project="../shared/Imageflow.Common.targets" />
+
+  <PropertyGroup>
+    <!-- Runtime-specific properties -->
+    <Description Condition="'$(Description)' == ''">Imageflow native runtime library for $(ImageflowNugetRid). Part of the Imageflow image processing suite.</Description>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    
+    <!-- Determine if .targets file should be included (Windows x86/x64/arm64) -->
+    <IncludeTargets Condition=" '$(ImageflowNugetRid)' == 'win-x64' OR '$(ImageflowNugetRid)' == 'win-x86' OR '$(ImageflowNugetRid)' == 'win-arm64' ">true</IncludeTargets>
+    <IncludeTargets Condition=" '$(IncludeTargets)' == '' ">false</IncludeTargets>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Runtime-specific tags -->
+    <PackageTags Include="nativeruntime;$(ImageflowNugetRid)" />
+
+    <!-- Include the native library binary from the calculated path -->
+    <Content Include="$(FullNativeLibPath)" 
+             Condition="Exists('$(FullNativeLibPath)')"
+             Pack="true" 
+             PackagePath="runtimes/$(ImageflowNugetRid)/native/" 
+             CopyToOutputDirectory="PreserveNewest" />
+             
+    <!-- Include the RID-specific .targets file conditionally based on property -->
+    <!-- See: https://learn.microsoft.com/en-us/nuget/create-packages/creating-a-package-msbuild#including-msbuild-props-and-targets-in-a-package -->
+    <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets"
+          Condition="'$(IncludeTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets')"
+          Pack="true"
+          PackagePath="build/$(PackageId).targets" />
+    <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets"
+          Condition="'$(IncludeTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets')"
+          Pack="true"
+          PackagePath="buildTransitive/$(PackageId).targets" />
+    <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets"
+          Condition="'$(IncludeTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets')"
+          Pack="true"
+          PackagePath="buildCrossTargeting/$(PackageId).targets" />
+    <!-- Also explicitly target net462+ to align with common practice -->
+    <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets"
+          Condition="'$(IncludeTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets')"
+          Pack="true"
+          PackagePath="build/net462/$(PackageId).targets" />
+     <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets"
+          Condition="'$(IncludeTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets')"
+          Pack="true"
+          PackagePath="buildTransitive/net462/$(PackageId).targets" />
+
+    <!-- Include dummy file for win-arm64 -->
+    <!-- Dummy file lives in ../shared relative to this file's directory (native/) -->
+    <None Include="$(MSBuildThisFileDirectory)../../shared/_._"
+          Condition="'$(ImageflowNugetRid)' == 'win-arm64'"
+          Pack="true"
+          PackagePath="lib/netstandard1.0/" />
+  </ItemGroup>
+  
+  <!-- Error check specific to library binary -->
+  <Target Name="CheckNativeBinaryExists" BeforeTargets="GenerateNuspec">
+    <Error Condition="'$(NativeArtifactBasePath)' == ''" Text="The NativeArtifactBasePath property must be set via /p:NativeArtifactBasePath=..." />
+    <Error Condition="!Exists('$(FullNativeLibPath)')" Text="The native library '$(FullNativeLibPath)' (derived from NativeArtifactBasePath='$(NativeArtifactBasePath)', RID='$(ImageflowNugetRid)', Name='$(ExpectedNativeLibBinaryName)') was not found." />
+  </Target>
+  
+</Project> 

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Set RID for this specific project -->
+    <ImageflowNugetRid>osx-arm64</ImageflowNugetRid>
+    <!-- All other properties and items are now imported -->
+  </PropertyGroup>
+
+  <!-- Import runtime-specific common targets -->
+  <Import Project="Imageflow.NativeRuntime.Common.targets" />
+
+</Project> 

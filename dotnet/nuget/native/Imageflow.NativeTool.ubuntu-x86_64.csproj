@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Set RID for this specific project -->
+    <ImageflowNugetRid>linux-x64</ImageflowNugetRid>
+    <!-- Set explicit PackageId for backward compatibility -->
+    <PackageId>Imageflow.NativeTool.ubuntu-x86_64</PackageId>
+    <!-- All other properties and items are now imported -->
+  </PropertyGroup>
+
+  <!-- Import tool-specific common targets -->
+  <Import Project="Imageflow.NativeTool.Common.targets" />
+
+</Project> 

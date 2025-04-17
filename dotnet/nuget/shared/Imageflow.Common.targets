@@ -1,0 +1,59 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- Common Metadata -->
+    <Authors>Imazen, lilith</Authors>
+    <Owners>Imazen, lilith</Owners>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Copyright>AGPLv3 or commercial</Copyright>
+    <PackageProjectUrl>https://imageflow.io</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <!-- RepositoryUrl should be set by the calling project or via /p: -->
+    <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/imazen/imageflow</RepositoryUrl> <!-- Provide a default -->
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    
+    <!-- Default version, expecting override via /p:Version=... -->
+    <Version Condition="'$(Version)' == ''">0.0.1-local</Version>
+    
+    <!-- Common Tags - Specific projects can add more -->
+    <PackageTags>imageflow imazen image processing resizing webp</PackageTags>
+
+    <!-- Default output path for pack -->
+    <PackageOutputPath Condition="'$(PackageOutputPath)' == ''">$(MSBuildThisFileDirectory)../../artifacts/nuget/</PackageOutputPath>
+
+    <!-- ############################################################ -->
+    <!-- ## Properties for locating native artifacts             ## -->
+    <!-- ############################################################ -->
+
+    <!-- Expecting base path via /p:NativeArtifactBasePath=... -->
+    <NativeArtifactBasePath Condition="'$(NativeArtifactBasePath)' == ''">$(MSBuildThisFileDirectory)../../artifacts/native_staging</NativeArtifactBasePath> <!-- Default for local testing -->
+
+    <!-- Determine expected binary names based on RID (set in consuming project) -->
+    <!-- Library Name -->
+    <ExpectedNativeLibBinaryName Condition=" '$(ImageflowNugetRid)' != '' AND $(ImageflowNugetRid.Contains('win')) ">imageflow.dll</ExpectedNativeLibBinaryName>
+    <ExpectedNativeLibBinaryName Condition=" '$(ImageflowNugetRid)' != '' AND $(ImageflowNugetRid.Contains('osx')) ">libimageflow.dylib</ExpectedNativeLibBinaryName>
+    <ExpectedNativeLibBinaryName Condition=" '$(ImageflowNugetRid)' != '' AND ($(ImageflowNugetRid.Contains('linux')) OR $(ImageflowNugetRid.Contains('unix'))) ">libimageflow.so</ExpectedNativeLibBinaryName>
+    <!-- Tool Name -->
+    <ExpectedNativeToolBinaryName Condition=" '$(ImageflowNugetRid)' != '' AND $(ImageflowNugetRid.Contains('win')) ">imageflow_tool.exe</ExpectedNativeToolBinaryName>
+    <ExpectedNativeToolBinaryName Condition=" '$(ImageflowNugetRid)' != '' AND ($(ImageflowNugetRid.Contains('osx')) OR $(ImageflowNugetRid.Contains('linux')) OR $(ImageflowNugetRid.Contains('unix'))) ">imageflow_tool</ExpectedNativeToolBinaryName>
+    
+    <!-- Calculate full paths (used by native projects) -->
+    <FullNativeLibPath Condition="'$(ImageflowNugetRid)' != ''">$(NativeArtifactBasePath)/$(ImageflowNugetRid)/native/$(ExpectedNativeLibBinaryName)</FullNativeLibPath>
+    <FullNativeToolPath Condition="'$(ImageflowNugetRid)' != ''">$(NativeArtifactBasePath)/$(ImageflowNugetRid)/native/$(ExpectedNativeToolBinaryName)</FullNativeToolPath>
+
+    <!-- NOTE: Conditional logic for IncludeTargets and dummy file moved to Imageflow.NativeRuntime.Common.targets -->
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Include shared files from this directory -->
+    <None Include="$(MSBuildThisFileDirectory)LICENSE.md" Pack="true" PackagePath="" />
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="" />
+    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <!-- NOTE: Conditional includes for targets and dummy file moved to Imageflow.NativeRuntime.Common.targets -->
+
+</Project> 
