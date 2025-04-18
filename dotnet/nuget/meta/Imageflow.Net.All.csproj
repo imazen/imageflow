@@ -6,10 +6,10 @@
     <TargetFrameworks>netstandard2.0</TargetFrameworks> <!-- Target framework for dependency resolution -->
     <IncludeBuildOutput>false</IncludeBuildOutput> <!-- Meta package has no build output -->
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo> <!-- Disable assembly info generation -->
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute> <!-- Explicitly disable TFM attribute -->
     
     <!-- Assume Version is passed via /p:Version=... (for NativeRuntime dependency) -->
     <!-- Assume ImageflowNetVersion is passed via /p:ImageflowNetVersion=... -->
-    <ImageflowNetVersion Condition="'$(ImageflowNetVersion)' == ''">0.13.2</ImageflowNetVersion> <!-- Default if not passed -->
 
   </PropertyGroup>
 

@@ -8,23 +8,13 @@
     <IsPackable>false</IsPackable> <!-- This project is for testing only -->
     <GenerateDependencyFile>true</GenerateDependencyFile> <!-- Explicitly enable -->
 
-    <!-- Define RID based on build properties - $(RuntimeIdentifier) is usually set by dotnet build -r -->
-    <!-- <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier> -->
 
-    <!-- Define Imageflow.Net version - expecting override via /p:ImageflowNetVersion=... -->
-    <ImageflowNetVersion Condition="'$(ImageflowNetVersion)' == ''">*-*</ImageflowNetVersion> 
     <!-- Define native runtime version - expecting override via /p:RuntimePackageVersion=... -->
     <RuntimePackageVersion Condition="'$(RuntimePackageVersion)' == ''">0.0.1-localtest</RuntimePackageVersion> 
     <!-- Removed RuntimeIdentifiers element -->
   </PropertyGroup>
 
-  <!-- Reference the main managed library -->
   <ItemGroup>
-    <PackageReference Include="Imageflow.Net" Version="$(ImageflowNetVersion)" />
-    <!-- Reference the metapackage that includes all native runtimes -->
-    <PackageReference Include="Imageflow.NativeRuntime.All" Version="$(RuntimePackageVersion)" />
+    <PackageReference Include="Imageflow.Net.All" Version="$(RuntimePackageVersion)" />
   </ItemGroup>
-
-  <!-- Removed conditional ItemGroups -->
-
 </Project> 

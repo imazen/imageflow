@@ -190,7 +190,7 @@ function Invoke-TestDiagnostics {
         [string]$IntermediatePackDir,
         [string]$PackageVersion
     )
-    $ErrorActionPreference = "SilentlyContinue" # Allow diagnostics to proceed even if parts fail
+   # $ErrorActionPreference = "SilentlyContinue" # Allow diagnostics to proceed even if parts fail
     Write-Host "--- Running Test Failure Diagnostics for RID $ridToTest --- START --- " -ForegroundColor Yellow
     $Host.UI.RawUI.FlushInputBuffer() # Try flushing
     Start-Sleep -Milliseconds 100 # Give buffer a moment
@@ -237,10 +237,32 @@ function Invoke-TestDiagnostics {
             Write-Host "--- DEBUG: Contents of $($nupkgFile.Name) --- " -ForegroundColor Magenta
             try {
                 $zip = [System.IO.Compression.ZipFile]::OpenRead($nupkgFile.FullName)
+                
+                # Print directory listing
+                Write-Host "    --- File Listing ---" -ForegroundColor Cyan
                 $zip.Entries | Sort-Object FullName | ForEach-Object {
                     Write-Host "    $($_.FullName) (Size: $($_.Length))" -ForegroundColor Magenta
                 }
-                $zip.Dispose()
+
+                # Extract and print .nuspec content
+                Write-Host "    --- Nuspec Content ---" -ForegroundColor Cyan
+                $nuspecEntry = $zip.Entries | Where-Object { $_.Name -like '*.nuspec' } | Select-Object -First 1
+                if ($nuspecEntry) {
+                    try {
+                        $stream = $nuspecEntry.Open()
+                        $reader = [System.IO.StreamReader]::new($stream)
+                        $nuspecContent = $reader.ReadToEnd()
+                        $reader.Dispose() # Dispose reader first
+                        $stream.Dispose() # Then dispose stream
+                        Write-Host $nuspecContent -ForegroundColor Magenta
+                    } catch {
+                         Write-HostError "      Error reading nuspec content from '$($nuspecEntry.Name)': $($_.Exception.Message)"
+                    }
+                } else {
+                    Write-HostWarning "      Could not find .nuspec file in '$($nupkgFile.Name)'."
+                }
+                
+                $zip.Dispose() # Dispose zip archive
             } catch {
                 Write-HostError "  Error inspecting package '$($nupkgFile.Name)': $($_.Exception.Message)"
             }
@@ -499,38 +521,30 @@ if ($SkipTest) {
     # Flag to track if test phase fails, to ensure diagnostics run before throwing
     $script:testFailed = $false 
 
-    try {
-        # 1. Restore test project using nuget.config sources
-        Write-Host "Restoring test project '$EndToEndTestProject'..."
-        $restoreArgs = @(
-            "restore",
-            "$EndToEndTestProject",
-            "--runtime", $ridToTest,
-            "--verbosity", "minimal"
-        )
-        Invoke-CommandAndLog -Executable "dotnet" -Arguments $restoreArgs -LogIdentifier "Restore Test $ridToTest"
+    $testBuildDir = Join-Path $testProjectDir "run/bin/$ridToTest"
 
-        # 2. Build test project (no restore needed)
+    try {
+        # First, delete the test build directory
+        if (Test-Path $testBuildDir) {
+            Remove-Item -Recurse -Force $testBuildDir
+        }
+
         Write-Host "Building test project '$EndToEndTestProject'..."
         $buildArgs = @(
             "build",
             "$EndToEndTestProject",
             "--configuration", $Configuration,
             "--runtime", $ridToTest,
-            "--no-restore",
-            "--output", (Join-Path $testProjectDir "bin/PublishOutput/$ridToTest"),
+            "--output", $testBuildDir,
             # Increase verbosity to diagnose missing runtime assets
             "/verbosity:normal" # Or use 'detailed' or 'diag'
         )
         Invoke-CommandAndLog -Executable "dotnet" -Arguments $buildArgs -LogIdentifier "Build Test $ridToTest"
 
         # 3. Find and Execute test
-        $publishDir = Join-Path $testProjectDir "bin/PublishOutput/$ridToTest"
         $testExeName = ($EndToEndTestProject | Split-Path -Leaf).Replace(".csproj", ".exe")
-        if (-not $ridToTest.StartsWith("win-")) {
-            $testExeName = $testExeName.Replace(".exe", "")
-        }
-        $testExePath = Join-Path $publishDir $testExeName
+
+        $testExePath = Join-Path $testBuildDir $testExeName
 
         if (-not (Test-Path $testExePath)) {
             Write-HostError "Compiled test executable not found at expected path: $testExePath"
@@ -544,33 +558,25 @@ if ($SkipTest) {
             }
         }
 
-        # --- BEGIN WORKAROUND: Copy native DLL to app base --- 
+        # --- Search recursively for native DLLs in $testBuildDir --- 
         $nativeBinaryName = Get-NativeBinaryName -rid $ridToTest
-        $nativeDllSourceDir = Join-Path $publishDir "runtimes/$ridToTest/native"
-        $nativeDllSourcePath = Join-Path $nativeDllSourceDir $nativeBinaryName
-        $nativeDllDestPath = Join-Path $publishDir $nativeBinaryName # Copy to the root publish dir
-        
-        Write-Host "Attempting workaround: Copying native DLL from '$nativeDllSourcePath' to '$nativeDllDestPath' before execution..." -ForegroundColor Yellow
-        if (Test-Path $nativeDllSourcePath) {
-            # This check failed last time, indicating the core problem is the DLL not being in the runtimes folder after build.
-            # However, if the <RuntimeIdentifier> fix *did* make the build copy the assets, this copy will now work.
-            Copy-Item -Path $nativeDllSourcePath -Destination $nativeDllDestPath -Force
-            Write-Host "  Successfully copied native DLL for workaround." -ForegroundColor Green
-        } else {
-            # If this warning still appears, then the <RuntimeIdentifier> fix didn't work, and the test will likely fail again.
-            Write-HostWarning "  Native DLL not found at expected source path '$nativeDllSourcePath' for workaround copy. Test will likely fail."
+        $nativeDlls = Get-ChildItem -Path $testBuildDir -Recurse -Filter $nativeBinaryName -File
+        if ($null -eq $nativeDlls -or $nativeDlls.Count -eq 0) {
+            $script:testFailed = $true
+            Write-Host "Required native DLL ($nativeBinaryName) not found anywhere in $testBuildDir" -ForegroundColor Red
+            Invoke-TestDiagnostics -ridToTest $ridToTest -testExePath $testExePath -testExeName $testExeName -IntermediatePackDir $IntermediatePackDir -PackageVersion $PackageVersion
+            Write-HostError "Required native DLL ($nativeBinaryName) not found anywhere in $testBuildDir"
         }
-        # --- END WORKAROUND --- 
 
         Write-Host "Executing test: $testExePath"
-        & $testExePath
-        if ($LASTEXITCODE -ne 0) {
-            Write-HostError "End-to-end test executable FAILED with exit code $LASTEXITCODE."
-            Invoke-TestDiagnostics -ridToTest $ridToTest -testExePath $testExePath -testExeName $testExeName -IntermediatePackDir $IntermediatePackDir -PackageVersion $PackageVersion
-            # Set flag instead of throwing immediately
+        try{
+            & $testExePath
+        } catch {
+            Write-Host "$testExeName FAILED" -ForegroundColor Red
             $script:testFailed = $true 
+            Invoke-TestDiagnostics -ridToTest $ridToTest -testExePath $testExePath -testExeName $testExeName -IntermediatePackDir $IntermediatePackDir -PackageVersion $PackageVersion
+            Write-HostError "$testExeName FAILED"
         }
-
         # Only print success if the flag wasn't set
         if (-not $script:testFailed) {
             Write-Host "End-to-end test completed successfully."
@@ -590,9 +596,9 @@ if ($SkipTest) {
 }
 
 
-# --- Validate Packages (MultiCI before Push) ---
+# --- Validate Packages (MultiCI) ---
 $validationFailed = $false
-if ($Mode -eq 'MultiCI' -and ($PushToNuGet -or $PushToGitHub)) {
+if ($Mode -eq 'MultiCI') {
     Write-Host "Validating generated .nupkg files for zero-byte native binaries..."
     # Requires a tool/method to inspect .nupkg contents (which are zip files)
     # Using System.IO.Compression (PowerShell Core 6+ or .NET Framework 4.5+)
