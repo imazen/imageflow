@@ -19,6 +19,7 @@
 /bindings/ruby/bin
 /ci/pack_nuget/staging
 
+temp_*
 
 #Generated for tests
 build/
@@ -32,6 +33,8 @@ coverage.info
 imageflow_cache/
 
 trash/
+bin/
+obj/
 
 # Exhaustive search logs
 
