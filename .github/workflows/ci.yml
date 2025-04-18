@@ -527,6 +527,7 @@ jobs:
             NativeArtifactBasePath = "$(pwd)/artifacts/native_binaries" # Base path containing all downloaded RID subdirs
             PackOutputDirectory   = "${{ env.REL_NUGET_OUTPUT_DIR }}"    # Final output directory
             SkipTest              = $false
+            TargetRid             = "linux-x64"
             # Push switches added conditionally below
             DeleteNuGetOnFailure = $true # Default, can be set to $false or controlled by env var if needed
           }
