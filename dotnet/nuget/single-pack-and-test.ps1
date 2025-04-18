@@ -70,10 +70,10 @@ if (-not $RID -or $RID -eq '') {
 
 # Get script directory and workspace root
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-# Assuming script is in dotnet/nuget/, workspace root is two levels up
-$WorkspaceRoot = Resolve-Path (Join-Path $ScriptDir "..\..") # Use Join-Path for robustness
+# Workspace root is three levels up from dotnet/nuget/scripts/
+$WorkspaceRoot = Resolve-Path (Join-Path $ScriptDir "..\..\..") # Use Join-Path for robustness
 
-# Define project paths
+# Define project paths (relative to workspace root)
 $NativeRuntimeProject = Join-Path $WorkspaceRoot "dotnet/nuget/native/Imageflow.NativeRuntime.${RID}.csproj"
 # Tool project might not exist for all RIDs (e.g., if static linking)
 # $NativeToolProject = Join-Path $WorkspaceRoot "dotnet/nuget/native/Imageflow.NativeTool.${RID}.csproj" 

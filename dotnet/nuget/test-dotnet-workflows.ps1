@@ -10,15 +10,17 @@ $ErrorActionPreference = "Stop"
 
 # Get script directory and workspace root
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$WorkspaceRoot = Resolve-Path (Join-Path $ScriptDir "..\..") # Assuming script is in dotnet/nuget/
+# Workspace root is three levels up from dotnet/nuget/scripts/
+$WorkspaceRoot = Resolve-Path (Join-Path $ScriptDir "..\..\..") 
 
-# Source utility functions (like Get-HostRid if needed, though scripts being tested have it)
-# . (Join-Path $ScriptDir "utils.ps1") 
+
 
 # Define paths
-$PlaceholderScript = Join-Path $ScriptDir "..\create_native_placeholders.ps1"
+# Scripts are now in the same directory as this script
+$PlaceholderScript = Join-Path $ScriptDir "create_native_placeholders.ps1"
 $SinglePackScript = Join-Path $ScriptDir "single-pack-and-test.ps1"
 $MergePackScript = Join-Path $ScriptDir "merge-pack-test-publish.ps1"
+
 $TempStagingDir = Join-Path $WorkspaceRoot "temp_placeholder_staging_for_test"
 $TempSinglePackOutputDir = Join-Path $WorkspaceRoot "temp_single_pack_output"
 $FinalPackOutputDir = Join-Path $WorkspaceRoot "artifacts/nuget" # Where merge script outputs

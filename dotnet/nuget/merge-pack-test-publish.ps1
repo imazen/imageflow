@@ -78,7 +78,8 @@ function Get-HostRid {
 
 # Get script directory and workspace root
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$WorkspaceRoot = Resolve-Path (Join-Path $ScriptDir "..\..") # Assuming script is in dotnet/nuget/
+# Workspace root is three levels up from dotnet/nuget/scripts/
+$WorkspaceRoot = Resolve-Path (Join-Path $ScriptDir "..\..\..") 
 
 # Define paths
 $SolutionFile = Join-Path $WorkspaceRoot "dotnet/nuget/Imageflow.sln"
