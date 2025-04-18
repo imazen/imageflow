@@ -115,7 +115,7 @@ try {
             /p:NativeArtifactBasePath=$NativeArtifactBasePath 
             
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Packing $NativeRuntimeProject FAILED." -ForegroundColor Red
+            Write-Error "❌ Packing $NativeRuntimeProject FAILED."
             exit 1
         }
     } else {
@@ -136,8 +136,53 @@ try {
 
     Write-Host "✅ Packing for RID $RID SUCCEEDED." -ForegroundColor Green
 
+    # --- DEBUG: Inspect the created native runtime package ---
+    Write-Host "`n--- DEBUG (single-pack): Inspecting created Native Runtime package for $RID ---" -ForegroundColor Magenta
+    
+    # Correct the package ID pattern based on csproj override
+    $PackageIdPattern = "Imageflow.NativeRuntime.${RID}.*.nupkg"
+    if ($RID -eq 'win-x64') {
+        $PackageIdPattern = "Imageflow.NativeRuntime.win-x86_64.*.nupkg"
+    } 
+    if ($RID -eq 'osx-x64') {
+        $PackageIdPattern = "Imageflow.NativeRuntime.osx-x64.*.nupkg"
+    }
+    # Add other overrides if necessary, e.g., ubuntu-x86_64 maps to linux-x64
+    # elseif ($RID -eq 'linux-x64') { ... }
+    
+    $NativePackagePath = Get-ChildItem -Path $PackOutputDirectory -Filter $PackageIdPattern | Select-Object -First 1 -ExpandProperty FullName
+    
+    if ($NativePackagePath -and (Test-Path $NativePackagePath)) {
+        $InspectDir = Join-Path $WorkspaceRoot "temp_inspect_nupkg_single"
+        if (Test-Path $InspectDir) { Remove-Item -Recurse -Force $InspectDir }
+        New-Item -ItemType Directory -Path $InspectDir | Out-Null
+        Write-Host "Inspecting package: $NativePackagePath"
+        Write-Host "Extracting to: $InspectDir ..."
+        try {
+            Expand-Archive -Path $NativePackagePath -DestinationPath $InspectDir -Force -ErrorAction Stop
+            Write-Host "Extraction successful. Contents:"
+            Get-ChildItem -Path $InspectDir -Recurse | ForEach-Object { Write-Host $_.FullName }
+            
+            # Specific check for native file
+            $ExpectedNativePath = "runtimes/$RID/native/"
+            $NativeFileExists = Test-Path (Join-Path $InspectDir $ExpectedNativePath)
+            Write-Host "Checking for native file existence in '$ExpectedNativePath': $NativeFileExists"
+            if ($NativeFileExists){
+                 Get-ChildItem (Join-Path $InspectDir $ExpectedNativePath) | ForEach-Object { Write-Host "  -> $($_.Name)" }
+            }
+
+        } catch {
+            Write-Warning "Failed to extract or list package contents: $($_.Exception.Message)"
+        }
+        # Cleanup of inspect dir should happen in the main script's finally block or manually
+    } else {
+        Write-Warning "Could not find native runtime package in '$PackOutputDirectory' matching '$PackageIdPattern' to inspect."
+    }
+    Write-Host "--- DEBUG END (single-pack) ---" -ForegroundColor Magenta
+    # --- END DEBUG ---
+
 } catch {
-    Write-Error "❌ Packing for RID $RID FAILED: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Error "❌ Packing for RID $RID FAILED: $($_.Exception.Message)"
     exit 1
 }
 
@@ -150,31 +195,19 @@ if (Test-Path $NativeRuntimeProject) {
         Write-Host "Restoring & Building test project ($EndToEndTestProject) with local packages..."
 
         # Explicitly restore first with --force-evaluate
-        dotnet restore $EndToEndTestProject `
-            -r $RID `
-            -s $PackOutputDirectory ` # Source 1 (using -s)
-            -s "https://api.nuget.org/v3/index.json" ` # Source 2 (using -s)
-            /p:RuntimePackageVersion=$PackageVersion `
-            /p:ImageflowNetVersion=$ImageflowNetVersion `
-            --force-evaluate
+        dotnet restore $EndToEndTestProject -r $RID /p:RuntimePackageVersion=$PackageVersion /p:ImageflowNetVersion=$ImageflowNetVersion --force-evaluate -v diag
 
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Restoring $EndToEndTestProject FAILED." -ForegroundColor Red
+            Write-Error "❌ Restoring $EndToEndTestProject FAILED."
             exit 1
         }
 
         Write-Host "Building test project ($EndToEndTestProject)..."
         # Build the console app, specifying the RID and using --no-restore
-        dotnet build $EndToEndTestProject `
-            -c $Configuration -r $RID `
-            --source $PackOutputDirectory `
-            --source "https://api.nuget.org/v3/index.json" `
-            /p:RuntimePackageVersion=$PackageVersion `
-            /p:ImageflowNetVersion=$ImageflowNetVersion `
-            --force-evaluate --no-restore # Ensure correct versions are used
+        dotnet build $EndToEndTestProject -c $Configuration -r $RID /p:RuntimePackageVersion=$PackageVersion /p:ImageflowNetVersion=$ImageflowNetVersion --no-restore
 
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Building $EndToEndTestProject FAILED." -ForegroundColor Red
+            Write-Error "❌ Building $EndToEndTestProject FAILED."
             exit 1
         }
 
@@ -192,7 +225,7 @@ if (Test-Path $NativeRuntimeProject) {
         }
 
         if (-not (Test-Path $testExePath)) {
-            Write-Error "❌ Test executable not found after build at expected path: $testExePath (or common variations)" -ForegroundColor Red
+            Write-Error "❌ Test executable not found after build at expected path: $testExePath (or common variations)"
             exit 1
         }
 
@@ -201,8 +234,20 @@ if (Test-Path $NativeRuntimeProject) {
         & $testExePath
         $exitCode = $LASTEXITCODE
 
+        # --- DEBUG: Check .deps.json, drop .exe first ---  
+        $testExeWithoutExe = $testExeName -replace '\.exe$', ''
+        $depsJsonPath = Join-Path $testExeDir "$($testExeWithoutExe).deps.json"
+        Write-Host "`n--- DEBUG: Contents of $depsJsonPath ---" -ForegroundColor Magenta
+        if (Test-Path $depsJsonPath) {
+            Get-Content $depsJsonPath | Write-Host
+        } else {
+            Write-Warning "File not found: $depsJsonPath"
+        }
+        Write-Host "--- DEBUG END ---" -ForegroundColor Magenta
+        # --- END DEBUG ---
+
         if ($exitCode -ne 0) {
-            Write-Error "❌ EndToEnd Test App FAILED for RID ${RID} with exit code $exitCode" -ForegroundColor Red # Used ${RID}
+            Write-Error "❌ EndToEnd Test App FAILED for RID ${RID} with exit code $exitCode" # Used ${RID}
             exit 1
         }
 
@@ -210,7 +255,7 @@ if (Test-Path $NativeRuntimeProject) {
 
     } catch {
         # Reverted to original Write-Error with emoji and variable expansion
-        Write-Error "❌ EndToEnd Test App Build/Run FAILED for RID ${RID}: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Error "❌ EndToEnd Test App Build/Run FAILED for RID ${RID}: $($_.Exception.Message)"
         exit 1
     }
 } else {

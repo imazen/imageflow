@@ -144,7 +144,7 @@ try {
     Write-Host "`nRestoring solution packages (forcing evaluation)..."
     dotnet restore $SolutionFile --force-evaluate /p:ImageflowNetVersion=$ImageflowNetVersion
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "❌ Restore Solution FAILED with exit code $LASTEXITCODE" -ForegroundColor Red
+        Write-Error "❌ Restore Solution FAILED with exit code $LASTEXITCODE"
         exit 1
     }
 
@@ -163,7 +163,7 @@ try {
         --no-restore # Already restored
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "❌ Pack Solution FAILED: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Error "❌ Pack Solution FAILED: $($_.Exception.Message)"
         exit 1
     }
 
@@ -187,14 +187,12 @@ try {
     # Explicitly restore first with --force-evaluate
     dotnet restore $EndToEndTestProject `
         -r $TestRid `
-        -s $PackOutputDirectory `
-        -s "https://api.nuget.org/v3/index.json" `
         /p:RuntimePackageVersion=$PackageVersion `
         /p:ImageflowNetVersion=$ImageflowNetVersion `
         --force-evaluate
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "❌ Restoring final $EndToEndTestProject FAILED." -ForegroundColor Red
+        Write-Error "❌ Restoring final $EndToEndTestProject FAILED."
         exit 1
     }
 
@@ -202,14 +200,12 @@ try {
     # Build the console app using the final packed nugets and --no-restore
     dotnet build $EndToEndTestProject `
         -c $Configuration -r $TestRid `
-        --source $PackOutputDirectory `
-        --source "https://api.nuget.org/v3/index.json" `
         /p:RuntimePackageVersion=$PackageVersion `
         /p:ImageflowNetVersion=$ImageflowNetVersion `
-        --force-evaluate --no-restore # Ensure correct versions are used
+        --no-restore -v diag
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "❌ Building final $EndToEndTestProject FAILED." -ForegroundColor Red
+        Write-Error "❌ Building final $EndToEndTestProject FAILED."
         exit 1
     }
 
@@ -226,7 +222,7 @@ try {
     }
 
     if (-not (Test-Path $testExePath)) {
-        Write-Error "❌ Final Test executable not found after build at expected path: $testExePath" -ForegroundColor Red
+        Write-Error "❌ Final Test executable not found after build at expected path: $testExePath"
         exit 1
     }
 
@@ -236,7 +232,7 @@ try {
     $exitCode = $LASTEXITCODE
 
     if ($exitCode -ne 0) {
-        Write-Error "❌ Final EndToEnd Test App FAILED for RID ${TestRid} with exit code $exitCode" -ForegroundColor Red
+        Write-Error "❌ Final EndToEnd Test App FAILED for RID ${TestRid} with exit code $exitCode"
         exit 1
     }
 
@@ -357,7 +353,7 @@ if ($anyPushFailed) {
         Write-Warning "`nDeleteOnFailure is false, leaving successfully pushed packages on the feed despite failures."
     }
     # Exit with error because the overall push operation failed
-    Write-Error "❌ `nOne or more packages failed to push. See warnings above." -ForegroundColor Red
+    Write-Error "❌ `nOne or more packages failed to push. See warnings above."
     exit 1
 } else {
     Write-Host "`nAll packages pushed successfully to enabled targets." -ForegroundColor Green
