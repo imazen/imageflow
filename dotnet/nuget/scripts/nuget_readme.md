@@ -36,7 +36,9 @@ Note that while the meta-package can be referenced, the underlying application h
 - **`native/`**: Contains individual `.csproj` files for each native runtime/tool package per RID. Also contains common targets specific to native runtime (`Imageflow.NativeRuntime.Common.targets`) or native tool (`Imageflow.NativeTool.Common.targets`) packages, and RID-specific `.targets` files (e.g., `targets/Imageflow.NativeRuntime.win-x64.targets`) for .NET Framework fallback copy logic.
 - **`meta/`**: Contains `.csproj` files for meta-packages.
 - **`test/`**: Contains a test project (`Imageflow.EndToEnd.Test.csproj`).
+- **`local/`**: A directory with the local packages built by the build pipeline.
 - **`Imageflow.sln`**: A solution file including all projects.
+- **`nuget.config`**: A NuGet configuration file that directs the build pipeline to use the 'local' directory as the package source for the Imageflow packages.
 
 ## Building and Packing
 

@@ -537,7 +537,7 @@ jobs:
           $pipelineArgs = @{
             Mode                  = 'MultiCI'
             PackageVersion        = "${{ env.NUGET_PACKAGE_VERSION }}"
-            ImageflowNetVersion   = "${{ env.IMAGEFLOW_NET_VERSION }}"
+            ImageflowNetVersion   = "*"
             NativeArtifactBasePath = "$(pwd)/artifacts/native_binaries" # Base path containing all downloaded RID subdirs
             PackOutputDirectory   = "${{ env.REL_NUGET_OUTPUT_DIR }}"    # Final output directory
             SkipTest              = $true # Skip test in the final multi-CI step

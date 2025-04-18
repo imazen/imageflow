@@ -537,6 +537,8 @@ if ($SkipTest) {
             "--configuration", $Configuration,
             "--runtime", $ridToTest,
             "--output", $testBuildDir,
+            # Pass the pipeline's PackageVersion to override the default in csproj
+            "/p:RuntimePackageVersion=$PackageVersion",
             # Increase verbosity to diagnose missing runtime assets
             "/verbosity:normal" # Or use 'detailed' or 'diag'
         )

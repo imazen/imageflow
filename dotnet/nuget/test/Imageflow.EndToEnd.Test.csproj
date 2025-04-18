@@ -9,9 +9,6 @@
     <GenerateDependencyFile>true</GenerateDependencyFile> <!-- Explicitly enable -->
 
 
-    <!-- Define native runtime version - expecting override via /p:RuntimePackageVersion=... -->
-    <RuntimePackageVersion Condition="'$(RuntimePackageVersion)' == ''">0.0.1-localtest</RuntimePackageVersion> 
-    <!-- Removed RuntimeIdentifiers element -->
   </PropertyGroup>
 
   <ItemGroup>
