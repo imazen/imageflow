@@ -168,7 +168,7 @@ jobs:
 
       - name: Install NASM
         uses: ./.github/actions/install-nasm
-        if: matrix.cross != 'true'
+        if: matrix.cross != 'true' && runner.os != 'Windows' # nasm.us is down, winget fails
 
       - name: Install Rust (Windows ARM64)
         uses: ./.github/actions/install-win-arm-rust
