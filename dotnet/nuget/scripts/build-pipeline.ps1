@@ -185,8 +185,7 @@ function Write-HostError {
 function Invoke-TestDiagnostics {
     param(
         [string]$ridToTest,
-        [string]$testExePath, # Might be null if error occurred before finding exe
-        [string]$testExeName, # Might be null
+        [string]$depsJsonPath, # Might be null
         [string]$IntermediatePackDir,
         [string]$PackageVersion
     )
@@ -196,8 +195,7 @@ function Invoke-TestDiagnostics {
     Start-Sleep -Milliseconds 100 # Give buffer a moment
 
     # 1. Show .deps.json (if possible)
-    if ($testExePath -and $testExeName) {
-        $depsJsonPath = $testExePath.Replace($testExeName, ($testExeName.Replace(".exe", "") + ".deps.json"))
+    if ($depsJsonPath) {
         Write-Host "--- DEBUG: Contents of '$($depsJsonPath)' ---" -ForegroundColor Magenta
         if (Test-Path $depsJsonPath) {
             try {
@@ -516,8 +514,8 @@ if ($SkipTest) {
 
     Write-Host "Attempting to run test for RID: $ridToTest"
     $testProjectDir = Split-Path $EndToEndTestProject -Parent
-    $testExePath = $null # Define scope outside try
-    $testExeName = $null
+    $testDepsJsonPath = $null # Define scope outside try
+    $testExePath = $null
 
     # Flag to track if test phase fails, to ensure diagnostics run before throwing
     $script:testFailed = $false 
@@ -545,13 +543,19 @@ if ($SkipTest) {
         Invoke-CommandAndLog -Executable "dotnet" -Arguments $buildArgs -LogIdentifier "Build Test $ridToTest"
 
         # 3. Find and Execute test
-        $testExeName = ($EndToEndTestProject | Split-Path -Leaf).Replace(".csproj", ".exe")
-
-        $testExePath = Join-Path $testBuildDir $testExeName
+        $testExeNameWithExe = ($EndToEndTestProject | Split-Path -Leaf).Replace(".csproj", ".exe")
+        $testDepsJsonPath = Join-Path $testBuildDir ($testExeNameWithExe.Replace(".exe", "") + ".deps.json")
+  
+        # linux/mac ext 
+        if ($ridToTest -like "*linux*" -or $ridToTest -like "*macos*") {
+            $testExePath = Join-Path $testBuildDir $testExeNameWithExe.Replace(".exe", "")
+        } else {
+            $testExePath = Join-Path $testBuildDir $testExeNameWithExe
+        }
 
         if (-not (Test-Path $testExePath)) {
             Write-HostError "Compiled test executable not found at expected path: $testExePath"
-            $foundExes = Get-ChildItem -Path $publishDir -Filter ($testExeName.Replace(".exe", "*")) -File
+            $foundExes = Get-ChildItem -Path $publishDir -Filter ($testExeNameWithExe.Replace(".exe", "*")) -File
             if ($foundExes.Count -eq 1) {
                 $testExePath = $foundExes[0].FullName
                 Write-HostWarning "Used fallback to find test executable: $testExePath"
@@ -567,7 +571,7 @@ if ($SkipTest) {
         if ($null -eq $nativeDlls -or $nativeDlls.Count -eq 0) {
             $script:testFailed = $true
             Write-Host "Required native DLL ($nativeBinaryName) not found anywhere in $testBuildDir" -ForegroundColor Red
-            Invoke-TestDiagnostics -ridToTest $ridToTest -testExePath $testExePath -testExeName $testExeName -IntermediatePackDir $IntermediatePackDir -PackageVersion $PackageVersion
+            Invoke-TestDiagnostics -ridToTest $ridToTest -depsJsonPath $testDepsJsonPath -IntermediatePackDir $IntermediatePackDir -PackageVersion $PackageVersion
             Write-HostError "Required native DLL ($nativeBinaryName) not found anywhere in $testBuildDir"
         }
 
@@ -577,7 +581,7 @@ if ($SkipTest) {
         } catch {
             Write-Host "$testExeName FAILED" -ForegroundColor Red
             $script:testFailed = $true 
-            Invoke-TestDiagnostics -ridToTest $ridToTest -testExePath $testExePath -testExeName $testExeName -IntermediatePackDir $IntermediatePackDir -PackageVersion $PackageVersion
+            Invoke-TestDiagnostics -ridToTest $ridToTest -depsJsonPath $testDepsJsonPath -IntermediatePackDir $IntermediatePackDir -PackageVersion $PackageVersion
             Write-HostError "$testExeName FAILED"
         }
         # Only print success if the flag wasn't set
@@ -587,7 +591,7 @@ if ($SkipTest) {
 
     } catch { 
         Write-HostError "Test phase FAILED for RID $ridToTest. Error: $($_.Exception.Message)"
-        Invoke-TestDiagnostics -ridToTest $ridToTest -testExePath $testExePath -testExeName $testExeName -IntermediatePackDir $IntermediatePackDir -PackageVersion $PackageVersion 
+        Invoke-TestDiagnostics -ridToTest $ridToTest -depsJsonPath $testDepsJsonPath -IntermediatePackDir $IntermediatePackDir -PackageVersion $PackageVersion 
         # Set flag instead of throwing immediately
         $script:testFailed = $true
     }
