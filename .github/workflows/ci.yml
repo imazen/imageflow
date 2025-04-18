@@ -367,50 +367,25 @@ jobs:
 
 
       # PER-RID PACK & TEST ---------------------------------------------------------------------
-      - name: Pack RID-specific Runtime Package (if not static)
-        if: ${{ !matrix.static && !matrix.test-only }}
-        shell: bash
+      - name: Run Single Pack & Test Script for RID ${{ matrix.nuget-rid }}
+        if: ${{ !matrix.static && !matrix.test-only }} # Only test if runtime package exists
+        shell: pwsh
         run: |
-          echo "Packing ./dotnet/nuget/native/Imageflow.NativeRuntime.${{ matrix.nuget-rid }}.csproj ..."
-          dotnet pack "./dotnet/nuget/native/Imageflow.NativeRuntime.${{ matrix.nuget-rid }}.csproj" \
-            -c Release -o "./temp_nuget_pkg" \
-            /p:Version="${{ env.NUGET_PACKAGE_VERSION }}" \
-            /p:ImageflowNetVersion="${{ env.IMAGEFLOW_NET_VERSION }}" \
-            /p:NativeArtifactBasePath="$(pwd)/artifacts/native_binaries" # Use absolute path
+          ./dotnet/nuget/single-pack-and-test.ps1 `
+            -RID "${{ matrix.nuget-rid }}" `
+            -PackageVersion "${{ env.NUGET_PACKAGE_VERSION }}" `
+            -ImageflowNetVersion "${{ env.IMAGEFLOW_NET_VERSION }}" `
+            -NativeArtifactBasePath "$(pwd)/artifacts/native_binaries" `
+            -PackOutputDirectory "./temp_nuget_pkg/${{ matrix.nuget-rid }}"
 
-          # Also pack the tool package if it exists for this RID?
-          # Assuming tool is only needed if runtime exists for now.
-
-
-      - name: Run EndToEnd Test for RID
-        if: ${{ !matrix.static && !matrix.test-only }} # Only test if runtime package was built
-        shell: bash
-        run: |
-          echo "Running EndToEnd test for RID ${{ matrix.nuget-rid }} using packages from ./temp_nuget_pkg"
-          # Ensure the test project exists
-          TEST_PROJ="./dotnet/nuget/test/Imageflow.EndToEnd.Test.csproj"
-          if [[ ! -f "$TEST_PROJ" ]]; then
-             echo "::error::Test project not found at $TEST_PROJ"
-             exit 1
-          fi
-
-          # Run tests using the specific RID and local package source
-          dotnet test "$TEST_PROJ" \
-            -c Release \
-            -r "${{ matrix.nuget-rid }}" \
-            --logger "trx;LogFileName=test_results_${{ matrix.nuget-rid }}.trx" \
-            --filter "Category=EndToEnd" \
-            /p:RestoreSources="$(pwd)/temp_nuget_pkg;https://api.nuget.org/v3/index.json" \
-            /p:ImageflowNetVersion="${{ env.IMAGEFLOW_NET_VERSION }}" \
-            /p:RuntimePackageVersion="${{ env.NUGET_PACKAGE_VERSION }}"
-
-      - name: Upload Test Results (if test run)
-        if: ${{ !matrix.static && !matrix.test-only }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.nuget-rid }}
-          path: "*.trx"
-          if-no-files-found: ignore # Don't fail if tests didn't run or produce output
+      # No test results file to upload - script checks exit code
+      # - name: Upload Test Results (from single-pack-and-test run)
+      #   if: ${{ !matrix.static && !matrix.test-only }} # If test was run
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: test-results-${{ matrix.nuget-rid }}
+      #     path: "./dotnet/nuget/test/bin/Release/**/*.trx" # Assuming TRX output path
+      #     if-no-files-found: ignore # Don't fail if tests didn't run or produce output
 
 
       # UPLOAD S3/RELEASE/DOCKER ---------------------------------------------------------------------
@@ -552,85 +527,38 @@ jobs:
       - name: List downloaded artifacts (for debugging)
         run: ls -R artifacts/native_binaries
 
-      - name: Pack Solution via PowerShell script (No Push)
+      - name: Run Merge, Pack, Test, and Publish Script
         shell: pwsh
         run: |
-          ./dotnet/pack_test_push_all.ps1 `
+          $pushNuGet = ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
+          $pushGitHub = ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
+          $deleteOnFail = $true # Always delete on failure for CI runs
+
+          ./dotnet/nuget/merge-pack-test-publish.ps1 `
             -PackageVersion "${{ env.NUGET_PACKAGE_VERSION }}" `
-            -NativeArtifactBasePath "./artifacts/native_binaries" `
-            -PushToNuGet:$false # Explicitly false
+            -ImageflowNetVersion "${{ env.IMAGEFLOW_NET_VERSION }}" `
+            -CombinedNativeArtifactBasePath "$(pwd)/artifacts/native_binaries" `
+            -NuGetApiKey "${{ secrets.NUGET_API_KEY }}" `
+            -GitHubApiKey "${{ secrets.GITHUB_TOKEN }}" `
+            -GitHubSourceUrl "https://nuget.pkg.github.com/${{ github.repository_owner }}" `
+            -PushToNuGet:$pushNuGet `
+            -PushToGitHub:$pushGitHub `
+            -DeleteOnFailure:$deleteOnFail `
+            -TestRid "linux-x64" # Run final test on linux-x64 runner
         env:
-          NUGET_PACKAGE_VERSION: ${{ env.NUGET_PACKAGE_VERSION }}
+          NUGET_UPLOAD_NUGET: ${{ env.NUGET_UPLOAD_NUGET }} # Needed for conditional check above
+          NUGET_UPLOAD_GITHUB: ${{ env.NUGET_UPLOAD_GITHUB }} # Needed for conditional check above
 
+      # No test results file to upload - script checks exit code
+      # - name: Upload Final Test Results (if generated by script - needs adjustment)
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: test-results-final-pack
+      #     path: "./dotnet/nuget/test/bin/Release/**/*.trx" # Adjust path if script changes output loc
+      #     if-no-files-found: ignore
 
-      - name: Run Final EndToEnd Test (Linux x64)
-        shell: bash
-        run: |
-          echo "Running final EndToEnd test using packages from ./artifacts/nuget"
-          TEST_PROJ="./dotnet/nuget/test/Imageflow.EndToEnd.Test.csproj"
-          if [[ ! -f "$TEST_PROJ" ]]; then
-             echo "::error::Test project not found at $TEST_PROJ"
-             exit 1
-          fi
-
-          # Use linux-x64 as the test RID since runner is ubuntu-latest
-          dotnet test "$TEST_PROJ" \
-            -c Release \
-            -r "linux-x64" \
-            --logger "trx;LogFileName=test_results_final_linux-x64.trx" \
-            --filter "Category=EndToEnd" \
-            /p:RestoreSources="$(pwd)/artifacts/nuget;https://api.nuget.org/v3/index.json" \
-            /p:ImageflowNetVersion="${{ env.IMAGEFLOW_NET_VERSION }}" \
-            /p:RuntimePackageVersion="${{ env.NUGET_PACKAGE_VERSION }}"
-
-      - name: Upload Final Test Results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-final-pack
-          path: "*.trx"
-          if-no-files-found: ignore
-
-      - name: Publish to NuGet.org
-        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
-        shell: bash
-        run: |
-          echo "Pushing packages to NuGet.org..."
-          shopt -s globstar
-          for f in ./artifacts/nuget/**/*.nupkg
-          do
-            if [[ -f "$f" ]]; then
-              echo "Pushing $f to NuGet.org..."
-              dotnet nuget push "$f" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
-              if [[ $? -ne 0 ]]; then
-                  echo "::error::Failed to push $f to NuGet.org"
-                  # Optionally add logic here to handle deletion if needed,
-                  # matching pack_test_push_all.ps1 logic, or rely on its deletion flag (if we ran it differently)
-                  # For now, just error out.
-                  # exit 1
-              fi
-            fi
-          done
-        env:
-          NUGET_UPLOAD_NUGET: ${{ env.NUGET_UPLOAD_NUGET }}
-
-      - name: Publish to GitHub Packages
-        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
-        shell: bash
-        run: |
-          echo "Pushing packages to GitHub Packages..."
-          shopt -s globstar # Enable recursive globbing if needed
-          for f in ./artifacts/nuget/**/*.nupkg
-          do
-            if [[ -f "$f" ]]; then
-              echo "Pushing $f to GitHub Packages..."
-              dotnet nuget push "$f" --api-key "${{ secrets.GITHUB_TOKEN }}" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}" --skip-duplicate
-              if [[ $? -ne 0 ]]; then
-                  echo "::error::Failed to push $f to GitHub Packages"
-                  # Decide if you want to exit 1 here to fail the job
-              fi
-            else
-              echo "Warning: Found non-file match in artifacts/nuget: $f"
-            fi
-          done
-        env:
-          NUGET_UPLOAD_GITHUB: ${{ env.NUGET_UPLOAD_GITHUB }}
+      # Publish steps are now handled within the merge-pack-test-publish.ps1 script
+      # - name: Publish to NuGet.org
+      #   ...
+      # - name: Publish to GitHub Packages
+      #   ...

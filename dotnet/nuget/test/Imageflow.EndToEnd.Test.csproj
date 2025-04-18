@@ -11,7 +11,7 @@
     <!-- <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier> -->
 
     <!-- Define Imageflow.Net version - expecting override via /p:ImageflowNetVersion=... -->
-    <ImageflowNetVersion Condition="'$(ImageflowNetVersion)' == ''">*_*</ImageflowNetVersion> 
+    <ImageflowNetVersion Condition="'$(ImageflowNetVersion)' == ''">*-*</ImageflowNetVersion> 
   </PropertyGroup>
 
   <!-- Reference the main managed library -->
