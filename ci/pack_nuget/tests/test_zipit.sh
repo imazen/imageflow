@@ -48,11 +48,15 @@ mkdir -p "${TRASH_DIR}/extract/zip_all"
 mkdir -p "${TRASH_DIR}/extract/tar_all"
 mkdir -p "${TRASH_DIR}/extract/zip_headers"
 mkdir -p "${TRASH_DIR}/extract/tar_headers"
+mkdir -p "${TRASH_DIR}/base/mylib.dylib.dSYM"
+mkdir -p "${TRASH_DIR}/extract/zip_dir_ext"
+mkdir -p "${TRASH_DIR}/extract/tar_dir_ext"
 
 # Create test files
 echo "Header content" > "${TRASH_DIR}/base/headers/file.h"
 echo "Other content" > "${TRASH_DIR}/base/other.txt"
 echo ".dotfile content" > "${TRASH_DIR}/base/.dotfile"
+echo "Symbol file" > "${TRASH_DIR}/base/mylib.dylib.dSYM/symbol_file.txt"
 
 echo "Test files created:"
 ls -R "${TRASH_DIR}/base"
@@ -62,6 +66,8 @@ ARCHIVE_ZIP_ALL="${TRASH_DIR}/all_content.zip"
 ARCHIVE_TAR_ALL="${TRASH_DIR}/all_content.tar.gz"
 ARCHIVE_ZIP_HEADERS="${TRASH_DIR}/headers_only.zip"
 ARCHIVE_TAR_HEADERS="${TRASH_DIR}/headers_only.tar.gz"
+ARCHIVE_ZIP_DIR_EXT="${TRASH_DIR}/dir_ext_only.zip"
+ARCHIVE_TAR_DIR_EXT="${TRASH_DIR}/dir_ext_only.tar.gz"
 
 # --- Cleanup Trap ---
 cleanup() {
@@ -91,6 +97,7 @@ else
     assert_exists "${TRASH_DIR}/extract/zip_all" "headers/file.h" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
     assert_exists "${TRASH_DIR}/extract/zip_all" "other.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
     assert_exists "${TRASH_DIR}/extract/zip_all" ".dotfile" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_exists "${TRASH_DIR}/extract/zip_all" "mylib.dylib.dSYM/symbol_file.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
     assert_not_exists "${TRASH_DIR}/extract/zip_all" "base" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
 fi
 
@@ -105,6 +112,7 @@ else
     assert_exists "${TRASH_DIR}/extract/tar_all" "headers/file.h" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
     assert_exists "${TRASH_DIR}/extract/tar_all" "other.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
     assert_exists "${TRASH_DIR}/extract/tar_all" ".dotfile" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_exists "${TRASH_DIR}/extract/tar_all" "mylib.dylib.dSYM/symbol_file.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
     assert_not_exists "${TRASH_DIR}/extract/tar_all" "base" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
 fi
 
@@ -120,6 +128,7 @@ else
     assert_not_exists "${TRASH_DIR}/extract/zip_headers" "other.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
     assert_not_exists "${TRASH_DIR}/extract/zip_headers" ".dotfile" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
     assert_not_exists "${TRASH_DIR}/extract/zip_headers" "base" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_not_exists "${TRASH_DIR}/extract/zip_headers" "mylib.dylib.dSYM/symbol_file.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
 fi
 
 # Test 4: Create tar.gz of headers only
@@ -134,6 +143,37 @@ else
     assert_not_exists "${TRASH_DIR}/extract/tar_headers" "other.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
     assert_not_exists "${TRASH_DIR}/extract/tar_headers" ".dotfile" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
     assert_not_exists "${TRASH_DIR}/extract/tar_headers" "base" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_not_exists "${TRASH_DIR}/extract/tar_headers" "mylib.dylib.dSYM/symbol_file.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+fi
+
+# Test 5: Create zip of directory with extension
+echo -e "\n--- Test 5: Create zip of directory with .dylib.dSYM extension ---"
+if ! "${PACK_DIR}/zipit.sh" "$ARCHIVE_ZIP_DIR_EXT" "${TRASH_DIR}/base" "mylib.dylib.dSYM"; then
+    echo "❌ FAIL: zipit.sh failed for zip directory with .dylib.dSYM extension" >&2
+    FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+else
+    echo "Extracting ${ARCHIVE_ZIP_DIR_EXT}..."
+    unzip -q "$ARCHIVE_ZIP_DIR_EXT" -d "${TRASH_DIR}/extract/zip_dir_ext"
+    assert_exists "${TRASH_DIR}/extract/zip_dir_ext" "mylib.dylib.dSYM/symbol_file.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_not_exists "${TRASH_DIR}/extract/zip_dir_ext" "headers/file.h" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_not_exists "${TRASH_DIR}/extract/zip_dir_ext" "other.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_not_exists "${TRASH_DIR}/extract/zip_dir_ext" ".dotfile" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_not_exists "${TRASH_DIR}/extract/zip_dir_ext" "base" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+fi
+
+# Test 6: Create tar.gz of directory with extension
+echo -e "\n--- Test 6: Create tar.gz of directory with .dylib.dSYM extension ---"
+if ! "${PACK_DIR}/zipit.sh" "$ARCHIVE_TAR_DIR_EXT" "${TRASH_DIR}/base" "mylib.dylib.dSYM"; then
+    echo "❌ FAIL: zipit.sh failed for tar directory with .dylib.dSYM extension" >&2
+    FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+else
+    echo "Extracting ${ARCHIVE_TAR_DIR_EXT}..."
+    tar -xzf "$ARCHIVE_TAR_DIR_EXT" -C "${TRASH_DIR}/extract/tar_dir_ext"
+    assert_exists "${TRASH_DIR}/extract/tar_dir_ext" "mylib.dylib.dSYM/symbol_file.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_not_exists "${TRASH_DIR}/extract/tar_dir_ext" "headers/file.h" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_not_exists "${TRASH_DIR}/extract/tar_dir_ext" "other.txt" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_not_exists "${TRASH_DIR}/extract/tar_dir_ext" ".dotfile" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
+    assert_not_exists "${TRASH_DIR}/extract/tar_dir_ext" "base" || FAILED_ASSERTIONS=$((FAILED_ASSERTIONS + 1))
 fi
 
 # --- Final Verdict ---

@@ -74,15 +74,14 @@ rm -f "$absolute_output_path"
     if [[ "$archive_type" == "zip" ]]; then
         sevenz_exit_code=1
         if [[ "$path_to_include" == "." ]]; then
-            echo "Archiving all content (including dotfiles) with 7z -tzip using find..."
-            # Use find piped to xargs to handle all files including dotfiles
-            # Check if find returns any files first
+            echo "Archiving all content (including dotfiles) with 7z -tzip using recursive mode..."
+            # Use 7z's recursive ability
             if find . -mindepth 1 -print -quit | grep -q .; then
-                if find . -mindepth 1 -print0 | xargs -0 7z a -tzip -mx=9 "$absolute_output_path" -x'!.DS_Store' > /dev/null; then
+                if 7z a -tzip -mx=9 "$absolute_output_path" . -r -x'!.DS_Store' > /dev/null; then
                     sevenz_exit_code=0
                 else
                      sevenz_exit_code=$?
-                     echo "7z -tzip (find) command failed with exit code $sevenz_exit_code." >&2
+                     echo "7z -tzip (recursive mode) command failed with exit code $sevenz_exit_code." >&2
                 fi
             else
                 echo "Warning: No files found to archive with 7z -tzip. Creating empty archive."
@@ -111,13 +110,13 @@ rm -f "$absolute_output_path"
 
         # Step 1: Create .tar
         if [[ "$path_to_include" == "." ]]; then
-            echo "Creating intermediate tar (all content, incl dotfiles) with 7z -ttar using find..."
+            echo "Creating intermediate tar (all content, incl dotfiles) with 7z -ttar using recursive mode..."
             if find . -mindepth 1 -print -quit | grep -q .; then
-                if find . -mindepth 1 -print0 | xargs -0 7z a -ttar "$intermediate_tar" -x'!.DS_Store' > /dev/null; then
+                if 7z a -ttar "$intermediate_tar" . -r -x'!.DS_Store' > /dev/null; then
                     sevenz_tar_exit_code=0
                 else
                     sevenz_tar_exit_code=$?
-                    echo "7z -ttar (find) command failed with exit code $sevenz_tar_exit_code." >&2
+                    echo "7z -ttar (recursive mode) command failed with exit code $sevenz_tar_exit_code." >&2
                 fi
             else
                 echo "Warning: No files found to archive with 7z -ttar. Creating empty archive."
