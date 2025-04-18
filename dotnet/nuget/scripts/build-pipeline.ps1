@@ -350,7 +350,8 @@ $StagingDir = Join-Path $NugetProjectRoot "temp_staging_for_packing"
 # Define the intermediate packing directory (for nuget.config)
 $IntermediatePackDir = Join-Path $NugetProjectRoot "local"
 # Define the final output directory from parameter
-$PackOutputDirectory = if ([System.IO.Path]::IsPathRooted($PackOutputDirectory)) { $PackOutputDirectory } else { Resolve-Path (Join-Path $PSScriptRoot $PackOutputDirectory) }
+# Construct the full path but don't require it to exist yet.
+$PackOutputDirectory = if ([System.IO.Path]::IsPathRooted($PackOutputDirectory)) { $PackOutputDirectory } else { [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $PackOutputDirectory)) }
 $NativeArtifactBasePath = if ([System.IO.Path]::IsPathRooted($NativeArtifactBasePath)) { $NativeArtifactBasePath } else { Resolve-Path (Join-Path $PSScriptRoot $NativeArtifactBasePath) }
 
 $SolutionFile = Join-Path $WorkspaceRoot "Imageflow.sln" # Adjust if needed
