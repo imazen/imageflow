@@ -228,7 +228,7 @@ function Invoke-TestDiagnostics {
         Get-ChildItem -Path $IntermediatePackDir -Filter $allPackageNamePattern -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
     ) | Where-Object { $_ -ne $null }
 
-    if ($packagesToInspect.Count -eq 0) {
+    if ($null -eq $packagesToInspect -or $packagesToInspect.Count -eq 0) {
         Write-HostWarning "  Could not find expected packages ($ridPackageNamePattern, $allPackageNamePattern) in '$IntermediatePackDir' to inspect."
     } else {
         foreach ($nupkgFile in $packagesToInspect) {
@@ -547,7 +547,7 @@ if ($SkipTest) {
         $testDepsJsonPath = Join-Path $testBuildDir ($testExeNameWithExe.Replace(".exe", "") + ".deps.json")
   
         # linux/mac ext 
-        if ($ridToTest -like "*linux*" -or $ridToTest -like "*macos*") {
+        if ($ridToTest -like "*linux*" -or $ridToTest -like "*osx*") {
             $testExePath = Join-Path $testBuildDir $testExeNameWithExe.Replace(".exe", "")
         } else {
             $testExePath = Join-Path $testBuildDir $testExeNameWithExe
@@ -556,7 +556,7 @@ if ($SkipTest) {
         if (-not (Test-Path $testExePath)) {
             Write-HostError "Compiled test executable not found at expected path: $testExePath"
             $foundExes = Get-ChildItem -Path $publishDir -Filter ($testExeNameWithExe.Replace(".exe", "*")) -File
-            if ($foundExes.Count -eq 1) {
+            if ($null -ne $foundExes -and $foundExes.Count -eq 1) {
                 $testExePath = $foundExes[0].FullName
                 Write-HostWarning "Used fallback to find test executable: $testExePath"
             } else {
@@ -663,7 +663,7 @@ if ($Mode -eq 'MultiCI') {
         Write-Host "Publishing packages to NuGet ($NuGetSourceUrl)..."
         # Push packages from the intermediate directory
         $nupkgFilesToPush = Get-ChildItem -Path $IntermediatePackDir -Filter *.nupkg -Recurse
-        if ($nupkgFilesToPush.Count -eq 0) {
+        if ($null -eq $nupkgFilesToPush -or $nupkgFilesToPush.Count -eq 0) {
              throw "No .nupkg files found in intermediate directory '$IntermediatePackDir'. Cannot push to NuGet."
         } else {
             foreach ($nupkgFile in $nupkgFilesToPush) {
@@ -719,7 +719,7 @@ if ($Mode -eq 'MultiCI') {
         Write-Host "Publishing packages to GitHub Release..."
         # Upload packages from the intermediate directory
         $nupkgFilesToUpload = Get-ChildItem -Path $IntermediatePackDir -Filter *.nupkg -Recurse
-         if ($nupkgFilesToUpload.Count -eq 0) {
+        if ($null -eq $nupkgFilesToUpload -or $nupkgFilesToUpload.Count -eq 0) {
              throw "No .nupkg files found in intermediate directory '$IntermediatePackDir'. Cannot upload to GitHub Release."
         } else {
             Write-Host "Uploading $($nupkgFilesToUpload.Count) packages to GitHub release tag '$releaseTag' in repo '$repo'..."

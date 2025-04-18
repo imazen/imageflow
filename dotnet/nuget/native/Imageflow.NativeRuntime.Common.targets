@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <!-- Runtime-specific properties -->
-    <Description Condition="'$(Description)' == ''">Imageflow native runtime library for $(ImageflowNugetRid). Part of the Imageflow image processing suite.</Description>
+    <Description Condition="'$(Description)' == ''">Imageflow is a fast, server-side-safe, and correct image processing library written in Rust. This package contains the native runtime library for $(ImageflowNugetRid); use 'Imageflow.Net' or 'Imageflow.AllPlatforms' for the managed wrapper.</Description>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     
     <IncludeBuildOutput>false</IncludeBuildOutput>
