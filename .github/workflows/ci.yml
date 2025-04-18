@@ -150,12 +150,13 @@ jobs:
       - name: "Goal: ${{ matrix.test-only != 'true' && github.event_name == 'release' && 'publish' || 'test' }} Imageflow.NativeRuntime.${{ matrix.package-suffix }} & Imageflow.NativeTool.${{ matrix.package-suffix }} with RID ${{ matrix.nuget-rid }}"
         run: echo "Hi"
 
-      - name: Parse version
-        uses: ./.github/actions/parse-version
-        id: parse_version
 
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Parse version
+        uses: ./.github/actions/parse-version
+        id: parse_version
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -523,17 +524,16 @@ jobs:
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' # Adjust condition as needed
 
     steps:
-      - name: Parse version
-        uses: ./.github/actions/parse-version
-        id: parse_version
-
-      - run: echo "NUGET_PACKAGE_VERSION=${{ steps.parse_version.outputs.version }}" >> $GITHUB_ENV
-
       - name: "Goal: ${{ github.event_name == 'release' && 'Pack, Test, and Publish' || 'Pack and Test' }} all NuGet packages"
         run: echo "Starting NuGet pack, test, and publish job..."
 
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Parse version
+        uses: ./.github/actions/parse-version
+        id: parse_version
+      - run: echo "NUGET_PACKAGE_VERSION=${{ steps.parse_version.outputs.version }}" >> $GITHUB_ENV
 
 
       # Setup .NET Core SDK - choose a version compatible with your solution/scripts
