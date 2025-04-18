@@ -307,42 +307,89 @@ jobs:
 
 
       # STAGE NATIVE BINARIES FOR NUGET PACKING JOB ---------------------------------------------------------------------
-      - name: Stage Native Binaries for NuGet Pack Job
+      - name: Stage Native Binaries for NuGet Artifact and S3 Upload
         if: ${{ !matrix.test-only }} # Don't stage binaries for unpublished builds
         shell: bash
         run: |
-          STAGE_DIR="artifacts/native_binaries/${{ matrix.nuget-rid }}"
-          mkdir -p "$STAGE_DIR"
-          echo "Staging binaries to $STAGE_DIR"
+          NUGET_STAGE_DIR="artifacts/native_binaries/${{ matrix.nuget-rid }}"
+          S3_STAGE_DIR="artifacts/upload/${{ matrix.package-suffix }}" # Using package-suffix for S3 path
 
-          # Copy dynamic lib if not static build
-          if [[ "${{ matrix.static }}" != "true" ]]; then
-            if [[ -f "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" ]]; then
-              cp "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" "$STAGE_DIR/"
-              echo "Copied dynamic lib: ${{ env.LIBIMAGEFLOW_DYNAMIC }}"
+          mkdir -p "$NUGET_STAGE_DIR"
+          mkdir -p "$S3_STAGE_DIR"
+
+          echo "Staging native binaries from ${{ env.REL_BINARIES_DIR }} for RID ${{ matrix.nuget-rid }}"
+          echo "  NuGet artifact dir: $NUGET_STAGE_DIR"
+          echo "  S3 upload dir:    $S3_STAGE_DIR"
+
+          TOOL_PATH="${{ env.IMAGEFLOW_TOOL_PATH }}"
+          DYNAMIC_LIB_PATH="${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}"
+          STATIC_LIB_PATH="${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }}"
+
+          tool_exists=false
+          dynamic_lib_exists=false
+          static_lib_exists=false
+
+          # Check and Copy Tool
+          if [[ -f "$TOOL_PATH" ]]; then
+            tool_exists=true
+            cp "$TOOL_PATH" "$NUGET_STAGE_DIR/"
+            cp "$TOOL_PATH" "$S3_STAGE_DIR/"
+            echo "  Copied tool: ${{ env.IMAGEFLOW_TOOL }}"
+          fi
+
+          # Check and Copy Dynamic Lib
+          if [[ -f "$DYNAMIC_LIB_PATH" ]]; then
+            dynamic_lib_exists=true
+            # Only copy dynamic lib if not a static build
+            if [[ "${{ matrix.static }}" != "true" ]]; then
+               cp "$DYNAMIC_LIB_PATH" "$NUGET_STAGE_DIR/"
+               cp "$DYNAMIC_LIB_PATH" "$S3_STAGE_DIR/"
+               echo "  Copied dynamic lib: ${{ env.LIBIMAGEFLOW_DYNAMIC }}"
             else
-              echo "Warning: Dynamic lib not found at ${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" >&2
+               echo "  Skipping dynamic lib copy for static build."
             fi
-          else
-             echo "Skipping dynamic lib copy for static build."
           fi
 
-          # Copy static lib if it exists (even for dynamic builds, might be needed by some targets?)
-          if [[ -f "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }}" ]]; then
-            cp "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }}" "$STAGE_DIR/"
-            echo "Copied static lib: ${{ env.LIBIMAGEFLOW_STATIC }}"
-          else
-            echo "Warning: Static lib not found at ${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }}" >&2
+          # Check and Copy Static Lib
+          if [[ -f "$STATIC_LIB_PATH" ]]; then
+            static_lib_exists=true
+            cp "$STATIC_LIB_PATH" "$NUGET_STAGE_DIR/"
+            cp "$STATIC_LIB_PATH" "$S3_STAGE_DIR/" # Also copy static lib to S3 dir if it exists
+            echo "  Copied static lib: ${{ env.LIBIMAGEFLOW_STATIC }}"
           fi
 
-          # Copy tool executable
-          if [[ -f "${{ env.IMAGEFLOW_TOOL_PATH }}" ]]; then
-            cp "${{ env.IMAGEFLOW_TOOL_PATH }}" "$STAGE_DIR/"
-            echo "Copied tool: ${{ env.IMAGEFLOW_TOOL }}"
-          else
-            echo "Error: Tool not found at ${{ env.IMAGEFLOW_TOOL_PATH }}" >&2
-            exit 1 # Fail the build if tool is essential for packaging
+          # --- Validation --- 
+          echo "  Performing validation..."
+          if [[ "$tool_exists" != "true" ]]; then
+             echo "Error: Required tool executable not found at $TOOL_PATH" >&2
+             exit 1
           fi
+
+          if [[ "${{ matrix.static }}" == "true" ]]; then
+            if [[ "$static_lib_exists" != "true" ]]; then
+              echo "Error: Static build requires static library, but it was not found at $STATIC_LIB_PATH" >&2
+              exit 1
+            else
+               echo "  Static build validation passed (tool and static lib exist)."
+            fi
+          else # Not a static build
+            if [[ "$dynamic_lib_exists" != "true" ]]; then
+              echo "Error: Non-static build requires dynamic library, but it was not found at $DYNAMIC_LIB_PATH" >&2
+              exit 1
+            else
+               echo "  Dynamic build validation passed (tool and dynamic lib exist)."
+            fi
+          fi
+
+
+      - name: List Staged Native Binaries (Before Upload)
+        if: ${{ !matrix.test-only }}
+        shell: bash
+        run: |
+          echo "--- Contents of NuGet staging dir: artifacts/native_binaries/${{ matrix.nuget-rid }}/"
+          ls -R "artifacts/native_binaries/${{ matrix.nuget-rid }}/"
+          echo "--- Contents of S3 staging dir: artifacts/upload/${{ matrix.package-suffix }}/"
+          ls -R "artifacts/upload/${{ matrix.package-suffix }}/"
 
       - name: Upload Native Binaries Artifact
         if: ${{ !matrix.test-only }} # Don't upload artifacts for unpublished builds
@@ -511,7 +558,7 @@ jobs:
           merge-multiple: true # Critical: ensures RIDs are in subdirs like artifacts/native_binaries/win-x64
 
       - name: List downloaded artifacts (for debugging)
-        run: ls -R artifacts/native_binaries
+        run: find artifacts/native_binaries
 
       - name: Run Merge, Pack, Test, and Publish Script
         shell: pwsh
