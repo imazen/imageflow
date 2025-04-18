@@ -56,11 +56,7 @@ function Get-HostRid {
 }
 
 # Fetch latest Imageflow.Net version
-$latestImageflowNetVersion = "0.13.2" #Get-LatestImageflowNetVersion
-if (-not $latestImageflowNetVersion) {
-    Write-Error "Failed to obtain latest Imageflow.Net version. Aborting test."
-    exit 1
-}
+$latestImageflowNetVersion = "*-*"
 
 $hostRid = Get-HostRid
 $testProject = Join-Path $WorkspaceRoot "dotnet/nuget/test/Imageflow.EndToEnd.Test.csproj"

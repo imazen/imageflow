@@ -2,7 +2,7 @@
 
 param(
     [string]$PackageVersion = "0.0.1-test"
-    # ImageflowNetVersion is now fetched automatically
+
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,7 +39,7 @@ try {
     # 2. Run the pack script in pack-only mode using the placeholders and fetched version
     Write-Host "`nRunning: $packScript (Pack only mode)"
     & $packScript -PackageVersion $PackageVersion `
-                   -ImageflowNetVersion 0.13.2 `
+                   -ImageflowNetVersion *-* `
                    -NativeArtifactBasePath $tempStagingDir `
                    -PushToNuGet:$false # Explicitly false
     

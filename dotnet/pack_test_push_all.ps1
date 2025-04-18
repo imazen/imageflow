@@ -27,15 +27,6 @@ if (-not (Test-Path $NativeArtifactBasePath -PathType Container)) {
     exit 1
 }
 
-# If ImageflowNetVersion is not provided, use the latest version
-if (-not $ImageflowNetVersion) {
-    $ImageflowNetVersion = Get-LatestImageflowNetVersion
-}# Fetch latest Imageflow.Net version
-if (-not $ImageflowNetVersion) {
-    Write-Error "Failed to obtain latest Imageflow.Net version. Aborting."
-    exit 1
-}
-
 
 # Get script directory and workspace root
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
