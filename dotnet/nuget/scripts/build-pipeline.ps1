@@ -555,7 +555,8 @@ if ($SkipTest) {
 
         if (-not (Test-Path $testExePath)) {
             Write-HostError "Compiled test executable not found at expected path: $testExePath"
-            $foundExes = Get-ChildItem -Path $publishDir -Filter ($testExeNameWithExe.Replace(".exe", "*")) -File
+            # Ensure \$foundExes is always an array
+            $foundExes = @(Get-ChildItem -Path $publishDir -Filter ($testExeNameWithExe.Replace(".exe", "*")) -File)
             if ($null -ne $foundExes -and $foundExes.Count -eq 1) {
                 $testExePath = $foundExes[0].FullName
                 Write-HostWarning "Used fallback to find test executable: $testExePath"
@@ -567,7 +568,8 @@ if ($SkipTest) {
 
         # --- Search recursively for native DLLs in $testBuildDir --- 
         $nativeBinaryName = Get-NativeBinaryName -rid $ridToTest
-        $nativeDlls = Get-ChildItem -Path $testBuildDir -Recurse -Filter $nativeBinaryName -File
+        # Ensure $nativeDlls is always an array, even if 0 or 1 items are found
+        $nativeDlls = @(Get-ChildItem -Path $testBuildDir -Recurse -Filter $nativeBinaryName -File)
         if ($null -eq $nativeDlls -or $nativeDlls.Count -eq 0) {
             $script:testFailed = $true
             Write-Host "Required native DLL ($nativeBinaryName) not found anywhere in $testBuildDir" -ForegroundColor Red
@@ -662,7 +664,8 @@ if ($Mode -eq 'MultiCI') {
     if ($PushToNuGet) {
         Write-Host "Publishing packages to NuGet ($NuGetSourceUrl)..."
         # Push packages from the intermediate directory
-        $nupkgFilesToPush = Get-ChildItem -Path $IntermediatePackDir -Filter *.nupkg -Recurse
+        # Ensure \$nupkgFilesToPush is always an array
+        $nupkgFilesToPush = @(Get-ChildItem -Path $IntermediatePackDir -Filter *.nupkg -Recurse)
         if ($null -eq $nupkgFilesToPush -or $nupkgFilesToPush.Count -eq 0) {
              throw "No .nupkg files found in intermediate directory '$IntermediatePackDir'. Cannot push to NuGet."
         } else {
@@ -718,7 +721,8 @@ if ($Mode -eq 'MultiCI') {
     if ($PushToGitHub) {
         Write-Host "Publishing packages to GitHub Release..."
         # Upload packages from the intermediate directory
-        $nupkgFilesToUpload = Get-ChildItem -Path $IntermediatePackDir -Filter *.nupkg -Recurse
+        # Ensure \$nupkgFilesToUpload is always an array
+        $nupkgFilesToUpload = @(Get-ChildItem -Path $IntermediatePackDir -Filter *.nupkg -Recurse)
         if ($null -eq $nupkgFilesToUpload -or $nupkgFilesToUpload.Count -eq 0) {
              throw "No .nupkg files found in intermediate directory '$IntermediatePackDir'. Cannot upload to GitHub Release."
         } else {

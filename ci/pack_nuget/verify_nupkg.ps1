@@ -75,7 +75,7 @@ function Test-NupkgStructure {
         }
 
         # Look for .nuspec file in root
-        $nuspecFiles = Get-ChildItem -Path $tempDir -Filter "*.nuspec"
+        $nuspecFiles = @($zip.Entries | Where-Object { $_.Name -like '*.nuspec' })
         
         if ($nuspecFiles.Count -eq 0) {
             Write-Host "::error::No .nuspec file found in package root of $NupkgPath"
@@ -147,7 +147,7 @@ function Test-NupkgStructure {
         # Additional check: Verify <files> structure if targets were expected
         # The comparison above should cover this, but explicit check is good.
         if (-not [string]::IsNullOrEmpty($ExpectedTargetsFileName)) {
-            $fileElements = $actualNuspecXml.package.files.file
+            $fileElements = @($actualNuspecXml.package.files.file)
             if ($null -eq $fileElements -or $fileElements.Count -ne 2) {
                 Write-Host "::error::Expected 2 <file> elements for targets in nuspec, found $($fileElements.Count)"
                 Write-Error "Incorrect number of <file> elements for targets."

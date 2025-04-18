@@ -12,18 +12,36 @@ Set-StrictMode -Version Latest
 function Get-HostRid {
     $os = $null
     $arch = $null
-    if ($IsWindows) { $os = "win" }
-    elseif ($IsMacOS) { $os = "osx" }
-    elseif ($IsLinux) { $os = "linux" }
-    else { throw "Unsupported OS for Get-HostRid" }
-
-    $nativeArch = switch ($env:PROCESSOR_ARCHITECTURE) {
-        "AMD64" { "x64" }
-        "ARM64" { "arm64" }
-        "x86"   { "x86" }
-        default { throw "Unsupported Architecture for Get-HostRid: $($env:PROCESSOR_ARCHITECTURE)" }
+    if ($IsWindows) {
+        $os = "win"
+        $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
+            "AMD64" { "x64" }
+            "ARM64" { "arm64" }
+            "x86"   { "x86" }
+            default { throw "Unsupported Windows Architecture for Get-HostRid: $($env:PROCESSOR_ARCHITECTURE)" }
+        }
+    } elseif ($IsMacOS) {
+        $os = "osx"
+        $unameArch = (uname -m).Trim()
+        $arch = switch ($unameArch) {
+            "x86_64" { "x64" }
+            "arm64"  { "arm64" } # Apple Silicon reports arm64
+            default { throw "Unsupported macOS Architecture for Get-HostRid: $unameArch" }
+        }
+    } elseif ($IsLinux) {
+        $os = "linux"
+        $unameArch = (uname -m).Trim()
+        $arch = switch ($unameArch) {
+            "x86_64" { "x64" }
+            "aarch64" { "arm64" }
+            # Add other Linux architectures if needed
+            default { throw "Unsupported Linux Architecture for Get-HostRid: $unameArch" }
+        }
+    } else {
+        throw "Unsupported OS for Get-HostRid"
     }
-    return "$($os)-$($nativeArch)"
+
+    return "$($os)-$($arch)"
 }
 
 # Helper function to get expected native binary name based on RID
