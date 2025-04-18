@@ -47,18 +47,6 @@ jobs:
             max-glibc: '2.17'
             linux: 'true'
 
-          # Keep publishing .ubuntu-x64 to nuget for backwards compatibility - for now.
-          - name: ubuntu-x64
-            package-suffix: ubuntu-x86_64
-            os: ubuntu-22.04
-            target-cpu: x86-64
-            nuget-rid: linux-x64
-            target: x86_64-unknown-linux-gnu
-            cross: 'true'
-            force-cross: 'true'
-            max-glibc: '2.17'
-            linux: 'true'
-
           - name: linux-x64-ubuntu-24
             package-suffix: ubuntu-x86_64-24-mistake
             os: ubuntu-24.04
@@ -497,8 +485,6 @@ jobs:
       contents: read
       packages: write
 
-    # Only run on release publish events, or workflow dispatches/pushes if testing
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' # Adjust condition as needed
 
     steps:
       - name: "Goal: ${{ github.event_name == 'release' && 'Pack, Test, and Publish' || 'Pack and Test' }} all NuGet packages"
@@ -540,7 +526,7 @@ jobs:
             ImageflowNetVersion   = "*"
             NativeArtifactBasePath = "$(pwd)/artifacts/native_binaries" # Base path containing all downloaded RID subdirs
             PackOutputDirectory   = "${{ env.REL_NUGET_OUTPUT_DIR }}"    # Final output directory
-            SkipTest              = $true # Skip test in the final multi-CI step
+            SkipTest              = $false
             # Push switches added conditionally below
             DeleteNuGetOnFailure = $true # Default, can be set to $false or controlled by env var if needed
           }
