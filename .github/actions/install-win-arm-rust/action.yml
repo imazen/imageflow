@@ -1,0 +1,33 @@
+name: 'Install Rust for Windows ARM64'
+description: 'Installs rustup and sets up the environment for Windows ARM64 if rustup is not already present.'
+runs:
+  using: "composite"
+  steps:
+    - name: Check for rustup command
+      id: check_rustup
+      shell: bash
+      run: |
+        if command -v rustup &> /dev/null; then
+          echo "rustup is already installed."
+          echo "installed=true" >> $GITHUB_OUTPUT
+        else
+          echo "rustup not found, proceeding with installation."
+          echo "installed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install rustup (Windows ARM64)
+      if: steps.check_rustup.outputs.installed == 'false'
+      shell: powershell
+      run: |
+        Invoke-WebRequest -Uri "https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe" -OutFile rustup-init.exe
+        .\rustup-init.exe --default-toolchain none -y
+        $cargoBinPath = "$env:USERPROFILE\.cargo\bin"
+        Write-Host "Adding $cargoBinPath to GITHUB_PATH"
+        echo $cargoBinPath | Out-File -Append -Encoding ascii $env:GITHUB_PATH
+        $cargoHome = "CARGO_HOME=$env:USERPROFILE\.cargo"
+        Write-Host "Adding $cargoHome to GITHUB_ENV"
+        echo $cargoHome | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+
+    - name: Verify rustup installation
+      shell: bash
+      run: rustup show

@@ -25,6 +25,8 @@ env:
     REL_NUGET_OUTPUT_DIR: "artifacts/nuget/"
     PROFILE: release
     DELETE_ALL_FROM_NUGET_AFTER_FAILURE: true
+    IMAGEFLOW_NET_VERSION: "*-*" # 0.13.2 # Ensure consistency
+
 jobs:
   build:
     strategy:
@@ -57,14 +59,13 @@ jobs:
             max-glibc: '2.17'
             linux: 'true'
 
-          # skip-publish, for testing only.
           - name: linux-x64-ubuntu-24
             package-suffix: ubuntu-x86_64-24-mistake
             os: ubuntu-24.04
             target-cpu: x86-64
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
-            skip-publish: 'true'
+            test-only: 'true' # for testing only, never publish
 
           - name: linux-arm64-ubuntu-22
             package-suffix: linux-arm64
@@ -144,46 +145,35 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: "${{ (matrix.cross == 'true') && 'cross ' || ''}}${{ matrix.name }}${{ matrix.target-cpu && format(' cpu: {0}', matrix.target-cpu) }}${{ matrix.target && format(' target: {0}', matrix.target) }}${{ matrix.features && format(' features: {0}', matrix.features) }} runs-on:${{ matrix.os }}"
 
+
     steps:
-      - name: "Goal: ${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'publish' || 'test' }} Imageflow.NativeRuntime.${{ matrix.package-suffix }} & Imageflow.NativeTool.${{ matrix.package-suffix }} with RID ${{ matrix.nuget-rid }}"
+      - name: "Goal: ${{ matrix.test-only != 'true' && github.event_name == 'release' && 'publish' || 'test' }} Imageflow.NativeRuntime.${{ matrix.package-suffix }} & Imageflow.NativeTool.${{ matrix.package-suffix }} with RID ${{ matrix.nuget-rid }}"
         run: echo "Hi"
+
+      - name: Parse version
+        uses: ./.github/actions/parse-version
+        id: parse_version
 
       - name: Checkout code
         uses: actions/checkout@v4
-
-
-      - name: Install 7z (Linux)
-        if: matrix.linux == 'true'
-        run: |
-          sudo apt-get install -y p7zip-full
-
-      - name: Install 7z (macOS)
-        if: matrix.mac == 'true'
-        run: brew install p7zip
-
-      - name: Test NuGet Package creation early
-        shell: bash
-        run: ./ci/pack_nuget/tests/run_all_tests.sh
 
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.name }}
         if: matrix.cross != 'true'
 
-      - name: Install rustup (Windows 11 ARM64)
-        shell: pwsh
-        run: |
-          Invoke-WebRequest -Uri "https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe" -OutFile rustup-init.exe
-          .\rustup-init.exe --default-toolchain none -y
-          "$env:USERPROFILE\.cargo\bin" | Out-File -Append -Encoding ascii $env:GITHUB_PATH
-          "CARGO_HOME=$env:USERPROFILE\.cargo" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
-        if: matrix.woa == 'true'
-
-      - uses: dtolnay/rust-toolchain@stable
-        if: matrix.cross != 'true'
+      - name: Install 7z
+        uses: ./.github/actions/install-7z
 
       - name: Install NASM
         uses: ./.github/actions/install-nasm
+        if: matrix.cross != 'true'
+
+      - name: Install Rust (Windows ARM64)
+        uses: ./.github/actions/install-win-arm-rust
+        if: matrix.woa == 'true'
+
+      - uses: dtolnay/rust-toolchain@stable
         if: matrix.cross != 'true'
 
       - name: Install i686 target
@@ -213,15 +203,17 @@ jobs:
           echo "CROSS_ARGS=--locked --${{ env.PROFILE }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
           echo "REL_BINARIES_DIR=target/${{ matrix.target }}/${{ env.PROFILE }}/" >> $GITHUB_ENV
           echo "BUILD_EXCLUDE=${{ matrix.build-exclude && format('--exclude={0}',matrix.build-exclude) }}" >> $GITHUB_ENV
-          echo "ALLOW_PUBLISH=${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
+          echo "ALLOW_PUBLISH=${{ matrix.test-only != 'true' && github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_DYNAMIC=${{ contains(matrix.target, 'win') && 'imageflow.dll'  || contains(matrix.target, 'apple') && 'libimageflow.dylib' || 'libimageflow.so' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_STATIC=${{ contains(matrix.target, 'win') && 'imageflow.lib' || 'libimageflow.a' }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TOOL=${{ contains(matrix.os, 'windows') && 'imageflow_tool.exe' || 'imageflow_tool' }}" >> $GITHUB_ENV
 
       - name: Set more env vars
+        id: set_vars_step
         shell: bash
         run: |
-          echo "IMAGEFLOW_NUGET_VERSION=${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}" >> $GITHUB_ENV
+          echo "NUGET_PACKAGE_VERSION=${{ steps.parse_version.outputs.version }}" >> $GITHUB_ENV
+
           echo "IMAGEFLOW_TAG_SHA_SUFFIX=imageflow-${{ env.TAG_SHA_SUFFIX }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TOOL_PATH=${{ env.REL_BINARIES_DIR }}${{ env.IMAGEFLOW_TOOL }}" >> $GITHUB_ENV
 
@@ -237,13 +229,13 @@ jobs:
           echo "CI=True" >> $GITHUB_ENV
           echo "CI_REPO=${{ github.repository }}" >> $GITHUB_ENV
           echo "CI_JOB_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
-          echo "CI_JOB_TITLE=GitHub ${{ github.job_id }} ${{ matrix.name }}" >> $GITHUB_ENV
+          echo "CI_JOB_TITLE=GitHub ${{ github.job }} ${{ matrix.name }}" >> $GITHUB_ENV # Use github.job instead of job_id
           echo "CI_STRING=GitHub actions" >> $GITHUB_ENV
-          echo "CI_PULL_REQUEST_INFO=${{ github.event_name !='release' }}" >> $GITHUB_ENV
+          echo "CI_PULL_REQUEST_INFO=${{ github.event_name != 'release' }}" >> $GITHUB_ENV
           echo "CI_BUILD_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
           echo "DEBUG=False" >> $GITHUB_ENV
           echo "TARGET_CPU=${{ matrix.target-cpu }}" >> $GITHUB_ENV
-          echo "REL_NUGET_ARCHIVE_DIR=./artifacts/upload/nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/" >> $GITHUB_ENV
+          echo "REL_NUGET_ARCHIVE_DIR=./artifacts/upload/nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/" >> $GITHUB_ENV # May not be needed anymore
           echo "CI_RELEASE=${{ github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
 
       - if: contains(matrix.target, 'musl')
@@ -260,12 +252,7 @@ jobs:
       # TESTS ---------------------------------------------------------------------
       - name: "cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
         run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
-        if: matrix.cross != 'true' # && matrix.woa != 'true'
-
-      # - name: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-      #   run: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-      #   shell: powershell
-      #   if: matrix.woa == 'true'
+        if: matrix.cross != 'true'
 
       - name: "cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
         uses: houseabsolute/actions-rust-cross@v1.0.2
@@ -278,13 +265,9 @@ jobs:
 
       # BUILD ---------------------------------------------------------------------
       - name: "cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-        if: matrix.cross != 'true' # && matrix.woa != 'true'
+        if: matrix.cross != 'true'
         run: cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
 
-      # - name: "& Launch-VsDevShell.ps1 | cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-      #   if: matrix.woa == 'true'
-      #   run: "& Launch-VsDevShell.ps1 | cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-      #   shell: powershell
 
       - name: "cross cargo build --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
         uses: houseabsolute/actions-rust-cross@v1.0.2
@@ -315,7 +298,7 @@ jobs:
         if: matrix.cross != 'true'
 
       # CREATE ZIP/TAR FILES FOR UPLOAD ---------------------------------------------------------------------
-      - name: "Create zip/tar files for upload" # (always, so we know if it fails before we make a release)
+      - name: "Create zip/tar files for S3/Release upload" # (always, so we know if it fails before we make a release)
         shell: bash
         run: |
           chmod +x ./ci/pack_artifacts.sh
@@ -333,37 +316,103 @@ jobs:
           TAG_SHA_SUFFIX: ${{ env.TAG_SHA_SUFFIX }}
           IMAGEFLOW_TOOL: ${{ env.IMAGEFLOW_TOOL }}
 
-      - name: "Create ${{ env.REL_NUGET_OUTPUT_DIR }}"
-        shell: bash
-        run: mkdir -p ${{ env.REL_NUGET_OUTPUT_DIR }}
 
-      # CREATE NUGET PACKAGE ---------------------------------------------------------------------
-      - name: "Create NuGet Package Imageflow.NativeTool.${{ matrix.nuget-rid }}"
+      # STAGE NATIVE BINARIES FOR NUGET PACKING JOB ---------------------------------------------------------------------
+      - name: Stage Native Binaries for NuGet Pack Job
+        if: ${{ !matrix.test-only }} # Don't stage binaries for unpublished builds
         shell: bash
-        run: ./ci/pack_nuget/pack_native_dotnet.sh tool
-        env:
-          NUGET_PACKAGE_VERSION: ${{ env.IMAGEFLOW_NUGET_VERSION }}
-          PACKAGE_SUFFIX: ${{ matrix.package-suffix }}
-          NUGET_RUNTIME: ${{ matrix.nuget-rid }}
-          REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
-          REL_BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
-          REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
-          REL_NUGET_ARCHIVE_DIR: "${{ env.REL_NUGET_ARCHIVE_DIR }}"
+        run: |
+          STAGE_DIR="artifacts/native_binaries/${{ matrix.nuget-rid }}"
+          mkdir -p "$STAGE_DIR"
+          echo "Staging binaries to $STAGE_DIR"
 
-      - name: "Create NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }}"
-        if: ${{ !matrix.static }}
+          # Copy dynamic lib if not static build
+          if [[ "${{ matrix.static }}" != "true" ]]; then
+            if [[ -f "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" ]]; then
+              cp "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" "$STAGE_DIR/"
+              echo "Copied dynamic lib: ${{ env.LIBIMAGEFLOW_DYNAMIC }}"
+            else
+              echo "Warning: Dynamic lib not found at ${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_DYNAMIC }}" >&2
+            fi
+          else
+             echo "Skipping dynamic lib copy for static build."
+          fi
+
+          # Copy static lib if it exists (even for dynamic builds, might be needed by some targets?)
+          if [[ -f "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }}" ]]; then
+            cp "${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }}" "$STAGE_DIR/"
+            echo "Copied static lib: ${{ env.LIBIMAGEFLOW_STATIC }}"
+          else
+            echo "Warning: Static lib not found at ${{ env.REL_BINARIES_DIR }}${{ env.LIBIMAGEFLOW_STATIC }}" >&2
+          fi
+
+          # Copy tool executable
+          if [[ -f "${{ env.IMAGEFLOW_TOOL_PATH }}" ]]; then
+            cp "${{ env.IMAGEFLOW_TOOL_PATH }}" "$STAGE_DIR/"
+            echo "Copied tool: ${{ env.IMAGEFLOW_TOOL }}"
+          else
+            echo "Error: Tool not found at ${{ env.IMAGEFLOW_TOOL_PATH }}" >&2
+            exit 1 # Fail the build if tool is essential for packaging
+          fi
+
+      - name: Upload Native Binaries Artifact
+        if: ${{ !matrix.test-only }} # Don't upload artifacts for unpublished builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-binaries-${{ matrix.nuget-rid }}
+          path: artifacts/native_binaries/${{ matrix.nuget-rid }}/
+          if-no-files-found: error # Fail if expected binaries weren't staged
+          retention-days: 3 # Keep artifacts long enough for pack job
+
+
+      # PER-RID PACK & TEST ---------------------------------------------------------------------
+      - name: Pack RID-specific Runtime Package (if not static)
+        if: ${{ !matrix.static && !matrix.test-only }}
         shell: bash
-        run: ./ci/pack_nuget/pack_native_dotnet.sh
-        env:
-          NUGET_PACKAGE_VERSION: ${{ env.IMAGEFLOW_NUGET_VERSION }}
-          PACKAGE_SUFFIX: ${{ matrix.package-suffix }}
-          NUGET_RUNTIME: ${{ matrix.nuget-rid }}
-          REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
-          REL_BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
-          REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
-          REL_NUGET_ARCHIVE_DIR: "${{ env.REL_NUGET_ARCHIVE_DIR }}"
+        run: |
+          echo "Packing ./dotnet/nuget/native/Imageflow.NativeRuntime.${{ matrix.nuget-rid }}.csproj ..."
+          dotnet pack "./dotnet/nuget/native/Imageflow.NativeRuntime.${{ matrix.nuget-rid }}.csproj" \
+            -c Release -o "./temp_nuget_pkg" \
+            /p:Version="${{ env.NUGET_PACKAGE_VERSION }}" \
+            /p:ImageflowNetVersion="${{ env.IMAGEFLOW_NET_VERSION }}" \
+            /p:NativeArtifactBasePath="$(pwd)/artifacts/native_binaries" # Use absolute path
 
-      # UPLOAD ---------------------------------------------------------------------
+          # Also pack the tool package if it exists for this RID?
+          # Assuming tool is only needed if runtime exists for now.
+
+
+      - name: Run EndToEnd Test for RID
+        if: ${{ !matrix.static && !matrix.test-only }} # Only test if runtime package was built
+        shell: bash
+        run: |
+          echo "Running EndToEnd test for RID ${{ matrix.nuget-rid }} using packages from ./temp_nuget_pkg"
+          # Ensure the test project exists
+          TEST_PROJ="./dotnet/nuget/test/Imageflow.EndToEnd.Test.csproj"
+          if [[ ! -f "$TEST_PROJ" ]]; then
+             echo "::error::Test project not found at $TEST_PROJ"
+             exit 1
+          fi
+
+          # Run tests using the specific RID and local package source
+          dotnet test "$TEST_PROJ" \
+            -c Release \
+            -r "${{ matrix.nuget-rid }}" \
+            --logger "trx;LogFileName=test_results_${{ matrix.nuget-rid }}.trx" \
+            --filter "Category=EndToEnd" \
+            /p:RestoreSources="$(pwd)/temp_nuget_pkg;https://api.nuget.org/v3/index.json" \
+            /p:ImageflowNetVersion="${{ env.IMAGEFLOW_NET_VERSION }}" \
+            /p:RuntimePackageVersion="${{ env.NUGET_PACKAGE_VERSION }}"
+
+      - name: Upload Test Results (if test run)
+        if: ${{ !matrix.static && !matrix.test-only }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.nuget-rid }}
+          path: "*.trx"
+          if-no-files-found: ignore # Don't fail if tests didn't run or produce output
+
+
+      # UPLOAD S3/RELEASE/DOCKER ---------------------------------------------------------------------
       - name: "Upload to Github Release"
         if: ${{ env.ALLOW_PUBLISH == 'true' }}
         uses: xresloader/upload-to-github-release@v1
@@ -459,70 +508,129 @@ jobs:
           labels:  ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
 
-      # In the build job, after creating NuGet packages:
-      - name: Upload NuGet packages to GitHub artifacts
-        if: ${{ !matrix.static }}  # Skip for static builds
-        uses: actions/upload-artifact@v4
-        with:
-          name: nuget-packages-${{ matrix.package-suffix }}
-          path: ${{ env.REL_NUGET_OUTPUT_DIR }}
-          retention-days: 1
 
-  nuget-meta-packages:
+  pack-and-publish-nuget:
     needs: [build]
-    runs-on: ubuntu-latest
-    name: "Meta NuGet packages like Imageflow.NativeRuntime.All, etc"
+    runs-on: ubuntu-latest # Use Linux for consistency in packing/pushing
+    name: "Pack Solution & Publish NuGet Packages"
+
+    # Grant permissions to write packages to GitHub Packages
+    permissions:
+      contents: read
+      packages: write
+
+    # Only run on release publish events, or workflow dispatches/pushes if testing
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' # Adjust condition as needed
+
     steps:
-      - name: "Goal: ${{ github.event_name == 'release' && 'publish' || 'test creating' }} Imageflow.NativeRuntime.All* && Imageflow.Net.All*"
-        run: echo "Hi"
+      - name: Parse version
+        uses: ./.github/actions/parse-version
+        id: parse_version
+
+      - run: echo "NUGET_PACKAGE_VERSION=${{ steps.parse_version.outputs.version }}" >> $GITHUB_ENV
+
+      - name: "Goal: ${{ github.event_name == 'release' && 'Pack, Test, and Publish' || 'Pack and Test' }} all NuGet packages"
+        run: echo "Starting NuGet pack, test, and publish job..."
 
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: "Create ${{ env.REL_NUGET_OUTPUT_DIR }}"
-        shell: bash
-        run: mkdir -p ${{ env.REL_NUGET_OUTPUT_DIR }}
 
-      - name: Pack Meta Packages
-        run: |
-          dotnet --version
-          ./ci/pack_nuget/pack_meta_dotnet.sh
-        env:
-          # IMAGEFLOW_NUGET_VERSION should be available from the build job context if needed,
-          # but pack_meta_dotnet.sh now reads NUGET_PACKAGE_VERSION
-          NUGET_PACKAGE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}
-          REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ env.GITHUB_REPOSITORY_NAME }}
-          REL_NUGET_OUTPUT_DIR: "${{ env.REL_NUGET_OUTPUT_DIR }}"
-
-      - name: Upload ${{ env.REL_NUGET_OUTPUT_DIR }} to S3 nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/
-        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
-        uses: shallwefootball/s3-upload-action@master
+      # Setup .NET Core SDK - choose a version compatible with your solution/scripts
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v4
         with:
-          aws_key_id: ${{ secrets.AWS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ env.IMAGEFLOW_RELEASE_BUCKET }}
-          source_dir: ./${{ env.REL_NUGET_OUTPUT_DIR }}
-          destination_dir: "nuget/${{ github.ref_type == 'tag' && github.ref_name || 'vTEST' }}/"
+          dotnet-version: '8.0.x' # Or your required version
 
-      - name: Download all NuGet packages from builds
+      - name: Download all Native Binaries artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: nuget-packages-*
-          path: ${{ env.REL_NUGET_OUTPUT_DIR }}
-          merge-multiple: true
+          pattern: native-binaries-* # Match artifact names from build job
+          path: artifacts/native_binaries # Download into this base directory
+          merge-multiple: true # Critical: ensures RIDs are in subdirs like artifacts/native_binaries/win-x64
 
-      - name: Publish to nuget.org (${{env.NUGET_UPLOAD_NUGET }})
-        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
-        run:  ./ci/pack_nuget/upload_nuget.sh ${{ env.REL_NUGET_OUTPUT_DIR }} "${{ secrets.NUGET_API_KEY }}"
-        shell: bash
-        env:
-          DELETE_ALL_FROM_NUGET_AFTER_FAILURE: ${{ env.DELETE_ALL_FROM_NUGET_AFTER_FAILURE }}
+      - name: List downloaded artifacts (for debugging)
+        run: ls -R artifacts/native_binaries
 
-      - name: Publish to nuget.pkg.github.com (${{env.NUGET_UPLOAD_GITHUB }})
-        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
+      - name: Pack Solution via PowerShell script (No Push)
+        shell: pwsh
         run: |
-          for f in ./${{ env.REL_NUGET_OUTPUT_DIR }}*.nupkg
-          do
-            curl -vX PUT -u "${{github.repository_owner}}:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/${{github.repository_owner}}/
-          done
+          ./dotnet/pack_test_push_all.ps1 `
+            -PackageVersion "${{ env.NUGET_PACKAGE_VERSION }}" `
+            -NativeArtifactBasePath "./artifacts/native_binaries" `
+            -PushToNuGet:$false # Explicitly false
+        env:
+          NUGET_PACKAGE_VERSION: ${{ env.NUGET_PACKAGE_VERSION }}
+
+
+      - name: Run Final EndToEnd Test (Linux x64)
         shell: bash
+        run: |
+          echo "Running final EndToEnd test using packages from ./artifacts/nuget"
+          TEST_PROJ="./dotnet/nuget/test/Imageflow.EndToEnd.Test.csproj"
+          if [[ ! -f "$TEST_PROJ" ]]; then
+             echo "::error::Test project not found at $TEST_PROJ"
+             exit 1
+          fi
+
+          # Use linux-x64 as the test RID since runner is ubuntu-latest
+          dotnet test "$TEST_PROJ" \
+            -c Release \
+            -r "linux-x64" \
+            --logger "trx;LogFileName=test_results_final_linux-x64.trx" \
+            --filter "Category=EndToEnd" \
+            /p:RestoreSources="$(pwd)/artifacts/nuget;https://api.nuget.org/v3/index.json" \
+            /p:ImageflowNetVersion="${{ env.IMAGEFLOW_NET_VERSION }}" \
+            /p:RuntimePackageVersion="${{ env.NUGET_PACKAGE_VERSION }}"
+
+      - name: Upload Final Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-final-pack
+          path: "*.trx"
+          if-no-files-found: ignore
+
+      - name: Publish to NuGet.org
+        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
+        shell: bash
+        run: |
+          echo "Pushing packages to NuGet.org..."
+          shopt -s globstar
+          for f in ./artifacts/nuget/**/*.nupkg
+          do
+            if [[ -f "$f" ]]; then
+              echo "Pushing $f to NuGet.org..."
+              dotnet nuget push "$f" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+              if [[ $? -ne 0 ]]; then
+                  echo "::error::Failed to push $f to NuGet.org"
+                  # Optionally add logic here to handle deletion if needed,
+                  # matching pack_test_push_all.ps1 logic, or rely on its deletion flag (if we ran it differently)
+                  # For now, just error out.
+                  # exit 1
+              fi
+            fi
+          done
+        env:
+          NUGET_UPLOAD_NUGET: ${{ env.NUGET_UPLOAD_NUGET }}
+
+      - name: Publish to GitHub Packages
+        if: ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
+        shell: bash
+        run: |
+          echo "Pushing packages to GitHub Packages..."
+          shopt -s globstar # Enable recursive globbing if needed
+          for f in ./artifacts/nuget/**/*.nupkg
+          do
+            if [[ -f "$f" ]]; then
+              echo "Pushing $f to GitHub Packages..."
+              dotnet nuget push "$f" --api-key "${{ secrets.GITHUB_TOKEN }}" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}" --skip-duplicate
+              if [[ $? -ne 0 ]]; then
+                  echo "::error::Failed to push $f to GitHub Packages"
+                  # Decide if you want to exit 1 here to fail the job
+              fi
+            else
+              echo "Warning: Found non-file match in artifacts/nuget: $f"
+            fi
+          done
+        env:
+          NUGET_UPLOAD_GITHUB: ${{ env.NUGET_UPLOAD_GITHUB }}

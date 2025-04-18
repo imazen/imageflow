@@ -1,0 +1,56 @@
+name: 'Parse Version'
+description: 'Parses version from tag (e.g., v1.2.3) or defaults to 0.0.0-ci-sha. Fails on release events if tag is invalid.'
+outputs:
+  version:
+    description: "The parsed tag version (if valid) or the default CI version (e.g., 1.2.3 or 0.0.0-ci-abc1234)"
+    value: ${{ steps.parser.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Parse, validate, and potentially fail
+      id: parser
+      shell: bash
+      env:
+        # Pass event name into the script environment
+        EVENT_NAME: ${{ github.event_name }}
+      run: |
+        TAG_NAME="${{ github.ref_name }}"
+        REF_TYPE="${{ github.ref_type }}"
+        SHA_SHORT="${GITHUB_SHA::7}"
+        DEFAULT_VERSION="0.0.0-ci-${SHA_SHORT}"
+        # Regex for basic SemVer 2.0.0 compatibility (used by NuGet)
+        SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-\.]+)?$'
+
+        FINAL_VERSION=$DEFAULT_VERSION # Default assumption
+
+        if [[ "$REF_TYPE" == "tag" ]]; then
+          # Remove leading 'v' if present
+          PARSED_VERSION="${TAG_NAME#v}"
+          # Check if it matches the SemVer/NuGet version format
+          if [[ "$PARSED_VERSION" =~ $SEMVER_REGEX ]]; then
+            echo "Parsed valid version from tag '$TAG_NAME': $PARSED_VERSION"
+            FINAL_VERSION=$PARSED_VERSION
+          else
+            # Invalid tag format
+            if [[ "$EVENT_NAME" == "release" ]]; then
+              echo "::error::Release event detected, but tag '$TAG_NAME' (parsed as '$PARSED_VERSION') does not match valid NuGet/SemVer format. Failing workflow."
+              exit 1
+            else
+              echo "::warning::Tag '$TAG_NAME' (parsed as '$PARSED_VERSION') does not match valid NuGet/SemVer format. Using default version."
+              # FINAL_VERSION remains $DEFAULT_VERSION
+            fi
+          fi
+        else
+          # Not a tag ref
+          if [[ "$EVENT_NAME" == "release" ]]; then
+            echo "::error::Release event detected, but the trigger was not a tag (ref_type: '$REF_TYPE', ref_name: '$TAG_NAME'). Releases must be triggered by valid version tags. Failing workflow."
+            exit 1
+          else
+             echo "Not a tag ref (ref_type: '$REF_TYPE', ref_name: '$TAG_NAME'). Using default version."
+             # FINAL_VERSION remains $DEFAULT_VERSION
+          fi
+        fi
+        # SET PARSED_VERSION env var
+        echo "PARSED_VERSION=$FINAL_VERSION" >> $GITHUB_ENV
+        echo "version=$FINAL_VERSION" >> $GITHUB_OUTPUT

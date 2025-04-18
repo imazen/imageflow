@@ -1,0 +1,57 @@
+name: 'Install 7z'
+description: 'Install 7z (p7zip) on various platforms if not already present'
+runs:
+  using: "composite"
+  steps:
+    - name: Check for 7z command
+      id: check_7z
+      shell: bash
+      run: |
+        if command -v 7z &> /dev/null; then
+          echo "7z is already installed."
+          echo "installed=true" >> $GITHUB_OUTPUT
+        else
+          echo "7z not found, proceeding with installation."
+          echo "installed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install 7z on macOS
+      if: runner.os == 'macOS' && steps.check_7z.outputs.installed == 'false'
+      shell: bash
+      run: brew install p7zip
+
+    - name: Install 7z on Ubuntu
+      if: runner.os == 'Linux' && steps.check_7z.outputs.installed == 'false'
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y p7zip-full
+
+    - name: Install 7z on Windows
+      if: runner.os == 'Windows' && steps.check_7z.outputs.installed == 'false'
+      shell: powershell
+      run: |
+        # Try winget first
+        try {
+          winget install --id 7zip.7zip -e --accept-package-agreements --accept-source-agreements
+          # Add default install path to GITHUB_PATH
+          $installDir = "C:\Program Files\7-Zip"
+          Write-Host "Adding $installDir to PATH"
+          echo $installDir | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        } catch {
+          Write-Host "Winget installation failed, trying Chocolatey"
+          try {
+            choco install 7zip --yes
+            # Choco usually adds to path automatically, but let's be sure
+            $installDir = "C:\Program Files\7-Zip" # Default Choco install path might vary slightly
+            if (Test-Path $installDir) {
+              Write-Host "Adding $installDir to PATH"
+              echo $installDir | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            }
+          } catch {
+            Write-Host "::error::Failed to install 7z using both winget and choco."
+            exit 1
+          }
+        }
+
+    - name: Verify 7z installation
+      shell: bash
+      run: 7z --help | head -n 5 # Run a simple command to confirm it's working
