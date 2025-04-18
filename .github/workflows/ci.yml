@@ -371,12 +371,14 @@ jobs:
         if: ${{ !matrix.static && !matrix.test-only }} # Only test if runtime package exists
         shell: pwsh
         run: |
-          ./dotnet/nuget/scripts/single-pack-and-test.ps1 `
-            -RID "${{ matrix.nuget-rid }}" `
+          ./dotnet/nuget/scripts/build-pipeline.ps1 `
+            -Mode SingleCI `
+            -TargetRid "${{ matrix.nuget-rid }}" `
             -PackageVersion "${{ env.NUGET_PACKAGE_VERSION }}" `
             -ImageflowNetVersion "${{ env.IMAGEFLOW_NET_VERSION }}" `
-            -NativeArtifactBasePath "$(pwd)/artifacts/native_binaries" `
-            -PackOutputDirectory "./temp_nuget_pkg/${{ matrix.nuget-rid }}"
+            -NativeArtifactBasePath "$(pwd)/artifacts/native_binaries/${{ matrix.nuget-rid }}" `
+            -PackOutputDirectory "./temp_nuget_pkg/${{ matrix.nuget-rid }}" # Temporary output for testing this RID
+            # -SkipTest:$false is default
 
       # No test results file to upload - script checks exit code
       # - name: Upload Test Results (from single-pack-and-test run)
@@ -530,19 +532,31 @@ jobs:
         run: |
           $pushNuGet = ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
           $pushGitHub = ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
-          $deleteOnFail = $true # Always delete on failure for CI runs
+          # $deleteOnFail = $true # Handled by default in build-pipeline.ps1
 
-          ./dotnet/nuget/scripts/merge-pack-test-publish.ps1 `
-            -PackageVersion "${{ env.NUGET_PACKAGE_VERSION }}" `
-            -ImageflowNetVersion "${{ env.IMAGEFLOW_NET_VERSION }}" `
-            -CombinedNativeArtifactBasePath "$(pwd)/artifacts/native_binaries" `
-            -NuGetApiKey "${{ secrets.NUGET_API_KEY }}" `
-            -GitHubApiKey "${{ secrets.GITHUB_TOKEN }}" `
-            -GitHubSourceUrl "https://nuget.pkg.github.com/${{ github.repository_owner }}" `
-            -PushToNuGet:$pushNuGet `
-            -PushToGitHub:$pushGitHub `
-            -DeleteOnFailure:$deleteOnFail `
-            -TestRid "linux-x64" # Run final test on linux-x64 runner
+          $pipelineArgs = @{
+            Mode                  = 'MultiCI'
+            PackageVersion        = "${{ env.NUGET_PACKAGE_VERSION }}"
+            ImageflowNetVersion   = "${{ env.IMAGEFLOW_NET_VERSION }}"
+            NativeArtifactBasePath = "$(pwd)/artifacts/native_binaries" # Base path containing all downloaded RID subdirs
+            PackOutputDirectory   = "${{ env.REL_NUGET_OUTPUT_DIR }}"    # Final output directory
+            SkipTest              = $true # Skip test in the final multi-CI step
+            # Push switches added conditionally below
+            DeleteNuGetOnFailure = $true # Default, can be set to $false or controlled by env var if needed
+          }
+          if ($pushNuGet) {
+              $pipelineArgs['PushToNuGet'] = $true
+              $pipelineArgs['NuGetApiKey'] = "${{ secrets.NUGET_API_KEY }}"
+              # NuGetSourceUrl uses default unless overridden
+          }
+          if ($pushGitHub) {
+               $pipelineArgs['PushToGitHub'] = $true
+               # Assumes gh CLI is present and GITHUB_TOKEN is in env
+          }
+
+          # Execute the pipeline script with splatted arguments
+          ./dotnet/nuget/scripts/build-pipeline.ps1 @pipelineArgs
         env:
           NUGET_UPLOAD_NUGET: ${{ env.NUGET_UPLOAD_NUGET }} # Needed for conditional check above
           NUGET_UPLOAD_GITHUB: ${{ env.NUGET_UPLOAD_GITHUB }} # Needed for conditional check above
+          REL_NUGET_OUTPUT_DIR: ${{ env.REL_NUGET_OUTPUT_DIR }} # Define where final packages go

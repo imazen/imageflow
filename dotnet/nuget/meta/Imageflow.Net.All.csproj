@@ -25,11 +25,11 @@
   <ItemGroup>
     <!-- Depends on the main managed library -->
     <!-- Use ProjectReference so build/pack within the solution works correctly -->
-    <PackageReference Include="Imageflow.Net" Version="$(ImageflowNetVersion)" PrivateAssets="All" />
+    <PackageReference Include="Imageflow.Net" Version="$(ImageflowNetVersion)"  />
     
     <!-- Depends on the meta-package containing all native runtimes -->
     <!-- Use ProjectReference so build/pack within the solution works correctly -->
-    <ProjectReference Include="Imageflow.NativeRuntime.All.csproj" PrivateAssets="All" />
+    <ProjectReference Include="Imageflow.NativeRuntime.All.csproj" />
   </ItemGroup>
 
   <!-- Target to ensure ImageflowNetVersion is provided -->

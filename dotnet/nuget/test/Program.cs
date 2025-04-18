@@ -7,9 +7,9 @@ using Imageflow.Fluent;
 
 class Program
 {
-    static async Task Main(string[] args)
+    static async Task<int> Main(string[] args)
     {
-        Console.WriteLine($"End-to-end test project starting for RID: {System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier}");
+        Console.WriteLine($"Test program running for RID: {System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier}");
 
         var imageBytes = Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=");
@@ -24,14 +24,16 @@ class Program
             // var versionInfo = await new Imageflow.Net.JobContext().GetVersionAsync();
             // Console.WriteLine($"Successfully called Imageflow.Net. Got version info: {versionInfo.ImageflowBuildDetails}");
 
-            Console.WriteLine("End-to-end test project completed successfully.");
+            Console.WriteLine("Test program completed successfully.");
             Environment.ExitCode = 0; // Explicit success
+            return 0;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error during end-to-end test: {ex.Message}");
+            Console.WriteLine($"Test program failing: {ex.Message}");
             Console.WriteLine(ex.StackTrace); // Provide more details on error
             Environment.ExitCode = 1; // Explicit failure
+            return 1;
         }
     }
 }

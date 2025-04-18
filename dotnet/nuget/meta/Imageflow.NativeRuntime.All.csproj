@@ -24,13 +24,13 @@
   <!-- Dependencies on all known native runtime packages -->
   <!-- Use ProjectReference so build/pack within the solution works correctly -->
   <ItemGroup>
-    <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-x64.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-x86.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-arm64.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\native\Imageflow.NativeRuntime.linux-x64.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\native\Imageflow.NativeRuntime.linux-arm64.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\native\Imageflow.NativeRuntime.osx-x64.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\native\Imageflow.NativeRuntime.osx-arm64.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-x64.csproj" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-x86.csproj" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-arm64.csproj" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.linux-x64.csproj" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.linux-arm64.csproj" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.osx-x64.csproj" />
+    <ProjectReference Include="..\native\Imageflow.NativeRuntime.osx-arm64.csproj" />
 </ItemGroup>
 
 </Project> 

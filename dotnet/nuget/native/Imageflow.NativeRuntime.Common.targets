@@ -25,11 +25,10 @@
     <PackageTags Include="nativeruntime;$(ImageflowNugetRid)" />
 
     <!-- Include the native library binary from the calculated path -->
-    <Content Include="$(FullNativeLibPath)" 
-             Condition="Exists('$(FullNativeLibPath)')"
-             Pack="true" 
-             PackagePath="runtimes/$(ImageflowNugetRid)/native/" 
-             CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(FullNativeLibPath)" 
+          Condition="Exists('$(FullNativeLibPath)')"
+          Pack="true" 
+          PackagePath="runtimes/$(ImageflowNugetRid)/native/" />
              
     <!-- Include the RID-specific .targets file conditionally based on property -->
     <!-- See: https://learn.microsoft.com/en-us/nuget/create-packages/creating-a-package-msbuild#including-msbuild-props-and-targets-in-a-package -->

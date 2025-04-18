@@ -21,15 +21,10 @@
   <!-- Reference the main managed library -->
   <ItemGroup>
     <PackageReference Include="Imageflow.Net" Version="$(ImageflowNetVersion)" />
-
-    <PackageReference Include="Imageflow.NativeRuntime.win-x86_64" Version="$(RuntimePackageVersion)"  />
-    <PackageReference Include="Imageflow.NativeRuntime.win-x86" Version="$(RuntimePackageVersion)"  />
-    <PackageReference Include="Imageflow.NativeRuntime.win-arm64" Version="$(RuntimePackageVersion)"  />
-    <PackageReference Include="Imageflow.NativeRuntime.linux-x64" Version="$(RuntimePackageVersion)"  />
-    <PackageReference Include="Imageflow.NativeRuntime.linux-arm64" Version="$(RuntimePackageVersion)"  />
-    <PackageReference Include="Imageflow.NativeRuntime.osx-x86_64" Version="$(RuntimePackageVersion)"  />
-    <PackageReference Include="Imageflow.NativeRuntime.osx-arm64" Version="$(RuntimePackageVersion)"  />
+    <!-- Reference the metapackage that includes all native runtimes -->
+    <PackageReference Include="Imageflow.NativeRuntime.All" Version="$(RuntimePackageVersion)" />
   </ItemGroup>
 
+  <!-- Removed conditional ItemGroups -->
 
 </Project> 

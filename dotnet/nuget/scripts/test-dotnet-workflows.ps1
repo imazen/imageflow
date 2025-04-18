@@ -1,190 +1,166 @@
-# PowerShell script to test the single-pack-and-test and merge-pack-test-publish scripts locally
+# PowerShell script to test the consolidated build-pipeline.ps1 script locally
 
 param(
     [string]$PackageVersion = "0.0.1-localtest" # Use a specific version for local testing
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+# --- Helper Functions ---
+# Helper function to get host RID (needed to determine which binaries to copy and pass to SingleTest mode)
+function Get-HostRid {
+    $os = $null
+    $arch = $null
+    if ($IsWindows) { $os = "win" }
+    elseif ($IsMacOS) { $os = "osx" }
+    elseif ($IsLinux) { $os = "linux" }
+    else { throw "Unsupported OS for Get-HostRid" }
+
+    $nativeArch = switch ($env:PROCESSOR_ARCHITECTURE) {
+        "AMD64" { "x64" }
+        "ARM64" { "arm64" }
+        "x86"   { "x86" }
+        default { throw "Unsupported Architecture for Get-HostRid: $($env:PROCESSOR_ARCHITECTURE)" }
+    }
+    return "$($os)-$($nativeArch)"
+}
+
+# Helper function to get expected native binary name based on RID
+function Get-NativeBinaryName {
+    param([string]$rid)
+    if ($rid.StartsWith("win-")) { return "imageflow.dll" }
+    if ($rid.StartsWith("osx-")) { return "libimageflow.dylib" }
+    if ($rid.StartsWith("linux-")) { return "libimageflow.so" }
+    throw "Cannot determine native binary name for RID: $rid"
+}
+
+# Helper function to get expected native tool name based on RID
+function Get-NativeToolName {
+    param([string]$rid)
+    if ($rid.StartsWith("win-")) { return "imageflow_tool.exe" }
+    return "imageflow_tool" # Linux, macOS
+}
+
 
 # --- Script Setup ---
 
 # Get script directory and workspace root
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 # Workspace root is three levels up from dotnet/nuget/scripts/
-$WorkspaceRoot = Resolve-Path (Join-Path $ScriptDir "..\..\..") 
-
-
+$WorkspaceRoot = Resolve-Path (Join-Path $ScriptDir "..\..\..")
 
 # Define paths
-# Scripts are now in the same directory as this script
-# $PlaceholderScript = Join-Path $ScriptDir "create_native_placeholders.ps1" # No longer using placeholders
-$SinglePackScript = Join-Path $ScriptDir "single-pack-and-test.ps1"
-$MergePackScript = Join-Path $ScriptDir "merge-pack-test-publish.ps1"
+$BuildPipelineScript = Join-Path $ScriptDir "build-pipeline.ps1"
 
-# This directory will now hold the REAL artifacts copied from the Rust build
-$TempStagingDir = Join-Path $WorkspaceRoot "temp_native_staging_for_test" 
-$TempSinglePackOutputDir = Join-Path $WorkspaceRoot "temp_single_pack_output"
-$FinalPackOutputDir = Join-Path $WorkspaceRoot "artifacts/nuget" # Where merge script outputs
+# This directory will hold the REAL artifacts copied from the Rust build for the HOST RID ONLY
+$CurrentBuildArtifactDir = Join-Path $WorkspaceRoot "dotnet/nuget/artifacts/native/current_build"
+$LocalPackOutputDir = Join-Path $WorkspaceRoot "temp_local_pack_output" # Where build-pipeline outputs packages
 
-# Define Rust build output path
+# Define Rust build output path (relative to WorkspaceRoot where cargo runs)
 $RustBuildOutputDir = Join-Path $WorkspaceRoot "target/release"
 
 # Check if dependent scripts exist
-# if (-not (Test-Path $PlaceholderScript)) { # Removed placeholder check
-#     Write-Error "Dependency script not found: $PlaceholderScript"
-#     exit 1
-# }
-if (-not (Test-Path $SinglePackScript)) {
-    Write-Error "Dependency script not found: $SinglePackScript"
-    exit 1
-}
-if (-not (Test-Path $MergePackScript)) {
-    Write-Error "Dependency script not found: $MergePackScript"
+if (-not (Test-Path $BuildPipelineScript)) {
+    Write-Error "Dependency script not found: $BuildPipelineScript"
     exit 1
 }
 
-# Ensure staging directory is clean before copying
-if (Test-Path $TempStagingDir) {
-    Write-Host "Cleaning previous staging directory: $TempStagingDir"
-    Remove-Item -Recurse -Force $TempStagingDir
+# Ensure output directories are clean before starting
+if (Test-Path $CurrentBuildArtifactDir) {
+    Write-Host "Cleaning previous local build artifact directory: $CurrentBuildArtifactDir"
+    Remove-Item -Recurse -Force $CurrentBuildArtifactDir
 }
-New-Item -ItemType Directory -Path $TempStagingDir | Out-Null
+New-Item -ItemType Directory -Path $CurrentBuildArtifactDir | Out-Null
 
-Write-Host "--- Testing DotNet Workflow Scripts Locally ---`n"
+if (Test-Path $LocalPackOutputDir) {
+    Write-Host "Cleaning previous local pack output directory: $LocalPackOutputDir"
+    Remove-Item -Recurse -Force $LocalPackOutputDir
+}
+New-Item -ItemType Directory -Path $LocalPackOutputDir | Out-Null
 
-# --- Test Execution --- 
+
+Write-Host "--- Testing DotNet Build Pipeline Locally ---`n"
+
+# --- Test Execution ---
 try {
     # 0. Build Rust Projects
     Write-Host "`nStep 0: Building Rust projects (cargo build --release)..." -ForegroundColor Cyan
     Push-Location $WorkspaceRoot # Run cargo from workspace root
-    cargo build --release
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "❌ Cargo build FAILED."
+    try {
+        cargo build --release
+        if ($LASTEXITCODE -ne 0) {
+            throw "Cargo build returned non-zero exit code: $LASTEXITCODE"
+        }
+    } finally {
         Pop-Location
-        exit 1
     }
-    Pop-Location
     Write-Host "✅ Rust build completed." -ForegroundColor Green
 
-    # 1. Copy REAL native artifacts to staging directory for ALL RIDs (using win-x64 for local test)
-    Write-Host "`nStep 1: Copying built native artifacts to $TempStagingDir for all expected RIDs..." -ForegroundColor Cyan
-    
-    # Define expected artifact names (adjust if needed)
-    $NativeDllName = "imageflow.dll"
-    $NativeToolName = "imageflow_tool.exe"
-    $SourceDllPath = Join-Path $RustBuildOutputDir $NativeDllName
-    $SourceToolPath = Join-Path $RustBuildOutputDir $NativeToolName
+    # 1. Copy built native artifacts for HOST RID to CurrentBuildArtifactDir
+    Write-Host "`nStep 1: Copying built native artifacts for HOST RID to $CurrentBuildArtifactDir..." -ForegroundColor Cyan
+    $hostRid = Get-HostRid
+    Write-Host "  Detected Host RID: $hostRid"
 
-    # List of RIDs expected by the solution pack (add more if needed)
-    $TargetRids = @(
-        "win-x64", 
-        "win-x86", 
-        "win-arm64", 
-        "linux-x64", 
-        "linux-arm64", 
-        "osx-x64", 
-        "osx-arm64"
-        # Add ubuntu-x86_64 if needed, maps to linux-x64 usually
-    )
+    # Determine expected artifact names for host RID
+    $hostLibName = Get-NativeBinaryName -rid $hostRid
+    $hostToolName = Get-NativeToolName -rid $hostRid
+    $sourceLibPath = Join-Path $RustBuildOutputDir $hostLibName
+    $sourceToolPath = Join-Path $RustBuildOutputDir $hostToolName
 
-    foreach ($rid in $TargetRids) {
-        # Determine expected names based on RID (simplified for copy)
-        $TargetDllName = $NativeDllName
-        $TargetToolName = $NativeToolName
-        if ($rid -notlike "win-*") { # Non-windows
-             $ext = if ($rid -like "osx-*") {"dylib"} else {"so"}
-             $TargetDllName = "libimageflow.$ext"
-             $TargetToolName = "imageflow_tool"
-        }
-        
-        # Create target structure
-        $TargetNativeDir = Join-Path $TempStagingDir $rid "native"
-        New-Item -ItemType Directory -Path $TargetNativeDir -Force | Out-Null
-        
-        # Copy artifacts (using win-x64 source for all in this local test)
-        Copy-Item -Path $SourceDllPath -Destination (Join-Path $TargetNativeDir $TargetDllName) -Force
-        Copy-Item -Path $SourceToolPath -Destination (Join-Path $TargetNativeDir $TargetToolName) -Force
-        Write-Host "  Copied win-x64 artifacts AS $TargetDllName/$TargetToolName for RID $rid."
+    if (-not (Test-Path $sourceLibPath)) { throw "Source library '$sourceLibPath' not found in Rust build output '$RustBuildOutputDir'" }
+    if (-not (Test-Path $sourceToolPath)) { throw "Source tool '$sourceToolPath' not found in Rust build output '$RustBuildOutputDir'" }
+
+    # Copy artifacts directly into the target dir
+    Copy-Item -Path $sourceLibPath -Destination (Join-Path $CurrentBuildArtifactDir $hostLibName) -Force
+    Copy-Item -Path $sourceToolPath -Destination (Join-Path $CurrentBuildArtifactDir $hostToolName) -Force
+    Write-Host "✅ Host artifacts ($hostLibName, $hostToolName) copied." -ForegroundColor Green
+
+    # 2. Run the consolidated build-pipeline.ps1 in SingleTest mode
+    Write-Host "`nStep 2: Running build-pipeline.ps1 -Mode SingleTest ..." -ForegroundColor Cyan
+    $pipelineArgs = @{
+        Mode                 = 'SingleTest'
+        TargetRid            = $hostRid
+        PackageVersion       = $PackageVersion
+        ImageflowNetVersion  = '*-*' # Use appropriate version constraint
+        NativeArtifactBasePath = $CurrentBuildArtifactDir # Point to dir with only host artifacts
+        PackOutputDirectory  = $LocalPackOutputDir
+        Configuration        = 'Release' # Or 'Debug' if testing debug builds
+        SkipTest             = $false # Run the test integrated in the pipeline
+        # No push flags needed for SingleTest
     }
-    Write-Host "✅ Artifacts copied for all RIDs." -ForegroundColor Green
+    & $BuildPipelineScript @pipelineArgs # Splat the arguments
+    Write-Host "✅ Step 2 (build-pipeline.ps1) completed." -ForegroundColor Green
 
-    # 2. Run single-pack-and-test for host RID using REAL artifacts
-    Write-Host "`nStep 2: Running single-pack-and-test.ps1 for host RID..." -ForegroundColor Cyan
-    # Note: We don't need to explicitly pass RID, the script defaults to host
-    & $SinglePackScript -PackageVersion $PackageVersion `
-                       -ImageflowNetVersion *-* `
-                       -NativeArtifactBasePath $TempStagingDir `
-                       -PackOutputDirectory $TempSinglePackOutputDir
-    Write-Host "✅ Step 2 completed." -ForegroundColor Green
 
-    # --- DEBUG: Inspect the created native runtime package ---
-    Write-Host "`n--------- DEBUG START: Inspect Native Package ---------" -ForegroundColor Magenta
-    $NativePackagePath = Get-ChildItem -Path $TempSinglePackOutputDir -Filter "Imageflow.NativeRuntime.win-x86_64.*.nupkg" | Select-Object -First 1 -ExpandProperty FullName
-    if ($NativePackagePath -and (Test-Path $NativePackagePath)) {
-        $InspectDir = Join-Path $WorkspaceRoot "temp_inspect_nupkg"
-        if (Test-Path $InspectDir) { Remove-Item -Recurse -Force $InspectDir }
-        New-Item -ItemType Directory -Path $InspectDir | Out-Null
-        Write-Host "Inspecting package: $NativePackagePath"
-        Write-Host "Extracting to: $InspectDir ..."
-        try {
-            Expand-Archive -Path $NativePackagePath -DestinationPath $InspectDir -Force -ErrorAction Stop
-            Write-Host "Extraction successful. Contents:"
-            Get-ChildItem -Path $InspectDir -Recurse | ForEach-Object { Write-Host $_.FullName }
-        } catch {
-            Write-Warning "Failed to extract or list package contents: $($_.Exception.Message)"
-        }
-        # Keep the extracted dir for manual inspection if needed, cleanup happens in finally
-    } else {
-        Write-Warning "Could not find native runtime package in '$TempSinglePackOutputDir' matching 'Imageflow.NativeRuntime.win-x86_64.*.nupkg' to inspect."
-    }
-    Write-Host "--------- DEBUG END: Inspect Native Package -----------" -ForegroundColor Magenta
-    # --- END DEBUG ---
-
-    # 3. Run merge-pack-test-publish using REAL artifacts 
-    #    (Simulates CI where artifacts are downloaded to CombinedNativeArtifactBasePath)
-    Write-Host "`nStep 3: Running merge-pack-test-publish.ps1 (Pack and Test only)..." -ForegroundColor Cyan
-    & $MergePackScript -PackageVersion $PackageVersion `
-                      -ImageflowNetVersion *-* `
-                      -CombinedNativeArtifactBasePath $TempStagingDir ` # Use the same staging dir
-                      -PushToNuGet:$false `
-                      -PushToGitHub:$false # Explicitly disable push
-    Write-Host "✅ Step 3 completed." -ForegroundColor Green
-
-    Write-Host "`nAll workflow script tests completed successfully." -ForegroundColor Green
+    Write-Host "`nLocal build pipeline test completed successfully." -ForegroundColor Green
+    Write-Host "Generated packages are in: $LocalPackOutputDir" -ForegroundColor Cyan
 
 } catch {
     # Catch errors from any script call
     Write-Error "❌ Workflow script test FAILED: $($_.Exception.Message)"
-    if ($_.Exception.ErrorRecord -and $_.Exception.ErrorRecord.InvocationInfo) { # Check InvocationInfo
-        Write-Error "❌ Error occurred in script: $($_.Exception.ErrorRecord.InvocationInfo.ScriptName) at line $($_.Exception.ErrorRecord.InvocationInfo.ScriptLineNumber)"
-    }
-    if ($_.Exception.ErrorRecord) {
-        Write-Error "❌ Originating Error Record: $($_.Exception.ErrorRecord | Out-String)"
+    if ($_.ErrorRecord) {
+        $InvocationInfo = $_.ErrorRecord.InvocationInfo
+        if ($InvocationInfo) {
+             Write-Error "❌ Error occurred in script: $($InvocationInfo.ScriptName) at line $($InvocationInfo.ScriptLineNumber), Position $($InvocationInfo.OffsetInLine)"
+             Write-Error "❌ Line: $($InvocationInfo.Line.Trim())"
+        }
+         Write-Error "❌ Full Error Record: $($_.ErrorRecord | Out-String)"
+    } else {
+         Write-Error "❌ Exception StackTrace: $($_.ScriptStackTrace)"
     }
     exit 1
 } finally {
-    # --- Cleanup --- 
+    # --- Cleanup ---
     Write-Host "`n--- Cleaning up temporary directories ---"
-    # Add cleanup for inspect dir
-    $InspectDir = Join-Path $WorkspaceRoot "temp_inspect_nupkg"
-    if (Test-Path $InspectDir) {
-        Write-Host "Removing inspect directory: $InspectDir"
-        Remove-Item -Recurse -Force $InspectDir -ErrorAction SilentlyContinue
+    if (Test-Path $CurrentBuildArtifactDir) {
+        Write-Host "Removing local build artifact directory: $CurrentBuildArtifactDir"
+        Remove-Item -Recurse -Force $CurrentBuildArtifactDir -ErrorAction SilentlyContinue
     }
-    # Existing cleanup
-    if (Test-Path $TempStagingDir) {
-        Write-Host "Removing staging directory: $TempStagingDir"
-        Remove-Item -Recurse -Force $TempStagingDir -ErrorAction SilentlyContinue
+    if (Test-Path $LocalPackOutputDir) {
+        Write-Host "Removing local pack output directory: $LocalPackOutputDir"
+        Remove-Item -Recurse -Force $LocalPackOutputDir -ErrorAction SilentlyContinue
     }
-    if (Test-Path $TempSinglePackOutputDir) {
-        Write-Host "Removing single pack output directory: $TempSinglePackOutputDir"
-        Remove-Item -Recurse -Force $TempSinglePackOutputDir
-    }
-     # Optionally clean the final pack output dir if desired after local test
-    # if (Test-Path $FinalPackOutputDir) {
-    #     Write-Host "Removing final pack output directory: $FinalPackOutputDir"
-    #     Remove-Item -Recurse -Force $FinalPackOutputDir
-    # }
 }
 
 Write-Host "`nLocal workflow test script finished." -ForegroundColor Cyan
