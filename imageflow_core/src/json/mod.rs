@@ -1,96 +1,41 @@
-
-//! Kind of like a routing table for JSON endpoints
-
+pub(crate) mod endpoints;
 use crate::internal_prelude::works_everywhere::*;
+use crate::context::Context;
 
-type ResponderFn<'a, T, D> = Box<dyn Fn(&mut T, D) -> Result<s::ResponsePayload> + 'a + Sync + Send>;
-type MethodHandler<'a, T> = Box<dyn Fn(&mut T, &[u8]) -> (JsonResponse, std::result::Result<(), FlowError>) + 'a + Sync + Send>;
-
-//#[cfg_attr(feature = "cargo-clippy", allow(new_without_default_derive))] // clippy is broke
-#[derive(Default)]
-pub struct MethodRouter<'a, T> {
-    handlers: HashMap<&'static str, MethodHandler<'a, T>>,
-    method_names: Vec<&'static str>,
-}
-
-impl<'a, T> MethodRouter<'a, T> {
-    //#[cfg_attr(feature = "cargo-clippy", allow(new_without_default_derive))] // clippy is broke
-    pub fn new() -> MethodRouter<'a, T> {
-        MethodRouter {
-            handlers: HashMap::new(),
-            method_names: vec![],
-        }
-    }
-    /// Returns the replaced MethodHandler if one already existed for that method.
-    pub fn add(&mut self,
-               method: &'static str,
-               handler: MethodHandler<'a, T>)
-               -> Option<MethodHandler<'a, T>> {
-        self.method_names.push(method);
-        self.handlers.insert(method, handler)
-    }
-
-    pub fn add_responder<D>(&mut self,
-                            method: &'static str,
-                            responder: ResponderFn<'a, T, D>)
-                            -> Option<MethodHandler<'a, T>>
-        where D: serde::de::DeserializeOwned,
-              D: 'a,
-              T: 'a
-    {
-        self.method_names.push(method);
-        self.handlers.insert(method, create_handler_over_responder(responder))
-    }
-
-
-    pub fn list(&self) -> &[&str] {
-        &self.method_names
-    }
-
-    /// Responds with an JsonResponse even for client errors
-    ///
-    pub fn invoke(&self,
-                  upon: &mut T,
-                  method: &str,
-                  json_request_body: &[u8])
-                  -> (JsonResponse, Result<()>) {
-        match self.handlers.get(method) {
-            Some(handler) => handler(upon as &mut T, json_request_body),
-            None => (JsonResponse::method_not_understood(), Err(nerror!(ErrorKind::InvalidMessageEndpoint)))
+pub(crate) fn route(context: &mut Context, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
+    match endpoints::route_inner(context, method, json) {
+        Ok(response) => (response, Ok(())),
+        Err(e) => {
+            (JsonResponse::from_flow_error(&e), Err(e))
         }
     }
 }
-pub fn create_handler_over_responder<'a, T, D>(responder: ResponderFn<'a, T, D>)
-                                               -> MethodHandler<'a, T>
-    where D: serde::de::DeserializeOwned,
-          D: 'a,
-          T: 'a
+
+pub(crate)fn parse_json<'a, D>(json: &[u8]) -> Result<D>
+where D: serde::de::DeserializeOwned, D: 'a
 {
+    match serde_json::from_slice(json) {
+        Ok(d) => Ok(d),
+        Err(e) => Err(FlowError::from_serde(e, json, std::any::type_name::<D>()).at(here!()))
+    }
+}
 
-    Box::new(move |upon: &mut T, json_request_bytes: &[u8]| {
 
-        let parsed_maybe: std::result::Result<D, serde_json::Error> =
-            serde_json::from_slice(json_request_bytes);
-        match parsed_maybe {
-            Ok(parsed) => {
-                let payload_maybe = responder(upon, parsed);
-                match payload_maybe {
-                    Ok(payload) => {
-                        (JsonResponse::success_with_payload(payload), Ok(())) //How about failures with payloads!?
-                    }
-                    Err(error) => {
-                        (JsonResponse::from_flow_error(&error), Err(error))
-                    }
-                }
-            }
-            Err(e) => {
-                let e = FlowError::from_serde(e, json_request_bytes);
-                (JsonResponse::from_flow_error(&e), Err(e))
-            }
-        }
+#[cfg(feature = "schema-export")]
+use utoipa::ToSchema;
+#[cfg(feature = "schema-export")]
+use serde::{Serialize, Deserialize};
 
-    })
-
+// Generic wrapper for successful JSON responses (matches Response001 structure)
+#[cfg_attr(feature = "schema-export", derive(Serialize, Deserialize, ToSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonAnswer<T> {
+    #[cfg_attr(feature = "schema-export", schema(example = 200))]
+    pub code: i64,
+    #[cfg_attr(feature = "schema-export", schema(example = true))]
+    pub success: bool,
+    pub message: Option<String>,
+    pub data: T, // Specific payload for the endpoint
 }
 
 #[derive(Debug, Clone)]
@@ -124,7 +69,18 @@ impl JsonResponse {
             response_json: Cow::Owned(serde_json::to_vec_pretty(&r).unwrap()),
         }
     }
-
+    pub fn ok<T>(r: T) -> JsonResponse  where T: serde::Serialize {
+        let r = JsonAnswer {
+            success: true,
+            code: 200,
+            message: Some("OK".to_owned()),
+            data: r,
+        };
+        JsonResponse {
+            status_code: r.code,
+            response_json: Cow::Owned(serde_json::to_vec_pretty(&r).unwrap()),
+        }
+    }
     pub fn from_result(r: Result<s::ResponsePayload>) -> JsonResponse{
         match r {
             Ok(payload) => {
@@ -159,7 +115,7 @@ impl JsonResponse {
         self
     }
 
-    pub fn ok() -> JsonResponse {
+    pub fn ok_empty() -> JsonResponse {
         JsonResponse {
             status_code: 200,
             response_json: Cow::Borrowed(br#"{"success": "true","code": 200,"message": "OK"}"#),

@@ -89,6 +89,7 @@ impl PixelLayout{
 #[repr(C)]
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum PixelFormat {
     #[serde(rename="bgra_32")]
     Bgra32 = 4,
@@ -150,6 +151,7 @@ pub enum PixelBuffer<'a> {
 #[repr(C)]
 #[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum Filter {
     #[serde(rename="robidoux_fast")]
     RobidouxFast = 1,
@@ -258,6 +260,7 @@ pub enum Filter {
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum PngBitDepth {
     #[serde(rename="png_32")]
     Png32,
@@ -268,6 +271,7 @@ pub enum PngBitDepth {
 /// The color space to blend/combine pixels in. Downscaling is best done in linear light.
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum ScalingFloatspace {
     #[serde(rename="srgb")]
     Srgb,
@@ -277,6 +281,7 @@ pub enum ScalingFloatspace {
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum OutputImageFormat{
     Webp,
@@ -328,6 +333,7 @@ impl OutputImageFormat{
 }
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub struct EncoderHints{
     //pub jxl: Option<JxlEncoderHints>,
@@ -356,6 +362,7 @@ pub struct EncoderHints{
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub struct GifEncoderHints{
 
@@ -363,6 +370,7 @@ pub struct GifEncoderHints{
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub struct WebpEncoderHints{
     pub quality: Option<f32>,
@@ -371,6 +379,7 @@ pub struct WebpEncoderHints{
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub struct JpegEncoderHints{
     pub quality: Option<f32>,
@@ -384,6 +393,7 @@ pub struct JpegEncoderHints{
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum JpegEncoderStyle{
     Jpegli,
@@ -395,6 +405,7 @@ pub enum JpegEncoderStyle{
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub struct PngEncoderHints{
     pub quality: Option<f32>,
@@ -408,6 +419,7 @@ pub struct PngEncoderHints{
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum PngEncoderStyle{
     Libpng,
@@ -418,6 +430,7 @@ pub enum PngEncoderStyle{
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub struct AllowedFormats{
     pub webp: Option<bool>,
@@ -614,6 +627,7 @@ impl AllowedFormats{
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum BoolKeep{
     Keep,
@@ -646,6 +660,7 @@ impl BoolKeep{
 }
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum QualityProfile{
     Lowest,
@@ -709,6 +724,7 @@ impl QualityProfile{
 /// Encoder presets (each with optional configuration). These are exposed by the JSON API.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum EncoderPreset {
     /// Requires a quality profile to be specified
@@ -810,6 +826,7 @@ impl EncoderPreset {
 /// Represents an sRGB color value.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum ColorSrgb {
     /// Hex in RRGGBBAA (css) form or variant thereof
     #[serde(rename="hex")]
@@ -819,6 +836,7 @@ pub enum ColorSrgb {
 /// Represents arbitrary colors (not color space specific)
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum Color {
     #[serde(rename="transparent")]
     Transparent,
@@ -900,6 +918,7 @@ fn test_bgra() {
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum ResampleWhen{
     #[serde(rename="size_differs")]
     SizeDiffers,
@@ -911,6 +930,7 @@ pub enum ResampleWhen{
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum SharpenWhen{
     #[serde(rename="downscaling")]
     Downscaling,
@@ -924,6 +944,7 @@ pub enum SharpenWhen{
 
 #[derive(Serialize, Deserialize,  Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct ResampleHints {
     pub sharpen_percent: Option<f32>,
     pub down_filter: Option<Filter>,
@@ -976,6 +997,7 @@ impl ResampleHints {
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum CommandStringKind{
     #[serde(rename="ir4")]
     ImageResizer4
@@ -983,6 +1005,7 @@ pub enum CommandStringKind{
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum ConstraintMode {
     /// Distort the image to exactly the given dimensions.
     /// If only one dimension is specified, behaves like `fit`.
@@ -1020,6 +1043,7 @@ pub enum ConstraintMode {
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum WatermarkConstraintMode {
     /// Distort the image to exactly the given dimensions.
     /// If only one dimension is specified, behaves like `fit`.
@@ -1056,6 +1080,7 @@ impl From<WatermarkConstraintMode> for ConstraintMode{
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum ConstraintGravity {
     #[serde(rename = "center")]
     Center,
@@ -1064,6 +1089,7 @@ pub enum ConstraintGravity {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct Constraint {
     pub mode: ConstraintMode,
     pub w: Option<u32>,
@@ -1075,6 +1101,7 @@ pub struct Constraint {
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum WatermarkConstraintBox{
     #[serde(rename = "image_percentage")]
     ImagePercentage{ x1: f32, y1: f32, x2: f32, y2: f32},
@@ -1090,6 +1117,7 @@ pub enum WatermarkConstraintBox{
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct Watermark{
     pub io_id: i32,
     pub fit_box: Option<WatermarkConstraintBox>,
@@ -1104,6 +1132,7 @@ pub struct Watermark{
 /// Blend pixels (if transparent) or replace?
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum CompositingMode {
     #[serde(rename="compose")]
     Compose,
@@ -1113,6 +1142,7 @@ pub enum CompositingMode {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct FrameSizeLimit{
     pub w: u32,
     pub h: u32,
@@ -1121,6 +1151,7 @@ pub struct FrameSizeLimit{
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct ExecutionSecurity{
     pub max_decode_size: Option<FrameSizeLimit>,
     pub max_frame_size: Option<FrameSizeLimit>,
@@ -1129,6 +1160,7 @@ pub struct ExecutionSecurity{
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum RoundCornersMode {
     #[serde(rename = "percentage")]
     Percentage(f32),
@@ -1147,6 +1179,7 @@ pub enum RoundCornersMode {
 #[allow(unreachable_patterns)]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum Node {
     #[serde(rename="flip_v")]
     FlipV,
@@ -1286,6 +1319,7 @@ pub enum Node {
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum ColorFilterSrgb {
     #[serde(rename="grayscale_ntsc")]
     GrayscaleNtsc,
@@ -1316,6 +1350,7 @@ pub enum ColorFilterSrgb {
 /// In the future, some operations may have multiple inputs, and new edge types may be introduced for non-bitmap data.
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum EdgeKind {
     #[serde(rename="input")]
     Input,
@@ -1326,6 +1361,7 @@ pub enum EdgeKind {
 /// Operation nodes are connected by edges. JSON only.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct Edge {
     pub from: i32,
     pub to: i32,
@@ -1336,6 +1372,7 @@ pub struct Edge {
 /// An operation graph; should be directed and acyclic. JSON only.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct Graph {
     pub nodes: std::collections::HashMap<String, Node>,
     pub edges: Vec<Edge>,
@@ -1344,6 +1381,7 @@ pub struct Graph {
 /// We must mark IO objects as data sources or data destinations.
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[repr(C)]
 pub enum IoDirection {
     #[serde(rename="out")]
@@ -1355,6 +1393,7 @@ pub enum IoDirection {
 /// Describes (or contains) a data source or destination
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum IoEnum {
     #[serde(rename="bytes_hex")]
     BytesHex(String),
@@ -1394,6 +1433,7 @@ impl IoEnum{
 /// Data source or destination (including IO ID).
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct IoObject {
     pub io_id: i32,
     pub direction: IoDirection,
@@ -1404,6 +1444,7 @@ pub struct IoObject {
 /// Operation graphs *may* be applied to each frame in the source data - thus 'Framewise'.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum Framewise {
     #[serde(rename="graph")]
     Graph(Graph),
@@ -1452,6 +1493,7 @@ impl Framewise {
 /// v0.0.1
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct Build001GraphRecording {
     pub record_graph_versions: Option<bool>,
     pub record_frame_images: Option<bool>,
@@ -1484,6 +1526,7 @@ impl Build001GraphRecording {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct Build001Config {
     // pub process_all_gif_frames: Option<bool>,
     pub graph_recording: Option<Build001GraphRecording>,
@@ -1494,6 +1537,7 @@ pub struct Build001Config {
 /// TODO: cleanup builder_config.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct Build001 {
     pub builder_config: Option<Build001Config>,
     pub io: Vec<IoObject>,
@@ -1587,6 +1631,7 @@ impl Build001 {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct Execute001 {
     pub graph_recording: Option<Build001GraphRecording>,
     pub security: Option<ExecutionSecurity>,
@@ -1765,30 +1810,35 @@ impl Execute001 {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct GetImageInfo001 {
     pub io_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct GetVersionInfo{
 
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct GetQueryStringSchema{
 
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct ListQueryStringKeys{
 
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct ValidateQueryString{
     pub query_string: String,
 }
@@ -1800,6 +1850,7 @@ impl GetImageInfo001 {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct JpegIDCTDownscaleHints {
     pub width: i64,
     pub height: i64,
@@ -1809,6 +1860,7 @@ pub struct JpegIDCTDownscaleHints {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct WebPDecoderHints {
     pub width: i32,
     pub height: i32,
@@ -1816,6 +1868,7 @@ pub struct WebPDecoderHints {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum DecoderCommand {
     #[serde(rename="jpeg_downscale_hints")]
     JpegDownscaleHints(JpegIDCTDownscaleHints),
@@ -1828,6 +1881,7 @@ pub enum DecoderCommand {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct TellDecoder001 {
     pub io_id: i32,
     pub command: DecoderCommand,
@@ -1849,6 +1903,7 @@ impl TellDecoder001 {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct ImageInfo {
     pub preferred_mime_type: String,
     pub preferred_extension: String,
@@ -1863,6 +1918,7 @@ pub struct ImageInfo {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum ResultBytes {
     #[serde(rename="base_64")]
     Base64(String),
@@ -1875,6 +1931,7 @@ pub enum ResultBytes {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct EncodeResult {
     pub preferred_mime_type: String,
     pub preferred_extension: String,
@@ -1887,6 +1944,7 @@ pub struct EncodeResult {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct DecodeResult {
     pub preferred_mime_type: String,
     pub preferred_extension: String,
@@ -1900,17 +1958,20 @@ pub struct DecodeResult {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct NodePerf{
     pub wall_microseconds: u64,
     pub name: String
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct BuildPerformance{
     pub frames: Vec<FramePerformance>,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct FramePerformance{
     pub nodes: Vec<NodePerf>,
     pub wall_microseconds: u64,
@@ -1924,6 +1985,7 @@ pub struct FramePerformance{
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct JobResult {
     pub encodes: Vec<EncodeResult>,
     pub decodes: Vec<DecodeResult>,
@@ -1932,6 +1994,7 @@ pub struct JobResult {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct VersionInfo{
     pub long_version_string: String,
     pub last_git_commit: String,
@@ -1942,6 +2005,7 @@ pub struct VersionInfo{
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum ResponsePayload {
     #[serde(rename="image_info")]
     ImageInfo(ImageInfo),
@@ -1965,12 +2029,14 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub struct QueryStringValidationResults{
         pub issues: Vec<QueryStringValidationIssue>,
     }
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub struct QueryStringValidationIssue{
         pub message: String,
         pub key: String,
@@ -1979,6 +2045,7 @@ pub mod json_messages{
     }
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub enum QueryStringValidationIssueKind{
         DuplicateKeyError,
         UnrecognizedKey,
@@ -1990,6 +2057,7 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub struct QueryStringSchema{
         pub key_names: Vec<String>,
         // pub keys: Vec<QueryStringSchemaKey>,
@@ -1999,6 +2067,7 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub struct QueryStringSchemaMarkdownPage{
         pub slug: String,
         pub title: String,
@@ -2007,6 +2076,7 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub enum QueryStringDescription{
         #[serde(rename="markdown")]
         Markdown(String),
@@ -2016,6 +2086,7 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub struct QueryStringSchemaKeyGroup{
         pub id: String,
         pub name: String,
@@ -2027,6 +2098,7 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub struct QueryStringSchemaKey{
         pub key: String,
         pub aliases: Option<Vec<String>>,
@@ -2043,6 +2115,7 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub struct QueryStringSchemaValue{
         pub example_value: Option<String>,
         pub value_syntax: Option<String>,
@@ -2056,6 +2129,7 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub enum QueryStringSchemaValueValidation{
         // float, integer (both with optionalrange)
         // enum of strings
@@ -2082,6 +2156,7 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub struct QueryStringSchemaValueRange{
         pub min: Option<f32>,
         pub max: Option<f32>,
@@ -2092,6 +2167,7 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub struct QueryStringSchemaExample{
         pub querystring: String,
         pub html_fragment: Option<String>,
@@ -2101,6 +2177,7 @@ pub mod json_messages{
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct Response001 {
     pub code: i64,
     pub success: bool,
@@ -2235,6 +2312,7 @@ fn decode_graph() {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub enum TestEnum {
     A,
     B { c: i32 },

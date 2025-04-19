@@ -106,7 +106,7 @@ impl Context {
 
 
     pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
-        crate::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
+        crate::json::route(self, method, json)
     }
 
     pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<BitmapsContainer>>{
@@ -324,10 +324,13 @@ impl Context {
         }
     }
 
-
+    pub fn build_1(&mut self, parsed: s::Build001) -> Result<s::ResponsePayload> {
+        let job_result = self.build_inner(parsed).map_err(|e| e.at(here!()))?;
+        Ok(s::ResponsePayload::BuildResult(job_result))
+    }
 
     /// For executing a complete job
-    pub fn build_1(&mut self, parsed: s::Build001) -> Result<s::ResponsePayload> {
+    pub(crate) fn build_inner(&mut self, parsed: s::Build001) -> Result<s::JobResult> {
         let g = crate::parsing::GraphTranslator::new().translate_framewise(parsed.framewise).map_err(|e| e.at(here!())) ?;
 
 
@@ -351,7 +354,7 @@ impl Context {
         let perf = engine.execute_many().map_err(|e| e.at(here!())) ?;
 
 
-        Ok(s::ResponsePayload::BuildResult(s::JobResult  { decodes, encodes: engine.collect_augmented_encode_results(&parsed.io), performance: Some(perf) }))
+        Ok(s::JobResult  { decodes, encodes: engine.collect_augmented_encode_results(&parsed.io), performance: Some(perf) })
     }
 
     pub fn configure_graph_recording(&mut self, recording: s::Build001GraphRecording) {
@@ -378,6 +381,10 @@ impl Context {
 
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
     pub fn execute_1(&mut self, what: s::Execute001) -> Result<s::ResponsePayload>{
+        let job_result = self.execute_inner(what).map_err(|e| e.at(here!()))?;
+        Ok(s::ResponsePayload::JobResult(job_result))
+    }
+    pub(crate) fn execute_inner(&mut self, what: s::Execute001) -> Result<s::JobResult>{
         let g = crate::parsing::GraphTranslator::new().translate_framewise(what.framewise).map_err(|e| e.at(here!()))?;
         if let Some(r) = what.graph_recording {
             self.configure_graph_recording(r);
@@ -392,7 +399,7 @@ impl Context {
 
         let perf = engine.execute_many().map_err(|e| e.at(here!()))?;
 
-        Ok(s::ResponsePayload::JobResult(s::JobResult { decodes, encodes: engine.collect_encode_results(), performance: Some(perf) }))
+        Ok(s::JobResult { decodes, encodes: engine.collect_encode_results(), performance: Some(perf) })
     }
 
     pub fn get_version_info(&self) -> Result<s::VersionInfo>{

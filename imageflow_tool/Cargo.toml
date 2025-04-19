@@ -5,6 +5,13 @@ authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
 edition = "2021"
 
+description = "A command-line tool for interacting with the Imageflow library, primarily for testing and debugging."
+homepage = "https://imageflow.io"
+repository = "https://github.com/imazen/imageflow"
+readme = "README.md"
+keywords = ["image", "imaging", "resizing", "graphics", "server"]
+categories = ["multimedia::images", "command-line-utilities"]
+
 [dependencies]
 imageflow_core = { path = "../imageflow_core", version = "*" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
@@ -16,13 +23,17 @@ serde = "1"
 serde_json = "1"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
-zip = { version = "2", default-features = false }
+zip = { version = "2.3.0", default-features = false }
 smallvec = "1"
+bytes = "1"
+utoipa = { version = "5.3.1", features = [], optional = true }
+
+[features]
+schema-export = ["dep:utoipa", "imageflow_types/schema-export", "imageflow_core/schema-export"]
 
 [[bin]]
 name = "imageflow_tool"
 path = "src/main.rs"
 doc = false
 
-[features]
-nightly = ["imageflow_helpers/nightly"]
+[dev-dependencies]

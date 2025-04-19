@@ -52,18 +52,16 @@ pub use crate::errors::*;
 
 mod json;
 mod flow;
-mod context_methods;
 mod context;
 mod codecs;
 mod io;
 pub mod graphics;
 
-pub use crate::context::{Context};
+pub use crate::context::Context;
 pub use crate::io::IoProxy;
-pub use crate::ffi::{IoDirection};
+pub use crate::ffi::IoDirection;
 pub use crate::flow::definitions::Graph;
 pub use crate::json::JsonResponse;
-pub use crate::json::MethodRouter;
 pub use crate::codecs::NamedDecoders;
 // use std::ops::DerefMut;
 pub mod clients;
@@ -102,8 +100,7 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod imageflow_core_all {
         #[doc(no_inline)]
-        pub use crate::{Graph, Context, JsonResponse,
-                   MethodRouter};
+        pub use crate::{Graph, Context, JsonResponse};
         #[doc(no_inline)]
         pub use crate::{clients, FlowError, Result, ErrorKind, CodeLocation};
         #[doc(no_inline)]
@@ -125,8 +122,7 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod default {
         #[doc(no_inline)]
-        pub use crate::{Graph, Context, JsonResponse,
-                   MethodRouter};
+        pub use crate::{Graph, Context, JsonResponse};
         #[doc(no_inline)]
         pub use crate::internal_prelude::works_everywhere::*;
     }

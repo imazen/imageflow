@@ -69,6 +69,9 @@ mozjpeg-sys = {version = "2", features = ["nasm_simd"]}
 
 evalchroma = "1"
 
+# Used for schema generation if feature enabled
+utoipa = { version = "5.3.1", features = [], optional = true }
+
 #ravif = { version = "0.11.12", features = [] }
 #jxl-oxide = { version = "0.11.4", features = ["lcms2"] }
 #jpegxl-rs = { version = "0.11", features = ["vendored"] }
@@ -91,6 +94,8 @@ default = []
 nightly = []
 c_rendering = []
 neon = ["libwebp-sys/neon"]
+# Feature to enable OpenAPI schema generation capabilities
+schema-export = ["dep:utoipa", "imageflow_types/schema-export"]
 
 [[bench]]
 name="bench_graphics"

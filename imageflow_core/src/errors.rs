@@ -420,7 +420,7 @@ impl FlowError {
     /// Create a FlowError (InvalidJson) from ::serde_json::Error
     /// Tries to include relevant context (like an annotated source line)
     ///
-    pub fn from_serde(e: ::serde_json::Error, json_bytes: &[u8]) -> FlowError{
+    pub fn from_serde(e: ::serde_json::Error, json_bytes: &[u8], type_name: &str) -> FlowError{
         let str_result = ::std::str::from_utf8(json_bytes);
         let line_ix = e.line() - 1;
         let col_ix = e.column() - 1;
@@ -436,15 +436,14 @@ impl FlowError {
                 kind: ErrorKind::Category(ErrorCategory::InvalidJson),
                 at: ::smallvec::SmallVec::new(),
                 node: None,
-                message: format!("Json Error: {}: {}", &e, &annotated_line)
+                message: format!("Json <{}> Error: {}: {}", type_name, &e, &annotated_line)
             }
         }else {
-
             FlowError {
                 kind: ErrorKind::Category(ErrorCategory::InvalidJson),
                 at: ::smallvec::SmallVec::new(),
                 node: None,
-                message: format!("InvalidJson: {}", &e)
+                message: format!("Invalid UTF-8, JSON Parsing Failed: {}", &e)
             }
         }
     }
