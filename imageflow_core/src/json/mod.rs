@@ -2,14 +2,23 @@ pub(crate) mod endpoints;
 use crate::internal_prelude::works_everywhere::*;
 use crate::context::Context;
 
-pub(crate) fn route(context: &mut Context, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
-    match endpoints::route_inner(context, method, json) {
+pub(crate) fn invoke_with_json_error(context: &mut Context, endpoint: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
+    match endpoints::invoke(context, endpoint, json) {
         Ok(response) => (response, Ok(())),
         Err(e) => {
             (JsonResponse::from_flow_error(&e), Err(e))
         }
     }
 }
+
+pub fn invoke(context: &mut Context, endpoint: &str, json: &[u8]) -> Result<JsonResponse> {
+    endpoints::invoke(context, endpoint, json)
+}
+
+pub fn try_invoke_static(endpoint: &str, json: &[u8]) -> Result<Option<JsonResponse>> {
+    endpoints::try_invoke_static( endpoint, json).map_err(|e| e.at(here!()))
+}
+
 
 pub(crate)fn parse_json<'a, D>(json: &[u8]) -> Result<D>
 where D: serde::de::DeserializeOwned, D: 'a
@@ -27,7 +36,7 @@ use utoipa::ToSchema;
 use serde::{Serialize, Deserialize};
 
 // Generic wrapper for successful JSON responses (matches Response001 structure)
-#[cfg_attr(feature = "schema-export", derive(Serialize, Deserialize, ToSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonAnswer<T> {
     #[cfg_attr(feature = "schema-export", schema(example = 200))]

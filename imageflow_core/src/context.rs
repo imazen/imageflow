@@ -106,7 +106,7 @@ impl Context {
 
 
     pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
-        crate::json::route(self, method, json)
+        crate::json::invoke_with_json_error(self, method, json)
     }
 
     pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<BitmapsContainer>>{
@@ -403,6 +403,9 @@ impl Context {
     }
 
     pub fn get_version_info(&self) -> Result<s::VersionInfo>{
+        Context::get_version_info_static()
+    }
+    pub(crate) fn get_version_info_static() -> Result<s::VersionInfo>{
         Ok(s::VersionInfo{
             long_version_string: imageflow_types::version::one_line_version().to_string(),
             last_git_commit: imageflow_types::version::last_commit().to_string(),

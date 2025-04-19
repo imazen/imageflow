@@ -48,6 +48,8 @@ use std::fmt;
 use imgref::ImgRef;
 #[cfg(feature = "json-schema")]
 use schemars::JsonSchema;
+#[cfg(feature = "schema-export")]
+use utoipa::ToSchema;
 
 // Placeholder derive macro when json-schema feature is not enabled
 #[cfg(not(feature = "json-schema"))]
@@ -2027,6 +2029,9 @@ pub enum ResponsePayload {
 /// To prevent name collisions with other types
 pub mod json_messages{
 
+    #[cfg(feature = "schema-export")]
+    use utoipa::ToSchema;
+
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -2057,7 +2062,7 @@ pub mod json_messages{
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
-#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+    #[cfg_attr(feature = "schema-export", derive(ToSchema))]
     pub struct QueryStringSchema{
         pub key_names: Vec<String>,
         // pub keys: Vec<QueryStringSchemaKey>,

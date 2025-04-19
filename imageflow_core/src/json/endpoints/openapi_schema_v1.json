@@ -1,0 +1,4308 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "libimageflow JSON API",
+    "description": "",
+    "contact": {
+      "name": "Imazen",
+      "url": "https://imazen.io",
+      "email": "support@imazen.io"
+    },
+    "license": {
+      "name": "AGPL 3.0 / Commercial",
+      "url": "https://imazen.io/pricing"
+    },
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Relative path for FFI/tool interaction (simulated server)"
+    }
+  ],
+  "paths": {
+    "/v1/build": {
+      "post": {
+        "tags": [],
+        "operationId": "build",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Build001"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Build successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_BuildV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Build failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/execute": {
+      "post": {
+        "tags": [],
+        "operationId": "execute",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execute001"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Execution successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_ExecuteV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Execution failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/get_image_info": {
+      "post": {
+        "tags": [],
+        "operationId": "get_image_info",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetImageInfo001"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Image info retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_GetImageInfoV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to get image info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/get_scaled_image_info": {
+      "post": {
+        "tags": [],
+        "operationId": "get_scaled_image_info",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetImageInfo001"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Scaled image info retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_GetScaledImageInfoV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to get scaled image info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/get_version_info": {
+      "post": {
+        "tags": [],
+        "operationId": "get_version_info",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetVersionInfo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Version info retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_GetVersionInfoV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to get version info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/openapi/schema/latest": {
+      "get": {
+        "tags": [],
+        "operationId": "get_openapi_schema_json",
+        "responses": {
+          "200": {
+            "description": "OpenAPI schema retrieved",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/query_string/latest/get_schema": {
+      "post": {
+        "tags": [],
+        "operationId": "get_query_string_schema",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetQueryStringSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Query string schema retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_GetQueryStringSchemaV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to get query string schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/query_string/latest/list_supported_keys": {
+      "post": {
+        "tags": [],
+        "operationId": "list_query_string_keys",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListQueryStringKeys"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Supported keys listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_ListQueryStringKeysV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to list keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/query_string/latest/validate": {
+      "post": {
+        "tags": [],
+        "operationId": "validate_query_string",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateQueryString"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Query string validation results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_ValidateQueryStringV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tell_decoder": {
+      "post": {
+        "tags": [],
+        "operationId": "tell_decoder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TellDecoder001"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decoder hints applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_TellDecoderV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to apply decoder hints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AllowedFormats": {
+        "type": "object",
+        "properties": {
+          "all": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "avif": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "color_profiles": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Allows use of color profiles other than sRGB. This is now widely supported."
+          },
+          "gif": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "jpeg": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "jpeg_progressive": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "jpeg_xyb": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "jxl": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "modern_web_safe": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Enables jpeg, gif, png, webp, color_profiles"
+          },
+          "png": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "web_safe": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Enables all formats that are 'safe' to display for all browsers.\nEnables jpeg, gif, png.\nWebP is at 97%, but is still excluded."
+          },
+          "webp": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      },
+      "BoolKeep": {
+        "type": "string",
+        "enum": [
+          "keep",
+          "true",
+          "false"
+        ]
+      },
+      "Build001": {
+        "type": "object",
+        "description": "Represents a complete build job, combining IO objects with a framewise operation graph.\nTODO: cleanup builder_config.",
+        "required": [
+          "io",
+          "framewise"
+        ],
+        "properties": {
+          "builder_config": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Build001Config"
+              }
+            ]
+          },
+          "framewise": {
+            "$ref": "#/components/schemas/Framewise"
+          },
+          "io": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IoObject"
+            }
+          }
+        }
+      },
+      "Build001Config": {
+        "type": "object",
+        "properties": {
+          "graph_recording": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Build001GraphRecording"
+              }
+            ]
+          },
+          "security": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ExecutionSecurity"
+              }
+            ]
+          }
+        }
+      },
+      "Build001GraphRecording": {
+        "type": "object",
+        "description": "TODO: clean up!\nContains flags that instruct how job execution is recorded during execution.\nv0.0.1",
+        "properties": {
+          "record_frame_images": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "record_graph_versions": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "render_animated_graph": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "render_graph_versions": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "render_last_graph": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      },
+      "BuildPerformance": {
+        "type": "object",
+        "required": [
+          "frames"
+        ],
+        "properties": {
+          "frames": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FramePerformance"
+            }
+          }
+        }
+      },
+      "BuildV1Response": {
+        "type": "object",
+        "required": [
+          "job_result"
+        ],
+        "properties": {
+          "job_result": {
+            "$ref": "#/components/schemas/JobResult"
+          }
+        }
+      },
+      "Color": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "transparent"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "black"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "srgb"
+            ],
+            "properties": {
+              "srgb": {
+                "$ref": "#/components/schemas/ColorSrgb"
+              }
+            }
+          }
+        ],
+        "description": "Represents arbitrary colors (not color space specific)"
+      },
+      "ColorFilterSrgb": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "grayscale_ntsc"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "grayscale_flat"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "grayscale_bt709"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "grayscale_ry"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "sepia"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "invert"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "alpha"
+            ],
+            "properties": {
+              "alpha": {
+                "type": "number",
+                "format": "float"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "contrast"
+            ],
+            "properties": {
+              "contrast": {
+                "type": "number",
+                "format": "float"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "brightness"
+            ],
+            "properties": {
+              "brightness": {
+                "type": "number",
+                "format": "float"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "saturation"
+            ],
+            "properties": {
+              "saturation": {
+                "type": "number",
+                "format": "float"
+              }
+            }
+          }
+        ]
+      },
+      "ColorSrgb": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Hex in RRGGBBAA (css) form or variant thereof",
+            "required": [
+              "hex"
+            ],
+            "properties": {
+              "hex": {
+                "type": "string",
+                "description": "Hex in RRGGBBAA (css) form or variant thereof"
+              }
+            }
+          }
+        ],
+        "description": "Represents an sRGB color value."
+      },
+      "CommandStringKind": {
+        "type": "string",
+        "enum": [
+          "ir4"
+        ]
+      },
+      "CompositingMode": {
+        "type": "string",
+        "description": "Blend pixels (if transparent) or replace?",
+        "enum": [
+          "compose",
+          "overwrite"
+        ]
+      },
+      "Constraint": {
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "properties": {
+          "canvas_color": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Color"
+              }
+            ]
+          },
+          "gravity": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ConstraintGravity"
+              }
+            ]
+          },
+          "h": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "hints": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ResampleHints"
+              }
+            ]
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ConstraintMode"
+          },
+          "w": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "ConstraintGravity": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "center"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "percentage"
+            ],
+            "properties": {
+              "percentage": {
+                "type": "object",
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "y": {
+                    "type": "number",
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ConstraintMode": {
+        "type": "string",
+        "enum": [
+          "distort",
+          "within",
+          "fit",
+          "larger_than",
+          "within_crop",
+          "fit_crop",
+          "aspect_crop",
+          "within_pad",
+          "fit_pad"
+        ]
+      },
+      "DecodeResult": {
+        "type": "object",
+        "required": [
+          "preferred_mime_type",
+          "preferred_extension",
+          "io_id",
+          "w",
+          "h"
+        ],
+        "properties": {
+          "h": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "io_id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "preferred_extension": {
+            "type": "string"
+          },
+          "preferred_mime_type": {
+            "type": "string"
+          },
+          "w": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DecoderCommand": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "jpeg_downscale_hints"
+            ],
+            "properties": {
+              "jpeg_downscale_hints": {
+                "$ref": "#/components/schemas/JpegIDCTDownscaleHints"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "webp_decoder_hints"
+            ],
+            "properties": {
+              "webp_decoder_hints": {
+                "$ref": "#/components/schemas/WebPDecoderHints"
+              }
+            }
+          },
+          {
+            "type": "string",
+            "enum": [
+              "discard_color_profile"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "ignore_color_profile_errors"
+            ]
+          }
+        ]
+      },
+      "Edge": {
+        "type": "object",
+        "description": "Operation nodes are connected by edges. JSON only.",
+        "required": [
+          "from",
+          "to",
+          "kind"
+        ],
+        "properties": {
+          "from": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EdgeKind"
+          },
+          "to": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "EdgeKind": {
+        "type": "string",
+        "description": "Operation nodes are connected by edges. Many operations require both an input and a canvas node.\n\nIn the future, some operations may have multiple inputs, and new edge types may be introduced for non-bitmap data.",
+        "enum": [
+          "input",
+          "canvas"
+        ]
+      },
+      "EncodeResult": {
+        "type": "object",
+        "required": [
+          "preferred_mime_type",
+          "preferred_extension",
+          "io_id",
+          "w",
+          "h",
+          "bytes"
+        ],
+        "properties": {
+          "bytes": {
+            "$ref": "#/components/schemas/ResultBytes"
+          },
+          "h": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "io_id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "preferred_extension": {
+            "type": "string"
+          },
+          "preferred_mime_type": {
+            "type": "string"
+          },
+          "w": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "EncoderHints": {
+        "type": "object",
+        "properties": {
+          "gif": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GifEncoderHints"
+              }
+            ]
+          },
+          "jpeg": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JpegEncoderHints"
+              }
+            ]
+          },
+          "png": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PngEncoderHints"
+              }
+            ]
+          },
+          "webp": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WebpEncoderHints"
+              }
+            ]
+          }
+        }
+      },
+      "EncoderPreset": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Requires a quality profile to be specified\nSpecify \"allow\" to enable specific formats (like webp, avif, jxl) and features\n(like jpeg_progressive, jpeg_xyb, color_profiles), (or sets thereof, like web_safe and modern_web_safe).",
+            "required": [
+              "auto"
+            ],
+            "properties": {
+              "auto": {
+                "type": "object",
+                "description": "Requires a quality profile to be specified\nSpecify \"allow\" to enable specific formats (like webp, avif, jxl) and features\n(like jpeg_progressive, jpeg_xyb, color_profiles), (or sets thereof, like web_safe and modern_web_safe).",
+                "required": [
+                  "quality_profile"
+                ],
+                "properties": {
+                  "allow": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/AllowedFormats"
+                      }
+                    ]
+                  },
+                  "lossless": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/BoolKeep",
+                        "description": "Whether to use, disable, or keep lossless encoding."
+                      }
+                    ]
+                  },
+                  "matte": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/Color",
+                        "description": "Applies a matte - background color to the image to eliminate transparency."
+                      }
+                    ]
+                  },
+                  "quality_profile": {
+                    "$ref": "#/components/schemas/QualityProfile",
+                    "description": "A quality profile to use. Will provide default 'allowed' formats, but 'allowed' takes priority."
+                  },
+                  "quality_profile_dpr": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "format": "float",
+                    "description": "Adjusts the quality profile, assuming a 150ppi display and 3x CSS pixel ratio. 3 is the default.\nlower values will increase quality, higher values will decrease quality.\nUseful when not using srcset/picture, just img src. Ex. <img width=400 src=\"img.jpg?srcset=qp-dpr-2,800w\" />"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Requires a file format to be specified, and allows for specific encoder hints.\nSpecific format features can be specified in 'allow', such as jxl_animation, avif_animation, etc.",
+            "required": [
+              "format"
+            ],
+            "properties": {
+              "format": {
+                "type": "object",
+                "description": "Requires a file format to be specified, and allows for specific encoder hints.\nSpecific format features can be specified in 'allow', such as jxl_animation, avif_animation, etc.",
+                "required": [
+                  "format"
+                ],
+                "properties": {
+                  "allow": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/AllowedFormats"
+                      }
+                    ]
+                  },
+                  "encoder_hints": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/EncoderHints"
+                      }
+                    ]
+                  },
+                  "format": {
+                    "$ref": "#/components/schemas/OutputImageFormat"
+                  },
+                  "lossless": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/BoolKeep",
+                        "description": "Whether to use, disable, or keep lossless encoding."
+                      }
+                    ]
+                  },
+                  "matte": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/Color",
+                        "description": "Applies a matte - background color to the image to eliminate transparency."
+                      }
+                    ]
+                  },
+                  "quality_profile": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/QualityProfile",
+                        "description": "A quality profile to use.."
+                      }
+                    ]
+                  },
+                  "quality_profile_dpr": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "format": "float",
+                    "description": "Adjusts the quality profile, assuming a 150ppi display and 3x CSS pixel ratio. 3 is the default.\nlower values will increase quality, higher values will decrease quality.\nUseful when not using srcset/picture, just img src. Ex. <img width=400 src=\"img.jpg?srcset=qp-dpr-2,800w\" />"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "libjpegturbo"
+            ],
+            "properties": {
+              "libjpegturbo": {
+                "type": "object",
+                "properties": {
+                  "matte": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/Color"
+                      }
+                    ]
+                  },
+                  "optimize_huffman_coding": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "progressive": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "quality": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int32"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "libpng"
+            ],
+            "properties": {
+              "libpng": {
+                "type": "object",
+                "properties": {
+                  "depth": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/PngBitDepth"
+                      }
+                    ]
+                  },
+                  "matte": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/Color"
+                      }
+                    ]
+                  },
+                  "zlib_compression": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int32"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "pngquant"
+            ],
+            "properties": {
+              "pngquant": {
+                "type": "object",
+                "properties": {
+                  "maximum_deflate": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "minimum_quality": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "quality": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "speed": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "lodepng"
+            ],
+            "properties": {
+              "lodepng": {
+                "type": "object",
+                "properties": {
+                  "maximum_deflate": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "mozjpeg"
+            ],
+            "properties": {
+              "mozjpeg": {
+                "type": "object",
+                "properties": {
+                  "matte": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/Color"
+                      }
+                    ]
+                  },
+                  "progressive": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "quality": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "webplossy"
+            ],
+            "properties": {
+              "webplossy": {
+                "type": "object",
+                "required": [
+                  "quality"
+                ],
+                "properties": {
+                  "quality": {
+                    "type": "number",
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "string",
+            "enum": [
+              "webplossless"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "gif"
+            ]
+          }
+        ],
+        "description": "Encoder presets (each with optional configuration). These are exposed by the JSON API."
+      },
+      "Execute001": {
+        "type": "object",
+        "required": [
+          "framewise"
+        ],
+        "properties": {
+          "framewise": {
+            "$ref": "#/components/schemas/Framewise"
+          },
+          "graph_recording": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Build001GraphRecording"
+              }
+            ]
+          },
+          "security": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ExecutionSecurity"
+              }
+            ]
+          }
+        }
+      },
+      "ExecuteV1Response": {
+        "type": "object",
+        "required": [
+          "job_result"
+        ],
+        "properties": {
+          "job_result": {
+            "$ref": "#/components/schemas/JobResult"
+          }
+        }
+      },
+      "ExecutionSecurity": {
+        "type": "object",
+        "properties": {
+          "max_decode_size": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FrameSizeLimit"
+              }
+            ]
+          },
+          "max_encode_size": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FrameSizeLimit"
+              }
+            ]
+          },
+          "max_frame_size": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FrameSizeLimit"
+              }
+            ]
+          }
+        }
+      },
+      "Filter": {
+        "type": "string",
+        "description": "Named interpolation function+configuration presets",
+        "enum": [
+          "robidoux_fast",
+          "robidoux",
+          "robidoux_sharp",
+          "ginseng",
+          "ginseng_sharp",
+          "lanczos",
+          "lanczos_sharp",
+          "lanczos_2",
+          "lanczos_2_sharp",
+          "cubic",
+          "cubic_sharp",
+          "catmull_rom",
+          "mitchell",
+          "cubic_b_spline",
+          "hermite",
+          "jinc",
+          "triangle",
+          "linear",
+          "box",
+          "fastest",
+          "n_cubic",
+          "n_cubic_sharp"
+        ]
+      },
+      "FramePerformance": {
+        "type": "object",
+        "required": [
+          "nodes",
+          "wall_microseconds",
+          "overhead_microseconds"
+        ],
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodePerf"
+            }
+          },
+          "overhead_microseconds": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "wall_microseconds": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "FrameSizeLimit": {
+        "type": "object",
+        "required": [
+          "w",
+          "h",
+          "megapixels"
+        ],
+        "properties": {
+          "h": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "megapixels": {
+            "type": "number",
+            "format": "float"
+          },
+          "w": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "Framewise": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "graph"
+            ],
+            "properties": {
+              "graph": {
+                "$ref": "#/components/schemas/Graph"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "steps"
+            ],
+            "properties": {
+              "steps": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Node"
+                }
+              }
+            }
+          }
+        ],
+        "description": "Represents an operation graph or series (series is simpler to think about and suitable for most tasks).\nOperation graphs *may* be applied to each frame in the source data - thus 'Framewise'."
+      },
+      "GetImageInfo001": {
+        "type": "object",
+        "required": [
+          "io_id"
+        ],
+        "properties": {
+          "io_id": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "GetImageInfoV1Response": {
+        "type": "object",
+        "required": [
+          "image_info"
+        ],
+        "properties": {
+          "image_info": {
+            "$ref": "#/components/schemas/ImageInfo"
+          }
+        }
+      },
+      "GetQueryStringSchema": {
+        "type": "object"
+      },
+      "GetQueryStringSchemaV1Response": {
+        "type": "object",
+        "required": [
+          "schema"
+        ],
+        "properties": {
+          "schema": {
+            "$ref": "#/components/schemas/QueryStringSchema"
+          }
+        }
+      },
+      "GetScaledImageInfoV1Response": {
+        "type": "object",
+        "required": [
+          "image_info"
+        ],
+        "properties": {
+          "image_info": {
+            "$ref": "#/components/schemas/ImageInfo"
+          }
+        }
+      },
+      "GetVersionInfo": {
+        "type": "object"
+      },
+      "GetVersionInfoV1Response": {
+        "type": "object",
+        "required": [
+          "version_info"
+        ],
+        "properties": {
+          "version_info": {
+            "$ref": "#/components/schemas/VersionInfo"
+          }
+        }
+      },
+      "GifEncoderHints": {
+        "type": "object"
+      },
+      "Graph": {
+        "type": "object",
+        "description": "An operation graph; should be directed and acyclic. JSON only.",
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "properties": {
+          "edges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Edge"
+            }
+          },
+          "nodes": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Node"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ImageInfo": {
+        "type": "object",
+        "required": [
+          "preferred_mime_type",
+          "preferred_extension",
+          "image_width",
+          "image_height",
+          "frame_decodes_into",
+          "lossless",
+          "multiple_frames"
+        ],
+        "properties": {
+          "frame_decodes_into": {
+            "$ref": "#/components/schemas/PixelFormat"
+          },
+          "image_height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "image_width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lossless": {
+            "type": "boolean"
+          },
+          "multiple_frames": {
+            "type": "boolean"
+          },
+          "preferred_extension": {
+            "type": "string"
+          },
+          "preferred_mime_type": {
+            "type": "string"
+          }
+        }
+      },
+      "IoDirection": {
+        "type": "string",
+        "description": "We must mark IO objects as data sources or data destinations.",
+        "enum": [
+          "out",
+          "in"
+        ]
+      },
+      "IoEnum": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "bytes_hex"
+            ],
+            "properties": {
+              "bytes_hex": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "base_64"
+            ],
+            "properties": {
+              "base_64": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "byte_array"
+            ],
+            "properties": {
+              "byte_array": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "file"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "string",
+            "enum": [
+              "output_buffer"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "output_base_64"
+            ]
+          },
+          {
+            "type": "string",
+            "description": "To be replaced before execution",
+            "enum": [
+              "placeholder"
+            ]
+          }
+        ],
+        "description": "Describes (or contains) a data source or destination"
+      },
+      "IoObject": {
+        "type": "object",
+        "description": "Data source or destination (including IO ID).",
+        "required": [
+          "io_id",
+          "direction",
+          "io"
+        ],
+        "properties": {
+          "direction": {
+            "$ref": "#/components/schemas/IoDirection"
+          },
+          "io": {
+            "$ref": "#/components/schemas/IoEnum"
+          },
+          "io_id": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "JobResult": {
+        "type": "object",
+        "required": [
+          "encodes",
+          "decodes"
+        ],
+        "properties": {
+          "decodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DecodeResult"
+            }
+          },
+          "encodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EncodeResult"
+            }
+          },
+          "performance": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BuildPerformance"
+              }
+            ]
+          }
+        }
+      },
+      "JpegEncoderHints": {
+        "type": "object",
+        "properties": {
+          "mimic": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JpegEncoderStyle"
+              }
+            ]
+          },
+          "progressive": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          }
+        }
+      },
+      "JpegEncoderStyle": {
+        "type": "string",
+        "enum": [
+          "jpegli",
+          "libjpegturbo",
+          "mozjpeg",
+          "default"
+        ]
+      },
+      "JpegIDCTDownscaleHints": {
+        "type": "object",
+        "required": [
+          "width",
+          "height"
+        ],
+        "properties": {
+          "gamma_correct_for_srgb_during_spatial_luma_scaling": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "height": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "scale_luma_spatially": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "width": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "JsonAnswer_BuildV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "job_result"
+            ],
+            "properties": {
+              "job_result": {
+                "$ref": "#/components/schemas/JobResult"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_ExecuteV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "job_result"
+            ],
+            "properties": {
+              "job_result": {
+                "$ref": "#/components/schemas/JobResult"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_GetImageInfoV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "image_info"
+            ],
+            "properties": {
+              "image_info": {
+                "$ref": "#/components/schemas/ImageInfo"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_GetQueryStringSchemaV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "schema"
+            ],
+            "properties": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryStringSchema"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_GetScaledImageInfoV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "image_info"
+            ],
+            "properties": {
+              "image_info": {
+                "$ref": "#/components/schemas/ImageInfo"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_GetVersionInfoV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "version_info"
+            ],
+            "properties": {
+              "version_info": {
+                "$ref": "#/components/schemas/VersionInfo"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_ListQueryStringKeysV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "schema"
+            ],
+            "properties": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryStringSchema"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_TellDecoderV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_ValidateQueryStringV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "results"
+            ],
+            "properties": {
+              "results": {
+                "$ref": "#/components/schemas/QueryStringValidationResults"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonError": {
+        "type": "object",
+        "required": [
+          "code",
+          "success"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 500
+          },
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Detailed error message"
+          },
+          "success": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "ListQueryStringKeys": {
+        "type": "object"
+      },
+      "ListQueryStringKeysV1Response": {
+        "type": "object",
+        "required": [
+          "schema"
+        ],
+        "properties": {
+          "schema": {
+            "$ref": "#/components/schemas/QueryStringSchema"
+          }
+        }
+      },
+      "Node": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "flip_v"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "flip_h"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "crop"
+            ],
+            "properties": {
+              "crop": {
+                "type": "object",
+                "required": [
+                  "x1",
+                  "y1",
+                  "x2",
+                  "y2"
+                ],
+                "properties": {
+                  "x1": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "x2": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "y1": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "y2": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "crop_whitespace"
+            ],
+            "properties": {
+              "crop_whitespace": {
+                "type": "object",
+                "required": [
+                  "threshold",
+                  "percent_padding"
+                ],
+                "properties": {
+                  "percent_padding": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "threshold": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "create_canvas"
+            ],
+            "properties": {
+              "create_canvas": {
+                "type": "object",
+                "required": [
+                  "format",
+                  "w",
+                  "h",
+                  "color"
+                ],
+                "properties": {
+                  "color": {
+                    "$ref": "#/components/schemas/Color"
+                  },
+                  "format": {
+                    "$ref": "#/components/schemas/PixelFormat"
+                  },
+                  "h": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "w": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "command_string"
+            ],
+            "properties": {
+              "command_string": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "value"
+                ],
+                "properties": {
+                  "decode": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int32"
+                  },
+                  "encode": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int32"
+                  },
+                  "kind": {
+                    "$ref": "#/components/schemas/CommandStringKind"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "watermarks": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "$ref": "#/components/schemas/Watermark"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "constrain"
+            ],
+            "properties": {
+              "constrain": {
+                "$ref": "#/components/schemas/Constraint"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "copy_rect_to_canvas"
+            ],
+            "properties": {
+              "copy_rect_to_canvas": {
+                "type": "object",
+                "required": [
+                  "from_x",
+                  "from_y",
+                  "w",
+                  "h",
+                  "x",
+                  "y"
+                ],
+                "properties": {
+                  "from_x": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "from_y": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "h": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "w": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "x": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "y": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "round_image_corners"
+            ],
+            "properties": {
+              "round_image_corners": {
+                "type": "object",
+                "required": [
+                  "radius",
+                  "background_color"
+                ],
+                "properties": {
+                  "background_color": {
+                    "$ref": "#/components/schemas/Color"
+                  },
+                  "radius": {
+                    "$ref": "#/components/schemas/RoundCornersMode"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "decode"
+            ],
+            "properties": {
+              "decode": {
+                "type": "object",
+                "required": [
+                  "io_id"
+                ],
+                "properties": {
+                  "commands": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "$ref": "#/components/schemas/DecoderCommand"
+                    }
+                  },
+                  "io_id": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "encode"
+            ],
+            "properties": {
+              "encode": {
+                "type": "object",
+                "required": [
+                  "io_id",
+                  "preset"
+                ],
+                "properties": {
+                  "io_id": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "preset": {
+                    "$ref": "#/components/schemas/EncoderPreset"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "fill_rect"
+            ],
+            "properties": {
+              "fill_rect": {
+                "type": "object",
+                "required": [
+                  "x1",
+                  "y1",
+                  "x2",
+                  "y2",
+                  "color"
+                ],
+                "properties": {
+                  "color": {
+                    "$ref": "#/components/schemas/Color"
+                  },
+                  "x1": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "x2": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "y1": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "y2": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "expand_canvas"
+            ],
+            "properties": {
+              "expand_canvas": {
+                "type": "object",
+                "required": [
+                  "left",
+                  "top",
+                  "right",
+                  "bottom",
+                  "color"
+                ],
+                "properties": {
+                  "bottom": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "color": {
+                    "$ref": "#/components/schemas/Color"
+                  },
+                  "left": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "right": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "top": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "region_percent"
+            ],
+            "properties": {
+              "region_percent": {
+                "type": "object",
+                "required": [
+                  "x1",
+                  "y1",
+                  "x2",
+                  "y2",
+                  "background_color"
+                ],
+                "properties": {
+                  "background_color": {
+                    "$ref": "#/components/schemas/Color"
+                  },
+                  "x1": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "x2": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "y1": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "y2": {
+                    "type": "number",
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "region"
+            ],
+            "properties": {
+              "region": {
+                "type": "object",
+                "required": [
+                  "x1",
+                  "y1",
+                  "x2",
+                  "y2",
+                  "background_color"
+                ],
+                "properties": {
+                  "background_color": {
+                    "$ref": "#/components/schemas/Color"
+                  },
+                  "x1": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "x2": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "y1": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "y2": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "string",
+            "enum": [
+              "transpose"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "rotate_90"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "rotate_180"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "rotate_270"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "apply_orientation"
+            ],
+            "properties": {
+              "apply_orientation": {
+                "type": "object",
+                "required": [
+                  "flag"
+                ],
+                "properties": {
+                  "flag": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "resample_2d"
+            ],
+            "properties": {
+              "resample_2d": {
+                "type": "object",
+                "required": [
+                  "w",
+                  "h"
+                ],
+                "properties": {
+                  "h": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "hints": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/ResampleHints"
+                      }
+                    ]
+                  },
+                  "w": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "draw_image_exact"
+            ],
+            "properties": {
+              "draw_image_exact": {
+                "type": "object",
+                "required": [
+                  "x",
+                  "y",
+                  "w",
+                  "h"
+                ],
+                "properties": {
+                  "blend": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/CompositingMode"
+                      }
+                    ]
+                  },
+                  "h": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "hints": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/ResampleHints"
+                      }
+                    ]
+                  },
+                  "w": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "x": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "y": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "watermark"
+            ],
+            "properties": {
+              "watermark": {
+                "$ref": "#/components/schemas/Watermark"
+              }
+            }
+          },
+          {
+            "type": "string",
+            "enum": [
+              "watermark_red_dot"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "white_balance_histogram_area_threshold_srgb"
+            ],
+            "properties": {
+              "white_balance_histogram_area_threshold_srgb": {
+                "type": "object",
+                "properties": {
+                  "threshold": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "color_matrix_srgb"
+            ],
+            "properties": {
+              "color_matrix_srgb": {
+                "type": "object",
+                "required": [
+                  "matrix"
+                ],
+                "properties": {
+                  "matrix": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "format": "float"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "color_filter_srgb"
+            ],
+            "properties": {
+              "color_filter_srgb": {
+                "$ref": "#/components/schemas/ColorFilterSrgb"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "flow_bitmap_key_ptr"
+            ],
+            "properties": {
+              "flow_bitmap_key_ptr": {
+                "type": "object",
+                "required": [
+                  "ptr_to_bitmap_key"
+                ],
+                "properties": {
+                  "ptr_to_bitmap_key": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "description": "Represents a image operation. Currently used both externally (for JSON API) and internally.\nThe most important data type"
+      },
+      "NodePerf": {
+        "type": "object",
+        "required": [
+          "wall_microseconds",
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "wall_microseconds": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "OutputImageFormat": {
+        "type": "string",
+        "enum": [
+          "webp",
+          "jpeg",
+          "jpg",
+          "png",
+          "avif",
+          "jxl",
+          "gif",
+          "keep"
+        ]
+      },
+      "PixelFormat": {
+        "type": "string",
+        "description": "Memory layout for pixels.\nsRGB w/ gamma encoding assumed for 8-bit channels.",
+        "enum": [
+          "bgra_32",
+          "bgr_32",
+          "bgr_24",
+          "gray_8"
+        ]
+      },
+      "PngBitDepth": {
+        "type": "string",
+        "enum": [
+          "png_32",
+          "png_24"
+        ]
+      },
+      "PngEncoderHints": {
+        "type": "object",
+        "properties": {
+          "hint_max_deflate": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "lossless": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BoolKeep"
+              }
+            ]
+          },
+          "mimic": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PngEncoderStyle"
+              }
+            ]
+          },
+          "min_quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "quantization_speed": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "PngEncoderStyle": {
+        "type": "string",
+        "enum": [
+          "libpng",
+          "lodepng",
+          "pngquant",
+          "default"
+        ]
+      },
+      "QualityProfile": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "lowest"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "low"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "mediumlow"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "medium"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "good"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "high"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "highest"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "lossless"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "percent"
+            ],
+            "properties": {
+              "percent": {
+                "type": "number",
+                "format": "float"
+              }
+            }
+          }
+        ]
+      },
+      "QueryStringDescription": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "markdown"
+            ],
+            "properties": {
+              "markdown": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "text"
+            ],
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "QueryStringSchema": {
+        "type": "object",
+        "required": [
+          "key_names"
+        ],
+        "properties": {
+          "key_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "QueryStringSchemaExample": {
+        "type": "object",
+        "required": [
+          "querystring",
+          "description"
+        ],
+        "properties": {
+          "description": {
+            "$ref": "#/components/schemas/QueryStringDescription"
+          },
+          "generated_markdown": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "html_fragment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "querystring": {
+            "type": "string"
+          }
+        }
+      },
+      "QueryStringSchemaKey": {
+        "type": "object",
+        "required": [
+          "key",
+          "description",
+          "allowed_values"
+        ],
+        "properties": {
+          "aliases": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowed_values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueryStringSchemaValue"
+            }
+          },
+          "conflicts_with_keys": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "deprecation_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "$ref": "#/components/schemas/QueryStringDescription"
+          },
+          "examples": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/QueryStringSchemaExample"
+            }
+          },
+          "generated_markdown": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ignored_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "interacts_with": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "key": {
+            "type": "string"
+          },
+          "related_keys": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "QueryStringSchemaKeyGroup": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "keys"
+        ],
+        "properties": {
+          "description": {
+            "$ref": "#/components/schemas/QueryStringDescription"
+          },
+          "examples": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/QueryStringSchemaExample"
+            }
+          },
+          "generated_markdown": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "QueryStringSchemaMarkdownPage": {
+        "type": "object",
+        "required": [
+          "slug",
+          "title",
+          "markdown"
+        ],
+        "properties": {
+          "markdown": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "QueryStringSchemaValue": {
+        "type": "object",
+        "required": [
+          "description"
+        ],
+        "properties": {
+          "data_validation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/QueryStringSchemaValueValidation"
+              }
+            ]
+          },
+          "deprecation_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "$ref": "#/components/schemas/QueryStringDescription"
+          },
+          "example_value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "examples": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/QueryStringSchemaExample"
+            }
+          },
+          "ignored_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_default": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "value_syntax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "QueryStringSchemaValueRange": {
+        "type": "object",
+        "properties": {
+          "integer": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "max": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "min": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "step_hint": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          }
+        }
+      },
+      "QueryStringSchemaValueValidation": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "enum"
+            ],
+            "properties": {
+              "enum": {
+                "type": "object",
+                "required": [
+                  "options"
+                ],
+                "properties": {
+                  "case_sensitive": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "numeric_list"
+            ],
+            "properties": {
+              "numeric_list": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "ranges": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "$ref": "#/components/schemas/QueryStringSchemaValueRange"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "string",
+            "description": "boolean values like 1, 0, true, false",
+            "enum": [
+              "bool"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "number"
+            ],
+            "properties": {
+              "number": {
+                "$ref": "#/components/schemas/QueryStringSchemaValueRange"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "regex"
+            ],
+            "properties": {
+              "regex": {
+                "type": "object",
+                "required": [
+                  "pattern"
+                ],
+                "properties": {
+                  "pattern": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "equals"
+            ],
+            "properties": {
+              "equals": {
+                "type": "object",
+                "required": [
+                  "value"
+                ],
+                "properties": {
+                  "case_sensitive": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "QueryStringValidationIssue": {
+        "type": "object",
+        "required": [
+          "message",
+          "key",
+          "value",
+          "kind"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/QueryStringValidationIssueKind"
+          },
+          "message": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "QueryStringValidationIssueKind": {
+        "type": "string",
+        "enum": [
+          "DuplicateKeyError",
+          "UnrecognizedKey",
+          "IgnoredKey",
+          "InvalidValueError",
+          "DeprecatedValueWarning",
+          "DeprecatedKeyWarning"
+        ]
+      },
+      "QueryStringValidationResults": {
+        "type": "object",
+        "required": [
+          "issues"
+        ],
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueryStringValidationIssue"
+            }
+          }
+        }
+      },
+      "ResampleHints": {
+        "type": "object",
+        "properties": {
+          "background_color": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Color"
+              }
+            ]
+          },
+          "down_filter": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Filter"
+              }
+            ]
+          },
+          "resample_when": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ResampleWhen"
+              }
+            ]
+          },
+          "scaling_colorspace": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ScalingFloatspace"
+              }
+            ]
+          },
+          "sharpen_percent": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "sharpen_when": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharpenWhen"
+              }
+            ]
+          },
+          "up_filter": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Filter"
+              }
+            ]
+          }
+        }
+      },
+      "ResampleWhen": {
+        "type": "string",
+        "enum": [
+          "size_differs",
+          "size_differs_or_sharpening_requested",
+          "always"
+        ]
+      },
+      "Response001": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ResponsePayload"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ResponsePayload": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "image_info"
+            ],
+            "properties": {
+              "image_info": {
+                "$ref": "#/components/schemas/ImageInfo"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "job_result"
+            ],
+            "properties": {
+              "job_result": {
+                "$ref": "#/components/schemas/JobResult"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "build_result"
+            ],
+            "properties": {
+              "build_result": {
+                "$ref": "#/components/schemas/JobResult"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "version_info"
+            ],
+            "properties": {
+              "version_info": {
+                "$ref": "#/components/schemas/VersionInfo"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "query_string_schema"
+            ],
+            "properties": {
+              "query_string_schema": {
+                "$ref": "#/components/schemas/QueryStringSchema"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "query_string_validation_results"
+            ],
+            "properties": {
+              "query_string_validation_results": {
+                "$ref": "#/components/schemas/QueryStringValidationResults"
+              }
+            }
+          },
+          {
+            "type": "string",
+            "enum": [
+              "none"
+            ]
+          }
+        ]
+      },
+      "ResultBytes": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "base_64"
+            ],
+            "properties": {
+              "base_64": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "byte_array"
+            ],
+            "properties": {
+              "byte_array": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "physical_file"
+            ],
+            "properties": {
+              "physical_file": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "string",
+            "enum": [
+              "elsewhere"
+            ]
+          }
+        ]
+      },
+      "RoundCornersMode": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "percentage"
+            ],
+            "properties": {
+              "percentage": {
+                "type": "number",
+                "format": "float"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "pixels"
+            ],
+            "properties": {
+              "pixels": {
+                "type": "number",
+                "format": "float"
+              }
+            }
+          },
+          {
+            "type": "string",
+            "enum": [
+              "circle"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "percentage_custom"
+            ],
+            "properties": {
+              "percentage_custom": {
+                "type": "object",
+                "required": [
+                  "top_left",
+                  "top_right",
+                  "bottom_right",
+                  "bottom_left"
+                ],
+                "properties": {
+                  "bottom_left": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "bottom_right": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "top_left": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "top_right": {
+                    "type": "number",
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "pixels_custom"
+            ],
+            "properties": {
+              "pixels_custom": {
+                "type": "object",
+                "required": [
+                  "top_left",
+                  "top_right",
+                  "bottom_right",
+                  "bottom_left"
+                ],
+                "properties": {
+                  "bottom_left": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "bottom_right": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "top_left": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "top_right": {
+                    "type": "number",
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ScalingFloatspace": {
+        "type": "string",
+        "description": "The color space to blend/combine pixels in. Downscaling is best done in linear light.",
+        "enum": [
+          "srgb",
+          "linear"
+        ]
+      },
+      "SharpenWhen": {
+        "type": "string",
+        "enum": [
+          "downscaling",
+          "upscaling",
+          "size_differs",
+          "always"
+        ]
+      },
+      "TellDecoder001": {
+        "type": "object",
+        "required": [
+          "io_id",
+          "command"
+        ],
+        "properties": {
+          "command": {
+            "$ref": "#/components/schemas/DecoderCommand"
+          },
+          "io_id": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "TellDecoderV1Response": {
+        "type": "object"
+      },
+      "ValidateQueryString": {
+        "type": "object",
+        "required": [
+          "query_string"
+        ],
+        "properties": {
+          "query_string": {
+            "type": "string"
+          }
+        }
+      },
+      "ValidateQueryStringV1Response": {
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "properties": {
+          "results": {
+            "$ref": "#/components/schemas/QueryStringValidationResults"
+          }
+        }
+      },
+      "VersionInfo": {
+        "type": "object",
+        "required": [
+          "long_version_string",
+          "last_git_commit",
+          "dirty_working_tree",
+          "build_date",
+          "git_describe_always"
+        ],
+        "properties": {
+          "build_date": {
+            "type": "string"
+          },
+          "dirty_working_tree": {
+            "type": "boolean"
+          },
+          "git_describe_always": {
+            "type": "string"
+          },
+          "git_tag": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_git_commit": {
+            "type": "string"
+          },
+          "long_version_string": {
+            "type": "string"
+          }
+        }
+      },
+      "Watermark": {
+        "type": "object",
+        "required": [
+          "io_id"
+        ],
+        "properties": {
+          "fit_box": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WatermarkConstraintBox"
+              }
+            ]
+          },
+          "fit_mode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WatermarkConstraintMode"
+              }
+            ]
+          },
+          "gravity": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ConstraintGravity"
+              }
+            ]
+          },
+          "hints": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ResampleHints"
+              }
+            ]
+          },
+          "io_id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "min_canvas_height": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "min_canvas_width": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "opacity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          }
+        }
+      },
+      "WatermarkConstraintBox": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "image_percentage"
+            ],
+            "properties": {
+              "image_percentage": {
+                "type": "object",
+                "required": [
+                  "x1",
+                  "y1",
+                  "x2",
+                  "y2"
+                ],
+                "properties": {
+                  "x1": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "x2": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "y1": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "y2": {
+                    "type": "number",
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "image_margins"
+            ],
+            "properties": {
+              "image_margins": {
+                "type": "object",
+                "required": [
+                  "left",
+                  "top",
+                  "right",
+                  "bottom"
+                ],
+                "properties": {
+                  "bottom": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "left": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "right": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "top": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "canvas_percentage"
+            ],
+            "properties": {
+              "canvas_percentage": {
+                "type": "object",
+                "required": [
+                  "x1",
+                  "y1",
+                  "x2",
+                  "y2"
+                ],
+                "properties": {
+                  "x1": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "x2": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "y1": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "y2": {
+                    "type": "number",
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "canvas_margins"
+            ],
+            "properties": {
+              "canvas_margins": {
+                "type": "object",
+                "required": [
+                  "left",
+                  "top",
+                  "right",
+                  "bottom"
+                ],
+                "properties": {
+                  "bottom": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "left": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "right": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  },
+                  "top": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "WatermarkConstraintMode": {
+        "type": "string",
+        "enum": [
+          "distort",
+          "within",
+          "fit",
+          "within_crop",
+          "fit_crop"
+        ]
+      },
+      "WebPDecoderHints": {
+        "type": "object",
+        "required": [
+          "width",
+          "height"
+        ],
+        "properties": {
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "WebpEncoderHints": {
+        "type": "object",
+        "properties": {
+          "lossless": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BoolKeep"
+              }
+            ]
+          },
+          "quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Imageflow V1",
+      "description": "Imageflow JSON API operations (V1)"
+    }
+  ]
+}

@@ -50,7 +50,7 @@ pub mod errors;
 pub use crate::errors::*;
 
 
-mod json;
+pub mod json;
 mod flow;
 mod context;
 mod codecs;
