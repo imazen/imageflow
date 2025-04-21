@@ -14,6 +14,10 @@ use super::parse_json;
 use std::fs::{self, ReadDir};
 use std::io::{self, Read};
 use std::path::PathBuf;
+use std::collections::HashMap;
+
+#[cfg(feature="json-schema")]
+use schemars::{schema_for, JsonSchema};
 
 #[cfg(test)]
 extern crate include_dir;
@@ -58,31 +62,42 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
 
 pub fn try_invoke_static(method: &str, json: &[u8]) -> Result<Option<JsonResponse>> {
     match method {
-        "v1/query_string/latest/get_schema" => {
-            let input = parse_json::<s::GetQueryStringSchema>(json)?;
-            let output = get_query_string_schema()?;
+        "v1/schema/riapi/latest/get" => {
+            let input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_riapi_schema()?;
             Ok(Some(JsonResponse::ok(output)))
         },
-        "v1/query_string/latest/list_supported_keys" => {
-            let input = parse_json::<s::ListQueryStringKeys>(json)?;
-            let output = list_query_string_keys()?;
+        "v1/schema/riapi/latest/list_keys" => {
+            let input = parse_json::<s::EmptyRequest>(json)?;
+            let output = list_riapi_keys()?;
             Ok(Some(JsonResponse::ok(output)))
         },
-        "v1/query_string/latest/validate" => {
+        "v1/schema/riapi/latest/validate" => {
             let input = parse_json::<s::ValidateQueryString>(json)?;
-            let output = validate_query_string(input)?;
+            let output = validate_riapi_query_string(input)?;
             Ok(Some(JsonResponse::ok(output)))
         },
-        "v1/openapi/schema/latest" => {
+        "v1/schema/openapi/latest/get" => {
             let output = get_openapi_schema_json()?;
             Ok(Some(JsonResponse::ok(output)))
         },
         "v1/get_version_info" => {
-            let input = parse_json::<s::GetVersionInfo>(json)?;
+            let input = parse_json::<s::EmptyRequest>(json)?;
             let output = get_version_info()?;
             Ok(Some(JsonResponse::ok(output)))
         },
-        "v1/brew_coffee" => Ok(Some(JsonResponse::teapot())),
+        "v1/schema/list-schema-endpoints" => {
+            let input = parse_json::<s::EmptyRequest>(json)?;
+            let output = list_schema_endpoints()?;
+            Ok(Some(JsonResponse::ok(output)))
+        },
+        #[cfg(feature = "json-schema")]
+        "v1/schema/json/latest/v1/all" => {
+            let input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_json_schemas_v1()?;
+            Ok(Some(JsonResponse::ok(output)))
+        },
+        "v1/brew_coffee" => Ok(Some(JsonResponse::teapot())), 
         _ => Ok(None)
     }
 }
@@ -140,40 +155,84 @@ pub struct JsonError {
 // --- Specific Success Response Structs ---
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BuildV1Response { pub job_result: JobResult }
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GetImageInfoV1Response { pub image_info: ImageInfo }
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GetScaledImageInfoV1Response { pub image_info: ImageInfo }
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TellDecoderV1Response { }
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExecuteV1Response { pub job_result: JobResult }
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GetVersionInfoV1Response { pub version_info: VersionInfo }
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct GetQueryStringSchemaV1Response { pub schema: json_messages::QueryStringSchema }
+pub struct GetRiapiSchemaV1Response { pub schema: json_messages::QueryStringSchema }
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ListQueryStringKeysV1Response { pub schema: json_messages::QueryStringSchema } // Reuse schema type
+pub struct ListRiapiKeysV1Response { pub schema: json_messages::QueryStringSchema } // Reuse schema type
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ValidateQueryStringV1Response { pub results: json_messages::QueryStringValidationResults }
+pub struct ValidateRiapiQueryStringV1Response { pub results: json_messages::QueryStringValidationResults }
+
+// New response structs for JSON schema endpoints
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ListSchemaEndpointsResponse { pub endpoints: Vec<String> }
+
+#[cfg(feature="json-schema")]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EndpointSchemaPair {
+    #[cfg_attr(feature = "schema-export", schema(value_type = Object))]
+    pub input_schema: schemars::Schema,
+    #[cfg_attr(feature = "schema-export", schema(value_type = Object))]
+    pub output_schema: schemars::Schema,
+}
+
+#[cfg(feature="json-schema")]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AllJsonSchemasV1 {
+    #[serde(rename = "v1/build")] pub build: EndpointSchemaPair,
+    #[serde(rename = "v1/execute")] pub execute: EndpointSchemaPair,
+    #[serde(rename = "v1/tell_decoder")] pub tell_decoder: EndpointSchemaPair,
+    #[serde(rename = "v1/get_image_info")] pub get_image_info: EndpointSchemaPair,
+    #[serde(rename = "v1/get_scaled_image_info")] pub get_scaled_image_info: EndpointSchemaPair,
+}
+
+#[cfg(feature="json-schema")]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GetJsonSchemasV1Response { pub schemas: AllJsonSchemasV1 }
 
 // --- Handler Functions ---
 
@@ -250,7 +309,7 @@ pub(super) fn execute(context: &mut Context, parsed: Execute001) -> Result<Execu
 #[cfg_attr(feature = "schema-export", utoipa::path(
     post,
     path = "/v1/get_version_info",
-    request_body = GetVersionInfo,
+    request_body = EmptyRequest,
     responses(
         (status = 200, description = "Version info retrieved", body = JsonAnswer<GetVersionInfoV1Response>),
         (status = 500, description = "Failed to get version info", body = JsonError)
@@ -263,56 +322,45 @@ pub(super) fn get_version_info() -> Result<GetVersionInfoV1Response> {
 
 #[cfg_attr(feature = "schema-export", utoipa::path(
     post,
-    path = "/v1/query_string/latest/get_schema",
-    request_body = GetQueryStringSchema,
+    path = "/v1/schema/riapi/latest/get",
+    request_body = EmptyRequest,
     responses(
-        (status = 200, description = "Query string schema retrieved", body = JsonAnswer<GetQueryStringSchemaV1Response>),
-        (status = 500, description = "Failed to get query string schema", body = JsonError)
+        (status = 200, description = "RIAPI schema retrieved", body = JsonAnswer<GetRiapiSchemaV1Response>),
+        (status = 500, description = "Failed to get RIAPI schema", body = JsonError)
     )
 ))]
-pub(crate) fn get_query_string_schema() -> Result<GetQueryStringSchemaV1Response> {
+pub(crate) fn get_riapi_schema() -> Result<GetRiapiSchemaV1Response> {
     let schema = imageflow_riapi::ir4::get_query_string_schema().map_err(|e| nerror!(ErrorKind::InternalError, "{}", e))?;
-    Ok(GetQueryStringSchemaV1Response { schema })
+    Ok(GetRiapiSchemaV1Response { schema })
 }
 
 #[cfg_attr(feature = "schema-export", utoipa::path(
     post,
-    path = "/v1/query_string/latest/list_supported_keys",
-    request_body = ListQueryStringKeys,
+    path = "/v1/schema/riapi/latest/list_keys",
+    request_body = EmptyRequest,
     responses(
-        (status = 200, description = "Supported keys listed", body = JsonAnswer<ListQueryStringKeysV1Response>),
+        (status = 200, description = "Supported RIAPI keys listed", body = JsonAnswer<ListRiapiKeysV1Response>),
         (status = 500, description = "Failed to list keys", body = JsonError)
     )
 ))]
-pub(super) fn list_query_string_keys() -> Result<ListQueryStringKeysV1Response> {
+pub(super) fn list_riapi_keys() -> Result<ListRiapiKeysV1Response> {
     let schema = imageflow_riapi::ir4::get_query_string_keys().map_err(|e| nerror!(ErrorKind::InternalError, "{}", e))?;
-    Ok(ListQueryStringKeysV1Response { schema })
+    Ok(ListRiapiKeysV1Response { schema })
 }
 
 #[cfg_attr(feature = "schema-export", utoipa::path(
     post,
-    path = "/v1/query_string/latest/validate",
+    path = "/v1/schema/riapi/latest/validate",
     request_body = ValidateQueryString,
     responses(
-        (status = 200, description = "Query string validation results", body = JsonAnswer<ValidateQueryStringV1Response>),
+        (status = 200, description = "RIAPI query string validation results", body = JsonAnswer<ValidateRiapiQueryStringV1Response>),
         (status = 500, description = "Validation failed", body = JsonError)
     )
 ))]
-pub(super) fn validate_query_string(data: ValidateQueryString) -> Result<ValidateQueryStringV1Response> {
+pub(super) fn validate_riapi_query_string(data: ValidateQueryString) -> Result<ValidateRiapiQueryStringV1Response> {
     let results = imageflow_riapi::ir4::validate_query_string(data.query_string)
         .map_err(|e| nerror!(ErrorKind::InternalError, "{}", e))?;
-    Ok(ValidateQueryStringV1Response { results })
-}
-
-#[cfg_attr(feature = "schema-export", utoipa::path(
-    get,
-    path = "/v1/openapi/schema/latest",
-    responses(
-        (status = 200, description = "OpenAPI schema retrieved", body = String)
-    )
-))]
-pub fn get_openapi_schema_json() -> Result<String> {
-    get_openapi_schema_json_inner()
+    Ok(ValidateRiapiQueryStringV1Response { results })
 }
 
 // --- Main OpenAPI Documentation Struct ---
@@ -326,11 +374,13 @@ pub fn get_openapi_schema_json() -> Result<String> {
         tell_decoder,
         execute,
         get_version_info,
-        get_query_string_schema,
-        list_query_string_keys,
-        validate_query_string,
+        get_riapi_schema,
+        list_riapi_keys,
+        validate_riapi_query_string,
         get_openapi_schema_json,
-
+        list_schema_endpoints,
+        #[cfg(feature = "json-schema")]
+        get_json_schemas_v1,
     ),
     components(
         schemas(
@@ -341,9 +391,12 @@ pub fn get_openapi_schema_json() -> Result<String> {
             JsonAnswer<TellDecoderV1Response>, TellDecoderV1Response,
             JsonAnswer<ExecuteV1Response>, ExecuteV1Response,
             JsonAnswer<GetVersionInfoV1Response>, GetVersionInfoV1Response,
-            JsonAnswer<GetQueryStringSchemaV1Response>, GetQueryStringSchemaV1Response,
-            JsonAnswer<ListQueryStringKeysV1Response>, ListQueryStringKeysV1Response,
-            JsonAnswer<ValidateQueryStringV1Response>, ValidateQueryStringV1Response,
+            JsonAnswer<GetRiapiSchemaV1Response>, GetRiapiSchemaV1Response,
+            JsonAnswer<ListRiapiKeysV1Response>, ListRiapiKeysV1Response,
+            JsonAnswer<ValidateRiapiQueryStringV1Response>, ValidateRiapiQueryStringV1Response,
+            JsonAnswer<ListSchemaEndpointsResponse>, ListSchemaEndpointsResponse,
+            JsonAnswer<GetJsonSchemasV1Response>, GetJsonSchemasV1Response, 
+            EndpointSchemaPair, AllJsonSchemasV1,
             JsonError,
 
             // Core Request/Response types from imageflow_types (referenced by handlers/structs above)
@@ -370,10 +423,8 @@ pub fn get_openapi_schema_json() -> Result<String> {
             GetImageInfo001,
             TellDecoder001, DecoderCommand, JpegIDCTDownscaleHints, WebPDecoderHints,
             Execute001,
-            GetVersionInfo,
-            GetQueryStringSchema,
-            ListQueryStringKeys,
             ValidateQueryString,
+            EmptyRequest,
         )
     ),
     modifiers(&SchemaNamer),
@@ -456,6 +507,8 @@ static SCHEMA_SET_2: include_dir::Dir = include_dir::include_dir!("$CARGO_MANIFE
 #[cfg(test)]
 fn hash_files_relevant_to_schema() -> String {
     let mut hasher = xxhash3_128::Hasher::new();
+    // Also include this file in the hash
+    hasher.write(include_str!("v1.rs").as_bytes()); 
     for file in SCHEMA_SET_1.find("**/*.rs").unwrap() {
         hasher.write(file.as_file().unwrap().contents());
     }
@@ -656,4 +709,75 @@ fn test_get_version_info(){
     assert!(response.git_describe_always.len() > 0);
     assert!(response.last_git_commit.len() > 0);
     assert!(response.long_version_string.len() > 0);
+}
+
+#[cfg_attr(feature = "schema-export", utoipa::path(
+    get,
+    path = "/v1/schema/openapi/latest/get",
+    responses(
+        (status = 200, description = "OpenAPI schema retrieved", body = String)
+    )
+))]
+pub fn get_openapi_schema_json() -> Result<String> {
+    get_openapi_schema_json_inner()
+}
+
+#[cfg_attr(feature = "schema-export", utoipa::path(
+    post,
+    path = "/v1/schema/list-schema-endpoints",
+    request_body = EmptyRequest,
+    responses(
+        (status = 200, description = "List of available schema endpoints", body = JsonAnswer<ListSchemaEndpointsResponse>),
+        (status = 500, description = "Failed to list schema endpoints", body = JsonError)
+    )
+))]
+pub(super) fn list_schema_endpoints() -> Result<ListSchemaEndpointsResponse> {
+    let mut endpoints = vec![
+        "/v1/schema/riapi/latest/get".to_string(),
+        "/v1/schema/riapi/latest/list_keys".to_string(),
+        "/v1/schema/riapi/latest/validate".to_string(),
+        "/v1/schema/openapi/latest/get".to_string(),
+        "/v1/schema/list-schema-endpoints".to_string(),
+    ];
+    if cfg!(feature = "json-schema") {
+        endpoints.push("/v1/schema/json/latest/v1/all".to_string());
+    }
+    endpoints.sort();
+    Ok(ListSchemaEndpointsResponse { endpoints })
+}
+
+#[cfg(feature="json-schema")]
+#[cfg_attr(feature = "schema-export", utoipa::path(
+    post,
+    path = "/v1/schema/json/latest/v1/all",
+    request_body = EmptyRequest,
+    responses(
+        (status = 200, description = "Combined JSON schemas for V1 endpoints", body = JsonAnswer<GetJsonSchemasV1Response>),
+        (status = 500, description = "Failed to generate JSON schemas", body = JsonError)
+    )
+))]
+pub(super) fn get_json_schemas_v1() -> Result<GetJsonSchemasV1Response> {
+    let schemas = AllJsonSchemasV1 {
+        build: EndpointSchemaPair {
+            input_schema: schema_for!(s::Build001),
+            output_schema: schema_for!(BuildV1Response),
+        },
+        execute: EndpointSchemaPair {
+            input_schema: schema_for!(s::Execute001),
+            output_schema: schema_for!(ExecuteV1Response),
+        },
+        tell_decoder: EndpointSchemaPair {
+            input_schema: schema_for!(s::TellDecoder001),
+            output_schema: schema_for!(TellDecoderV1Response),
+        },
+        get_image_info: EndpointSchemaPair {
+            input_schema: schema_for!(s::GetImageInfo001),
+            output_schema: schema_for!(GetImageInfoV1Response),
+        },
+        get_scaled_image_info: EndpointSchemaPair {
+            input_schema: schema_for!(s::GetImageInfo001),
+            output_schema: schema_for!(GetScaledImageInfoV1Response),
+        },
+    };
+    Ok(GetJsonSchemasV1Response { schemas })
 }

@@ -30,6 +30,6 @@ rayon = "1"
 
 [features]
 nightly = ["imageflow_helpers/nightly"]
-json-schema = ["schemars"]
+json-schema = ["dep:schemars"]
 schema-export = ["dep:utoipa"]
 

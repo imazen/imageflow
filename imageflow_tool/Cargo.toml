@@ -29,7 +29,9 @@ bytes = "1"
 utoipa = { version = "5.3.1", features = [], optional = true }
 
 [features]
+default = ["schema-export", "json-schema"]
 schema-export = ["dep:utoipa", "imageflow_types/schema-export", "imageflow_core/schema-export"]
+json-schema = ["imageflow_types/json-schema", "imageflow_core/json-schema"]
 
 [[bin]]
 name = "imageflow_tool"

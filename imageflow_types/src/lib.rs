@@ -48,6 +48,7 @@ use std::fmt;
 use imgref::ImgRef;
 #[cfg(feature = "json-schema")]
 use schemars::JsonSchema;
+
 #[cfg(feature = "schema-export")]
 use utoipa::ToSchema;
 
@@ -1817,25 +1818,12 @@ pub struct GetImageInfo001 {
     pub io_id: i32,
 }
 
+// Define a reusable empty request struct
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
-pub struct GetVersionInfo{
-
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
-#[cfg_attr(feature = "schema-export", derive(ToSchema))]
-pub struct GetQueryStringSchema{
-
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
-#[cfg_attr(feature = "schema-export", derive(ToSchema))]
-pub struct ListQueryStringKeys{
-
+pub struct EmptyRequest {
+    // No fields needed
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -2031,6 +2019,9 @@ pub mod json_messages{
 
     #[cfg(feature = "schema-export")]
     use utoipa::ToSchema;
+
+    #[cfg(feature = "json-schema")]
+    use schemars::JsonSchema;
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
