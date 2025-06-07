@@ -46,6 +46,8 @@ fi
 archive_type=""
 if [[ "$absolute_output_path" == *.zip ]]; then
     archive_type="zip"
+elif [[ "$absolute_output_path" == *.nupkg ]]; then
+    archive_type="zip"
 elif [[ "$absolute_output_path" == *.tar.gz ]]; then
     archive_type="tar.gz"
 else
@@ -98,7 +100,42 @@ rm -f "$absolute_output_path"
                  echo "7z -tzip (specific path) command failed with exit code $sevenz_exit_code." >&2
             fi
         fi
+        if [ $sevenz_exit_code -eq 0 ]; then
+            echo "Now unzipping the archive to a temp directory to check if it's valid..."
+            temp_dir=$(mktemp -d)
+            if 7z x-tzip "$absolute_output_path" -o"$temp_dir"; then
+                echo "Archive is valid."
+                sevenz_exit_code=0
+            else
+                echo "Archive failed to unzip."
+                sevenz_exit_code=1
+            fi
+            rm -rf "$temp_dir"
+        fi
+                
+        if [ $sevenz_exit_code -eq 0 ]; then
+            echo "Archive created: '$absolute_output_path'. Now running diagnostics..."
+            echo "---"
+            echo "1. Which 7z executable was used?"
+            which 7z
+            echo "---"
+            echo "2. What is the 7z version?"
+            7z i | head -n 3
+            echo "---"
+            echo "3. What does the 'file' command think the archive is?"
+            file "$absolute_output_path"
+            echo "---"
+            echo "4. Can 7z list the contents of the archive it just created?"
+            if 7z l "$absolute_output_path" > /dev/null; then
+                echo "SUCCESS: 7z was able to list the archive contents."
+            else
+                echo "FAILURE: 7z was NOT able to list the archive contents."
+                sevenz_exit_code=1 # Mark as failure
+            fi
+            echo "---"
+        fi
         exit $sevenz_exit_code
+
     fi
 
     # --- TAR.GZ Creation ---

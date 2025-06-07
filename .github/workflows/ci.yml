@@ -358,7 +358,7 @@ jobs:
             echo "  Copied static lib: ${{ env.LIBIMAGEFLOW_STATIC }}"
           fi
 
-          # --- Validation --- 
+          # --- Validation ---
           echo "  Performing validation..."
           if [[ "$tool_exists" != "true" ]]; then
              echo "Error: Required tool executable not found at $TOOL_PATH" >&2
@@ -396,7 +396,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: native-binaries-${{ matrix.nuget-rid }}
-          path: artifacts/native_binaries/${{ matrix.nuget-rid }}/
+          path: artifacts/native_binaries/
           if-no-files-found: error # Fail if expected binaries weren't staged
           retention-days: 3 # Keep artifacts long enough for pack job
 
@@ -554,7 +554,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: native-binaries-* # Match artifact names from build job
-          path: artifacts/native_binaries # Download into this base directory
+          path: artifacts/native_binaries/ # Download into this base directory
           merge-multiple: true # Critical: ensures RIDs are in subdirs like artifacts/native_binaries/win-x64
 
       - name: List downloaded artifacts (for debugging)
