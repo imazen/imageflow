@@ -1,0 +1,19 @@
+[package]
+name = "imageflow_macros"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2.0", features = ["full", "parsing"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+inventory = "0.3" # For compile-time registration
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+indexmap = "2" # Used by utoipa
+utoipa = { version = "4.2", features = ["preserve_order", "serde_json"] } # For OpenAPI types
+imageflow_types = { path = "../imageflow_types" } # To reference schema types
+# imageflow_core removed 

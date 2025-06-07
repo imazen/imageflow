@@ -1,4 +1,3 @@
-
 extern crate clap;
 extern crate imageflow_helpers;
 extern crate imageflow_types as s;
@@ -17,6 +16,7 @@ use std::{ffi::OsStr, fs::File, io::{Read, Write}};
 use imageflow_helpers as hlp;
 
 use std::path::{Path,PathBuf};
+use std::io::stdout;
 mod cmd_build;
 pub mod self_test;
 
@@ -34,7 +34,17 @@ pub fn main_with_exit_code() -> i32 {
     let app = Command::new("imageflow_tool").version(str)
         .arg(  Arg::new("capture-to").long("capture-to").num_args(1).value_parser(clap::value_parser!(PathBuf)).global(true)
             .help("Run whatever you're doing in a sub-process, capturing output, input, and version detail")
-        ).subcommand_required(true).arg_required_else_help(true)
+        )
+        .arg(
+            Arg::new("export-openapi-schema")
+                .long("export-openapi-schema")
+                .num_args(0..=1) // Optional argument for file path
+                .value_parser(clap::value_parser!(PathBuf))
+                .value_name("FILE_PATH")
+                .help("Generate the OpenAPI schema for the JSON API and print it to stdout or save to a file.")
+        )
+        .subcommand_required(false) // Allow running with just --export-openapi-schema
+        .arg_required_else_help(true)
         .subcommand(
             Command::new("diagnose").arg_required_else_help(true)
                 .about("Diagnostic utilities")
@@ -87,7 +97,7 @@ pub fn main_with_exit_code() -> i32 {
         // file.json --in 0 a.png 1 b.png --out 3 base64
 
 
-        .subcommand(Command::new("v1/build").alias("v0.1/build")
+        .subcommand(Command::new("v1/build").alias("v0.1/build") // soon: .alias("build")
             .about("Runs the given operation file")
             .arg(
                 Arg::new("in").long("in").num_args(1..)
@@ -149,6 +159,51 @@ pub fn main_with_exit_code() -> i32 {
 
         );
     let matches = app.get_matches();
+
+    // Handle OpenAPI schema export first, if requested
+    if let Some(export_path_maybe) = matches.get_one::<PathBuf>("export-openapi-schema") {
+        match fc::json::try_invoke_static("v1/openapi/schema/latest", b"{}") {
+            Ok(Some(schema_json)) => {
+                if !export_path_maybe.as_os_str().eq_ignore_ascii_case("stdout") 
+                    && !export_path_maybe.as_os_str().eq_ignore_ascii_case("-")
+                    && export_path_maybe.as_os_str().len() > 0
+                    {
+                    let path = export_path_maybe.to_owned();
+                    match File::create(export_path_maybe) {
+                        Ok(mut file) => {
+                            if let Err(e) = file.write_all(&schema_json.response_json) {
+                                eprintln!("Error writing OpenAPI schema to file {}: {}", path.display(), e);
+                                return 1;
+                            }
+                            eprintln!("OpenAPI schema successfully written to {}", path.display());
+                        }
+                        Err(e) => {
+                            eprintln!("Error creating file {}: {}", path.display(), e);
+                            return 1;
+                        }
+                    }
+                } else {
+                    // Write to stdout
+                    if let Err(e) = stdout().write_all(&schema_json.response_json) {
+                        eprintln!("Error writing OpenAPI schema to stdout: {}", e);
+                        return 1;
+                    }
+                }
+                return 0; // Success
+            }
+            Ok(None) => {
+                eprintln!("Error: imageflow_tool was not compiled with the 'schema-export' feature.");
+                eprintln!("Please recompile with --features imageflow_tool/schema-export");
+                return 1;
+            }
+            Err(e) => {
+                eprintln!("Error generating OpenAPI schema: {}", e);
+                return 1;
+            }
+        }
+
+    }
+
     if let Some(capture_dest) = matches.get_one("capture-to"){
         let mut filtered_args = std::env::args().collect::<Vec<String>>();
         for ix in 0..filtered_args.len() {

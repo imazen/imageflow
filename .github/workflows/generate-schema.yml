@@ -1,0 +1,55 @@
+# .github/workflows/generate-schema.yml
+name: Generate API Schema
+
+on:
+  push:
+    branches:
+      - main # Or your default branch
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./schema/Dockerfile
+          push: false # Do not push the image to a registry
+          tags: imageflow-schema-gen:latest
+          load: true # Load the image into the local Docker daemon
+
+      - name: Create output directory
+        run: mkdir ./schema-output
+
+      - name: Run schema generation script via Docker
+        run: docker run --rm -v ./schema-output:/output imageflow-schema-gen:latest
+
+      - name: List generated files
+        run: ls -l ./schema-output
+
+      - name: Upload OpenAPI Schema Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-schema
+          path: ./schema-output/openapi.json
+
+      # Optional: Upload to S3
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # Store in GitHub secrets
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-east-1 # Or your desired region
+      #
+      # - name: Upload schema to S3
+      #   run: |
+      #     aws s3 cp ./schema-output/openapi.json s3://your-bucket-name/path/to/openapi.json --acl public-read
+      #   # Adjust bucket name, path, and ACL as needed 

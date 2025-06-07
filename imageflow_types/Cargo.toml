@@ -11,21 +11,21 @@ name="imageflow_types"
 doctest = false
 
 [dependencies]
-serde = "1"
-serde_json = "1"
-serde_derive = "1"
-lazy_static = "1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_derive = "1.0"
+lazy_static = "1.4"
 regex-lite = { version = "0.1.6" }
-imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
-chrono = "0.4"
-imgref = "1.10"
+imageflow_helpers = { path = "../imageflow_helpers" }
+chrono = { version = "0.4", features = ["serde"] }
+imgref = "1.9"
 rgb = "0.8"
-schemars = { version = "1.0.0-alpha.17", features = ["derive"], optional = true }
-utoipa = { version = "5.3.1", features = [], optional = true }
+schemars = { version = "0.8", optional = true }
+utoipa = { version = "4.2", features = ["preserve_order", "serde_json"], optional = true }
+inventory = "0.3"
 
 [build-dependencies]
 quick-error = "2"
-chrono = "0.4"
 rayon = "1"
 
 [features]
