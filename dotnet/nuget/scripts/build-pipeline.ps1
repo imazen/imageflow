@@ -1,3 +1,4 @@
+#! /usr/bin/env pwsh
 #Requires -Version 5.1
 <#
 .SYNOPSIS
@@ -111,22 +112,79 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 # --- Helper Functions ---
-function Get-HostRid {
-    $os = $null
-    $arch = $null
-    if ($IsWindows) { $os = "win" }
-    elseif ($IsMacOS) { $os = "osx" }
-    elseif ($IsLinux) { $os = "linux" }
-    else { throw "Unsupported OS" }
 
-    $nativeArch = switch ($env:PROCESSOR_ARCHITECTURE) {
-        "AMD64" { "x64" }
-        "ARM64" { "arm64" }
-        "x86"   { "x86" } # Should not happen on modern systems where PowerShell Core runs
-        default { throw "Unsupported Architecture: $($env:PROCESSOR_ARCHITECTURE)" }
+# Cache for host RID to avoid repeated detection
+$script:cachedHostRid = $null
+
+function Get-HostRid {
+    # Return cached value if already determined
+    if ($script:cachedHostRid) {
+        Write-HostVerbose "Using cached host RID: $script:cachedHostRid"
+        return $script:cachedHostRid
     }
-    # Handle potential nuances like musl vs gnu on Linux if needed later
-    return "$($os)-$($nativeArch)"
+    # Use dotnet --info to get the RID, which is cross-platform and reliable
+    try {
+        $dotnetInfo = & dotnet --info 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            throw "dotnet --info failed with exit code $LASTEXITCODE"
+        }
+        
+        # Parse the RID from dotnet --info output
+        $ridLine = $dotnetInfo | Where-Object { $_ -match '^\s*RID:\s*(.+)$' }
+        if ($ridLine) {
+            $rid = $Matches[1].Trim()
+            Write-HostVerbose "Detected host RID from dotnet --info: $rid"
+            $script:cachedHostRid = $rid
+            return $rid
+        } else {
+            throw "Could not find RID line in dotnet --info output"
+        }
+    } catch {
+        Write-HostError "Failed to get RID from dotnet --info: $($_.Exception.Message)"
+        # Fallback to manual detection (with improved cross-platform logic)
+        Write-HostWarning "Falling back to manual OS/architecture detection"
+        
+        $os = $null
+        if ($IsWindows) { $os = "win" }
+        elseif ($IsMacOS) { $os = "osx" }
+        elseif ($IsLinux) { $os = "linux" }
+        else { throw "Unsupported OS" }
+
+        # Use uname for Unix-like systems, fallback to env var for Windows
+        $arch = $null
+        if ($IsWindows -and $env:PROCESSOR_ARCHITECTURE) {
+            $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
+                "AMD64" { "x64" }
+                "ARM64" { "arm64" }
+                "x86"   { "x86" }
+                default { throw "Unsupported Windows Architecture: $($env:PROCESSOR_ARCHITECTURE)" }
+            }
+        } else {
+            # Use uname -m for Unix-like systems
+            try {
+                $unameOutput = & uname -m 2>$null
+                if ($LASTEXITCODE -eq 0) {
+                    $arch = switch ($unameOutput.Trim()) {
+                        "x86_64" { "x64" }
+                        "aarch64" { "arm64" }
+                        "arm64" { "arm64" }
+                        "i386" { "x86" }
+                        "i686" { "x86" }
+                        default { throw "Unsupported Unix Architecture: $unameOutput" }
+                    }
+                } else {
+                    throw "uname -m failed or not available"
+                }
+            } catch {
+                throw "Could not determine architecture on non-Windows system: $($_.Exception.Message)"
+            }
+        }
+        
+                 $fallbackRid = "$($os)-$($arch)"
+         Write-HostWarning "Using fallback RID: $fallbackRid"
+         $script:cachedHostRid = $fallbackRid
+         return $fallbackRid
+    }
 }
 
 function Get-NativeBinaryName {

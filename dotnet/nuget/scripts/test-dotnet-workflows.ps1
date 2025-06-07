@@ -1,3 +1,4 @@
+#! /usr/bin/env pwsh
 # PowerShell script to test the consolidated build-pipeline.ps1 script locally
 
 param(

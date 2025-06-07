@@ -128,6 +128,8 @@ rm -f "$absolute_output_path"
             echo "4. Can 7z list the contents of the archive it just created?"
             if 7z l "$absolute_output_path" > /dev/null; then
                 echo "SUCCESS: 7z was able to list the archive contents."
+                echo "Contents:"
+                7z l "$absolute_output_path"
             else
                 echo "FAILURE: 7z was NOT able to list the archive contents."
                 sevenz_exit_code=1 # Mark as failure
