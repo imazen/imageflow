@@ -103,7 +103,7 @@ rm -f "$absolute_output_path"
         if [ $sevenz_exit_code -eq 0 ]; then
             echo "Now unzipping the archive to a temp directory to check if it's valid..."
             temp_dir=$(mktemp -d)
-            if 7z x-tzip "$absolute_output_path" -o"$temp_dir"; then
+            if 7z x -tzip "$absolute_output_path" -o"$temp_dir"; then
                 echo "Archive is valid."
                 sevenz_exit_code=0
             else
