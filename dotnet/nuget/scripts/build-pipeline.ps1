@@ -398,6 +398,8 @@ if ($PushToGitHub) {
     }
 }
 
+Write-Host "PushToNuGet: $PushToNuGet" -ForegroundColor Green
+Write-Host "PushToGitHub: $PushToGitHub" -ForegroundColor Green
 
 # Define paths relative to the script location ($PSScriptRoot)
 $WorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path # Assumes script is in dotnet/nuget/scripts

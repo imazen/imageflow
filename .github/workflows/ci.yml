@@ -563,8 +563,8 @@ jobs:
       - name: Run Merge, Pack, Test, and Publish Script
         shell: pwsh
         run: |
-          $pushNuGet = ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}
-          $pushGitHub = ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}
+          $pushNuGet = ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }} -eq 'true'
+          $pushGitHub = ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }} -eq 'true'
           # $deleteOnFail = $true # Handled by default in build-pipeline.ps1
 
           $pipelineArgs = @{
@@ -579,15 +579,17 @@ jobs:
             DeleteNuGetOnFailure = $true # Default, can be set to $false or controlled by env var if needed
           }
           if ($pushNuGet) {
+              Write-Host "Setting PushToNuGet to true"
               $pipelineArgs['PushToNuGet'] = $true
               $pipelineArgs['NuGetApiKey'] = "${{ secrets.NUGET_API_KEY }}"
               # NuGetSourceUrl uses default unless overridden
           }
           if ($pushGitHub) {
+              Write-Host "Setting PushToGitHub to true"
                $pipelineArgs['PushToGitHub'] = $true
                # Assumes gh CLI is present and GITHUB_TOKEN is in env
           }
-
+          Write-Host "build-pipeline.ps1 args: $pipelineArgs"
           # Execute the pipeline script with splatted arguments
           ./dotnet/nuget/scripts/build-pipeline.ps1 @pipelineArgs
         env:
