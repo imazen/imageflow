@@ -20,8 +20,8 @@ env:
     # IMAGEFLOW_TOOL_DOCKER_x64_FILE : "linux-musl-x64/imageflow_tool.tar.gz"
     # IMAGEFLOW_TOOL_DOCKER_arm64_FILE : "linux-musl-arm64/imageflow_tool.tar.gz"
 
-    NUGET_UPLOAD_NUGET: ${{ secrets.NUGET_UPLOAD_NUGET }}
-    NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
+    NUGET_UPLOAD_NUGET: ${{ vars.NUGET_UPLOAD_NUGET }}
+    NUGET_UPLOAD_GITHUB: ${{ vars.NUGET_UPLOAD_GITHUB }}
     REL_NUGET_OUTPUT_DIR: "artifacts/nuget/"
     PROFILE: release
     DELETE_ALL_FROM_NUGET_AFTER_FAILURE: true
