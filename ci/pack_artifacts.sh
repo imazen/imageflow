@@ -94,13 +94,112 @@ ls "./${REL_BINARIES_DIR}"imageflow_* | cat
 ls bindings/headers/*.h | cat
 ls bindings/headers/imageflow_default.h | cat
 echo "--------------------------------"
-cp -R "./${REL_BINARIES_DIR}"libimageflow* ./artifacts/staging/ || true
-cp -R "./${REL_BINARIES_DIR}"imageflow_* ./artifacts/staging/
-cp -R "./${REL_BINARIES_DIR}"${LIBIMAGEFLOW_DYNAMIC} ./artifacts/staging/
-# tool should always exist
-cp -R "./${REL_BINARIES_DIR}"${IMAGEFLOW_TOOL} ./artifacts/staging/
 cp bindings/headers/*.h ./artifacts/staging/headers/
 cp bindings/headers/imageflow_default.h ./artifacts/staging/imageflow.h
+
+# either static or dynamic library should exist
+cp -R "./${REL_BINARIES_DIR}"${LIBIMAGEFLOW_DYNAMIC} ./artifacts/staging/ || cp -R "./${REL_BINARIES_DIR}"${LIBIMAGEFLOW_STATIC} ./artifacts/staging/
+# tool should always exist
+cp -R "./${REL_BINARIES_DIR}"${IMAGEFLOW_TOOL} ./artifacts/staging/
+
+
+# Copy imageflow.dll.lib if it exists
+if [[ "${LIBIMAGEFLOW_DYNAMIC}" == "imageflow.dll" ]]; then
+    cp -R "./${REL_BINARIES_DIR}"imageflow.dll.lib ./artifacts/staging/ || true
+fi
+
+# Function to handle debug symbols for a specific binary
+handle_debug_symbols() {
+    local binary="$1"
+    local platform="$2"
+    local symbol_type="$3"
+    local symbol_ext="$4"
+    
+    local source_dir="./${REL_BINARIES_DIR}"
+    local dest_dir="./artifacts/staging"
+    
+    case "$platform" in
+        "macos")
+            local symbol_path="${source_dir}${binary}.${symbol_ext}"
+            if [ -d "$symbol_path" ]; then
+                echo "Found ${symbol_type} directory: $symbol_path"
+                cp -R "$symbol_path" "${dest_dir}/"
+            fi
+            ;;
+        "linux")
+            local symbol_path="${source_dir}${binary}.${symbol_ext}"
+            if [ -f "$symbol_path" ]; then
+                echo "Found ${symbol_type} file: $symbol_path"
+                cp "$symbol_path" "${dest_dir}/"
+            fi
+            ;;
+        "windows")
+            local symbol_path="${source_dir}${binary%.*}.${symbol_ext}"
+            if [ -f "$symbol_path" ]; then
+                echo "Found ${symbol_type} file: $symbol_path"
+                cp "$symbol_path" "${dest_dir}/"
+            fi
+            ;;
+    esac
+}
+
+# Function to verify debug symbols for a specific binary
+verify_debug_symbols() {
+    local binary="$1"
+    local platform="$2"
+    local symbol_type="$3"
+    local symbol_ext="$4"
+    
+    local dest_dir="./artifacts/staging"
+    
+    case "$platform" in
+        "macos")
+            local symbol_path="${dest_dir}/${binary}.${symbol_ext}"
+            if [ -d "$symbol_path" ]; then
+                echo "✓ Verified ${symbol_type} directory: $symbol_path"
+                ls -R "$symbol_path"
+            else
+                echo "✗ Missing ${symbol_type} directory for $binary"
+            fi
+            ;;
+        "linux"|"windows")
+            local symbol_path="${dest_dir}/${binary%.*}.${symbol_ext}"
+            if [ -f "$symbol_path" ]; then
+                echo "✓ Verified ${symbol_type} file: $symbol_path"
+                ls -l "$symbol_path"
+            else
+                echo "✗ Missing ${symbol_type} file for $binary"
+            fi
+            ;;
+    esac
+}
+
+# Handle debug symbols based on platform
+if [[ "${LIBIMAGEFLOW_DYNAMIC}" == "libimageflow.dylib" ]]; then
+    echo "Copying debug symbols for macOS build..."
+    handle_debug_symbols "libimageflow.dylib" "macos" ".dSYM" "dSYM"
+    handle_debug_symbols "imageflow_tool" "macos" ".dSYM" "dSYM"
+    
+    echo "Verifying debug symbols in staging..."
+    verify_debug_symbols "libimageflow.dylib" "macos" ".dSYM" "dSYM"
+    verify_debug_symbols "imageflow_tool" "macos" ".dSYM" "dSYM"
+elif [[ "${LIBIMAGEFLOW_DYNAMIC}" == "libimageflow.so" ]]; then
+    echo "Copying debug symbols for Linux build..."
+    handle_debug_symbols "libimageflow.so" "linux" ".dwp" "dwp"
+    handle_debug_symbols "imageflow_tool" "linux" ".dwp" "dwp"
+    
+    echo "Verifying debug symbols in staging..."
+    verify_debug_symbols "libimageflow.so" "linux" ".dwp" "dwp"
+    verify_debug_symbols "imageflow_tool" "linux" ".dwp" "dwp"
+elif [[ "${LIBIMAGEFLOW_DYNAMIC}" == "imageflow.dll" ]]; then
+    echo "Copying debug symbols for Windows build..."
+    handle_debug_symbols "imageflow.dll" "windows" ".pdb" "pdb"
+    handle_debug_symbols "imageflow_tool.exe" "windows" ".pdb" "pdb"
+    
+    echo "Verifying debug symbols in staging..."
+    verify_debug_symbols "imageflow.dll" "windows" ".pdb" "pdb"
+    verify_debug_symbols "imageflow_tool.exe" "windows" ".pdb" "pdb"
+fi
 
 # Verify and copy installation scripts, IF LIBIMAGEFLOW_DYNAMIC!=imageflow.dll
 if [ "${LIBIMAGEFLOW_DYNAMIC}" != "imageflow.dll" ]; then
