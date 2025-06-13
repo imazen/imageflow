@@ -20,7 +20,7 @@ runs:
         SHA_SHORT="${GITHUB_SHA::7}"
         DEFAULT_VERSION="0.0.0-ci-${SHA_SHORT}"
         # Regex for basic SemVer 2.0.0 compatibility (used by NuGet)
-        SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-\.]+)?$'
+        SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z-]+)?$'
 
         FINAL_VERSION=$DEFAULT_VERSION # Default assumption
 
@@ -34,7 +34,7 @@ runs:
           else
             # Invalid tag format
             if [[ "$EVENT_NAME" == "release" ]]; then
-              echo "::error::Release event detected, but tag '$TAG_NAME' (parsed as '$PARSED_VERSION') does not match valid NuGet/SemVer format. Failing workflow."
+              echo "::error::Release event detected, but tag '$TAG_NAME' (parsed as '$PARSED_VERSION') does not match valid NuGet baseline (SemVer subset, like x.x.x-beta1 ) format. Failing workflow."
               exit 1
             else
               echo "::warning::Tag '$TAG_NAME' (parsed as '$PARSED_VERSION') does not match valid NuGet/SemVer format. Using default version."
