@@ -96,19 +96,22 @@ ls bindings/headers/imageflow_default.h | cat
 echo "--------------------------------"
 cp -R "./${REL_BINARIES_DIR}"libimageflow* ./artifacts/staging/ || true
 cp -R "./${REL_BINARIES_DIR}"imageflow_* ./artifacts/staging/
+cp -R "./${REL_BINARIES_DIR}"${LIBIMAGEFLOW_DYNAMIC} ./artifacts/staging/
 # tool should always exist
 cp -R "./${REL_BINARIES_DIR}"${IMAGEFLOW_TOOL} ./artifacts/staging/
 cp bindings/headers/*.h ./artifacts/staging/headers/
 cp bindings/headers/imageflow_default.h ./artifacts/staging/imageflow.h
 
-# Verify and copy installation scripts
-for script in "./ci/packaging_extras/"{install,uninstall}.sh; do
-    if [ ! -f "$script" ]; then
-        echo "Error: Required installation script not found: $script"
-        exit 1
-    fi
-    cp "$script" ./artifacts/staging/
-done
+# Verify and copy installation scripts, IF LIBIMAGEFLOW_DYNAMIC!=imageflow.dll
+if [ "${LIBIMAGEFLOW_DYNAMIC}" != "imageflow.dll" ]; then
+    for script in "./ci/packaging_extras/"{install,uninstall}.sh; do
+        if [ ! -f "$script" ]; then
+            echo "Error: Required installation script not found: $script"
+            exit 1
+        fi
+        cp "$script" ./artifacts/staging/
+    done
+fi
 
 # Clean up unnecessary files
 rm ./artifacts/staging/*.{o,d,rlib} 2>/dev/null || true
