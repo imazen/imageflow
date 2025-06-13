@@ -563,8 +563,8 @@ jobs:
       - name: Run Merge, Pack, Test, and Publish Script
         shell: pwsh
         run: |
-          $pushNuGet = ${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }} -eq 'true'
-          $pushGitHub = ${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }} -eq 'true'
+          $pushNuGet = [bool]"${{ github.event_name == 'release' && env.NUGET_UPLOAD_NUGET == 'true' }}"
+          $pushGitHub = [bool]"${{ github.event_name == 'release' && env.NUGET_UPLOAD_GITHUB == 'true' }}"
           # $deleteOnFail = $true # Handled by default in build-pipeline.ps1
 
           $pipelineArgs = @{
