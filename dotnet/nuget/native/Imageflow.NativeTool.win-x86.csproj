@@ -4,6 +4,7 @@
     <!-- Set RID for this specific project -->
     <ImageflowNugetRid>win-x86</ImageflowNugetRid>
     <!-- All other properties and items are now imported -->
+    <IsWindowsRid>true</IsWindowsRid>
   </PropertyGroup>
 
   <!-- Import tool-specific common targets -->

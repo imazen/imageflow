@@ -3,33 +3,17 @@
   <!-- This file is included by Imageflow.NativeRuntime.Common.targets when ImageflowNugetRid is win-x86 -->
   <!-- It includes the native libraries in the build output and NuGet package. -->
 
-  <!-- When the consuming project targets AnyCPU or x86 -->
-  <ItemGroup Condition="('$(Platform)' == 'AnyCPU' or '$(Platform)' == 'x86')">
+  <!-- If RID is set, let the system copy it instead. Only copy on Windows. -->
+  <ItemGroup Condition=" '$(RuntimeIdentifier)' == '' AND '$(OS)' == 'Windows_NT' ">
     <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-x86/native/*">
       <Link>runtimes/win-x86/native/imageflow.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>False</Visible>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <Pack>true</Pack>
       <PackagePath>runtimes/win-x86/native/imageflow.dll</PackagePath>
     </Content>
   </ItemGroup>
 
-  <!-- Legacy linking for AnyCPU (might not be strictly necessary with PackagePath) -->
-  <ItemGroup Condition="'$(Platform)' == 'AnyCPU'">
-     <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-x86/native/*">
-       <Link>x86/imageflow.dll</Link>
-       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-       <Visible>False</Visible>
-    </Content>
-  </ItemGroup>
-
-  <!-- Legacy linking for x86 (might not be strictly necessary with PackagePath) -->
-  <ItemGroup Condition="'$(Platform)' == 'x86'">
-     <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-x86/native/*">
-       <Link>imageflow.dll</Link>
-       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-       <Visible>False</Visible>
-    </Content>
-  </ItemGroup>
 
 </Project> 

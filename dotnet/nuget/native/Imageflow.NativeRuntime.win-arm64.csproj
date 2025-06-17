@@ -3,6 +3,7 @@
   <PropertyGroup>
     <!-- Set RID for this specific project -->
     <ImageflowNugetRid>win-arm64</ImageflowNugetRid>
+    <IsWindowsRid>true</IsWindowsRid>
     <!-- All other properties and items are now imported -->
   </PropertyGroup>
 

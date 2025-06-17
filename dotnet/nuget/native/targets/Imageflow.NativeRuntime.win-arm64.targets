@@ -3,33 +3,16 @@
   <!-- This file is included by Imageflow.NativeRuntime.Common.targets when ImageflowNugetRid is win-arm64 -->
   <!-- It includes the native libraries in the build output and NuGet package. -->
 
-  <!-- When the consuming project targets AnyCPU or ARM64 -->
-  <ItemGroup Condition="('$(Platform)' == 'AnyCPU' or '$(Platform)' == 'ARM64')">
+
+  <!-- If RID is set, let the system copy it instead. Only copy on Windows. -->
+  <ItemGroup Condition=" '$(RuntimeIdentifier)' == '' AND '$(OS)' == 'Windows_NT' ">
     <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-arm64/native/*">
       <Link>runtimes/win-arm64/native/imageflow.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>False</Visible>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <Pack>true</Pack>
       <PackagePath>runtimes/win-arm64/native/imageflow.dll</PackagePath>
     </Content>
   </ItemGroup>
-
-  <!-- Legacy linking for AnyCPU (might not be strictly necessary with PackagePath) -->
-  <ItemGroup Condition="'$(Platform)' == 'AnyCPU'">
-     <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-arm64/native/*">
-       <Link>arm64/imageflow.dll</Link>
-       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-       <Visible>False</Visible>
-    </Content>
-  </ItemGroup>
-
-  <!-- Legacy linking for ARM64 (might not be strictly necessary with PackagePath) -->
-  <ItemGroup Condition="'$(Platform)' == 'ARM64'">
-     <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-arm64/native/*">
-       <Link>imageflow.dll</Link>
-       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-       <Visible>False</Visible>
-    </Content>
-  </ItemGroup>
-
 </Project> 

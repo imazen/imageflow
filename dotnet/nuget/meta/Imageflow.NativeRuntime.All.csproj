@@ -3,7 +3,7 @@
   <PropertyGroup>
     <PackageId>Imageflow.NativeRuntime.All</PackageId>
     <Description>Meta-package referencing all Imageflow native runtime libraries (DLL/SO/DYLIB). Provides the native library for all supported RIDs.</Description>
-    <TargetFrameworks>netstandard2.0</TargetFrameworks> <!-- Target framework for dependency resolution -->
+    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks> <!-- Target framework for dependency resolution -->
     <IncludeBuildOutput>false</IncludeBuildOutput> <!-- Meta package has no build output -->
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute> <!-- Disable SDK generation -->
     <DisableImplicitFrameworkReferences>false</DisableImplicitFrameworkReferences>
@@ -25,6 +25,8 @@
   <!-- Dependencies on all known native runtime packages -->
   <!-- Use ProjectReference so build/pack within the solution works correctly -->
   <ItemGroup> <!-- We do want the native dlls to work transitively -->
+
+    
     <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-x64.csproj"    />
     <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-x86.csproj" />
     <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-arm64.csproj" />

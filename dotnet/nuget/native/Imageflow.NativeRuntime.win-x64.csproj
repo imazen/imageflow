@@ -6,6 +6,7 @@
     <!-- Set explicit PackageId for backward compatibility -->
     <PackageId>Imageflow.NativeRuntime.win-x86_64</PackageId>
     <!-- All other properties and items are now imported -->
+    <IsWindowsRid>true</IsWindowsRid>
   </PropertyGroup>
 
   <!-- Import runtime-specific common targets -->
