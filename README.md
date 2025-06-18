@@ -12,7 +12,7 @@
 * **`imageflow_tool`** is a command-line tool for experimenting, running batch jobs, JSON jobs,
 or when you want process isolation. Up to 17x faster than ImageMagick. Also produces smaller files at higher quality. [Download](https://github.com/imazen/imageflow/releases) or `docker run imazen/imageflow_tool`.
 * **`libimageflow`** is for direct (in-process) use from *your* programming language. See our [**Node bindings**](https://github.com/imazen/imageflow-node),  [**Go bindings**](https://github.com/imazen/imageflow-go), [**Scala bindings**](https://github.com/Dealermade/imageflow-scala), [**Elixir bindings**](https://github.com/naps62/imageflow_ex), or  [**.NET bindings**](https://github.com/imazen/imageflow-dotnet). If we don't already have bindings for your language, consider spending a day to add them. Imageflow has a simple
-  C-compatible ABI, of which only 4 methods are needed to implement bindings. 
+  C-compatible ABI, of which only 4 methods are needed to implement bindings.
 * **[Imageflow.Server](https://github.com/imazen/imageflow-dotnet-server)** is cross-platform and can manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from
 HTML. Source images can reside in blob storage, on another server, or on the filesystem. It's a production ready server with excellent hybrid disk caching, support for Azure and Amazon blob storage, and can be easily customized. You can deploy it easily via Docker, on a VM, or via any cloud host. It's also backwards compatible with the ImageResizer API - which is useful, as ImageResizer as been integrated into more than a thousand different CMSes and applications in the last decade.
 
@@ -20,10 +20,10 @@ HTML. Source images can reside in blob storage, on another server, or on the fil
 
 [Querystring API Documentation](https://docs.imageflow.io/querystring/introduction.html)
 
-[JSON API Documentation](https://docs.imageflow.io/json/introduction.html) 
+[JSON API Documentation](https://docs.imageflow.io/json/introduction.html)
 
 libimageflow and  imageflow_tool are available as
-[self-contained binaries](https://github.com/imazen/imageflow/releases) for Windows, Ubuntu, and Mac. We also offer [Docker images](https://hub.docker.com/r/imazen/imageflow_tool/) for Linux (where glibc and OpenSSL are required). 
+[self-contained binaries](https://github.com/imazen/imageflow/releases) for Windows, Ubuntu, and Mac. We also offer [Docker images](https://hub.docker.com/r/imazen/imageflow_tool/) for Linux (where glibc and OpenSSL are required).
 
 [We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122)
 and [the many supporters of ImageResizer](https://imageresizing.net) for making this project a reality.
@@ -79,8 +79,8 @@ Now you can edit images from HTML... and use srcset without headache.
 ![](https://www.imageflow.io/images/libimageflow-direct.svg)
 
 * .NET Standard bindings can be found at https://github.com/imazen/imageflow-dotnet
-* Node bindings available  at https://github.com/imazen/imageflow-node
-* Ruby - Basic bindings can be found in [bindings/ruby/](https://github.com/imazen/imageflow/tree/main/bindings/ruby)
+* Node bindings available at https://github.com/imazen/imageflow-node
+* Ruby - Basic bindings can be found at https://github.com/imazen/imageflow-ruby
 * C and C++ interface is stable - use [bindings/headers/imageflow_default.h](https://github.com/imazen/imageflow/blob/main/bindings/headers/imageflow_default.h) or one of the many alternate conventions provided with each release.
 * Rust - Imageflow is written in Rust, so you can use the `imageflow_core` crate, althogh the interfaces are not stable or semver in line with tagged releases (those version numbers are for the C ABI, not the Rust API)
 * other languages - Use an [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) binding-generation tool for your language, and feed it whichever [header file it likes best](https://github.com/imazen/imageflow/tree/main/bindings/headers).
