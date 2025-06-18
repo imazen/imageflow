@@ -348,7 +348,7 @@ pub extern "C" fn imageflow_context_error_try_clear(context: *mut Context) -> bo
 ///
 /// These will be stabilized after 1.0, once error categories have passed rigorous real-world testing
 /// `imageflow_context_error_as_exit_code` and `imageflow_context_error_as_http_status` are suggested in the meantime.
-///
+/// Unstable, do not use.
 #[no_mangle]
 pub extern "C" fn imageflow_context_error_code(context: *mut Context) -> i32 {
     context!(context).outward_error_mut().category().to_outward_error_code()

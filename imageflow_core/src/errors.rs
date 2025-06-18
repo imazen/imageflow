@@ -506,66 +506,66 @@ pub enum ErrorCategory{
     /// No error
     Ok = 0,
     /// The process was unable to allocate necessary memory (bitmaps are large arrays - often 80MB+ in size)
-    OutOfMemory,
+    OutOfMemory = 1,
 
 
     /// An invalid parameter was provided to Imageflow
-    ArgumentInvalid,
+    ArgumentInvalid = 2,
 
     /// The JSON provided was invalid
-    InvalidJson,
+    InvalidJson = 3,
 
     /// Image should have been but could not be decoded
-    ImageMalformed,
+    ImageMalformed = 4,
     /// No support for decoding this type of image (or subtype)
-    ImageTypeNotSupported,
+    ImageTypeNotSupported = 5,
 
 
 
 
     /// Invalid parameters were found in a operation node
-    NodeArgumentInvalid,
+    NodeArgumentInvalid = 6,
     /// The graph is invalid; it may have cycles, or have nodes connected in ways they do not support.
-    GraphInvalid,
+    GraphInvalid = 7,
     /// An operation described in the job is not supported
-    ActionNotSupported,
+    ActionNotSupported = 8,
 
     /// An operation is forbidden by the active Imageflow security policy
-    ActionForbidden,
+    ActionForbidden = 9,
 
     /// The imageflow server requires authorization to complete the request
-    AuthorizationRequired,
+    AuthorizationRequired = 10,
 
     /// A valid license is needed for the specified job
-    LicenseError,
+    LicenseError = 11,
 
     /// The primary file/remote resource for this job was not found
-    PrimaryResourceNotFound,
+    PrimaryResourceNotFound = 12,
 
     /// A file or remote resource was not found
-    SecondaryResourceNotFound,
+    SecondaryResourceNotFound = 13,
 
     /// A request to an upstream server timed out
-    UpstreamTimeout,
+    UpstreamTimeout = 14,
 
     /// An upstream server failed to respond correctly (not a 404, but some other error)
-    UpstreamError,
+    UpstreamError = 15,
 
     /// An I/O error of some kind occurred (this may be related to file locks or permissions or something else)
-    IoError,
+    IoError = 16,
 
     /// The job could not be completed; the graph could not be executed within a reasonable number of passes.
-    NoSolutionFound,
+    NoSolutionFound = 17,
 
     /// Possible bug (please report these): An internal error has occurred
-    InternalError,
+    InternalError = 18,
 
 
 
     /// The category of the error is unknown
-    Unknown,
+    Unknown = 19,
     /// A custom error defined by a third-party plugin
-    Custom
+    Custom = 20,
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // NOTE - safe use of transmute in from_i32 requires that there be no numbering gaps in this list
@@ -575,7 +575,7 @@ pub enum ErrorCategory{
 
 impl ErrorCategory{
     pub fn last() -> ErrorCategory {
-        ErrorCategory::Unknown
+        ErrorCategory::Custom
     }
     fn from_i32(v: i32) -> Option<ErrorCategory>{
         if v >= 0 && v <= ErrorCategory::last() as i32 {
@@ -587,9 +587,12 @@ impl ErrorCategory{
     fn to_i32(&self) -> i32{
         *self as i32
     }
+    /// Used by the C abi, unfortunately.
     pub fn to_outward_error_code(&self) -> i32{
         self.to_i32()
     }
+    // Was intendend to be used by the C abi, but we accidentally used
+    // to_outward_error_code for imageflow_context_error_code
     pub fn from_c_error_code(status: i32) -> Option<ErrorCategory>{
         if let Some(v) = ErrorCategory::from_i32(status - 200){
             Some(v)
@@ -604,7 +607,8 @@ impl ErrorCategory{
             }
         }
     }
-
+    // Was intendend to be used by the C abi, but we accidentally used
+    // to_outward_error_code for imageflow_context_error_code
     pub fn to_c_error_code(&self) -> i32{
         match *self{
             ErrorCategory::Ok => 0,
