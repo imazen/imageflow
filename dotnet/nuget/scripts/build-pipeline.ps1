@@ -630,7 +630,7 @@ if ($SkipTest) {
         )
         Invoke-CommandAndLog -Executable "dotnet" -Arguments $buildArgs -LogIdentifier "Build Test $ridToTest"
 
-        # Use dotnet test
+        
         $testArgs = @(
             "run",
             "--project",
@@ -638,7 +638,7 @@ if ($SkipTest) {
             "--configuration", $Configuration,
             "--runtime", $ridToTest,
             "--output", $testBuildDir,
-            "/p:RuntimePackageVersion=$PackageVersion"
+            "--property:RuntimePackageVersion=$PackageVersion"
         )
         Invoke-CommandAndLog -Executable "dotnet" -Arguments $testArgs -LogIdentifier "Test $ridToTest"
 
