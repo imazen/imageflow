@@ -21,6 +21,9 @@
     <NativeToolFileName Condition="'$(OS)' != 'Windows_NT'">imageflow_tool</NativeToolFileName>
     <FullNativeToolPath Condition="Exists('$(NativeArtifactBasePath)/$(NativeToolRid)/$(NativeToolFileName)')">$(NativeArtifactBasePath)/$(NativeToolRid)/$(NativeToolFileName)</FullNativeToolPath>
 
+      
+    <!-- disable CS2008: No source files specified -->
+    <NoWarn>$(NoWarn);CS2008</NoWarn>
     <!-- Error out if the expected native tool isn't found -->
     </PropertyGroup>
   <!-- Error check specific to tool binary -->

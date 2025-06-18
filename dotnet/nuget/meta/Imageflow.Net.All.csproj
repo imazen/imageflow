@@ -11,6 +11,8 @@
     <!-- Assume Version is passed via /p:Version=... (for NativeRuntime dependency) -->
     <!-- Assume ImageflowNetVersion is passed via /p:ImageflowNetVersion=... -->
 
+    <!-- disable CS2008: No source files specified -->
+    <NoWarn>$(NoWarn);CS2008</NoWarn>
   </PropertyGroup>
 
   <!-- Import common properties and items -->

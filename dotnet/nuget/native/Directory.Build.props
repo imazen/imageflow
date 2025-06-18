@@ -9,7 +9,5 @@
     <!-- Disable AssemblyInfo generation for these projects -->
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 
-    <RepositoryUrl>https://github.com/imageflow/imageflow</RepositoryUrl> 
-    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 </Project> 

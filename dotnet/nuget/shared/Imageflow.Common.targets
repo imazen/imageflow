@@ -13,6 +13,8 @@
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
+
+    <NetClassicVersion>net45</NetClassicVersion>
     
     <!-- Default version, expecting override via /p:Version=... -->
     <Version Condition="'$(Version)' == ''">0.0.1-local</Version>

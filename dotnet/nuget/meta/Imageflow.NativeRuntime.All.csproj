@@ -12,6 +12,8 @@
     <!-- Assume Version is passed via /p:Version=... -->
     <!-- Add ImageflowNetVersion property, even if unused here, for consistency? Or omit? Let's omit for now. -->
 
+    <!-- disable CS2008: No source files specified -->
+    <NoWarn>$(NoWarn);CS2008</NoWarn>
   </PropertyGroup>
 
   <!-- Import common properties and items -->
