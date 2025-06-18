@@ -6,8 +6,12 @@
     <!-- Runtime-specific properties -->
     <Description Condition="'$(Description)' == ''">Imageflow is a fast, server-side-safe, and correct image processing library written in Rust. This package contains the native runtime library for $(ImageflowNugetRid); use 'Imageflow.Net' or 'Imageflow.AllPlatforms' for the managed wrapper.</Description>
     
-    <TargetFrameworks Condition="'$(IsWindowsRid)' == 'true'">netstandard2.0;net45</TargetFrameworks>
+    <TargetFrameworks Condition="'$(IsWindowsRid)' == 'true'">
+      netstandard2.0;net45
+    </TargetFrameworks>
+    
     <TargetFrameworks Condition="'$(IsWindowsRid)' != 'true'">netstandard2.0</TargetFrameworks>
+    
     
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>
@@ -21,7 +25,7 @@
     <!-- Determine if .targets file should be included (Windows x86/x64/arm64) -->
     <IncludeTargets Condition=" '$(IsWindowsRid)' == 'true' ">true</IncludeTargets>
     <IncludeTargets Condition=" '$(IncludeTargets)' == '' ">false</IncludeTargets>
-
+  
     <!-- disable CS2008: No source files specified -->
     <NoWarn>$(NoWarn);CS2008</NoWarn>
   </PropertyGroup>
@@ -38,31 +42,25 @@
     <!-- Include the RID-specific .targets file conditionally based on property -->
     <!-- See: https://learn.microsoft.com/en-us/nuget/create-packages/creating-a-package-msbuild#including-msbuild-props-and-targets-in-a-package -->
 
-    <!-- Also explicitly target net45+ to align with common practice -->
+    <!-- Also explicitly target net45 (NetClassicVersion)+ to align with common practice -->
     <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets"
           Condition="'$(IncludeTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets')"
           Pack="true"
-          PackagePath="build/net45/$(PackageId).targets" />
-     <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets"
+          PackagePath="build/$(NetClassicVersion)/$(PackageId).targets" />
+    <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets"
           Condition="'$(IncludeTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeRuntime.$(ImageflowNugetRid).targets')"
           Pack="true"
-          PackagePath="buildTransitive/net45/$(PackageId).targets" />
+          PackagePath="buildTransitive/$(NetClassicVersion)/$(PackageId).targets" />
 
-    <!-- Include dummy file for win-arm64 -->
-    <!-- Dummy file lives in ../shared relative to this file's directory (native/) -->
-    <!-- <None Include="$(MSBuildThisFileDirectory)../shared/_._"
-          Condition="'$(ImageflowNugetRid)' == 'win-arm64'"
-          Pack="true"
-          PackagePath="lib/netstandard1.0/" /> -->
 
-        <!-- dummy file in lib/netstandard2.0/ -->
+    <!-- Dummy files to match the target frameworks -->
     <None Include="$(MSBuildThisFileDirectory)../shared/_._"
           Pack="true"
-          Condition="'$(IsWindowsRid)' == 'true'"
           PackagePath="lib/netstandard2.0/" />
     <None Include="$(MSBuildThisFileDirectory)../shared/_._"
           Pack="true"
-          PackagePath="lib/net45/" />
+          Condition="'$(IsWindowsRid)' == 'true'"
+          PackagePath="lib/$(NetClassicVersion)/" />
   </ItemGroup>
 
 

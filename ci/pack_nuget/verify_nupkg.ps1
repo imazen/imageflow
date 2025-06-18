@@ -153,8 +153,10 @@ function Test-NupkgStructure {
                 Write-Error "Incorrect number of <file> elements for targets."
                 return $false
             }
-            $target1 = "build\\net45\\$ExpectedTargetsFileName"
-            $target2 = "buildTransitive\\net45\\$ExpectedTargetsFileName"
+            # Find first dir name inside buildTransitive that starts with "net"
+            $netDir = $fileElements[0].target.Split('\')[1]
+            $target1 = "build\\$netDir\\$ExpectedTargetsFileName"
+            $target2 = "buildTransitive\\$netDir\\$ExpectedTargetsFileName"
             if (($fileElements[0].target -ne $target1 -or $fileElements[1].target -ne $target2) -and `
                 ($fileElements[0].target -ne $target2 -or $fileElements[1].target -ne $target1)) {
                     Write-Host "::error::Unexpected <file target=...> values for targets file."

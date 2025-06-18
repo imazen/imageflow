@@ -25,7 +25,7 @@
     <!-- disable CS2008: No source files specified -->
     <NoWarn>$(NoWarn);CS2008</NoWarn>
     <!-- Error out if the expected native tool isn't found -->
-    </PropertyGroup>
+  </PropertyGroup>
   <!-- Error check specific to tool binary -->
   <Target Name="CheckNativeBinaryExists" BeforeTargets="GenerateNuspec">
     <Error Condition="'$(FullNativeToolPath)' == '' Or !Exists($(FullNativeToolPath))" Text="The required native tool was not found at '$(NativeArtifactBasePath)/$(NativeToolRid)/$(NativeToolFileName)'. Ensure NativeArtifactBasePath ('$(NativeArtifactBasePath)') and NativeToolRid ('$(NativeToolRid)') are set correctly and the file exists." />

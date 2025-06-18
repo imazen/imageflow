@@ -2,8 +2,14 @@
 # PowerShell script to test the consolidated build-pipeline.ps1 script locally
 
 param(
-    [string]$PackageVersion = "0.0.1-localtest" # Use a specific version for local testing
+    [string]$PackageVersion = "" # Use a specific version for local testing
 )
+
+# if PackageVersion is not set, generate a version from the hour, minute, and second
+# HH.MM.SS-localtest
+if ($PackageVersion -eq "") {
+    $PackageVersion = "$(Get-Date -Format "HH.mm.ss")-localtest"
+}
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
@@ -61,6 +67,11 @@ function Get-NativeToolName {
     return "imageflow_tool" # Linux, macOS
 }
 
+
+# which dotnet version is installed?
+$dotnetVersion = (dotnet --version)
+$dotnetRunnerPath = (which dotnet)
+Write-Host "Dotnet version: $dotnetVersion, which dotnet: $dotnetRunnerPath"
 
 # --- Script Setup ---
 
@@ -133,7 +144,7 @@ try {
     # Copy artifacts directly into the target dir
     Copy-Item -Path $sourceLibPath -Destination (Join-Path $CurrentBuildArtifactDir $hostLibName) -Force
     Copy-Item -Path $sourceToolPath -Destination (Join-Path $CurrentBuildArtifactDir $hostToolName) -Force
-    Write-Host "✅ Host artifacts ($hostLibName, $hostToolName) copied." -ForegroundColor Green
+    Write-Host "✅ Host artifacts ($hostLibName, $hostToolName) copied to $CurrentBuildArtifactDir" -ForegroundColor Green
 
     # 2. Run the consolidated build-pipeline.ps1 in SingleTest mode
     Write-Host "`nStep 2: Running build-pipeline.ps1 -Mode SingleTest ..." -ForegroundColor Cyan
@@ -157,7 +168,7 @@ try {
 
 } catch {
     # Catch errors from any script call
-    Write-Error "❌ Workflow script test FAILED: $($_.Exception.Message)"
+    Write-Error "❌ Workflow script test FAILED at line $($_.InvocationInfo.ScriptLineNumber) in file $($_.InvocationInfo.ScriptName) $($_.Exception.Message)"
     if ($_.ErrorRecord) {
         $InvocationInfo = $_.ErrorRecord.InvocationInfo
         if ($InvocationInfo) {
@@ -168,6 +179,7 @@ try {
     } else {
          Write-Error "❌ Exception StackTrace: $($_.ScriptStackTrace)"
     }
+    throw "❌ Workflow script test FAILED: $($_.Exception.Message) on line $($_.InvocationInfo.ScriptLineNumber)"
     exit 1
 } finally {
     # --- Cleanup ---

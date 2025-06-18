@@ -346,7 +346,25 @@ function Invoke-CommandAndLog {
     Write-HostVerbose "Command succeeded: $commandString ($LogIdentifier)"
 }
 
+function Force-Resolve-Path {
+    <#
+    .SYNOPSIS
+        Calls Resolve-Path but works for files that don't exist.
+    .REMARKS
+        From http://devhawk.net/blog/2010/1/22/fixing-powershells-busted-resolve-path-cmdlet
+    #>
+    param (
+        [string] $FileName
+    )
 
+    $FileName = Resolve-Path $FileName -ErrorAction SilentlyContinue `
+                                       -ErrorVariable _frperror
+    if (-not($FileName)) {
+        $FileName = $_frperror[0].TargetObject
+    }
+
+    return $FileName
+}
 # --- Initial Setup & Validation ---
 
 Write-Host "Starting build-pipeline.ps1 in Mode '$Mode'"
@@ -409,8 +427,15 @@ $StagingDir = Join-Path $NugetProjectRoot "temp_staging_for_packing"
 $IntermediatePackDir = Join-Path $NugetProjectRoot "local"
 # Define the final output directory from parameter
 # Construct the full path but don't require it to exist yet.
-$PackOutputDirectory = if ([System.IO.Path]::IsPathRooted($PackOutputDirectory)) { $PackOutputDirectory } else { [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $PackOutputDirectory)) }
-$NativeArtifactBasePath = if ([System.IO.Path]::IsPathRooted($NativeArtifactBasePath)) { $NativeArtifactBasePath } else { Resolve-Path (Join-Path $PSScriptRoot $NativeArtifactBasePath) }
+if (![System.IO.Path]::IsPathRooted($PackOutputDirectory)) { 
+    $PackOutputDirectory = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $PackOutputDirectory))
+    Write-Host "PackOutputDirectory: $PackOutputDirectory"
+}
+if (![System.IO.Path]::IsPathRooted($NativeArtifactBasePath)) { 
+    # let's change Resolve-Path to something that works on non-existing paths
+    $NativeArtifactBasePath = Force-Resolve-Path (Join-Path $PSScriptRoot $NativeArtifactBasePath)
+    Write-Host "NativeArtifactBasePath: $NativeArtifactBasePath"
+}
 
 $SolutionFile = Join-Path $WorkspaceRoot "Imageflow.sln" # Adjust if needed
 $EndToEndTestProject = Join-Path $NugetProjectRoot "test/Imageflow.EndToEnd.Test.csproj" # Adjust if needed
@@ -581,11 +606,14 @@ if ($SkipTest) {
     $script:testFailed = $false 
 
     $testBuildDir = Join-Path $testProjectDir "run/bin/$ridToTest"
-
+    $testObjDir = Join-Path $testProjectDir "obj"
     try {
         # First, delete the test build directory
         if (Test-Path $testBuildDir) {
             Remove-Item -Recurse -Force $testBuildDir
+        }
+        if (Test-Path $testObjDir) {
+            Remove-Item -Recurse -Force $testObjDir
         }
 
         Write-Host "Building test project '$EndToEndTestProject'..."
@@ -601,6 +629,18 @@ if ($SkipTest) {
             "/verbosity:normal" # Or use 'detailed' or 'diag'
         )
         Invoke-CommandAndLog -Executable "dotnet" -Arguments $buildArgs -LogIdentifier "Build Test $ridToTest"
+
+        # Use dotnet test
+        $testArgs = @(
+            "run",
+            "--project",
+            "$EndToEndTestProject",
+            "--configuration", $Configuration,
+            "--runtime", $ridToTest,
+            "--output", $testBuildDir,
+            "/p:RuntimePackageVersion=$PackageVersion"
+        )
+        Invoke-CommandAndLog -Executable "dotnet" -Arguments $testArgs -LogIdentifier "Test $ridToTest"
 
         # 3. Find and Execute test
         $testExeNameWithExe = ($EndToEndTestProject | Split-Path -Leaf).Replace(".csproj", ".exe")

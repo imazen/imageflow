@@ -3,7 +3,7 @@
   <PropertyGroup>
     <PackageId>Imageflow.NativeRuntime.All</PackageId>
     <Description>Meta-package referencing all Imageflow native runtime libraries (DLL/SO/DYLIB). Provides the native library for all supported RIDs.</Description>
-    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks> <!-- Target framework for dependency resolution -->
+    <TargetFrameworks>netstandard2.0</TargetFrameworks> <!-- Target framework for dependency resolution -->
     <IncludeBuildOutput>false</IncludeBuildOutput> <!-- Meta package has no build output -->
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute> <!-- Disable SDK generation -->
     <DisableImplicitFrameworkReferences>false</DisableImplicitFrameworkReferences>
@@ -11,11 +11,15 @@
     
     <!-- Assume Version is passed via /p:Version=... -->
     <!-- Add ImageflowNetVersion property, even if unused here, for consistency? Or omit? Let's omit for now. -->
-
+  
     <!-- disable CS2008: No source files specified -->
     <NoWarn>$(NoWarn);CS2008</NoWarn>
   </PropertyGroup>
 
+  <!-- Dummy files to match the target frameworks -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../shared/_._" Pack="true" PackagePath="lib/netstandard2.0/" />
+  </ItemGroup>
   <!-- Import common properties and items -->
   <Import Project="../shared/Imageflow.Common.targets" />
 
