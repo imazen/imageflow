@@ -181,7 +181,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GetVersionInfo"
+                "$ref": "#/components/schemas/EmptyRequest"
               }
             }
           },
@@ -211,7 +211,83 @@
         }
       }
     },
-    "/v1/openapi/schema/latest": {
+    "/v1/schema/json/latest/v1/all": {
+      "post": {
+        "tags": [],
+        "operationId": "get_json_schemas_v1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Combined JSON schemas for V1 endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_GetJsonSchemasV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to generate JSON schemas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/schema/list-schema-endpoints": {
+      "post": {
+        "tags": [],
+        "operationId": "list_schema_endpoints",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "List of available schema endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_ListSchemaEndpointsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to list schema endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/schema/openapi/latest/get": {
       "get": {
         "tags": [],
         "operationId": "get_openapi_schema_json",
@@ -229,15 +305,15 @@
         }
       }
     },
-    "/v1/query_string/latest/get_schema": {
+    "/v1/schema/riapi/latest/get": {
       "post": {
         "tags": [],
-        "operationId": "get_query_string_schema",
+        "operationId": "get_riapi_schema",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GetQueryStringSchema"
+                "$ref": "#/components/schemas/EmptyRequest"
               }
             }
           },
@@ -245,17 +321,17 @@
         },
         "responses": {
           "200": {
-            "description": "Query string schema retrieved",
+            "description": "RIAPI schema retrieved",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonAnswer_GetQueryStringSchemaV1Response"
+                  "$ref": "#/components/schemas/JsonAnswer_GetRiapiSchemaV1Response"
                 }
               }
             }
           },
           "500": {
-            "description": "Failed to get query string schema",
+            "description": "Failed to get RIAPI schema",
             "content": {
               "application/json": {
                 "schema": {
@@ -267,15 +343,15 @@
         }
       }
     },
-    "/v1/query_string/latest/list_supported_keys": {
+    "/v1/schema/riapi/latest/list_keys": {
       "post": {
         "tags": [],
-        "operationId": "list_query_string_keys",
+        "operationId": "list_riapi_keys",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ListQueryStringKeys"
+                "$ref": "#/components/schemas/EmptyRequest"
               }
             }
           },
@@ -283,11 +359,11 @@
         },
         "responses": {
           "200": {
-            "description": "Supported keys listed",
+            "description": "Supported RIAPI keys listed",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonAnswer_ListQueryStringKeysV1Response"
+                  "$ref": "#/components/schemas/JsonAnswer_ListRiapiKeysV1Response"
                 }
               }
             }
@@ -305,10 +381,10 @@
         }
       }
     },
-    "/v1/query_string/latest/validate": {
+    "/v1/schema/riapi/latest/validate": {
       "post": {
         "tags": [],
-        "operationId": "validate_query_string",
+        "operationId": "validate_riapi_query_string",
         "requestBody": {
           "content": {
             "application/json": {
@@ -321,11 +397,11 @@
         },
         "responses": {
           "200": {
-            "description": "Query string validation results",
+            "description": "RIAPI query string validation results",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonAnswer_ValidateQueryStringV1Response"
+                  "$ref": "#/components/schemas/JsonAnswer_ValidateRiapiQueryStringV1Response"
                 }
               }
             }
@@ -384,6 +460,33 @@
   },
   "components": {
     "schemas": {
+      "AllJsonSchemasV1": {
+        "type": "object",
+        "required": [
+          "v1/build",
+          "v1/execute",
+          "v1/tell_decoder",
+          "v1/get_image_info",
+          "v1/get_scaled_image_info"
+        ],
+        "properties": {
+          "v1/build": {
+            "$ref": "#/components/schemas/EndpointSchemaPair"
+          },
+          "v1/execute": {
+            "$ref": "#/components/schemas/EndpointSchemaPair"
+          },
+          "v1/get_image_info": {
+            "$ref": "#/components/schemas/EndpointSchemaPair"
+          },
+          "v1/get_scaled_image_info": {
+            "$ref": "#/components/schemas/EndpointSchemaPair"
+          },
+          "v1/tell_decoder": {
+            "$ref": "#/components/schemas/EndpointSchemaPair"
+          }
+        }
+      },
       "AllowedFormats": {
         "type": "object",
         "properties": {
@@ -939,6 +1042,9 @@
           "canvas"
         ]
       },
+      "EmptyRequest": {
+        "type": "object"
+      },
       "EncodeResult": {
         "type": "object",
         "required": [
@@ -1380,6 +1486,21 @@
         ],
         "description": "Encoder presets (each with optional configuration). These are exposed by the JSON API."
       },
+      "EndpointSchemaPair": {
+        "type": "object",
+        "required": [
+          "input_schema",
+          "output_schema"
+        ],
+        "properties": {
+          "input_schema": {
+            "type": "object"
+          },
+          "output_schema": {
+            "type": "object"
+          }
+        }
+      },
       "Execute001": {
         "type": "object",
         "required": [
@@ -1587,10 +1708,18 @@
           }
         }
       },
-      "GetQueryStringSchema": {
-        "type": "object"
+      "GetJsonSchemasV1Response": {
+        "type": "object",
+        "required": [
+          "schemas"
+        ],
+        "properties": {
+          "schemas": {
+            "$ref": "#/components/schemas/AllJsonSchemasV1"
+          }
+        }
       },
-      "GetQueryStringSchemaV1Response": {
+      "GetRiapiSchemaV1Response": {
         "type": "object",
         "required": [
           "schema"
@@ -1611,9 +1740,6 @@
             "$ref": "#/components/schemas/ImageInfo"
           }
         }
-      },
-      "GetVersionInfo": {
-        "type": "object"
       },
       "GetVersionInfoV1Response": {
         "type": "object",
@@ -1998,7 +2124,43 @@
           }
         }
       },
-      "JsonAnswer_GetQueryStringSchemaV1Response": {
+      "JsonAnswer_GetJsonSchemasV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "schemas"
+            ],
+            "properties": {
+              "schemas": {
+                "$ref": "#/components/schemas/AllJsonSchemasV1"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_GetRiapiSchemaV1Response": {
         "type": "object",
         "required": [
           "code",
@@ -2106,7 +2268,7 @@
           }
         }
       },
-      "JsonAnswer_ListQueryStringKeysV1Response": {
+      "JsonAnswer_ListRiapiKeysV1Response": {
         "type": "object",
         "required": [
           "code",
@@ -2127,6 +2289,45 @@
             "properties": {
               "schema": {
                 "$ref": "#/components/schemas/QueryStringSchema"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_ListSchemaEndpointsResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "endpoints"
+            ],
+            "properties": {
+              "endpoints": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -2170,7 +2371,7 @@
           }
         }
       },
-      "JsonAnswer_ValidateQueryStringV1Response": {
+      "JsonAnswer_ValidateRiapiQueryStringV1Response": {
         "type": "object",
         "required": [
           "code",
@@ -2237,10 +2438,7 @@
           }
         }
       },
-      "ListQueryStringKeys": {
-        "type": "object"
-      },
-      "ListQueryStringKeysV1Response": {
+      "ListRiapiKeysV1Response": {
         "type": "object",
         "required": [
           "schema"
@@ -2248,6 +2446,20 @@
         "properties": {
           "schema": {
             "$ref": "#/components/schemas/QueryStringSchema"
+          }
+        }
+      },
+      "ListSchemaEndpointsResponse": {
+        "type": "object",
+        "required": [
+          "endpoints"
+        ],
+        "properties": {
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -3977,7 +4189,7 @@
           }
         }
       },
-      "ValidateQueryStringV1Response": {
+      "ValidateRiapiQueryStringV1Response": {
         "type": "object",
         "required": [
           "results"
