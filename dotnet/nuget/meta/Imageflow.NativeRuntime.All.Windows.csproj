@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+      <PackageId>Imageflow.NativeRuntime.All.Windows</PackageId>
+      <Description>Meta-package referencing all Windows Imageflow native dlls.</Description>
+      <TargetFrameworks>netstandard2.0</TargetFrameworks> <!-- Target framework for dependency resolution -->
+      <IncludeBuildOutput>false</IncludeBuildOutput> <!-- Meta package has no build output -->
+      <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute> <!-- Disable SDK generation -->
+      <DisableImplicitFrameworkReferences>false</DisableImplicitFrameworkReferences>
+      <GenerateDependencyFile>false</GenerateDependencyFile>
+      
+      <!-- Assume Version is passed via /p:Version=... -->
+      <!-- Add ImageflowNetVersion property, even if unused here, for consistency? Or omit? Let's omit for now. -->
+    
+      <!-- disable CS2008: No source files specified -->
+      <NoWarn>$(NoWarn);CS2008</NoWarn>
+    </PropertyGroup>
+  
+    <!-- Dummy files to match the target frameworks -->
+    <ItemGroup>
+      <None Include="$(MSBuildThisFileDirectory)../shared/_._" Pack="true" PackagePath="lib/netstandard2.0/" />
+    </ItemGroup>
+    <!-- Import common properties and items -->
+    <Import Project="../shared/Imageflow.Common.targets" />
+  
+    <ItemGroup>
+      <!-- Add specific tags -->
+      <PackageTags Include="nativeruntime;meta" />
+    </ItemGroup>
+  
+    <!-- Dependencies on all known native runtime packages -->
+    <!-- Use ProjectReference so build/pack within the solution works correctly -->
+    <ItemGroup> <!-- We do want the native dlls to work transitively -->
+  
+      
+      <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-x64.csproj"    />
+      <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-x86.csproj" />
+      <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-arm64.csproj" />
+
+  </ItemGroup>
+  
+  </Project> 
+  
