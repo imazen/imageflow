@@ -5,7 +5,7 @@
   <PropertyGroup>
     <!-- Tool-specific properties -->
     <Description Condition="'$(Description)' == ''">Imageflow command-line tool for $(ImageflowNugetRid). Part of the Imageflow image processing suite.</Description>
-    <TargetFrameworks>net8.0</TargetFrameworks> <!-- Still need a TFM for MSBuild processing -->
+    <TargetFrameworks>netstandard2.0</TargetFrameworks> <!-- Still need a TFM for MSBuild processing -->
     <!-- <PackAsTool>true</PackAsTool> --> <!-- This causes issues with native-only packages; we manually place the tool -->
     <!-- <ToolCommandName>imageflow_tool</ToolCommandName> --> <!-- Only needed if PackAsTool is true -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
@@ -37,12 +37,15 @@
     <PackageTags Include="imageflow-tool;command-line;$(ImageflowNugetRid)" />
 
     <!-- Include the native tool binary from the calculated path into the runtimes folder -->
-    <Content Include="$(FullNativeToolPath)" 
+    <None Include="$(FullNativeToolPath)" 
              Condition="Exists('$(FullNativeToolPath)')"
              Pack="true" 
              PackagePath="runtimes/$(ImageflowNugetRid)/native/" 
-             CopyToOutputDirectory="Never" />
-             
+            />
+
+    <None Include="$(MSBuildThisFileDirectory)../shared/_._"
+          Pack="true"
+          PackagePath="lib/netstandard2.0/" /> 
   </ItemGroup>
   
 
