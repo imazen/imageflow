@@ -7,7 +7,7 @@
     <Description Condition="'$(Description)' == ''">Imageflow is a fast, server-side-safe, and correct image processing library written in Rust. This package contains the native runtime library for $(ImageflowNugetRid); use 'Imageflow.Net' or 'Imageflow.AllPlatforms' for the managed wrapper.</Description>
     
     <TargetFrameworks Condition="'$(IsWindowsRid)' == 'true'">
-      netstandard2.0;net45
+      netstandard2.0;$(NetClassicVersion)
     </TargetFrameworks>
     
     <TargetFrameworks Condition="'$(IsWindowsRid)' != 'true'">netstandard2.0</TargetFrameworks>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- This file is included by Imageflow.NativeRuntime.Common.targets when ImageflowNugetRid is win-x64 -->
+  <!-- It includes the native libraries in the build output and NuGet package. -->
+
+  <!-- If RID is set, let the system copy it instead. Only copy on Windows. -->
+  <ItemGroup Condition=" '$(RuntimeIdentifier)' == '' AND '$(OS)' == 'Windows_NT' ">
+    <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-x64/native/*">
+      <Link>runtimes/win-x64/native/imageflow_tool.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>False</Visible>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <Pack>true</Pack>
+      <PackagePath>runtimes/win-x64/native/imageflow_tool.exe</PackagePath>
+    </Content>
+  </ItemGroup>
+
+
+</Project> 

@@ -3,11 +3,15 @@
   <Import Project="../shared/Imageflow.Common.targets" />
 
   <PropertyGroup>
-    <!-- Tool-specific properties -->
+    
     <Description Condition="'$(Description)' == ''">Imageflow command-line tool for $(ImageflowNugetRid). Part of the Imageflow image processing suite.</Description>
-    <TargetFrameworks>netstandard2.0</TargetFrameworks> <!-- Still need a TFM for MSBuild processing -->
-    <!-- <PackAsTool>true</PackAsTool> --> <!-- This causes issues with native-only packages; we manually place the tool -->
-    <!-- <ToolCommandName>imageflow_tool</ToolCommandName> --> <!-- Only needed if PackAsTool is true -->
+    <!-- For windows, target netstandard2.0 and net45 -->
+    <TargetFrameworks Condition="'$(IsWindowsRid)' == 'true'">
+      netstandard2.0;$(NetClassicVersion)
+    </TargetFrameworks>
+    <TargetFrameworks Condition="'$(IsWindowsRid)' != 'true'">netstandard2.0</TargetFrameworks>
+    
+
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>
   
@@ -21,7 +25,10 @@
     <NativeToolFileName Condition="'$(OS)' != 'Windows_NT'">imageflow_tool</NativeToolFileName>
     <FullNativeToolPath Condition="Exists('$(NativeArtifactBasePath)/$(ImageflowNugetRid)/$(NativeToolFileName)')">$(NativeArtifactBasePath)/$(ImageflowNugetRid)/$(NativeToolFileName)</FullNativeToolPath>
 
-      
+    <!-- Determine if .targets file should be included (Windows x86/x64/arm64) -->
+    <IncludeTargets Condition=" '$(IsWindowsRid)' == 'true' ">true</IncludeTargets>
+    <IncludeTargets Condition=" '$(IncludeTargets)' == '' ">false</IncludeTargets>
+  
     <!-- disable CS2008: No source files specified -->
     <NoWarn>$(NoWarn);CS2008</NoWarn>
     <!-- Error out if the expected native tool isn't found -->
@@ -46,6 +53,21 @@
     <None Include="$(MSBuildThisFileDirectory)../shared/_._"
           Pack="true"
           PackagePath="lib/netstandard2.0/" /> 
+    <None Include="$(MSBuildThisFileDirectory)../shared/_._"
+          Pack="true"
+          Condition="'$(IsWindowsRid)' == 'true'"
+          PackagePath="lib/$(NetClassicVersion)/" />
+    <!-- Also explicitly target net45 (NetClassicVersion)+ to align with common practice -->
+    <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeTool.$(ImageflowNugetRid).targets"
+          Condition="'$(IncludeTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeTool.$(ImageflowNugetRid).targets')"
+          Pack="true"
+          PackagePath="build/$(NetClassicVersion)/$(PackageId).targets" />
+    
+    <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeTool.$(ImageflowNugetRid).targets"
+          Condition="'$(IncludeTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeTool.$(ImageflowNugetRid).targets')"
+          Pack="true"
+          PackagePath="buildTransitive/$(NetClassicVersion)/$(PackageId).targets" />
+
   </ItemGroup>
   
 
