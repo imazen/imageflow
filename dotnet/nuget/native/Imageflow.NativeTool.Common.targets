@@ -16,10 +16,10 @@
     <BuildProjectReferences>false</BuildProjectReferences>
     <EnableDefaultContentItems>false</EnableDefaultContentItems>
 
-    <!-- Ensure the RID-specific parent project sets NativeToolRid -->
+    <!-- Ensure the RID-specific parent project sets ImageflowNugetRid -->
     <NativeToolFileName Condition="'$(OS)' == 'Windows_NT'">imageflow_tool.exe</NativeToolFileName>
     <NativeToolFileName Condition="'$(OS)' != 'Windows_NT'">imageflow_tool</NativeToolFileName>
-    <FullNativeToolPath Condition="Exists('$(NativeArtifactBasePath)/$(NativeToolRid)/$(NativeToolFileName)')">$(NativeArtifactBasePath)/$(NativeToolRid)/$(NativeToolFileName)</FullNativeToolPath>
+    <FullNativeToolPath Condition="Exists('$(NativeArtifactBasePath)/$(ImageflowNugetRid)/$(NativeToolFileName)')">$(NativeArtifactBasePath)/$(ImageflowNugetRid)/$(NativeToolFileName)</FullNativeToolPath>
 
       
     <!-- disable CS2008: No source files specified -->
@@ -28,7 +28,7 @@
   </PropertyGroup>
   <!-- Error check specific to tool binary -->
   <Target Name="CheckNativeBinaryExists" BeforeTargets="GenerateNuspec">
-    <Error Condition="'$(FullNativeToolPath)' == '' Or !Exists($(FullNativeToolPath))" Text="The required native tool was not found at '$(NativeArtifactBasePath)/$(NativeToolRid)/$(NativeToolFileName)'. Ensure NativeArtifactBasePath ('$(NativeArtifactBasePath)') and NativeToolRid ('$(NativeToolRid)') are set correctly and the file exists." />
+    <Error Condition="'$(FullNativeToolPath)' == '' Or !Exists($(FullNativeToolPath))" Text="The required native tool was not found at '$(NativeArtifactBasePath)/$(ImageflowNugetRid)/$(NativeToolFileName)'. Ensure NativeArtifactBasePath ('$(NativeArtifactBasePath)') and ImageflowNugetRid ('$(ImageflowNugetRid)') are set correctly and the file exists." />
     <Error Condition="'$(NativeArtifactBasePath)' == ''" Text="The NativeArtifactBasePath property must be set via /p:NativeArtifactBasePath=..." />
     <Error Condition="!Exists('$(FullNativeToolPath)')" Text="The native tool binary '$(FullNativeToolPath)' (derived from NativeArtifactBasePath='$(NativeArtifactBasePath)', RID='$(ImageflowNugetRid)', Name='$(ExpectedNativeToolBinaryName)') was not found." />
   </Target>
@@ -36,15 +36,15 @@
     <!-- Tool-specific tags -->
     <PackageTags Include="imageflow-tool;command-line;$(ImageflowNugetRid)" />
 
-    <!-- Include the native tool binary from the calculated path into the tools folder -->
+    <!-- Include the native tool binary from the calculated path into the runtimes folder -->
     <Content Include="$(FullNativeToolPath)" 
              Condition="Exists('$(FullNativeToolPath)')"
              Pack="true" 
-             PackagePath="tools/$(TargetFramework)/any/" 
+             PackagePath="runtimes/$(ImageflowNugetRid)/native/" 
              CopyToOutputDirectory="Never" />
              
   </ItemGroup>
   
 
   
-</Project> 
+</Project>  
