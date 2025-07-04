@@ -2423,7 +2423,8 @@
             "type": [
               "object",
               "null"
-            ]
+            ],
+            "description": "Errors have no data payload"
           },
           "message": {
             "type": [

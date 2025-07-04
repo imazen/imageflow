@@ -135,7 +135,7 @@ int32_t imageflow_context_error_as_http_code(struct imageflow_context *context);
 //
 // These will be stabilized after 1.0, once error categories have passed rigorous real-world testing
 // `imageflow_context_error_as_exit_code` and `imageflow_context_error_as_http_status` are suggested in the meantime.
-//
+// Unstable, do not use.
 int32_t imageflow_context_error_code(struct imageflow_context *context);
 
 // Returns true if the context is "ok" or in an error state that is recoverable.

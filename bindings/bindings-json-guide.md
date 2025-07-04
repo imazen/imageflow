@@ -4,21 +4,39 @@ Manually creating a language binding can be a time-consuming and error-prone pro
 
 This guide outlines a more advanced, schema-driven approach to creating and maintaining bindings. By using `libimageflow` itself as the "source of truth", we can automate the generation of data models, documentation, and even parts of a fluent API.
 
-## The Core Concept: Self-Describing API
+## Table of Contents
+1. [Schema-First Development](#the-core-concept-schema-first-development)
+2. [Generating Data Models](#part-1-generating-data-models-with-openapi)
+3. [Generating Documentation](#part-2-generating-documentation)
+4. [Generating Fluent APIs](#part-3-generating-a-fluent-api---the-challenge)
+5. [Fully Automated Bindings](#part-4-the-holy-grail---a-fully-automated-binding)
+6. [CI/CD Integration](#part-5-integration-with-cicd)
 
-Imageflow's JSON API is self-describing. When you have a build of `libimageflow` (or the `imageflow_tool`), you can ask it for the schemas of the APIs it supports. This is done by calling special "meta" endpoints.
+---
 
-The primary tool for this is `imageflow_tool`. You can use it in build scripts to call these endpoints and save their output.
+## The Core Concept: Schema-First Development
 
-### Key Meta-Endpoints
+Imageflow's JSON API schema is **not** extracted at runtime. Instead, it's generated during the build process when the `schema-export` feature is enabled and stored as a committed file in the repository.
 
-You can see a list of available endpoints by running:
-`imageflow_tool v1/schema/list-schema-endpoints`
+### Schema Source Location
+- **Source**: `imageflow_core/src/json/endpoints/openapi_schema_v1.json`
+- **Hash file**: `imageflow_core/src/json/endpoints/openapi_schema_v1.json.hash`
+- **Feature flag**: `schema-export` (enabled by default in `imageflow_tool`)
 
-The most important ones for automation are:
-*   `v1/schema/openapi/latest/get`: Returns a full **OpenAPI v3 schema** for the entire JSON API. This is the cornerstone of automation.
-*   `v1/schema/riapi/latest/get`: Returns a detailed JSON schema for the querystring API (RIAPI).
-*   `v1/schema/json/latest/v1/all`: Returns granular JSON schemas for the inputs and outputs of each individual endpoint.
+### Schema Generation Process
+1. **Build with feature**: `cargo build --features schema-export`
+2. **Schema generation**: The build process generates/updates `openapi_schema_v1.json`
+3. **Change detection**: Compare hash to detect if schema changed
+4. **PR creation**: If schema changed, create PR to update the file
+5. **Binding regeneration**: After schema PR is merged, trigger binding generation
+
+This approach ensures that:
+- The schema is always version-controlled and traceable
+- Changes to the API are immediately reflected in the schema
+- Binding generation is triggered automatically when the API changes
+- The schema serves as the single source of truth for all bindings
+
+---
 
 ## Part 1: Generating Data Models with OpenAPI
 
@@ -26,25 +44,25 @@ The most significant benefit of the schema-first approach is automatic model gen
 
 ### The Workflow
 
-1.  **Export the OpenAPI Schema**:
-    In your binding's build script, start by exporting the live schema from `imageflow_tool`:
-    ```bash
-    imageflow_tool v1/schema/openapi/latest/get > openapi.json
-    ```
-    This command creates an `openapi.json` file that contains a complete definition of every JSON object, field, and type used in the Imageflow API.
+1. **Use the Committed Schema**:
+   Your binding's build script uses the committed schema file:
+   ```bash
+   # The schema is already available in the repository
+   SCHEMA_PATH="imageflow_core/src/json/endpoints/openapi_schema_v1.json"
+   ```
 
-2.  **Use an OpenAPI Generator**:
-    Use a standard tool like [openapi-generator-cli](https://openapi-generator.tech/) to generate code from the schema file. You can target dozens of languages.
+2. **Use an OpenAPI Generator**:
+   Use a standard tool like [openapi-generator-cli](https://openapi-generator.tech/) to generate code from the schema file. You can target dozens of languages.
 
-    For example, to generate TypeScript models:
-    ```bash
-    openapi-generator-cli generate -i openapi.json -g typescript-axios -o ./generated/
-    ```
+   For example, to generate TypeScript models:
+   ```bash
+   openapi-generator-cli generate -i $SCHEMA_PATH -g typescript-axios -o ./generated/
+   ```
 
-    To generate models for Go:
-    ```bash
-    openapi-generator-cli generate -i openapi.json -g go -o ./generated/
-    ```
+   To generate models for Go:
+   ```bash
+   openapi-generator-cli generate -i $SCHEMA_PATH -g go -o ./generated/
+   ```
 
 ### What You Get
 
@@ -78,15 +96,19 @@ Many OpenAPI generators allow you to generate only the models, which simplifies 
 
 By separating the data models from the transport mechanism, you get the best of both worlds: fully automated, type-safe data structures, and a purpose-built execution engine that correctly interfaces with the C ABI.
 
+---
+
 ## Part 2: Generating Documentation
 
 The OpenAPI schema is also rich with documentation. Every field, object, and endpoint has a `description` property containing Markdown-formatted text.
 
-Your build process can parse the `openapi.json` file and extract these descriptions to generate documentation for your binding. You can:
+Your build process can parse the `openapi_schema_v1.json` file and extract these descriptions to generate documentation for your binding. You can:
 *   Create Markdown files for a documentation website.
 *   Insert the descriptions as inline code comments (e.g., XML-docs in C#, GoDoc in Go, JSDoc in TypeScript) in the generated models.
 
 This ensures that your binding's documentation is always accurate and reflects the capabilities of the underlying native library.
+
+---
 
 ## Part 3: Generating a Fluent API - The Challenge
 
@@ -97,22 +119,24 @@ To bridge this gap, your generator needs to understand Imageflow's semantics:
 2.  **Node Inputs**: It must identify which operations are "source" nodes that start a chain (`decode`, `create_canvas`), which are "filters" that modify an input (`constrain`, `rotate_90`), and which are "terminal" nodes that finish a chain (`encode`).
 3.  **Special Inputs**: It must understand nodes that take more than one image input, like `draw_image_exact`, which has a primary `input` and a `canvas` input.
 
+---
+
 ## Part 4: The Holy Grail - A Fully Automated Binding
 
-Achieving one-step binding generation requires a custom code generator tailored to Imageflow. This tool would read the `openapi.json` schema and use a set of custom templates to write the entire binding, including the models, the FFI transport layer, and the fluent API.
+Achieving one-step binding generation requires a custom code generator tailored to Imageflow. This tool would read the `openapi_schema_v1.json` schema and use a set of custom templates to write the entire binding, including the models, the FFI transport layer, and the fluent API.
 
 ### The Custom Generator Workflow
 
 A fully automated build script would look like this:
 
-1.  **Export the Schema**:
+1.  **Use the Schema**:
     ```bash
-    imageflow_tool v1/schema/openapi/latest/get > openapi.json
+    SCHEMA_PATH="imageflow_core/src/json/endpoints/openapi_schema_v1.json"
     ```
 2.  **Run the Custom Generator**:
     ```bash
     # A hypothetical custom tool
-    imageflow-binding-generator --input openapi.json --language csharp --templates ./codegen/csharp/ --output ./src/Imageflow.Fluent/Generated/
+    imageflow-binding-generator --input $SCHEMA_PATH --language csharp --templates ./bindings/templates/csharp/ --output ./bindings/imageflow-csharp/Generated/
     ```
 This process would regenerate everything, ensuring the binding is always perfectly in sync.
 
@@ -120,7 +144,7 @@ This process would regenerate everything, ensuring the binding is always perfect
 
 Your custom generator would need three main components:
 
-1.  **Schema Interpreter**: A robust parser for the `openapi.json` file. It wouldn't just read the schema; it would need to *interpret* it based on Imageflow conventions to identify which JSON objects represent graph nodes.
+1.  **Schema Interpreter**: A robust parser for the `openapi_schema_v1.json` file. It wouldn't just read the schema; it would need to *interpret* it based on Imageflow conventions to identify which JSON objects represent graph nodes.
 
 2.  **Templating Engine**: Use a standard templating language like [Scriban](https://github.com/scriban/scriban) (for .NET), [Handlebars](https://handlebarsjs.com/), or Go's built-in `text/template`. You would create a set of templates for your target language.
 
@@ -144,4 +168,31 @@ For example, a `constrain` operation in the schema could be augmented like this:
 *   `x-imageflow-node-type`: Could be `'source'`, `'filter'`, or `'terminal'`.
 *   `x-imageflow-inputs`: Could list the expected input kinds, like `['input', 'canvas']`.
 
-With these hints, a custom generator has all the information it needs to build a complete, correct, and fully-featured fluent API automatically. While building this generator is a significant upfront investment, it offers a path to nearly effortless maintenance and rapid development of bindings for new languages. 
+With these hints, a custom generator has all the information it needs to build a complete, correct, and fully-featured fluent API automatically. While building this generator is a significant upfront investment, it offers a path to nearly effortless maintenance and rapid development of bindings for new languages.
+
+---
+
+## Part 5: Integration with CI/CD
+
+The schema-first approach integrates seamlessly with continuous integration:
+
+### Schema Update Workflow
+1. **Automatic Detection**: CI detects when the schema has changed
+2. **PR Creation**: Creates a PR to update the schema file
+3. **Auto-Merge**: Schema updates are auto-merged (they're generated, not hand-written)
+4. **Binding Trigger**: Schema merge triggers binding regeneration
+
+### Binding Generation Workflow
+1. **Parallel Generation**: Each language binding is generated in parallel
+2. **PR Creation**: Each binding gets its own PR with generated updates
+3. **PR Replacement**: New PRs replace old ones (no accumulation)
+4. **Manual Review**: Binding changes require manual review before merge
+
+### Benefits of This Approach
+- **Consistency**: All bindings use the same schema version
+- **Automation**: Minimal manual intervention required
+- **Traceability**: Every binding change is traceable to a schema change
+- **Reliability**: Generated code is less error-prone than hand-written code
+- **Maintainability**: Changes to the API automatically propagate to all bindings
+
+This approach transforms binding maintenance from a manual, error-prone process into an automated, reliable system that scales with the number of supported languages. 

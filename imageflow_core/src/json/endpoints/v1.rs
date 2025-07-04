@@ -97,16 +97,12 @@ pub fn try_invoke_static(method: &str, json: &[u8]) -> Result<Option<JsonRespons
             let output = get_json_schemas_v1()?;
             Ok(Some(JsonResponse::ok(output)))
         },
-        "v1/brew_coffee" => Ok(Some(JsonResponse::teapot())), 
+        "v1/brew_coffee" => Ok(Some(JsonResponse::teapot())),
         _ => Ok(None)
     }
 }
 
 
-#[cfg(not(feature = "schema-export"))]
-pub fn get_openapi_schema_json() -> Result<String> {
-    Err(nerror!(ErrorKind::MethodNotImplemented))
-}
 
 // Define a struct to implement the Modify trait for customizing schema names
 #[cfg(feature = "schema-export")]
@@ -147,7 +143,7 @@ pub struct JsonError {
     pub success: bool,
     #[cfg_attr(feature = "schema-export", schema(example = "Detailed error message"))]
     pub message: Option<String>,
-    // Errors have no data payload
+    /// Errors have no data payload
     #[cfg_attr(feature = "schema-export", schema(nullable = true, value_type = Option<Object>))]
     pub data: Option<serde_json::Value>, // Use Option<Value> which serializes to null
 }
@@ -395,7 +391,7 @@ pub(super) fn validate_riapi_query_string(data: ValidateQueryString) -> Result<V
             JsonAnswer<ListRiapiKeysV1Response>, ListRiapiKeysV1Response,
             JsonAnswer<ValidateRiapiQueryStringV1Response>, ValidateRiapiQueryStringV1Response,
             JsonAnswer<ListSchemaEndpointsResponse>, ListSchemaEndpointsResponse,
-            JsonAnswer<GetJsonSchemasV1Response>, GetJsonSchemasV1Response, 
+            JsonAnswer<GetJsonSchemasV1Response>, GetJsonSchemasV1Response,
             EndpointSchemaPair, AllJsonSchemasV1,
             JsonError,
 
@@ -484,7 +480,7 @@ pub fn generate_openapi_schema_json_cached() -> Result<String> {
 pub fn generate_openapi_schema_json() -> Result<String> {
     //Use an atomic or something to cache the result
     use ApiDoc;
-    ApiDoc::openapi().to_pretty_json().map_err( |e| nerror!(ErrorKind::InternalError, "{}", e))    
+    ApiDoc::openapi().to_pretty_json().map_err( |e| nerror!(ErrorKind::InternalError, "{}", e))
 }
 
 
@@ -508,7 +504,7 @@ static SCHEMA_SET_2: include_dir::Dir = include_dir::include_dir!("$CARGO_MANIFE
 fn hash_files_relevant_to_schema() -> String {
     let mut hasher = xxhash3_128::Hasher::new();
     // Also include this file in the hash
-    hasher.write(include_str!("v1.rs").as_bytes()); 
+    hasher.write(include_str!("v1.rs").as_bytes());
     for file in SCHEMA_SET_1.find("**/*.rs").unwrap() {
         hasher.write(file.as_file().unwrap().contents());
     }
@@ -532,10 +528,10 @@ fn hash_files_relevant_to_schema_and_compare() -> io::Result<()> {
             let new_schema_json = generate_openapi_schema_json()
                 .expect("Failed to generate OpenAPI schema JSON");
 
-                
+
             let cargo_manifest_dir = env!("CARGO_MANIFEST_DIR");
             let current_dir = Path::new(cargo_manifest_dir).join("src/json/endpoints");
-    
+
             let hash_file_path = current_dir.join(OPENAPI_SCHEMA_V1_JSON_HASH_NAME);
             let schema_file_path = current_dir.join(OPENAPI_SCHEMA_V1_JSON_NAME);
             // if current_dir doesn't exist, fail with a message
@@ -543,7 +539,7 @@ fn hash_files_relevant_to_schema_and_compare() -> io::Result<()> {
                 panic!("Current directory does not exist: {}", current_dir.display());
             }
 
-            
+
             fs::write(&schema_file_path, &new_schema_json)?;
             eprintln!("Wrote updated schema to: {}", schema_file_path.display());
 

@@ -1,0 +1,9 @@
+{
+  "name": "imageflow-bindings",
+  "version": "1.0.0",
+  "description": "Tooling for generating Imageflow language bindings.",
+  "private": true,
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^2.13.4"
+  }
+}

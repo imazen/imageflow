@@ -14,26 +14,14 @@ Imageflow's power lies in its high-performance Rust core, but its reach comes fr
 This guide will walk you through the process of creating your own Imageflow bindings. We'll cover everything from the low-level C ABI to designing a high-level, user-friendly fluent API. Throughout this guide, we will reference the official [.NET bindings](https://github.com/imazen/imageflow/tree/main/bindings/imageflow-dotnet) as a canonical example of best practices.
 
 ## Table of Contents
-1.  **Imageflow Architecture Overview**
-2.  **Part 1: The Low-Level C ABI**
-    *   Linking and Loading
-    *   The `imageflow_context`
-    *   Error Handling
-    *   Managing I/O and Memory
-    *   Executing Jobs & Retrieving Results
-3.  **Part 2: The JSON Graph API**
-    *   High-Level Structure (`io`, `security`, `framewise`)
-    *   Simple `steps` vs. `graph` Execution
-    *   Anatomy of a Graph (`nodes`, `edges`)
-    *   Key Operation Nodes
-4.  **Part 3: Designing a Fluent API**
-    *   The Job Builder Pattern
-    *   Chainable Nodes
-    *   Abstracting I/O
-    *   Assembling the JSON Graph
-    *   Handling Job Execution
-5.  **Part 4: Integrating the Querystring API**
-6.  **Language-Specific Considerations** (Go, TypeScript, Ruby, PHP)
+1. [Imageflow Architecture Overview](#imageflow-architecture-overview)
+2. [The Low-Level C ABI](#part-1-the-low-level-c-abi)
+3. [The JSON Graph API](#part-2-the-json-graph-api)
+4. [Designing a Fluent API](#part-3-designing-a-fluent-api)
+5. [Integrating the Querystring API](#part-4-integrating-the-querystring-api)
+6. [Schema-Driven Development](#part-5-schema-driven-development)
+7. [Language-Specific Considerations](#language-specific-considerations)
+8. [Integration with CI/CD](#integration-with-cicd)
 
 ---
 
@@ -42,9 +30,10 @@ This guide will walk you through the process of creating your own Imageflow bind
 Imageflow has a layered architecture:
 
 1.  **The Core (`libimageflow`)**: A native library written in Rust, compiled with a C-compatible ABI. It contains all the image processing logic, decoding, and encoding capabilities.
-2.  **The C ABI (`imageflow_default.h`)**: A stable, C-style header that defines the functions, structs, and enums needed to interact with the core library from other languages.
+2.  **The C ABI (`bindings/headers/imageflow_default.h`)**: A stable, C-style header that defines the functions, structs, and enums needed to interact with the core library from other languages.
 3.  **The JSON API**: The "language" used to tell the core what to do. You construct a JSON object that describes a graph of operations (decode, resize, watermark, encode, etc.) and send it to the core via a C ABI function.
-4.  **Language Bindings (You are here!)**: A library in a specific language (e.g., C#, Go, TypeScript) that makes it easy for developers to use Imageflow. A good binding hides the complexity of both the C ABI and the JSON graph construction, providing a safe, idiomatic, and user-friendly interface.
+4.  **The OpenAPI Schema**: A machine-readable description of the JSON API, generated during the build process and stored as `imageflow_core/src/json/endpoints/openapi_schema_v1.json`.
+5.  **Language Bindings (You are here!)**: A library in a specific language (e.g., C#, Go, TypeScript) that makes it easy for developers to use Imageflow. A good binding hides the complexity of both the C ABI and the JSON graph construction, providing a safe, idiomatic, and user-friendly interface.
 
 ---
 
@@ -275,6 +264,51 @@ Instead of building a full graph, you can construct a very simple JSON object th
 
 ---
 
+## Part 5: Schema-Driven Development
+
+The modern approach to Imageflow binding development leverages the OpenAPI schema that's generated during the build process.
+
+### Schema Source
+- **Location**: `imageflow_core/src/json/endpoints/openapi_schema_v1.json`
+- **Generation**: Built with `cargo build --features schema-export`
+- **Version Control**: Committed to the repository as the source of truth
+
+### Using the Schema for Model Generation
+
+Instead of hand-writing data models, use the OpenAPI schema to generate them:
+
+```bash
+# Generate C# models
+openapi-generator-cli generate \
+  -i imageflow_core/src/json/endpoints/openapi_schema_v1.json \
+  -g csharp \
+  --global-property models \
+  -o ./generated/
+
+# Generate TypeScript models
+openapi-generator-cli generate \
+  -i imageflow_core/src/json/endpoints/openapi_schema_v1.json \
+  -g typescript-axios \
+  --global-property models \
+  -o ./generated/
+```
+
+### Custom Transport Layer
+
+After generating models, create a custom transport layer that:
+1. Takes generated model objects
+2. Serializes them to JSON
+3. Calls the C FFI functions
+4. Deserializes responses back to generated models
+
+### Benefits of Schema-Driven Development
+- **Type Safety**: Generated models are always in sync with the API
+- **Documentation**: Schema includes descriptions for all fields
+- **Maintainability**: API changes automatically propagate to models
+- **Consistency**: All bindings use the same data structures
+
+---
+
 ## Language-Specific Considerations
 
 *   **Go**:
@@ -294,5 +328,25 @@ Instead of building a full graph, you can construct a very simple JSON object th
     *   **FFI**: PHP has a built-in FFI extension that can be used to call C functions.
     *   **JSON**: `json_encode` and `json_decode` are standard. Use classes and associative arrays to construct the JSON structure.
     *   **I/O**: Work with PHP's stream resources.
+
+---
+
+## Integration with CI/CD
+
+The binding development process integrates with the CI/CD pipeline:
+
+### Schema Updates
+1. **Automatic Detection**: CI detects when the schema has changed
+2. **PR Creation**: Creates a PR to update the schema file
+3. **Auto-Merge**: Schema updates are auto-merged. If possible with github, we cancel all workflow runs for this since it will re-run when we merge, and will start faster.
+4. **Binding Trigger**: Schema merge triggers binding regeneration
+
+### Binding Generation
+1. **Parallel Generation**: Each language binding is generated in parallel
+2. **PR Creation**: Each binding gets its own PR with generated updates
+3. **PR Replacement**: New PRs replace old ones (no accumulation)
+4. **Manual Review**: Binding changes require manual review before merge
+
+This approach ensures that all bindings stay in sync with the core API while maintaining the flexibility to customize the transport layer and fluent API for each language's idioms.
 
 @/json @/querystring @/Fluent @/Bindings 
