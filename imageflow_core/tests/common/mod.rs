@@ -590,7 +590,7 @@ impl<'a> ResultKind<'a>{
     }
 }
 
-fn get_imgref_bgra32(b: &mut BitmapWindowMut<u8>) -> imgref::ImgVec<rgb::RGBA<f32>> {
+fn get_imgref_bgra32(b: &mut BitmapWindowMut<u8>) -> imgref::ImgVec<rgb::Rgba<f32>> {
     use self::dssim::*;
 
     b.normalize_unused_alpha().unwrap();

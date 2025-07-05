@@ -3,8 +3,6 @@ use crate::ffi::{PixelFormat, BitmapCompositingMode};
 use imageflow_helpers::colors::Color32;
 use imageflow_types::{PixelBuffer, CompositingMode};
 use imgref::ImgRef;
-use rgb::alt::{BGR8, BGRA8};
-use rgb::{Bgra, Pod};
 use std::slice;
 use slotmap::*;
 use crate::graphics::aligned_buffer::AlignedBuffer;
@@ -12,9 +10,9 @@ use std::cell::{RefCell, RefMut};
 use std;
 use std::ops::DerefMut;
 use crate::ErrorKind::BitmapPointerNull;
+use bytemuck::{Pod, try_cast_slice, try_cast_slice_mut};
+use rgb::{Bgra, RGBA8, RGB8, BGRA8, BGR8, GrayA, Gray_v09 as Gray};
 use std::fmt;
-
-
 
 
 new_key_type! {
@@ -1445,8 +1443,141 @@ where T: Pod
     }
 
 
+    pub fn row_mut_bgra(&mut self, index: u32) -> Option<&mut [rgb::Bgra<T>]>{
+        if self.info.pixel_layout() != PixelLayout::BGRA{
+            return None;
+        }
+        self.row_mut(index as usize).map(|r| bytemuck::cast_slice_mut::<T, rgb::Bgra<T>>(r) )
+    }
 }
 
+impl<'a>  BitmapWindowMut<'a, u8> {
+
+    pub unsafe fn to_vec_rgba(&self) -> Result<(Vec<rgb::RGBA8>, usize, usize), FlowError>{
+
+        let w = self.w() as usize;
+        let h = self.h() as usize;
+
+        match &self.info().compose(){
+            BitmapCompositing::ReplaceSelf | BitmapCompositing::BlendWithSelf =>{
+                let mut v = vec![rgb::RGBA8::new(0,0,0,255);w * h];
+
+                if self.info().t_per_pixel() != 4 || self.slice.len() %4 != 0{
+                    return Err(unimpl!("Only Bgr(a)32 supported"));
+                }
+
+                // TODO: if alpha might be random, we should clear it if self.info.alpha_meaningful(){
+
+                let mut y = 0;
+                for stride_row in self.slice.chunks(self.info().t_stride() as usize){
+                    for x in 0..w{
+                        v[y * w + x].b = stride_row[x * 4 + 0];
+                        v[y * w + x].g = stride_row[x * 4 + 1];
+                        v[y * w + x].r = stride_row[x * 4 + 2];
+                        v[y * w + x].a = stride_row[x * 4 + 3];
+                    }
+                    y = y + 1;
+                }
+
+
+                Ok((v, w, h))
+            } BitmapCompositing::BlendWithMatte(c) => {
+                let matte = c.clone().to_color_32().unwrap().to_rgba8();
+                Ok((vec![matte;w * h], w, h))
+            }
+        }
+    }
+
+}
+pub trait BitmapRowAccess {
+    fn row_bgra8(&self, row_ix: usize, stride: usize) -> Option<&[BGRA8]>;
+    fn row_rgba8(&self, row_ix: usize, stride: usize) -> Option<&[RGBA8]>;
+    fn row_bgr8(&self, row_ix: usize, stride: usize) -> Option<&[BGR8]>;
+    fn row_rgb8(&self, row_ix: usize, stride: usize) -> Option<&[RGB8]>;
+    fn row_gray8(&self, row_ix: usize, stride: usize) -> Option<&[Gray<u8>]>;
+    fn row_grayalpha8(&self, row_ix: usize, stride: usize) -> Option<&[GrayA<u8>]>;
+
+    fn row_mut_bgra8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [BGRA8]>;
+    fn row_mut_rgba8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [RGBA8]>;
+    fn row_mut_bgr8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [BGR8]>;
+    fn row_mut_rgb8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [RGB8]>;
+    fn row_mut_gray8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [Gray<u8>]>;
+    fn row_mut_grayalpha8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [GrayA<u8>]>;
+}
+
+impl BitmapRowAccess for Vec<u8> {
+    fn row_bgra8(&self, row_ix: usize, stride: usize) -> Option<&[BGRA8]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get(start..start.checked_add(stride)?)?;
+        try_cast_slice(row).ok()
+    }
+
+    fn row_rgba8(&self, row_ix: usize, stride: usize) -> Option<&[RGBA8]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get(start..start.checked_add(stride)?)?;
+        try_cast_slice(row).ok()
+    }
+
+    fn row_bgr8(&self, row_ix: usize, stride: usize) -> Option<&[BGR8]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get(start..start.checked_add(stride)?)?;
+        try_cast_slice(row).ok()
+    }
+
+    fn row_rgb8(&self, row_ix: usize, stride: usize) -> Option<&[RGB8]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get(start..start.checked_add(stride)?)?;
+        try_cast_slice(row).ok()
+    }
+
+    fn row_gray8(&self, row_ix: usize, stride: usize) -> Option<&[Gray<u8>]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get(start..start.checked_add(stride)?)?;
+        try_cast_slice(row).ok()
+    }
+
+    fn row_grayalpha8(&self, row_ix: usize, stride: usize) -> Option<&[GrayA<u8>]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get(start..start.checked_add(stride)?)?;
+        try_cast_slice(row).ok()
+    }
+
+    fn row_mut_bgra8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [BGRA8]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get_mut(start..start.checked_add(stride)?)?;
+        try_cast_slice_mut(row).ok()
+    }
+
+    fn row_mut_rgba8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [RGBA8]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get_mut(start..start.checked_add(stride)?)?;
+        try_cast_slice_mut(row).ok()
+    }
+
+    fn row_mut_bgr8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [BGR8]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get_mut(start..start.checked_add(stride)?)?;
+        try_cast_slice_mut(row).ok()
+    }
+
+    fn row_mut_rgb8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [RGB8]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get_mut(start..start.checked_add(stride)?)?;
+        try_cast_slice_mut(row).ok()
+    }
+
+    fn row_mut_gray8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [Gray<u8>]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get_mut(start..start.checked_add(stride)?)?;
+        try_cast_slice_mut(row).ok()
+    }
+
+    fn row_mut_grayalpha8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [GrayA<u8>]> {
+        let start = row_ix.checked_mul(stride)?;
+        let row = self.get_mut(start..start.checked_add(stride)?)?;
+        try_cast_slice_mut(row).ok()
+    }
+}
 #[test]
 fn test_scanline_for_1x1(){
     let mut c = BitmapsContainer::with_capacity(1);
