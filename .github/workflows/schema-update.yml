@@ -1,0 +1,44 @@
+name: Schema Update Check
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'imageflow_core/src/**'
+      - 'imageflow_types/src/**'
+  workflow_dispatch:
+
+jobs:
+  check-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build with schema-export feature
+        run: |
+          cargo test --features schema-export --test schema
+
+      - name: Check if schema changed
+        id: check
+        run: |
+          if git diff --quiet imageflow_core/src/json/endpoints/openapi_schema_v1.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Schema Update PR
+        if: steps.check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GH_PAT }}
+          branch: ci/schema-update-${{ github.run_number }}
+          title: "Update OpenAPI schema"
+          body: |
+            Auto-generated schema update
+
+            Generated from commit: ${{ github.sha }}
+            This will trigger binding regeneration after merge.
+          labels: automerge
