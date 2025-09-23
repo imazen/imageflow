@@ -522,43 +522,7 @@ fn hash_files_relevant_to_schema_and_compare() -> io::Result<()> {
     let schema_name = OPENAPI_SCHEMA_V1_JSON_NAME;
 
     if current_hash.as_str() != embedded_hash {
-        if cfg!(feature = "schema-export") {
-            eprintln!("Schema-relevant files changed. Regenerating OpenAPI schema and hash.");
-
-            let new_schema_json = generate_openapi_schema_json()
-                .expect("Failed to generate OpenAPI schema JSON");
-
-
-            let cargo_manifest_dir = env!("CARGO_MANIFEST_DIR");
-            let current_dir = Path::new(cargo_manifest_dir).join("src/json/endpoints");
-
-            let hash_file_path = current_dir.join(OPENAPI_SCHEMA_V1_JSON_HASH_NAME);
-            let schema_file_path = current_dir.join(OPENAPI_SCHEMA_V1_JSON_NAME);
-            // if current_dir doesn't exist, fail with a message
-            if !current_dir.exists() {
-                panic!("Current directory does not exist: {}", current_dir.display());
-            }
-
-
-            fs::write(&schema_file_path, &new_schema_json)?;
-            eprintln!("Wrote updated schema to: {}", schema_file_path.display());
-
-            fs::write(&hash_file_path, &current_hash)?;
-            eprintln!("Wrote updated hash to: {}", hash_file_path.display());
-
-            eprintln!(
-                "OpenAPI schema ({}) and hash ({}) \
-                 were updated because relevant source files changed. Please review and commit \
-                 the changes.",
-                 schema_name, hash_name
-            );
-        } else {
-            panic!(
-                "OpenAPI schema definition is outdated. Please run `cargo test --features schema-export`
-                 to regenerate the schema and hash file, then commit the changes to both '{}' and '{}'.",
-                 hash_name, schema_name
-            );
-        }
+        schema_update(hash_name, schema_name)?;
     } else {
         println!("OpenAPI schema hash matches.");
     }
@@ -566,6 +530,50 @@ fn hash_files_relevant_to_schema_and_compare() -> io::Result<()> {
     Ok(())
 }
 
+#[cfg(all(not(feature = "schema-export"), test))]
+pub fn schema_update(hash_name: &str, schema_name: &str) -> io::Result<()>{
+    panic!(
+        "OpenAPI schema definition is outdated. Please run `cargo test --features schema-export,json-schema`
+         to regenerate the schema and hash file, then commit the changes to both '{}' and '{}'.",
+         hash_name, schema_name
+    );
+}
+#[cfg(all(feature = "schema-export", test))]
+pub fn schema_update(hash_name: &str, schema_name: &str) -> io::Result<()>{
+    let current_hash = hash_files_relevant_to_schema();
+
+    eprintln!("Schema-relevant files changed. Regenerating OpenAPI schema and hash.");
+
+    let new_schema_json = generate_openapi_schema_json()
+        .expect("Failed to generate OpenAPI schema JSON");
+
+
+    let cargo_manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let current_dir = Path::new(cargo_manifest_dir).join("src/json/endpoints");
+
+    let hash_file_path = current_dir.join(OPENAPI_SCHEMA_V1_JSON_HASH_NAME);
+    let schema_file_path = current_dir.join(OPENAPI_SCHEMA_V1_JSON_NAME);
+    // if current_dir doesn't exist, fail with a message
+    if !current_dir.exists() {
+        panic!("Current directory does not exist: {}", current_dir.display());
+    }
+
+
+    fs::write(&schema_file_path, &new_schema_json)?;
+    eprintln!("Wrote updated schema to: {}", schema_file_path.display());
+
+    fs::write(&hash_file_path, &current_hash)?;
+    eprintln!("Wrote updated hash to: {}", hash_file_path.display());
+
+    eprintln!(
+        "OpenAPI schema ({}) and hash ({}) \
+         were updated because relevant source files changed. Please review and commit \
+         the changes.",
+         schema_name, hash_name
+    );
+
+    Ok(())
+}
 
 fn get_create_doc_dir() -> std::path::PathBuf {
     let path = ::imageflow_types::version::crate_parent_folder().join(Path::new("target/doc"));
