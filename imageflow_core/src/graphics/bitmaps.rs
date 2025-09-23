@@ -973,7 +973,7 @@ impl<'a, T> fmt::Display for ScanlineIterMut<'a, T> {
 
 impl<'a, T> ScanlineIterMut<'a, T> {
     pub fn empty(info: &'a BitmapInfo) -> Self{
-        eprintln!("scanline_iter_mut::empty::{:?}", &info);
+        
         Self {
             info: info.surface_info(),
             remaining_slice: &mut [],
