@@ -1972,3 +1972,10 @@ fn test_idct_spatial_no_gamma(){
 //}
 
 
+
+
+#[test]
+fn zz_verify_all_checksum_files_uploaded(){
+    let ctx = ChecksumCtx::visuals();
+    ctx.verify_all_active_images_uploaded();
+}

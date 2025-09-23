@@ -16,10 +16,10 @@ use imageflow_core::graphics::bitmaps::BitmapWindowMut;
 use imageflow_core::{Context, FlowError, ErrorKind};
 
 use s::PixelLayout;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap};
 use std::fs::File;
 use std::path::PathBuf;
-use std::io::Write;
+use std::io::{Write};
 use std;
 use std::pin::Pin;
 use imageflow_core;
@@ -185,6 +185,10 @@ pub fn smoke_test(input: Option<IoTestEnum>, output: Option<IoTestEnum>, securit
 pub struct ChecksumCtx{
     checksum_file: PathBuf,
     url_list_file: PathBuf,
+    uploaded_index: PathBuf,
+    missing_index: PathBuf,
+    missing_everywhere_index: PathBuf,
+    to_upload_index: PathBuf,
     visuals_dir: PathBuf,
     #[allow(dead_code)]
     cache_dir: PathBuf,
@@ -208,6 +212,10 @@ impl ChecksumCtx{
             create_if_missing: true,
             checksum_file: visuals.join(Path::new("checksums.json")),
             url_list_file:  visuals.join(Path::new("images.txt")),
+            uploaded_index: visuals.join(Path::new("uploaded.txt")),
+            missing_index: visuals.join(Path::new("missing_on_s3.txt")),
+            missing_everywhere_index: visuals.join(Path::new("missing_everwhere.txt")),
+            to_upload_index: visuals.join(Path::new("to_upload.txt")),
             url_base: "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/"
         }
     }
@@ -227,6 +235,8 @@ impl ChecksumCtx{
         let mut f = ::std::fs::File::create(&self.checksum_file).unwrap();
         ::serde_json::to_writer_pretty(&mut f, map).unwrap();
         f.sync_all().unwrap();
+
+       
         // Write the URL list
         // We can use this to prefetch required images in the background on CI)
         // TODO: add simple script to do this
@@ -235,9 +245,150 @@ impl ChecksumCtx{
         let list_contents = map.values().map(|key| self.image_url(key)).join("\n");
         f.write_all(list_contents.as_bytes()).unwrap();
         f.sync_all().unwrap();
+
+        self.track_missing(map.values().map(|v| self.image_name(v)).collect());
+
         Ok(())
     }
 
+    pub fn verify_all_active_images_uploaded(&self){
+        let map = self.load_list().unwrap();
+        if !self.track_missing(map.values().map(|v| self.image_name(v)).collect()){
+            panic!("Missing images");
+        }
+    }
+
+    fn track_missing(&self, active_names: Vec<String>) -> bool{
+        let mut uploaded = self.load_uploaded().unwrap();
+        let mut missing = active_names.into_iter().filter(|v| !uploaded.contains(v)).collect::<Vec<String>>();
+
+
+        let stored_missing = self.load_missing().unwrap();
+
+        // if stored_missing contains all potential missing, and to_upload.txt isn't empty, we can fail fast rather than checking each image again
+        if missing.iter().all(|v| stored_missing.contains(v)){
+            let to_upload = self.load_to_upload().unwrap();
+            if !to_upload.is_empty(){
+                eprintln!("{} images need to be uploaded to s3 ({} missing), run ./imageflow_core/tests/visuals/upload.sh and delete to_upload.txt", to_upload.len(), missing.len());
+                return false; // We're in a "missing" state, we can just stop now.
+            }
+        }
+
+        self.record_missing(&missing);
+
+        let probably_missing = missing.iter().map(|v| v.clone()).collect::<Vec<String>>();
+
+        let mut nowhere = Vec::new();
+        let mut to_upload = Vec::new();
+
+        for name in probably_missing {
+            let remote_url = self.image_url(&name);
+            print!("Checking {} ...", remote_url);
+            if let Err(e) = get_url_bytes_with_retry(&remote_url){
+                // red text
+                println!("\x1b[31mFAILED\x1b[0m");
+                eprintln!("\x1b[31m{:?}\x1b[0m", e);
+
+                let local_path = self.image_path(&name);
+                if local_path.exists(){
+                    eprintln!("Found {} locally, adding to the to_upload list", name);
+                    to_upload.push(name.clone());
+                }else{
+                    nowhere.push(name.clone());
+                    eprintln!("===== {} not found locally or on s3! =====", name);
+                }
+            }else{
+                // green text
+                println!("\x1b[32mFound {}, removing from missing list. Url: {} \x1b[0m", name, remote_url);
+                let index = missing.iter().position(|v| v == &name).unwrap();
+                uploaded.push(name);
+                missing.remove(index);
+                self.save_uploaded(&uploaded).unwrap();
+                self.record_missing(&missing);           
+            }
+        }
+        if !missing.is_empty(){
+            eprintln!("See {} for list of images missing from s3", self.missing_index.display());
+        }
+
+        if !nowhere.is_empty(){
+            eprintln!("\x1b[31m!!!! {} images are missing both locally and on s3!\x1b[0m", nowhere.len());
+            eprintln!("\x1b[31mSee {} for list of actively needed images that are missing both locally and on s3!\x1b[0m", self.missing_everywhere_index.display());
+            for name in &nowhere {
+                println!("Missing from S3 and locally: {} from s3 {}", name, self.image_url(&name));
+            }
+        }
+        if !to_upload.is_empty(){
+
+            // yellow text
+            eprintln!("\x1b[33mSee {} for list of images that are present locally but missing from s3\x1b[0m", self.missing_everywhere_index.display());
+            for name in &to_upload {
+                println!("Missing from S3 but present locally: {} from s3 {}", name, self.image_url(&name));
+            }
+            self.record_to_upload(&to_upload);
+
+        }
+        if missing.is_empty() && nowhere.is_empty() && to_upload.is_empty(){
+            println!("All actively used images are uploaded!");
+            return true;
+        }else{
+            // red text
+            eprintln!("\x1b[31mUploads not complete. Run ./imageflow_core/tests/visuals/upload.sh to upload missing images\x1b[0m");
+            return false;
+        }
+
+    }
+
+    fn load_missing(&self) -> Result<Vec<String>,()>{
+        self.load_lines(&self.missing_index)
+    }
+
+    fn record_missing(&self, missing: &[String]){
+        self.save_lines(&self.missing_index, missing).unwrap();
+    }
+
+    fn load_to_upload(&self) -> Result<Vec<String>,()>{
+        self.load_lines(&self.to_upload_index)
+    }
+    fn record_to_upload(&self, names: &[String]){
+        self.save_lines(&self.to_upload_index, names).unwrap();
+    }
+
+    fn load_uploaded(&self) -> Result<Vec<String>,()>{
+        self.load_lines(&self.uploaded_index)
+    }
+
+    fn load_lines(&self, path: &Path) -> Result<Vec<String>,()>{
+        if path.exists() {
+            let contents = std::fs::read_to_string(path).unwrap();
+            let mut lines = contents.lines().collect::<Vec<&str>>();
+            // remove final empty line
+            if lines.last() == Some(&""){
+                lines.pop();
+            }
+            let set: Vec<String> = lines.into_iter().map(|v| v.to_owned()).collect();
+
+            Ok(set)
+        }else{
+            Ok(Vec::new())
+        }
+    }
+
+    fn save_uploaded(&self, set: &Vec<String>) -> Result<(),()>{
+        self.save_lines(&self.uploaded_index, set)
+    }
+
+
+    fn save_lines(&self, path: &Path, lines: &[String]) -> Result<(),()>{
+        let mut f = ::std::fs::File::create(path).unwrap();
+        use self::itertools::Itertools;
+        let list_contents = lines.iter().join("\n");
+        f.write_all(list_contents.as_bytes()).unwrap();
+        // write final newline
+        f.write_all("\n".as_bytes()).unwrap();
+        f.sync_all().unwrap();
+        Ok(())
+    }
 
     /// Get the stored result checksum for a named test
     #[allow(unused_variables)]
@@ -277,6 +428,14 @@ impl ChecksumCtx{
 
         self.visuals_dir.as_path().join(Path::new(&name))
     }
+    pub fn image_name(&self, checksum: &str) -> String{
+        if !checksum.contains("."){
+            format!("{}.png", checksum)
+        }else{
+            format!("{}", checksum)
+        }
+    }
+
 
     pub fn image_path_string(&self, checksum: &str) -> String{
         self.image_path(checksum).into_os_string().into_string().unwrap()
