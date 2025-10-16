@@ -28,7 +28,7 @@
     <!-- Determine if .targets file should be included (Windows x86/x64/arm64) -->
     <IncludeTargets Condition=" '$(IsWindowsRid)' == 'true' ">true</IncludeTargets>
     <IncludeTargets Condition=" '$(IncludeTargets)' == '' ">false</IncludeTargets>
-  
+    <IncludeTransitiveTargets Condition=" '$(IncludeTransitiveTargets)' == '' ">true</IncludeTransitiveTargets>
     <!-- disable CS2008: No source files specified -->
     <NoWarn>$(NoWarn);CS2008</NoWarn>
     <!-- Error out if the expected native tool isn't found -->
@@ -64,7 +64,7 @@
           PackagePath="build/$(NetClassicVersion)/$(PackageId).targets" />
     
     <None Include="$(MSBuildThisFileDirectory)targets/Imageflow.NativeTool.$(ImageflowNugetRid).targets"
-          Condition="'$(IncludeTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeTool.$(ImageflowNugetRid).targets')"
+          Condition="'$(IncludeTransitiveTargets)' == 'true' AND Exists('$(MSBuildThisFileDirectory)targets/Imageflow.NativeTool.$(ImageflowNugetRid).targets')"
           Pack="true"
           PackagePath="buildTransitive/$(NetClassicVersion)/$(PackageId).targets" />
 

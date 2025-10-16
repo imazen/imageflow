@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
+
+
   <!-- Copy when RID is not set and target framework is not .NET Framework. Or, when RID matches-->
   <PropertyGroup>
     <NativeToolMightBeNeeded Condition=" '$(RuntimeIdentifier)' == '' AND '$(TargetFrameworkIdentifier)' != '.NETFramework' ">true</NativeToolMightBeNeeded>
   </PropertyGroup>
-  
-  <ItemGroup Condition=" '$(NativeToolMightBeNeeded)' == 'true' OR '$(RuntimeIdentifier)' == 'win-arm64' ">
-    <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-arm64/native/*">
-      <Link>runtimes/win-arm64/native/imageflow_tool.exe</Link>
+
+  <ItemGroup Condition=" '$(NativeToolMightBeNeeded)' == 'true' OR '$(RuntimeIdentifier)' == 'linux-arm64' ">
+    <Content Include="$(MSBuildThisFileDirectory)../../runtimes/linux-arm64/native/*">
+      <Link>runtimes/linux-arm64/native/imageflow_tool</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>False</Visible>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <Pack>false</Pack>
-      <PackagePath>runtimes/win-arm64/native/imageflow_tool.exe</PackagePath>
+      <PackagePath>runtimes/linux-arm64/native/imageflow_tool</PackagePath>
     </Content>
   </ItemGroup>
 </Project> 

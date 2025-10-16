@@ -5,15 +5,15 @@
   <PropertyGroup>
     <NativeToolMightBeNeeded Condition=" '$(RuntimeIdentifier)' == '' AND '$(TargetFrameworkIdentifier)' != '.NETFramework' ">true</NativeToolMightBeNeeded>
   </PropertyGroup>
-  
-  <ItemGroup Condition=" '$(NativeToolMightBeNeeded)' == 'true' OR '$(RuntimeIdentifier)' == 'win-arm64' ">
-    <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-arm64/native/*">
-      <Link>runtimes/win-arm64/native/imageflow_tool.exe</Link>
+
+  <ItemGroup Condition=" '$(NativeToolMightBeNeeded)' == 'true' OR '$(RuntimeIdentifier)' == 'osx-arm64' ">
+    <Content Include="$(MSBuildThisFileDirectory)../../runtimes/osx-arm64/native/*">
+      <Link>runtimes/osx-arm64/native/imageflow_tool</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>False</Visible>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <Pack>false</Pack>
-      <PackagePath>runtimes/win-arm64/native/imageflow_tool.exe</PackagePath>
+      <PackagePath>runtimes/osx-arm64/native/imageflow_tool</PackagePath>
     </Content>
   </ItemGroup>
 </Project> 
