@@ -3,14 +3,14 @@
   <!-- This file is included by Imageflow.NativeRuntime.Common.targets when ImageflowNugetRid is win-x64 -->
   <!-- It includes the native libraries in the build output and NuGet package. -->
 
-  <!-- If RID is set, let the system copy it instead. Only copy on Windows. -->
-  <ItemGroup Condition=" '$(RuntimeIdentifier)' == '' AND '$(OS)' == 'Windows_NT' ">
+  <!-- If RID is set, let the system copy it instead. Only copy if the current project is not .NET Core. -->
+  <ItemGroup Condition=" '$(RuntimeIdentifier)' == '' AND '$(TargetFrameworkIdentifier)' != '.NETCoreApp' ">
     <Content Include="$(MSBuildThisFileDirectory)../../runtimes/win-x64/native/*">
       <Link>runtimes/win-x64/native/imageflow.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>False</Visible>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <Pack>true</Pack>
+      <Pack>False</Pack>
       <PackagePath>runtimes/win-x64/native/imageflow.dll</PackagePath>
     </Content>
   </ItemGroup>

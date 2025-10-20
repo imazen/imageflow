@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- useless file because: .NET core always copies it for us -->
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
-
-
-  <!-- Copy when RID is not set and target framework is not .NET Framework. Or, when RID matches-->
+  <!-- Copy when RID is not set and target framework is not .NET Core. Or, when RID matches-->
   <PropertyGroup>
-    <NativeToolMightBeNeeded Condition=" '$(RuntimeIdentifier)' == '' AND '$(TargetFrameworkIdentifier)' != '.NETFramework' ">true</NativeToolMightBeNeeded>
+    <NativeToolMightBeNeeded Condition=" '$(RuntimeIdentifier)' == '' AND '$(TargetFrameworkIdentifier)' != '.NETCoreApp' ">true</NativeToolMightBeNeeded>
   </PropertyGroup>
 
   <ItemGroup Condition=" '$(NativeToolMightBeNeeded)' == 'true' OR '$(RuntimeIdentifier)' == 'linux-arm64' ">

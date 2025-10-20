@@ -21,14 +21,17 @@
     <EnableDefaultContentItems>false</EnableDefaultContentItems>
 
     <!-- Ensure the RID-specific parent project sets ImageflowNugetRid -->
-    <NativeToolFileName Condition="'$(OS)' == 'Windows_NT'">imageflow_tool.exe</NativeToolFileName>
-    <NativeToolFileName Condition="'$(OS)' != 'Windows_NT'">imageflow_tool</NativeToolFileName>
+    <NativeToolFileName Condition="'$(IsWindowsRid)' == 'true'">imageflow_tool.exe</NativeToolFileName>
+    <NativeToolFileName Condition="'$(IsWindowsRid)' != 'true'">imageflow_tool</NativeToolFileName>
     <FullNativeToolPath Condition="Exists('$(NativeArtifactBasePath)/$(ImageflowNugetRid)/$(NativeToolFileName)')">$(NativeArtifactBasePath)/$(ImageflowNugetRid)/$(NativeToolFileName)</FullNativeToolPath>
 
-    <!-- Determine if .targets file should be included (Windows x86/x64/arm64) -->
+    <!-- Determine if .targets file should be included in '/build/' (Windows x86/x64/arm64) -->
     <IncludeTargets Condition=" '$(IsWindowsRid)' == 'true' ">true</IncludeTargets>
     <IncludeTargets Condition=" '$(IncludeTargets)' == '' ">false</IncludeTargets>
-    <IncludeTransitiveTargets Condition=" '$(IncludeTransitiveTargets)' == '' ">true</IncludeTransitiveTargets>
+    <!-- Determine if .targets file should be included in '/buildTransitive/' (Windows x86/x64/arm64) -->
+    <IncludeTransitiveTargets Condition=" '$(IncludeTransitiveTargets)' == 'true' ">true</IncludeTransitiveTargets>
+
+    
     <!-- disable CS2008: No source files specified -->
     <NoWarn>$(NoWarn);CS2008</NoWarn>
     <!-- Error out if the expected native tool isn't found -->
