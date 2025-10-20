@@ -10,9 +10,6 @@ use std::io::Write;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::os::raw::{c_int, c_uint, c_ulong};
-use libc;
-use rgb;
-use lodepng;
 use lodepng::{CompressSettings, DecompressSettings};
 use flate2::Compression;
 use crate::codecs::NamedEncoders::LodePngEncoder;
@@ -93,7 +90,7 @@ impl LodepngEncoder {
 
     pub fn write_png_auto<W: Write>(writer: W, window: &mut crate::graphics::bitmaps::BitmapWindowMut<u8>, use_highest_compression: Option<bool>) -> Result<()> {
 
-        let bytes_per_pixel = window.t_per_pixel() as usize;
+        let bytes_per_pixel = window.t_per_pixel();
         let w = window.w() as usize;
         let h = window.h() as usize;
         let proper_len = w * h * bytes_per_pixel;
@@ -121,7 +118,7 @@ impl LodepngEncoder {
 
     pub fn write_png_auto_slice<W: Write>(mut writer: W, pixels: &[u8], width: usize, height: usize, pixel_format: lodepng::ColorType, use_highest_compression: Option<bool>) -> Result<()> {
 
-        if pixels.len() == 0{
+        if pixels.is_empty(){
             return Err(nerror!(ErrorKind::InvalidOperation, "No pixels to encode"));
         }
 
@@ -139,7 +136,7 @@ impl LodepngEncoder {
 
         let png = lode.encode(pixels, width, height)?;
 
-        writer.write_all(&png).map_err(|e| FlowError::from_encoder(e))?;
+        writer.write_all(&png).map_err(FlowError::from_encoder)?;
         Ok(())
     }
 
@@ -165,9 +162,9 @@ impl LodepngEncoder {
             lode.set_custom_zlib(Some(zlib_compressor_6), std::ptr::null());
         }
 
-        let png = lode.encode(&pixels, width, height)?;
+        let png = lode.encode(pixels, width, height)?;
 
-        writer.write_all(&png).map_err(|e| FlowError::from_encoder(e))?;
+        writer.write_all(&png).map_err(FlowError::from_encoder)?;
         Ok(())
     }
 }
@@ -185,7 +182,7 @@ fn zlib_compressor_9(input: &[u8], output: &mut dyn std::io::Write, context: &Co
 }
 fn zlib_compressor(input: &[u8], output: &mut dyn std::io::Write, context: &CompressSettings, zlib_level: u32) -> std::result::Result<(), lodepng::Error>{
     let mut compress = flate2::write::ZlibEncoder::new(output, flate2::Compression::new(zlib_level));
-    if let Err(e) = compress.write_all(&input){
+    if let Err(e) = compress.write_all(input){
         return Err(lodepng::Error::new(1008));
     }
     if let Err(e) = compress.finish(){

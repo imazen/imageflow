@@ -12,14 +12,14 @@ use std::env;
 use rayon::prelude::*;
 
 
-static OPAQUE_STRUCTS: &'static str = r#"
+static OPAQUE_STRUCTS: &str = r#"
 struct Context;
 struct JsonResponse;
 struct Job;
 struct JobIo;
         "#;
 
-static DEFINE_INTS: &'static str = r#"
+static DEFINE_INTS: &str = r#"
 typedef signed byte int8_t;
 typedef signed long int64_t;
 typedef signed int int32_t;
@@ -73,7 +73,7 @@ fn rename_enum_snake_case_and_prefix_members(input: String, old_name: &str, new_
         let contents = re_member.replace_all(&outer_caps[1], | caps: &Captures| {
             let without_moz_cheddar_prefix = caps[1].replace(&moz_cheddar_prefix,"");
             let snake_id = style_id(&without_moz_cheddar_prefix, Style::Snake);
-            let full_snake_id = if member_prefix == "" {
+            let full_snake_id = if member_prefix.is_empty() {
                 snake_id
             }else {
                format!("{}_{}", style_id(member_prefix, Style::Snake), snake_id)
@@ -135,7 +135,7 @@ fn filter_enums<'a,'b>(s: String,  names: &'a[&'a str],  how: EnumModification) 
     let mut temp =s;
     for n in names{
         let new_name = format!("{}{}", how.name_prefix, n);
-        let member_prefix = if how.member_prefix == ""{
+        let member_prefix = if how.member_prefix.is_empty(){
             "".to_owned()
         }else{
             new_name.to_owned()
@@ -145,8 +145,8 @@ fn filter_enums<'a,'b>(s: String,  names: &'a[&'a str],  how: EnumModification) 
     temp
 }
 
-static ENUM_NAMES: [&'static str; 4] = ["IoMode", "Direction", "Lifetime", "CleanupWith"];
-static STRUCT_NAMES: [&'static str; 4] = ["Job", "JobIo", "Context", "JsonResponse"];
+static ENUM_NAMES: [&str; 4] = ["IoMode", "Direction", "Lifetime", "CleanupWith"];
+static STRUCT_NAMES: [&str; 4] = ["Job", "JobIo", "Context", "JsonResponse"];
 
 
 
@@ -163,7 +163,7 @@ enum Target{
 
 fn strip_preprocessor_directives(contents: &str) -> String{
     //Strip the extern C stuff
-    let temp = Regex::new(r"(?im)^\s*\#\s*ifdef\s+__cplusplus[^\#]+\#\s*endif").unwrap().replace_all(&contents, "");
+    let temp = Regex::new(r"(?im)^\s*\#\s*ifdef\s+__cplusplus[^\#]+\#\s*endif").unwrap().replace_all(contents, "");
     //Strip all ifndef/ifdef statements
     //let temp2 = Regex::new(r"(?im)^\s*\#\s*(ifdef|ifndef|endif).*").unwrap().replace_all(&temp, "");
     //Strip ALL # preprocessor directives
@@ -300,7 +300,7 @@ fn create_file_and_parent<P: AsRef<path::Path>>( file: P, text: String)  {
         }
     }
     let bytes_buf = text.into_bytes();
-    if let Err(error) = std::fs::File::create(&file).and_then(|mut f| f.write_all(&bytes_buf)) {
+    if let Err(error) = std::fs::File::create(file).and_then(|mut f| f.write_all(&bytes_buf)) {
         panic!("could not write to '{}': {}", file.display(), error);
     }
 }

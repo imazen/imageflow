@@ -50,12 +50,12 @@ fn plan_quadrants(radii: RoundCornersRadius, w: u32, h: u32) -> Result<[Quadrant
             RoundCornersRadius::All(smallest_dimension / 2f32), w.min(h), w.min(h))
             .map_err(|e| e.at(here!()))?;
         for q in quadrants.iter_mut(){
-            q.x = q.x + offset_x;
-            q.y = q.y + offset_y;
+            q.x += offset_x;
+            q.y += offset_y;
             q.image_width = w;
             q.image_height = h;
-            q.center_x = q.center_x + offset_x as f32;
-            q.center_y = q.center_y + offset_y as f32;
+            q.center_x += offset_x as f32;
+            q.center_y += offset_y as f32;
         }
         return Ok(quadrants);
     }
@@ -271,9 +271,9 @@ pub fn flow_bitmap_bgra_clear_around_rounded_corners(
 
             //Clear what we don't need to alias
             if quadrant.is_left {
-                row_pixels[0..edge_influence_x1].fill(matte.clone());
+                row_pixels[0..edge_influence_x1].fill(matte);
             } else {
-                row_pixels[edge_influence_x2..w as usize].fill(matte.clone());
+                row_pixels[edge_influence_x2..w as usize].fill(matte);
             };
 
             let (alias_from, alias_to) = if quadrant.is_left{
@@ -288,12 +288,12 @@ pub fn flow_bitmap_bgra_clear_around_rounded_corners(
                 let distance = (diff_x * diff_x + y_dist_squared).sqrt();
 
                 if distance > radius_of_influence{
-                    row_pixels[x] = matte.clone();
+                    row_pixels[x] = matte;
                 } else if distance > radius_of_solid{
                     //Intensity should be 0..1, where 1 is full matte color and 0 is full image color
                     let intensity = (distance - radius_of_solid) / (radius_aliasing_width);
 
-                    let pixel = row_pixels[x].clone();
+                    let pixel = row_pixels[x];
                     let pixel_a = pixel.a;
                     let pixel_a_f32 = pixel_a as i32 as f32 * alpha_to_float * (1f32 - intensity);
 

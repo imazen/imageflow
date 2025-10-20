@@ -28,7 +28,7 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
     fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
         if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = *p {
             input.map_frame(|info| {
-                let swap = flag >= 5 && flag <= 8;
+                let swap = (5..=8).contains(&flag);
                 Ok(FrameInfo {
                     w: if swap {
                         info.h
@@ -87,7 +87,7 @@ impl NodeDefOneInputExpand for TransposeDef {
         let canvas_params = s::Node::CreateCanvas {
             w: parent.h as usize,
             h: parent.w as usize,
-            format: s::PixelFormat::from(parent.fmt),
+            format: parent.fmt,
             color: s::Color::Transparent,
         };
         let canvas = ctx.graph

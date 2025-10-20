@@ -5,6 +5,12 @@ use crate::{HttpFetcher, FetchError, FetchResult, FetchedResponse, FetchConfig};
 
 pub struct ShellFetcher;
 
+impl Default for ShellFetcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShellFetcher {
     pub fn new() -> Self {
         ShellFetcher
@@ -74,7 +80,7 @@ impl HttpFetcher for ShellFetcher {
 
                 Command::new(tool)
                     .args(&args)
-                    .stderr(std::fs::File::create(&error_path)?)
+                    .stderr(std::fs::File::create(error_path)?)
                     .output()?
             },
             "wget" => {
@@ -84,7 +90,7 @@ impl HttpFetcher for ShellFetcher {
 
                 Command::new(tool)
                     .args(&args)
-                    .stderr(std::fs::File::create(&error_path)?)
+                    .stderr(std::fs::File::create(error_path)?)
                     .output()?
             },
             "powershell.exe" => {
@@ -97,28 +103,28 @@ impl HttpFetcher for ShellFetcher {
 
                 Command::new(tool)
                     .args(&args)
-                    .stderr(std::fs::File::create(&error_path)?)
+                    .stderr(std::fs::File::create(error_path)?)
                     .output()?
             },
             _ => unreachable!()
         };
 
         // Read the downloaded file and error output
-        let bytes = if std::fs::metadata(&temp_path).is_ok() {
-            std::fs::read(&temp_path)?
+        let bytes = if std::fs::metadata(temp_path).is_ok() {
+            std::fs::read(temp_path)?
         } else {
             vec![]
         };
 
-        let error_bytes = if std::fs::metadata(&error_path).is_ok() {
-            std::fs::read(&error_path)?
+        let error_bytes = if std::fs::metadata(error_path).is_ok() {
+            std::fs::read(error_path)?
         } else {
             vec![]
         };
 
         // Clean up
-        let _ = std::fs::remove_file(&temp_path);
-        let _ = std::fs::remove_file(&error_path);
+        let _ = std::fs::remove_file(temp_path);
+        let _ = std::fs::remove_file(error_path);
 
         // Handle the response
         if !output.status.success() {

@@ -244,7 +244,7 @@ impl ProcTestContext {
     ///
     /// Pass false for valgrind_on_signal_death if your callback might kill the child
     pub fn execute<F>(&self, args_vec: Vec<&str>, valgrind_on_signal_death: bool, callback: F) -> ProcOutput
-                where F: Fn(&mut std::process::Child) -> () {
+                where F: Fn(&mut std::process::Child) {
 
         //TODO: serialize in a safer way - this isn't correct
         let full_invocation = format!("{} {}", &self.exe.to_str().unwrap(), args_vec.join(" "));
@@ -281,7 +281,7 @@ impl ProcTestContext {
                          "exit code {:?}", output.status.code());
 
         // Try to debug segfaults
-        if output.status.code() == None && valgrind_on_signal_death{
+        if output.status.code().is_none() && valgrind_on_signal_death{
 
             std::io::stderr().write_all(&output.stderr).unwrap();
             std::io::stdout().write_all(&output.stdout).unwrap();

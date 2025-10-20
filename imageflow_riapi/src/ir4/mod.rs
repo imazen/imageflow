@@ -88,11 +88,7 @@ impl Ir4Translate{
 
 
     pub fn get_decode_node_without_commands(&self) -> Option<s::Node>{
-        if let Some(id) = self.decode_id {
-            Some(s::Node::Decode { io_id: id, commands: None })
-        }else{
-            None
-        }
+        self.decode_id.map(|id| s::Node::Decode { io_id: id, commands: None })
     }
 
     pub fn translate(&self) -> sizing::Result<Ir4Result> {
@@ -243,7 +239,7 @@ impl Ir4Expand{
         if let Some(id) = self.encode_id {
 
             let preset = crate::ir4::encoder::calculate_encoder_preset(i);
-            Some(s::Node::Encode { io_id: id, preset: preset })
+            Some(s::Node::Encode { io_id: id, preset })
         }else{
             None
         }

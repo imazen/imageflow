@@ -285,7 +285,7 @@ impl<T> MutProtect<T> where T: NodeDef {
     pub fn new(with: &'static T, fqn: & 'static str) -> MutProtect<T>{
         MutProtect {
             node: with,
-            fqn: fqn
+            fqn
         }
     }
 }
@@ -311,7 +311,7 @@ impl<T> NodeDefOneInputExpand for MutProtect<T> where T: NodeDef{
         if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
             new_nodes.push(Node::n(&CLONE, NodeParams::None));
         }
-        new_nodes.push(Node::n(&*self.node, ctx.weight(ix).params.clone()));
+        new_nodes.push(Node::n(self.node, ctx.weight(ix).params.clone()));
         ctx.replace_node(ix, new_nodes);
         Ok(())
     }

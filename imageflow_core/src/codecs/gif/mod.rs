@@ -1,4 +1,3 @@
-use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{Context, Result, JsonResponse};
@@ -222,7 +221,7 @@ impl<T> Encoder for EncoderAdapter<T>  where T: EasyEncoder{
             r.io_id = self.io_id;
             match r.bytes {
                 s::ResultBytes::ByteArray(vec) => {
-                    let _ = IoProxyProxy(self.io_ref.clone()).write_all(&vec).map_err(|e| FlowError::from_encoder(e).at(here!()))?;
+                    IoProxyProxy(self.io_ref.clone()).write_all(&vec).map_err(|e| FlowError::from_encoder(e).at(here!()))?;
                     r.bytes = s::ResultBytes::Elsewhere;
                     Ok(r)
                 },

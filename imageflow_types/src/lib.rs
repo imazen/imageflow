@@ -958,6 +958,12 @@ pub struct ResampleHints {
     pub sharpen_when: Option<SharpenWhen>
 }
 
+impl Default for ResampleHints {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ResampleHints {
     pub fn new() -> ResampleHints {
         ResampleHints {
@@ -1470,7 +1476,7 @@ impl Framewise {
                 Node::Encode{io_id, ..} => Some((io_id, IoDirection::Out)),
                 _ => None
             }
-        }).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<Vec<(i32, IoDirection)>>();
+        }).flatten().collect::<Vec<(i32, IoDirection)>>();
         vec.sort_by(|&(a,_), &(b,_)| a.cmp(&b));
         vec
     }
@@ -1555,7 +1561,7 @@ impl Build001{
         let value_ref = &value;
         let new_io_vec = self.io.into_iter().map(|obj| {
             if obj.io_id == io_id {
-                IoObject { direction: obj.direction, io_id: io_id, io: value_ref.to_owned() }
+                IoObject { direction: obj.direction, io_id, io: value_ref.to_owned() }
             }else {obj}
         }).collect::<Vec<IoObject>>();
         if !new_io_vec.as_slice().iter().any(|obj| obj.io_id == io_id){
@@ -2358,8 +2364,8 @@ fn error_from_value() {
 }
 
 mod key_casing {
-    use serde;
-    use serde_json;
+    
+    
 
     fn collect_keys(list: &mut Vec<String>, from: &serde_json::Value) {
         match *from {

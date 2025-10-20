@@ -177,7 +177,7 @@ impl<T> AddRemoveSet<T> {
         for refcell in self.inner.iter() {
             match refcell.try_borrow_mut() {
                 Ok(ref_obj) => {
-                    if ref_obj.is_some() && ref_obj.as_ref().unwrap() as *const T == v {
+                    if ref_obj.is_some() && std::ptr::eq(ref_obj.as_ref().unwrap(), v) {
                         return Ok(Some(ref_obj));
                     }
                 }

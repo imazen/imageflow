@@ -27,7 +27,7 @@ impl NodeDefOneInputExpand for ScaleDef {
                 Ok(FrameInfo {
                     w: w as i32,
                     h: h as i32,
-                    fmt: ffi::PixelFormat::from(info.fmt),
+                    fmt: info.fmt,
                 })
             })
         } else {
@@ -37,7 +37,7 @@ impl NodeDefOneInputExpand for ScaleDef {
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()> {
         if let NodeParams::Json(s::Node::Resample2D { w, h, hints }) =
         params {
-            let resample_when = hints.as_ref().and_then(|ref h| h.resample_when).unwrap_or(s::ResampleWhen::SizeDiffersOrSharpeningRequested);
+            let resample_when = hints.as_ref().and_then(|h| h.resample_when).unwrap_or(s::ResampleWhen::SizeDiffersOrSharpeningRequested);
 
 
             let size_differs = w != parent.w as u32 || h != parent.h as u32;
@@ -45,7 +45,7 @@ impl NodeDefOneInputExpand for ScaleDef {
             let upscaling = w > parent.w as u32 || h > parent.h as u32;
             let matte_color = hints.as_ref().and_then(|h| h.background_color.as_ref());
             let apply_matte = parent.fmt == PixelFormat::Bgra32 &&
-                matte_color != Some(&s::Color::Transparent) && matte_color != None;
+                matte_color != Some(&s::Color::Transparent) && matte_color.is_some();
 
             let sharpen_percent_raw = hints.as_ref().and_then(|h| h.sharpen_percent).unwrap_or(0f32);
 
@@ -87,7 +87,7 @@ impl NodeDefOneInputExpand for ScaleDef {
                 let canvas_params = s::Node::CreateCanvas {
                     w: w as usize,
                     h: h as usize,
-                    format: s::PixelFormat::from(parent.fmt),
+                    format: parent.fmt,
                     color: hints.as_ref().and_then(|h| h.background_color.clone()).unwrap_or(s::Color::Transparent),
                 };
 

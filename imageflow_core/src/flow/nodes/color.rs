@@ -28,7 +28,7 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
                 .map_err(|e| e.at(here!()))?;
 
             let mut window = bitmap_bitmap.get_window_bgra32().unwrap();
-            crate::graphics::color_matrix::window_bgra32_apply_color_matrix(&mut window, &matrix)
+            crate::graphics::color_matrix::window_bgra32_apply_color_matrix(&mut window, matrix)
                 .map_err(|e| e.at(here!()))?;
             bitmap_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
 

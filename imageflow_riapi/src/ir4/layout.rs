@@ -296,7 +296,7 @@ impl Ir4Layout{
 
     pub fn process_constraint(source_w: i32, source_h: i32, constraint: &imageflow_types::Constraint) -> sizing::Result<ConstraintResults>{
 
-        let instructions = Ir4Layout::get_instructions(&constraint).expect("aspect_crop is enabled but not supported");
+        let instructions = Ir4Layout::get_instructions(constraint).expect("aspect_crop is enabled but not supported");
 
         let ir_layout = Ir4Layout::new(instructions, source_w, source_h, source_w, source_h);
 
@@ -317,7 +317,7 @@ impl Ir4Layout{
 
 
         //align crop
-        let (inner_crop_x1, inner_crop_y1) = Ir4Layout::align_gravity(constraint.gravity.clone().unwrap_or(ConstraintGravity::Center) , new_crop, initial_size)
+        let (inner_crop_x1, inner_crop_y1) = Ir4Layout::align_gravity(constraint.gravity.unwrap_or(ConstraintGravity::Center) , new_crop, initial_size)
             .expect("Outer box should never be smaller than inner box. All values must > 0");
         //add manual crop offset
         let (crop_x1, crop_y1) = ((inner_crop_x1) as u32, ( inner_crop_y1) as u32);
@@ -332,7 +332,7 @@ impl Ir4Layout{
         //Align padding
         let final_canvas = layout.get_box(BoxTarget::CurrentCanvas);
         let scale_to = layout.get_box(BoxTarget::CurrentImage);
-        let (left, top) = Ir4Layout::align_gravity(constraint.gravity.clone().unwrap_or(ConstraintGravity::Center) , scale_to, final_canvas)
+        let (left, top) = Ir4Layout::align_gravity(constraint.gravity.unwrap_or(ConstraintGravity::Center) , scale_to, final_canvas)
             .expect("Outer box should never be smaller than inner box. All values must > 0");
 
         let (right, bottom) = (final_canvas.width() - scale_to.width() - left, final_canvas.height() - scale_to.height() - top);
@@ -449,7 +449,7 @@ impl Ir4Layout{
             w: image.width() as u32,
             h: image.height() as u32,
             hints: Some(imageflow_types::ResampleHints {
-                sharpen_percent: self.i.f_sharpen.map(|v| v as f32),
+                sharpen_percent: self.i.f_sharpen.map(|v| v),
                 down_filter: self.i.down_filter.map(|v| v.to_filter()),
                 up_filter: self.i.up_filter.map(|v| v.to_filter()),
                 scaling_colorspace,
@@ -480,16 +480,16 @@ impl Ir4Layout{
 
 
         if let Some(c) = self.i.s_alpha {
-            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Alpha(c as f32)));
+            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Alpha(c)));
         }
         if let Some(c) = self.i.s_brightness {
-            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Brightness(c as f32)));
+            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Brightness(c)));
         }
         if let Some(c) = self.i.s_contrast {
-            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Contrast(c as f32)));
+            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Contrast(c)));
         }
         if let Some(c) = self.i.s_saturation {
-            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Saturation(c as f32)));
+            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Saturation(c)));
         }
         if let Some(true) = self.i.s_sepia{
             b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Sepia));
@@ -637,7 +637,7 @@ impl Ir4Layout{
             let xunits = self.i.cropxunits.map(|v| if v == 0f64 {f64::from(original_width)} else { v }).unwrap_or(f64::from(original_width));
             let yunits = self.i.cropyunits.map(|v| if v == 0f64 {f64::from(original_height)} else { v }).unwrap_or(f64::from(original_height));
             let floats = values.iter().enumerate().map(|(ix, item)| {
-                let relative_to = if ix % 2 == 0 { xunits } else { yunits} as f64;
+                let relative_to = if ix % 2 == 0 { xunits } else { yunits};
                 let max_dimension = f64::from(if ix % 2 == 0 {original_width } else {original_height});
                 let mut v = *item * max_dimension / relative_to;
                 if ix < 2 && v < 0f64 || ix > 1 && v <= 0f64{

@@ -10,7 +10,6 @@ use std::slice;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::os::raw::c_int;
-use imagequant;
 use rgb::ComponentSlice;
 use crate::codecs::lode;
 use crate::graphics::bitmaps::BitmapKey;
@@ -75,7 +74,7 @@ impl Encoder for PngquantEncoder {
             let mut img = unsafe {
                 imagequant::Image::new_fn(&self.liq, |row: &mut [MaybeUninit<imagequant::RGBA>], row_index:usize| {
                     let from = window.row(row_index).unwrap();
-                    from.into_iter().zip(row).for_each(|(from, to)| {
+                    from.iter().zip(row).for_each(|(from, to)| {
                         to.write(imagequant::RGBA {
                             r: from.r,
                             g: from.g,

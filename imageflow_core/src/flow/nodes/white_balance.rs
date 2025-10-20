@@ -18,16 +18,16 @@ fn area_threshold(histogram: &[u64], total_pixels: u64, low_threshold: f64, high
     let mut area = 0u64;
     let pixel_count = total_pixels as f64;
     for (ix, value) in histogram.iter().enumerate(){
-        area += u64::from(*value);
-        if area as f64 / f64::from(pixel_count) > low_threshold {
+        area += *value;
+        if area as f64 / pixel_count > low_threshold {
             low = ix;
             break;
         }
     }
     area = 0u64;
     for (ix, value) in histogram.iter().enumerate().rev(){
-        area += u64::from(*value);
-        if area as f64 / f64::from(pixel_count) > low_threshold {
+        area += *value;
+        if area as f64 / pixel_count > low_threshold {
             high = ix;
             break;
         }

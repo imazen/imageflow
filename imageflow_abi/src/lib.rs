@@ -126,7 +126,7 @@ extern crate backtrace;
 pub use crate::c::{Context, ErrorCategory};
 pub use crate::c::ffi::ImageflowJsonResponse as JsonResponse;
 //use c::IoDirection;
-use crate::c::{ErrorKind, CodeLocation, FlowError};
+use crate::c::ErrorKind;
 use std::ptr;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 #[cfg(test)]
@@ -184,7 +184,7 @@ fn type_name_of<T>(_: T) -> &'static str {
 
 fn parent_function_name<T>(f: T) -> &'static str {
     let name = type_name_of(f);
-    &name[..name.len() - 3].rsplit_terminator(":").next().unwrap_or("[function name not found]")
+    name[..name.len() - 3].rsplit_terminator(":").next().unwrap_or("[function name not found]")
 }
 
 macro_rules! context {
@@ -605,7 +605,7 @@ pub fn create_abi_json_response(c: &mut Context,
         };
 
         let pointer_to_final_buffer =
-            pointer.offset(sizeof_struct as isize) as *mut u8;
+            pointer.add(sizeof_struct) as *mut u8;
         let imageflow_response = &mut (*(pointer as *mut JsonResponse));
         imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
         imageflow_response.buffer_size = json_bytes.len();

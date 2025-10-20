@@ -1,4 +1,3 @@
-use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::{ffi, FlowError};
 use crate::{Context, Result, JsonResponse, ErrorKind};
@@ -24,7 +23,7 @@ impl<'a> IoProxyRef<'a> {
         match self {
             IoProxyRef::Borrow(r) => f(r),
             IoProxyRef::BoxedAsRef(r) => f((*r).as_ref()),
-            IoProxyRef::Ref(r) => f(&*r)
+            IoProxyRef::Ref(r) => f(&r)
         }
 
     }
@@ -182,7 +181,7 @@ impl IoProxy {
     /// Only valid as long as the life of the IoProxy is the same as the life of the Context, 'b
     pub fn get_output_buffer_bytes<'b>(&self, c: &'b Context) -> Result<&'b[u8]> {
         match &self.backend{
-            &IoBackend::WriteVec(ref v) => Ok(unsafe{ std::mem::transmute(v.get_ref().as_slice())}),
+            IoBackend::WriteVec(v) => Ok(unsafe{ std::mem::transmute(v.get_ref().as_slice())}),
             _ => Err(nerror!(ErrorKind::InvalidOperation, "get_output_buffer_bytes only works on output buffers"))
         }
     }
@@ -223,7 +222,7 @@ impl IoProxy {
         let backend = match direction {
             IoDirection::In => {
                 let file = File::open(path.as_ref())
-                    .map_err(|e| FlowError::from_decoder(e))?;
+                    .map_err(FlowError::from_decoder)?;
                 IoBackend::ReadFile(BufReader::new(file))
             },
             IoDirection::Out => {
@@ -231,7 +230,7 @@ impl IoProxy {
                     .write(true)
                     .create(true)
                     .open(path.as_ref())
-                    .map_err(|e| FlowError::from_encoder(e))?;
+                    .map_err(FlowError::from_encoder)?;
                 IoBackend::WriteFile(BufWriter::new(file))
             }
         };

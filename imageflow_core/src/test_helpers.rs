@@ -47,8 +47,8 @@ pub mod process_testing {
                                                    h: u32,
                                                    encoder: s::EncoderPreset) {
             let out = BlankImage {
-                w: w,
-                h: h,
+                w,
+                h,
                 encoding: encoder,
                 color: s::Color::Black
             }.generate();

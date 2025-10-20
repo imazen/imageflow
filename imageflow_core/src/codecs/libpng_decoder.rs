@@ -1,4 +1,3 @@
-use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{Context, Result, JsonResponse};
@@ -136,14 +135,13 @@ impl PngDec{
             return;
         }
 
-        if decoder.error.is_none() {
-            if !message.is_null(){
+        if decoder.error.is_none()
+            && !message.is_null(){
 
                 let cstr = unsafe{ CStr::from_ptr(message) };
                 let message = cstr.to_str().expect("LibPNG error message was not UTF-8");
                 decoder.error = Some(nerror!(ErrorKind::ImageDecodingError, "LibPNG error: {}", message));
             }
-        }
     }
 
 
@@ -156,7 +154,7 @@ impl PngDec{
 
         let buffer_slice = unsafe{ std::slice::from_raw_parts_mut(buffer, bytes_requested) };
 
-        return match decoder.io.read_maximally(buffer_slice) {
+        match decoder.io.read_maximally(buffer_slice) {
             Ok(read_total) => {
                 assert!(read_total <= bytes_requested);
                 *out_bytes_read = read_total;
@@ -171,7 +169,7 @@ impl PngDec{
                     } else {
                         None
                     };
-                    let missing = remaining.map(|r| (bytes_requested as i64) - (r as i64));
+                    let missing = remaining.map(|r| (bytes_requested as i64) - r);
                     let err =
                     FlowError::without_location(ErrorKind::DecodingIoError,
                         format!("{:?} (failed to read requested {} bytes (only {:?} remain), pos={:?}, len={:?}, missing={:?})", err, bytes_requested, remaining, pos, len, missing)).at(here!());

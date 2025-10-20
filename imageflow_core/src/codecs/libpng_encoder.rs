@@ -10,8 +10,6 @@ use std::io::Write;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::os::raw::{c_int, c_uint, c_ulong, c_char};
-use libc;
-use rgb;
 use crate::ffi;
 use imageflow_helpers::preludes::from_std::CStr;
 use std::ffi::c_void;
@@ -84,8 +82,8 @@ impl LibPngEncoder {
        }
         let encoder = unsafe { &mut *(custom_state as *mut LibPngEncoder) };
 
-        if encoder.error.is_none() {
-            if !message.is_null() {
+        if encoder.error.is_none()
+            && !message.is_null() {
                 let cstr = unsafe { CStr::from_ptr(message) };
                 let message = cstr.to_str().expect("LibPNG error message was not UTF-8");
 
@@ -96,7 +94,6 @@ impl LibPngEncoder {
 
                 encoder.error = Some(nerror!(ErrorKind::ImageDecodingError, "LibPNG encoding error: {}", message));
             }
-        }
     }
 
 
@@ -114,7 +111,7 @@ impl LibPngEncoder {
         }
         let buffer_slice = unsafe { std::slice::from_raw_parts(buffer, buffer_length) };
 
-        return match encoder.io.write_all(buffer_slice) {
+        match encoder.io.write_all(buffer_slice) {
             Ok(()) => true,
             Err(err) => {
                 encoder.error = Some(FlowError::from_encoder(err).at(here!()));

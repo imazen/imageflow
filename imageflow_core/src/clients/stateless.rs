@@ -83,7 +83,7 @@ impl LibClient {
      fn get_image_info_inner(context: &mut Context, bytes: &[u8])
                           -> std::result::Result<s::ImageInfo, FlowError> {
         context.add_input_bytes(0, bytes).map_err(|e| e.at(here!()))?;
-        Ok(context.get_unscaled_rotated_image_info(0).map_err(|e| e.at(here!()))?)
+        context.get_unscaled_rotated_image_info(0).map_err(|e| e.at(here!()))
 
     }
     pub fn get_image_info(&mut self, bytes: &[u8])
@@ -96,7 +96,7 @@ impl LibClient {
 
         let result = match result{
             Err(panic) => Err(BuildFailure::Error{ httpish_code: 500, message: format!("{}", PanicFormatter(&panic))}),
-            Ok(Err(e)) => Err(BuildFailure::from(e)),
+            Ok(Err(e)) => Err(e),
             Ok(Ok(v)) => Ok(v)
         };
 
@@ -126,10 +126,7 @@ impl LibClient {
         let send_execute = s::Execute001 {
             framewise: task.framewise,
             security: None,
-            graph_recording: match task.export_graphs_to {
-                Some(_) => Some(s::Build001GraphRecording::debug_defaults()),
-                None => None,
-            }
+            graph_recording: task.export_graphs_to.map(|_| s::Build001GraphRecording::debug_defaults())
         };
 
         let payload = context.execute_1(send_execute).map_err(|e| e.at(here!()))?;
@@ -154,7 +151,7 @@ impl LibClient {
             });
         }
 
-        Ok(BuildSuccess { outputs: outputs, performance: perf})
+        Ok(BuildSuccess { outputs, performance: perf})
     }
     pub fn build(&mut self, task: BuildRequest) -> std::result::Result<BuildSuccess, BuildFailure> {
         let mut context = Context::create().map_err(|e| e.at(here!()))?;
@@ -165,7 +162,7 @@ impl LibClient {
 
         let result = match result{
             Err(panic) => Err(BuildFailure::Error{ httpish_code: 500, message: format!("{}", PanicFormatter(&panic))}),
-            Ok(Err(e)) => Err(BuildFailure::from(e)),
+            Ok(Err(e)) => Err(e),
             Ok(Ok(v)) => Ok(v)
         };
 

@@ -1,4 +1,3 @@
-use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{JsonResponse, ErrorKind, FlowError, Result};
@@ -158,7 +157,7 @@ impl Context {
 
 
     pub fn io_id_present(&self, io_id: i32) -> bool{
-        self.io_id_list.borrow().iter().any(|v| *v == io_id)
+        self.io_id_list.borrow().contains(&io_id)
     }
 
     fn add_io(&self, io: IoProxy, io_id: i32, direction: IoDirection) -> Result<()>{
@@ -226,10 +225,8 @@ impl Context {
             .map_err(|e| e.at(here!()))?;
 
         if let Some(exif_flag) = exif_maybe{
-            if exif_flag >= 5 && exif_flag <= 8 {
-                let temp = image_info.image_width;
-                image_info.image_width = image_info.image_height;
-                image_info.image_height = temp;
+            if (5..=8).contains(&exif_flag) {
+                std::mem::swap(&mut image_info.image_width, &mut image_info.image_height);
             }
         }
         Ok(())
@@ -255,7 +252,7 @@ impl Context {
     pub fn get_image_decodes(&mut self) -> Vec<s::DecodeResult>{
         let io_ids = self.io_id_list.borrow().to_vec();
 
-        io_ids.iter().map(|io_id| {
+        io_ids.iter().filter_map(|io_id| {
             if let Ok(info) = self.get_unscaled_rotated_image_info(*io_id){
                 Some(imageflow_types::DecodeResult{
                     io_id: *io_id,
@@ -268,8 +265,6 @@ impl Context {
                 None
             }
         })
-            .filter(|r| r.is_some())
-            .map(|r| r.unwrap())
             .sorted_by_key(|r| r.io_id)
             .collect_vec()
     }
@@ -358,7 +353,7 @@ impl Context {
     }
 
     pub fn configure_graph_recording(&mut self, recording: s::Build001GraphRecording) {
-        let r = if std::env::var("CI").and_then(|s| Ok(s.to_uppercase())) ==
+        let r = if std::env::var("CI").map(|s| s.to_uppercase()) ==
             Ok("TRUE".to_owned()) {
             s::Build001GraphRecording::off()
         } else {

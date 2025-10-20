@@ -17,7 +17,7 @@ pub fn flow_bitmap_bgra_flip_vertical_safe(b: &mut Bitmap) -> Result<(), FlowErr
 
     for (mut top_row, mut bottom_row) in top.scanlines()
                         .zip(bottom_half.scanlines_reverse()) {
-        top_row.row_mut().swap_with_slice(&mut bottom_row.row_mut());
+        top_row.row_mut().swap_with_slice(bottom_row.row_mut());
     }
     Ok(())
 }
@@ -28,7 +28,7 @@ pub fn flow_bitmap_bgra_flip_horizontal_safe(b: &mut Bitmap) -> Result<(), FlowE
     // Step 3a: Determine image size and retrieve a safe window
     let (width, height) = b.size();
     let pixel_format = b.info().calculate_pixel_format().map_err(|e| e.at(here!()))?;
-    let bytes_per_pixel = pixel_format.bytes() as usize;
+    let bytes_per_pixel = pixel_format.bytes();
 
     let mut window = b
         .get_window_u8()

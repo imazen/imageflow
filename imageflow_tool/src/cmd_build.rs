@@ -1,7 +1,5 @@
 use crate::fc;
 use crate::s;
-use serde_json;
-use std;
 extern crate serde;
 
 use std::collections::HashMap;
@@ -417,10 +415,8 @@ impl CmdBuild {
             if let Some(filename) = response_file {
                 let mut file = BufWriter::new(File::create(filename).unwrap());
                 file.write_all(&self.get_json_response().response_json)?;
-            } else {
-                if allow_stdout {
-                    std::io::stdout().write_all(&self.get_json_response().response_json)?;
-                }
+            } else if allow_stdout {
+                std::io::stdout().write_all(&self.get_json_response().response_json)?;
             }
 
         }

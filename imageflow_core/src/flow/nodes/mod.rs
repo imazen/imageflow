@@ -153,7 +153,7 @@ impl<'c> OpCtxMut<'c> {
             })
     }
 
-    pub fn visit_ancestors<F>(&self, ancestors_of_node: NodeIndex, f: &mut F) where F: FnMut(NodeIndex) -> (){
+    pub fn visit_ancestors<F>(&self, ancestors_of_node: NodeIndex, f: &mut F) where F: FnMut(NodeIndex){
         for (_,ix) in self.graph.parents(ancestors_of_node).iter(self.graph){
             f(ix);
             self.visit_ancestors(ix, f);
@@ -311,7 +311,7 @@ impl<'c> OpCtxMut<'c> {
             n => {
                 with.reverse();
                 let mut last_ix = self.graph.add_node(with.pop().unwrap());
-                let first_ix = last_ix.clone();
+                let first_ix = last_ix;
                 while !with.is_empty() {
                     let new_ix = self.graph.add_node(with.pop().unwrap());
                     self.graph.add_edge(last_ix, new_ix, EdgeKind::Input).unwrap();

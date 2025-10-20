@@ -105,7 +105,7 @@ impl Debounce{
     }
     pub fn allow(&mut self, clock: &dyn AppClock) -> bool{
         if self.interval <= 0{
-            return false;
+            false
         } else {
             let now = clock.get_timestamp_ticks();
             if now > self.next{
@@ -121,12 +121,12 @@ impl Debounce{
 /// Like .for_each, but for Option instead of Iterator
 pub trait DoSome{
     type Item;
-    fn do_some<F>(&mut self, f: F) -> () where F: FnMut(&mut Self::Item) -> ();
+    fn do_some<F>(&mut self, f: F) -> () where F: FnMut(&mut Self::Item);
 }
 impl<T> DoSome for Option<T>{
     type Item = T;
-    fn do_some<F>(&mut self, mut f: F) -> () where
-        F: FnMut(&mut Self::Item) -> () {
+    fn do_some<F>(&mut self, mut f: F) where
+        F: FnMut(&mut Self::Item) {
         if let Some(ref mut v) = *self{
             f(v)
         }
@@ -170,9 +170,9 @@ pub struct PanicFormatter<'a>(pub &'a dyn Any);
 impl<'a> std::fmt::Display for PanicFormatter<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if let Some(str) = self.0.downcast_ref::<String>() {
-            write!(f, "panicked: {}\n", str)?;
+            writeln!(f, "panicked: {}", str)?;
         } else if let Some(str) = self.0.downcast_ref::<&str>() {
-            write!(f, "panicked: {}\n", str)?;
+            writeln!(f, "panicked: {}", str)?;
         }
         Ok(())
     }

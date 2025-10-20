@@ -11,8 +11,6 @@ use std::slice;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::os::raw::c_int;
-use mozjpeg;
-use evalchroma;
 use evalchroma::PixelSize;
 use crate::codecs::lode;
 use std::io::Write;
@@ -138,7 +136,7 @@ impl Encoder for MozjpegEncoder {
         } else {
 
             for line in window.scanlines(){
-                compressor.write_scanlines(&line.row())
+                compressor.write_scanlines(line.row())
                     .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
             }
         }

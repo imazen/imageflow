@@ -83,7 +83,7 @@ impl NodeDefOneInputExpand for WatermarkDef {
                         w: Some(box_w),
                         h: Some(box_h),
                         hints: None,
-                        gravity: watermark.gravity.clone(),
+                        gravity: watermark.gravity,
                         canvas_color: None
                     };
 

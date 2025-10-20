@@ -44,7 +44,7 @@ pub enum EnvTidbit{
 
 fn run(cmd: &str) -> std::result::Result<String,Error> {
     let mut args: Vec<&str> = cmd.split(" ").collect::<Vec<&str>>();
-    if args.len() < 1 {
+    if args.is_empty() {
         panic!("");
     }
     let exe = args.remove(0);
@@ -74,14 +74,14 @@ fn run(cmd: &str) -> std::result::Result<String,Error> {
 fn fetch_env(key: &str, result_required: bool, empty_is_missing: bool) -> Option<String>{
     if result_required {
         match env::var(key) {
-            Ok(ref v) if v.len() == 0 && empty_is_missing => {
+            Ok(ref v) if v.is_empty() && empty_is_missing => {
                 panic!("Required env var {} is present - but empty - in the build environment", key);
             },
             Ok(v) => Some(v),
             Err(e) => { panic!("Required env var {} missing in the build environment: {:?}", key, e); }
         }
     }else{
-        env::var(key).ok().and_then(|v| if v.len() == 0 && empty_is_missing { None } else { Some(v) })
+        env::var(key).ok().and_then(|v| if v.is_empty() && empty_is_missing { None } else { Some(v) })
     }
 }
 fn command(key: &str, cmd: &str, result_required: bool, fallback_to_env: bool) -> Option<String>{
@@ -94,11 +94,10 @@ fn command(key: &str, cmd: &str, result_required: bool, fallback_to_env: bool) -
     //Ensure consistency if both are present
     if let Ok(ref out_str) = output {
         if let Some(ref env_str) = env_val {
-            if out_str != env_str {
-                if out_str.trim() != env_str.trim() {
+            if out_str != env_str
+                && out_str.trim() != env_str.trim() {
                     panic!("Inconsistent values for {} and {}.\nCommand output: {}\nEnv var: {}", key, cmd, out_str, env_str);
                 }
-            }
         }
     }
 
@@ -161,7 +160,7 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_ALL", cmd: "git describe --always --all --long"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_TAG", cmd: "git describe --exact-match --tags"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_BRANCH", cmd: "git symbolic-ref --short HEAD"});
-    static ENV_VARS: [&'static str;22] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",
+    static ENV_VARS: [&str;22] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",
         "CI_PULL_REQUEST_INFO", "CI_TAG", "CI_RELEASE", "CI_REPO", "CI_RELATED_BRANCH", "CI", "TARGET", "OUT_DIR", "HOST", "OPT_LEVEL", "DEBUG", "PROFILE", "RUSTC", "RUSTFLAGS","TARGET_CPU"
     ];
     for name in ENV_VARS.iter(){
@@ -234,5 +233,5 @@ fn main() {
 //    contents += &line;
 
 
-    let _ = write_file("build_env_info.rs", contents ).expect("Saving git version");
+    write_file("build_env_info.rs", contents ).expect("Saving git version");
 }

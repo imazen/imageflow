@@ -102,7 +102,7 @@ impl Rect {
                 });
             }
         }
-        return None;
+        None
     }
 }
 
@@ -345,7 +345,7 @@ Blue: 0.114;
         panic!("Invalid grayscale_Stride")
     }
 
-    let bytes_per_pixel = b.t_per_pixel() as usize;
+    let bytes_per_pixel = b.t_per_pixel();
     let stride = b.info().t_stride() as usize;
     let first_pixel = stride * y as usize + bytes_per_pixel * x as usize;
     let remnant: usize = stride - (bytes_per_pixel * w as usize);
@@ -366,7 +366,7 @@ Blue: 0.114;
             for y in 0..h {
                 for x in 0..w {
                     let bgra = &input_bitmap[input_index..input_index + 4];
-                    let gray = (((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) * bgra[3] as u32 + 524288 - 1) / 524288) as u16;
+                    let gray = ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) * bgra[3] as u32).div_ceil(524288) as u16;
                     grayscale[buf_ix] = if gray > 255 { 255 } else { gray as u8 };
                     input_index += 4;
                     buf_ix += 1;
@@ -425,7 +425,7 @@ fn sobel_scharr_detect(buf: &Buffer, search: &mut WhitespaceSearch) {
     let y_end = h - 1;
     let x_end = w - 1;
     let threshold = search.threshold as i32;
-    let mut buf_ix = w as usize + 1;
+    let mut buf_ix = w + 1;
     for y in 1..y_end {
         for x in 1..x_end {
             let a11 = buf.pixels[buf_ix - w - 1];

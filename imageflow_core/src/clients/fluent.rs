@@ -144,7 +144,7 @@ impl FluentNode {
     }
 
     pub fn crop_whitespace(self, threshold: u32, percent_padding: f32) -> FluentNode {
-        self.to(s::Node::CropWhitespace { threshold: threshold, percent_padding: percent_padding })
+        self.to(s::Node::CropWhitespace { threshold, percent_padding })
     }
 
     //#[cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
@@ -240,7 +240,7 @@ impl FluentGraphBuilder {
     }
     pub fn to_framewise(&self) -> s::Framewise {
         let mut nodes = self.collect_unique();
-        if self.output_nodes.len() == 1 && nodes.as_slice().iter().all(|n| n.canvas == None) {
+        if self.output_nodes.len() == 1 && nodes.as_slice().iter().all(|n| n.canvas.is_none()) {
             nodes.sort_by(|a,b|a.uid.cmp(&b.uid));
             s::Framewise::Steps(nodes.into_iter().map(|b| b.data.clone().unwrap()).collect::<Vec<s::Node>>())
         }else{
@@ -256,7 +256,7 @@ impl FluentGraphBuilder {
                 s::Edge {
                     from: (from - lowest_uid) as i32,
                     to: (to - lowest_uid) as i32,
-                    kind: kind,
+                    kind,
                 }
             })
             .collect::<Vec<s::Edge>>();

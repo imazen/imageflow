@@ -25,7 +25,7 @@ fn test_file_macro_for_this_build(){
 #[macro_export]
 macro_rules! here {
     () => (
-        crate::CodeLocation::new(file!(), line!(), column!())
+        $crate::CodeLocation::new(file!(), line!(), column!())
     );
 }
 
@@ -51,7 +51,7 @@ macro_rules! loc {
 #[macro_export]
 macro_rules! nerror {
     ($kind:expr) => (
-        crate::FlowError{
+        $crate::FlowError{
             kind: $kind,
             message: String::new(), // If .message() is needed after all, then crate_enum_derive on ErrorKind and switch message to Cow<>
             at: ::smallvec::SmallVec::new(),
@@ -59,7 +59,7 @@ macro_rules! nerror {
         }.at(here!())
     );
     ($kind:expr, $fmt:expr) => (
-        crate::FlowError{
+        $crate::FlowError{
             kind: $kind,
             message:  format!(concat!("{:?}: ",$fmt ), $kind,),
             at: ::smallvec::SmallVec::new(),
@@ -80,8 +80,8 @@ macro_rules! nerror {
 #[macro_export]
 macro_rules! unimpl {
     () => (
-        crate::FlowError{
-            kind: crate::ErrorKind::MethodNotImplemented,
+        $crate::FlowError{
+            kind: $crate::ErrorKind::MethodNotImplemented,
             message: String::new(),
             at: ::smallvec::SmallVec::new(),
             node: None
@@ -102,8 +102,8 @@ macro_rules! unimpl {
 #[macro_export]
 macro_rules! err_oom {
     () => (
-        crate::FlowError{
-            kind: crate::ErrorKind::AllocationFailed,
+        $crate::FlowError{
+            kind: $crate::ErrorKind::AllocationFailed,
             message: String::new(),
             at: ::smallvec::SmallVec::new(),
             node: None
@@ -476,9 +476,9 @@ impl fmt::Display for FlowError {
 impl fmt::Debug for FlowError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.message.is_empty() {
-            write!(f, "{:?} at\n", self.kind)?;
+            writeln!(f, "{:?} at", self.kind)?;
         }else{
-            write!(f, "{} at\n", self.message)?;
+            writeln!(f, "{} at", self.message)?;
         }
 
         // If CI was used, we assume a publicly-accessible commit
@@ -492,10 +492,10 @@ impl fmt::Debug for FlowError {
         }else { None };
 
         for recorded_frame in &self.at{
-            write!(f, "{}:{}:{}\n", recorded_frame.file(), recorded_frame.line(), recorded_frame.col())?;
+            writeln!(f, "{}:{}:{}", recorded_frame.file(), recorded_frame.line(), recorded_frame.col())?;
 
             if let Some(ref url) = url{
-                write!(f, "{}{}#L{}\n",url, recorded_frame.file().replace("\\", "/"), recorded_frame.line())?;
+                writeln!(f, "{}{}#L{}",url, recorded_frame.file().replace("\\", "/"), recorded_frame.line())?;
             }
         }
         if let Some(ref n) = self.node{
@@ -771,7 +771,7 @@ impl std::fmt::Display for OutwardErrorBuffer {
             write!(f, "{:?}: ", self.category)?;
         }
         if self.last_error.is_some() && self.last_panic.is_some(){
-            write!(f, "2 errors:\n")?;
+            writeln!(f, "2 errors:")?;
         }
 
         if let Some(ref panic) = self.last_panic{
@@ -791,9 +791,9 @@ pub struct PanicFormatter<'a>(pub &'a dyn Any);
 impl<'a> std::fmt::Display for PanicFormatter<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if let Some(str) = self.0.downcast_ref::<String>() {
-            write!(f, "panicked: {}\n", str)?;
+            writeln!(f, "panicked: {}", str)?;
         } else if let Some(str) = self.0.downcast_ref::<&str>() {
-            write!(f, "panicked: {}\n", str)?;
+            writeln!(f, "panicked: {}", str)?;
         }
         Ok(())
     }
@@ -858,8 +858,8 @@ pub mod writing_to_slices {
 
     impl<T> NonAllocatingFormatter<T> where T: std::fmt::Display {
         pub unsafe fn write_and_write_errors_to_cstring(&self, buffer: *mut u8, buffer_length: usize, append_when_truncated: Option<&str>) -> WriteResult {
-            let mut slice = ::std::slice::from_raw_parts_mut(buffer, buffer_length);
-            self.write_and_write_errors_to_cstring_slice(&mut slice, append_when_truncated)
+            let slice = ::std::slice::from_raw_parts_mut(buffer, buffer_length);
+            self.write_and_write_errors_to_cstring_slice(slice, append_when_truncated)
         }
 
         pub fn write_to_slice(&self, buffer: &mut [u8]) -> WriteResult {
@@ -879,7 +879,7 @@ pub mod writing_to_slices {
                     WriteResult::Error { bytes_written, error } => {
                         let mut cursor = NonAllocatingCursor::new(&mut buffer[bytes_written..]);
                         let _ = write!(&mut cursor, "\nerror serialization failed: {:#?}\n", error);
-                        WriteResult::Error { bytes_written: cursor.position(), error: error }
+                        WriteResult::Error { bytes_written: cursor.position(), error }
                     },
                     WriteResult::TruncatedAt(bytes_written) if append_when_truncated.is_some() => {
                         let mut cursor = NonAllocatingCursor::new(&mut buffer[bytes_written..]);

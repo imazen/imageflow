@@ -34,8 +34,8 @@ impl GraphTranslator {
         }
         let _ = edges.pop();
         s::Graph {
-            nodes: nodes,
-            edges: edges,
+            nodes,
+            edges,
         }
     }
 

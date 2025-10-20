@@ -251,7 +251,7 @@ impl InterpolationDetails{
     if abs_t < 1f64 {
         1f64 - 2f64 * abs_t_sq +
             abs_t_sq * abs_t
-    } else if abs_t < 2i32 as f64 {
+    } else if abs_t < 2_f64 {
         4f64 - 8f64 * abs_t +
             5f64 * abs_t_sq - abs_t_sq * abs_t
     } else {
@@ -263,17 +263,17 @@ impl InterpolationDetails{
     let abs_t: f64 = t.abs() / d.blur;
     if abs_t == 0f64 {
         // Avoid division by zero
-        return 1f64
+        1f64
     } else if abs_t > d.window {
-        return 0f64
+        0f64
     } else {
         let a: f64 = abs_t * f64::consts::PI;
-        return a.sin() / a
-    };
+        a.sin() / a
+    }
 }
  fn filter_box(d: &InterpolationDetails, t: f64) -> f64 {
     let x: f64 = t / d.blur;
-    if x >= -1f64 * d.window && x < d.window {
+    if x >= -d.window && x < d.window {
         1f64
     } else {
         0f64
@@ -281,7 +281,7 @@ impl InterpolationDetails{
 }
  fn filter_triangle(d: &InterpolationDetails, t: f64) -> f64 {
     let x: f64 = t.abs() / d.blur;
-    if x < 1.0f64 { return 1.0f64 - x } else { return 0.0f64 };
+    if x < 1.0f64 { 1.0f64 - x } else { 0.0f64 }
 }
 
  fn filter_sinc_windowed( d: &InterpolationDetails,
@@ -291,14 +291,14 @@ impl InterpolationDetails{
     let abs_t: f64 = x.abs();
     if abs_t == 0i32 as f64 {
         // Avoid division by zero
-        return 1f64
+        1f64
     } else if abs_t > d.window {
-        return 0f64
+        0f64
     } else {
-        return d.window * (f64::consts::PI * x / d.window).sin() *
+        d.window * (f64::consts::PI * x / d.window).sin() *
             (x * f64::consts::PI).sin() /
             (f64::consts::PI * f64::consts::PI * x * x)
-    };
+    }
 }
 
 
@@ -406,6 +406,12 @@ pub struct PixelRowWeights {
     weights_length: usize
 }
 
+impl Default for PixelRowWeights {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PixelRowWeights{
     pub fn new() -> PixelRowWeights{
         PixelRowWeights{
@@ -482,7 +488,7 @@ impl WeightContainer for PixelRowWeights {
         if self.weights_length + weights_to_add.len() > weights.len() {
             return Err(WeightsError::PixelWeightsTooSmall);
         }
-        if weights_to_add.len() == 0 {
+        if weights_to_add.is_empty() {
             return Err(WeightsError::NoPixelInputs);
         }
 
@@ -555,7 +561,7 @@ pub  fn populate_weights<T:WeightContainer>(container: &mut T, output_line_size 
     let half_source_window: f64 =
         (details.window + 0.5f64) / downscale_factor;
     let allocated_window_size: u32 =
-        ((2i32 as f64 * (half_source_window - 0.00001f64)).ceil() as
+        ((2_f64 * (half_source_window - 0.00001f64)).ceil() as
             i32 + 1i32) as u32;
 
     container.try_reserve(output_line_size, allocated_window_size)?;

@@ -9,8 +9,6 @@ use imageflow_helpers::preludes::from_std::*;
 //use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::graphics::bitmaps::BitmapRowAccess;
 
-use png;
-use rgb;
 
 pub struct ImagePngDecoder {
     reader: png::Reader<IoProxy>,
@@ -100,7 +98,7 @@ impl Decoder for ImagePngDecoder {
                 for row_ix in 0..h{
                     let from = buffer.row_mut_rgb8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
-                    from.into_iter().zip(to.iter_mut()).for_each(|(from, to)| {
+                    from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
                         to.r = from.r;
                         to.g = from.g;
                         to.b = from.b;
@@ -112,7 +110,7 @@ impl Decoder for ImagePngDecoder {
                 for row_ix in 0..h{
                     let from = buffer.row_mut_rgba8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
-                    from.into_iter().zip(to.iter_mut()).for_each(|(from, to)| {
+                    from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
                         to.r = from.r;
                         to.g = from.g;
                         to.b = from.b;
@@ -125,7 +123,7 @@ impl Decoder for ImagePngDecoder {
                 for row_ix in 0..h{
                     let from = buffer.row_mut_gray8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
-                    from.into_iter().zip(to.iter_mut()).for_each(|(f, to)| {
+                    from.iter_mut().zip(to.iter_mut()).for_each(|(f, to)| {
                         to.r = f.v;
                         to.g = f.v;
                         to.b = f.v;
@@ -138,7 +136,7 @@ impl Decoder for ImagePngDecoder {
                 for row_ix in 0..h{
                     let from = buffer.row_mut_grayalpha8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
-                        from.into_iter().zip(to.iter_mut()).for_each(|(from, to)| {
+                        from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
                         to.r = from.v;
                         to.g = from.v;
                         to.b = from.v;

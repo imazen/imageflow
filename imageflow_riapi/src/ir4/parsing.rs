@@ -239,7 +239,7 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;100] = [
+pub static IR4_KEYS: [&str;100] = [
     "mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
@@ -331,7 +331,7 @@ impl fmt::Display for Instructions{
 pub(crate) fn iter_all_eq<T: PartialEq>(iter: impl IntoIterator<Item = T>) -> Option<T> {
     let mut iter = iter.into_iter();
     let first = iter.next()?;
-    iter.all(|elem| elem == first).then(|| first)
+    iter.all(|elem| elem == first).then_some(first)
 }
 
 impl Instructions{
@@ -346,9 +346,9 @@ impl Instructions{
         vec.sort_by_key(|&(a,_)| a);
         for (k,v) in vec{
             s.push_str(k);
-            s.push_str("=");
+            s.push('=');
             s.push_str(&v);
-            s.push_str("&");
+            s.push('&');
         }
         let len = s.len();
         if len > 0{
@@ -422,7 +422,7 @@ impl Instructions{
         add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "subsampling", self.jpeg_subsampling);
-        add(&mut m, "bgcolor", self.bgcolor_srgb.and_then(|v| Some(v.to_rrggbbaa_string().to_lowercase())));
+        add(&mut m, "bgcolor", self.bgcolor_srgb.map(|v| v.to_rrggbbaa_string().to_lowercase()));
         add(&mut m, "f.sharpen", self.f_sharpen);
         add(&mut m, "f.sharpen_when", self.f_sharpen_when.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "trim.percentpadding", self.trim_whitespace_padding_percent);
@@ -725,7 +725,7 @@ impl<'a> Parser<'a>{
     fn parse_crop_strict(&mut self, key: &'static str) -> Option<[f64;4]> {
         self.warning_parse(key, |s| {
             let values = s.split(',').map(|v| v.trim().parse::<f64>()).collect::<Vec<std::result::Result<f64,num::ParseFloatError>>>();
-            if let Some(&Err(ref e)) = values.iter().find(|v| v.is_err()) {
+            if let Some(Err(e)) = values.iter().find(|v| v.is_err()) {
                 Err(ParseCropError::InvalidNumber(e.clone()))
             } else if values.len() != 4 {
                 Err(ParseCropError::InvalidNumberOfValues("Crops must contain exactly 4 values, separated by commas"))
@@ -756,7 +756,7 @@ impl<'a> Parser<'a>{
     fn parse_round_corners(&mut self, key: &'static str) -> Option<[f64;4]> {
         self.warning_parse(key, |s| {
             let values = s.split(',').map(|v| v.trim().parse::<f64>()).collect::<Vec<std::result::Result<f64,num::ParseFloatError>>>();
-            if let Some(&Err(ref e)) = values.iter().find(|v| v.is_err()) {
+            if let Some(Err(e)) = values.iter().find(|v| v.is_err()) {
                 Err(ParseRoundCornersError::InvalidNumber(e.clone()))
             } else if values.len() == 4{
                 Ok(([*values[0].as_ref().unwrap(), *values[1].as_ref().unwrap(), *values[2].as_ref().unwrap(), *values[3].as_ref().unwrap()], None, true))
@@ -816,7 +816,7 @@ impl<'a> Parser<'a>{
                     Ok(None)
                 }
             } else {
-                s.trim_end_matches("x").parse::<f32>().map(|v| Some(v))
+                s.trim_end_matches("x").parse::<f32>().map(Some)
             }
         })?
     }
@@ -861,7 +861,7 @@ impl<'a> Parser<'a>{
             i += 1;
         }
         if i != N{
-            return Err(ParseListError::InvalidNumberOfValues(wrong_count_message))
+            Err(ParseListError::InvalidNumberOfValues(wrong_count_message))
         }else{
             Ok(array)
         }

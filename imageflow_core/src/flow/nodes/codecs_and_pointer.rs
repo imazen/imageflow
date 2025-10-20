@@ -17,7 +17,7 @@ impl BitmapKeyDef{
         if let NodeParams::Json(s::Node::FlowBitmapKeyPtr { ptr_to_bitmap_key }) = *p {
             let ptr: *mut BitmapKey = ptr_to_bitmap_key as *mut BitmapKey;
             if ptr.is_null() {
-                return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "The pointer to the bitmap key is null! Must be a valid reference to a pointer's location."));
+                Err(nerror!(crate::ErrorKind::InvalidNodeParams, "The pointer to the bitmap key is null! Must be a valid reference to a pointer's location."))
             } else {
                 Ok(ptr)
             }

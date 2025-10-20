@@ -1,6 +1,5 @@
 use imageflow_types as s;
 use imageflow_types::*;
-use std;
 use std::sync::*;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
@@ -272,16 +271,16 @@ fn create_jpeg_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_i
     let profile_hints = details.quality_profile.map(|qp|
         get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
 
-    let manual_and_default_hints = details.encoder_hints.map(|hints| hints.jpeg).flatten();
+    let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.jpeg);
 
-    let mut progressive = manual_and_default_hints.map(|hints| hints.progressive).flatten().unwrap_or(true);
+    let mut progressive = manual_and_default_hints.and_then(|hints| hints.progressive).unwrap_or(true);
     if details.allow.jpeg_progressive != Some(true) {
         progressive = false;
     }
 
-    let manual_quality = manual_and_default_hints.map(|hints| hints.quality).flatten();
+    let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
 
-    let matte = details.matte.map(|c| c.clone());
+    let matte = details.matte;
     let moz_quality = profile_hints.map(|hints: QualityProfileHints| hints.moz).or(manual_quality)
     .unwrap_or(90.0).clamp(0.0, 100.0) as u8;
 
@@ -290,7 +289,7 @@ fn create_jpeg_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_i
 
     //TODO: technically we should ignore the manual hint if qp is specified.
     //Once we have tuned the quality profile, we should use that regardless.
-    let style = manual_and_default_hints.map(|hints| hints.mimic).flatten().unwrap_or(JpegEncoderStyle::Default);
+    let style = manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(JpegEncoderStyle::Default);
 
     match style {
         JpegEncoderStyle::LibjpegTurbo => {
@@ -308,16 +307,16 @@ fn create_jpeg_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_i
 fn create_webp_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_io_ids: &[i32], details: AutoEncoderDetails) -> Result<Box<dyn Encoder>> {
     let profile_hints = details.quality_profile.map(|qp|
         get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
-    let manual_and_default_hints = details.encoder_hints.map(|hints| hints.webp).flatten();
-    let manual_quality   = manual_and_default_hints.map(|hints| hints.quality).flatten();
-    let manual_lossless = match manual_and_default_hints.map(|hints| hints.lossless).flatten() {
+    let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.webp);
+    let manual_quality   = manual_and_default_hints.and_then(|hints| hints.quality);
+    let manual_lossless = match manual_and_default_hints.and_then(|hints| hints.lossless) {
         Some(BoolKeep::Keep) => Some(details.source_image_info.map(|info| info.lossless).unwrap_or(false)),
         Some(BoolKeep::True) => Some(true),
         Some(BoolKeep::False) => Some(false),
         None => None,
     };
-    let matte = details.matte.map(|c| c.clone());
-    let manual_quality = manual_and_default_hints.map(|hints| hints.quality).flatten().unwrap_or(80.0).clamp(0.0, 100.0);
+    let matte = details.matte;
+    let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality).unwrap_or(80.0).clamp(0.0, 100.0);
 
     // If there is no lossless=keep, webp.lossless=keep + lossless format (nor any lossless=true), go lossy
     let lossless = details.needs_lossless.or(manual_lossless).unwrap_or(false);
@@ -333,11 +332,11 @@ fn create_webp_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_i
 fn create_png_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_io_ids: &[i32], details: AutoEncoderDetails) -> Result<Box<dyn Encoder>> {
     let profile_hints = details.quality_profile.map(|qp|
         get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
-    let manual_and_default_hints = details.encoder_hints.map(|hints| hints.png).flatten();
-    let manual_quality = manual_and_default_hints.map(|hints| hints.quality).flatten();
-    let matte = details.matte.map(|c| c.clone());
-    let png_style = manual_and_default_hints.map(|hints| hints.mimic).flatten().unwrap_or(PngEncoderStyle::Default);
-    let manual_lossless = manual_and_default_hints.map(|hints| hints.lossless).flatten();
+    let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.png);
+    let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
+    let matte = details.matte;
+    let png_style = manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(PngEncoderStyle::Default);
+    let manual_lossless = manual_and_default_hints.and_then(|hints| hints.lossless);
     //TODO: Note that PNG has special rules for the default value of lossless - the manual hint wins
     let lossless = match (details.needs_lossless, manual_lossless) {
         (Some(true), _) => Some(true),
@@ -348,7 +347,7 @@ fn create_png_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_io
         (None, None) => Some(manual_quality.is_none() || png_style == PngEncoderStyle::Libpng),
     }.unwrap();
 
-    let max_deflate = manual_and_default_hints.map(|hints| hints.hint_max_deflate).flatten();
+    let max_deflate = manual_and_default_hints.and_then(|hints| hints.hint_max_deflate);
 
     if let Some(profile_hints) = profile_hints{
          if profile_hints.png == 100 || lossless {
@@ -372,10 +371,10 @@ fn create_png_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_io
             }
             PngEncoderStyle::Pngquant | PngEncoderStyle::Default if !lossless => {
                 let manual_quality = manual_quality.map(|s| s.clamp(0.0, 100.0) as u8);
-                let manual_min_quality = manual_and_default_hints.map(|hints| hints.min_quality).flatten()
+                let manual_min_quality = manual_and_default_hints.and_then(|hints| hints.min_quality)
                 .map(|s| s.clamp(0.0, 100.0) as u8);
-                let manual_quantization_speed = manual_and_default_hints.map(|hints| hints.quantization_speed).flatten()
-                .map(|s| s.clamp(1, 10) as u8);
+                let manual_quantization_speed = manual_and_default_hints.and_then(|hints| hints.quantization_speed)
+                .map(|s| s.clamp(1, 10));
                 Ok(Box::new(crate::codecs::pngquant::PngquantEncoder::create(ctx, io,
                     manual_quantization_speed,
                     manual_quality,
@@ -385,7 +384,7 @@ fn create_png_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_io
 
             }
             _ => {
-                let max_deflate = manual_and_default_hints.map(|hints| hints.hint_max_deflate).flatten();
+                let max_deflate = manual_and_default_hints.and_then(|hints| hints.hint_max_deflate);
                 Ok(Box::new(crate::codecs::lode::LodepngEncoder::create(ctx, io, max_deflate, matte).map_err(|e| e.at(here!()))?))
             }
         }
@@ -433,7 +432,7 @@ fn build_auto_encoder_details(ctx: &Context, preset: &s::EncoderPreset, bitmap_k
 
 
     let source_image_info: Option<ImageInfo> =
-    if decoder_io_ids.first().is_some(){
+    if !decoder_io_ids.is_empty(){
         Some(ctx.get_unscaled_unrotated_image_info(*decoder_io_ids.first().unwrap()).map_err(|e| e.at(here!()))?)
     }else{
         None
@@ -451,8 +450,7 @@ fn build_auto_encoder_details(ctx: &Context, preset: &s::EncoderPreset, bitmap_k
 
 
     let source_mime_format = source_image_info.as_ref()
-        .map(|i| OutputImageFormat::from_str(&i.preferred_mime_type))
-        .flatten();
+        .and_then(|i| OutputImageFormat::from_str(&i.preferred_mime_type));
 
     let needs_animation = source_image_info.as_ref()
         .map(|i| i.multiple_frames)
@@ -580,11 +578,10 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
 
     // AVIF is 10x slower than jpegli, but might still be in our budget.
     // We'll vary based on the pixel count. We can add budget logic later
-    if pixel_count < 3_000_000 || !can_jpegli {
-        if FEATURES_IMPLEMENTED.avif && allowed.avif == Some(true) {
+    if (pixel_count < 3_000_000 || !can_jpegli)
+        && FEATURES_IMPLEMENTED.avif && allowed.avif == Some(true) {
             return Some(OutputImageFormat::Avif);
         }
-    }
     // Use jpegli if available, it's way faster than webp and comparable or better on size/quality.
     if can_jpegli {
         return Some(OutputImageFormat::Jpeg);

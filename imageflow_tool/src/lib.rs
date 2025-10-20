@@ -116,7 +116,7 @@ pub fn main_with_exit_code() -> i32 {
             .arg(Arg::new("debug-package").long("debug-package").num_args(1).value_hint(ValueHint::FilePath).value_parser(clap::value_parser!(PathBuf)).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
 
         )
-        .subcommand(Command::new("v1/querystring").aliases(&["v0.1/ir4","v1/ir4"])
+        .subcommand(Command::new("v1/querystring").aliases(["v0.1/ir4","v1/ir4"])
             .about("Run an command querystring")
             .arg(
                 Arg::new("in").long("in").num_args(1..)
@@ -175,9 +175,7 @@ pub fn main_with_exit_code() -> i32 {
         let source = cmd_build::JobSource::JsonFile(m.get_one::<PathBuf>("json").unwrap().to_owned());
         //};
         Some((m, source, "v1/build"))
-    }else if let Some(m) = matches.subcommand_matches("v1/querystring"){
-        Some((m,cmd_build::JobSource::Ir4QueryString(m.get_one::<String>("command").unwrap().to_owned()), "v1/querystring"))
-    }else{ None };
+    }else { matches.subcommand_matches("v1/querystring").map(|m| (m,cmd_build::JobSource::Ir4QueryString(m.get_one::<String>("command").unwrap().to_owned()), "v1/querystring")) };
 
     if let Some((m, source, subcommand_name)) = build_triple{
 
@@ -190,7 +188,7 @@ pub fn main_with_exit_code() -> i32 {
             let dir = Path::new(&dir_str);
             builder.bundle_to(dir);
             let current_dir = std::env::current_dir().unwrap();
-            std::env::set_current_dir(&dir).unwrap();
+            std::env::set_current_dir(dir).unwrap();
             let cap = hlp::process_capture::CaptureTo::create(&OsStr::new("recipe").to_owned().into(), None, vec![subcommand_name.to_owned(), "--json".to_owned(), "recipe.json".to_owned()], artifact_source());
             cap.run();
             //Restore current directory

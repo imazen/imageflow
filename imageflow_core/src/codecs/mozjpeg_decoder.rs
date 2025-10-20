@@ -1,4 +1,3 @@
-use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{Context, Result, JsonResponse};
@@ -21,7 +20,7 @@ use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
 use crate::graphics::bitmaps::{Bitmap, BitmapCompositing, BitmapKey, ColorSpace};
 use mozjpeg_sys::c_void;
 
-static CMYK_PROFILE: &'static [u8] = include_bytes!("cmyk.icc");
+static CMYK_PROFILE: &[u8] = include_bytes!("cmyk.icc");
 
 
 pub struct MozJpegDecoder{
@@ -72,7 +71,7 @@ impl Decoder for MozJpegDecoder {
     }
 
     fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<Option<i32>> {
-        Ok(self.decoder.get_exif_rotation_flag()?)
+        self.decoder.get_exif_rotation_flag()
     }
 
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()> {
@@ -111,8 +110,8 @@ impl Decoder for MozJpegDecoder {
             .map_err(|e| e.at(here!()))?;
 
         let bitmap_key = bitmaps
-            .create_bitmap_u8(w as u32,
-                              h as u32,
+            .create_bitmap_u8(w,
+                              h,
                               PixelLayout::BGRA,
                               false,
                               false,
@@ -205,7 +204,7 @@ impl MzDec{
             }
         }
 
-        return false; //false -> Fail, true -> ignore
+        false//false -> Fail, true -> ignore
     }
 
     fn new(context: &Context, io: IoProxy) -> Result<Box<MzDec>>{
@@ -411,21 +410,21 @@ impl MzDec{
                         buffer[1] = 0xD9;
                         source_manager.manager.shared_mgr.next_input_byte = buffer.as_mut_ptr();
                         source_manager.manager.shared_mgr.bytes_in_buffer = 2;
-                        return true;
+                        true
                     }else{
                         decoder.error = Some(nerror!(ErrorKind::ImageDecodingError, "Empty source file"));
-                        return false;
+                        false
                     }
                 }else{
                     source_manager.manager.shared_mgr.next_input_byte = buffer.as_mut_ptr();
                     source_manager.manager.shared_mgr.bytes_in_buffer = size;
                     source_manager.bytes_have_been_read = true;
-                    return true;
+                    true
                 }
             },
             Err(err) => {
                 decoder.error = Some(FlowError::from_decoder(err));
-                return false;
+                false
             }
         }
 
@@ -534,16 +533,16 @@ impl MzDec{
         }
 
 
-        if self.hints.downscaled_min_width > 0 && self.hints.downscaled_min_height > 0 {
-            if self.original_width > self.hints.downscale_if_wider_than as u32
-                || self.original_height > self.hints.or_if_taller_than as u32 {
+        if self.hints.downscaled_min_width > 0 && self.hints.downscaled_min_height > 0
+            && (self.original_width > self.hints.downscale_if_wider_than as u32
+                || self.original_height > self.hints.or_if_taller_than as u32) {
                 for i in 1..8 {
                     if i == 7 {
                         continue; // Because 7/8ths is slower than 8/8
                     }
 
-                    let new_w = (self.original_width * i + 8 - 1) / 8;
-                    let new_h = (self.original_height * i + 8 - 1) / 8;
+                    let new_w = (self.original_width * i).div_ceil(8);
+                    let new_h = (self.original_height * i).div_ceil(8);
                     if new_w >= self.hints.downscaled_min_width as u32 && new_h >= self.hints.downscaled_min_height as u32 {
                         self.codec_info.scale_denom = 8;
                         self.codec_info.scale_num = i;
@@ -553,7 +552,6 @@ impl MzDec{
                     }
                 }
             }
-        }
     }
 
     fn interpret_metadata(&mut self){

@@ -71,7 +71,7 @@ pub fn copy_rectangle(input: &mut Bitmap, canvas: &mut Bitmap, from_x: u32, from
         // The next branch is for 24->32 (of any type)
     } else if input_fmt == PixelFormat::Bgr24 && canvas_layout == PixelLayout::BGRA{
         for mut row in from_window.scanlines_bgra().unwrap().zip(to_window.scanlines_bgra().unwrap()) {
-            for (from,to) in row.0.row().into_iter().zip(row.1.row_mut()) {
+            for (from,to) in row.0.row().iter().zip(row.1.row_mut()) {
                 to.a = 0xff;
                 to.r = from.r;
                 to.g = from.g;

@@ -73,7 +73,7 @@ fn set_panic_hook(){
         let mut frames: Vec<BacktraceFrame> = Backtrace::new().into();
 
         loop{
-            if frames.len() < 1 || frames[0].symbols().is_empty() || frames[0].symbols()[0].name().is_none(){
+            if frames.is_empty() || frames[0].symbols().is_empty() || frames[0].symbols()[0].name().is_none(){
                 break;
             }
 

@@ -1,4 +1,3 @@
-use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 
 use super::*;
@@ -83,7 +82,7 @@ pub fn read_icc_profile(codec: &mozjpeg_sys::jpeg_decompress_struct) -> Option<V
         return None
     }
 
-    let mut reassembled_data =vec![0; total_length as usize];
+    let mut reassembled_data =vec![0; total_length];
 
 
     let mut current_marker = codec.marker_list;

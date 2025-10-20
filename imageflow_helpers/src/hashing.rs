@@ -51,7 +51,7 @@ pub fn bits_format(bits: &[u8], format: &'static str) -> String{
     RE.replace_all(format, |c: &Captures | {
         let from = c[1].parse::<usize>().unwrap();
         let until = c[2].parse::<usize>().unwrap();
-        let padding = c.get(4).and_then(|f| Some(f.as_str().parse::<usize>().unwrap_or(0))).unwrap_or(0);
+        let padding = c.get(4).map(|f| f.as_str().parse::<usize>().unwrap_or(0)).unwrap_or(0);
         if from == 0 && until == bits.len() * 8{
             format!("{:01$x}", HexableBytes(bits), padding)
         }else{
@@ -65,11 +65,11 @@ pub fn bits_select(hash: &[u8], from: usize, until: usize) -> Option<u64>{
     if until > hash.len() * 8 || until < from || until - from > 57 {
         return None;
     }
-    let relevant_bytes = &hash[from / 8..(until + 7) / 8];
+    let relevant_bytes = &hash[from / 8..until.div_ceil(8)];
     let truncate_right = (8 - until % 8) % 8;
     let mask = if until == from { 0 } else{ !0u64 >> (64 - (until - from)) };
 
-    Some((relevant_bytes.iter().fold(0u64, | acc, elem| (u64::from(*elem) | (acc << 8)) ) >> truncate_right) & mask)
+    Some((relevant_bytes.iter().fold(0u64, | acc, elem| u64::from(*elem) | (acc << 8) ) >> truncate_right) & mask)
     //println!("bits {} to {} of {:032x} - using bytes {} to {}. Unshift {} and mask {:#016x} to produce {:x}",from, until, HexableBytes(hash), (from / 8), (until + 7) / 8, truncate_right, mask, res.unwrap());
 }
 

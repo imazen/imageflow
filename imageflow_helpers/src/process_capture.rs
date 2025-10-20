@@ -32,10 +32,10 @@ impl CaptureTo{
         let executable= bin_location.unwrap_or_else(|| std::env::current_exe().expect("For CaptureTo to work, we need to know the binary's location. env::current_exe failed"));
 
         CaptureTo{
-            args: args,
-            executable: executable,
+            args,
+            executable,
             base_path: capture_to.to_owned(),
-            include_binary: include_binary
+            include_binary
         }
 
     }
@@ -45,7 +45,7 @@ impl CaptureTo{
         filename.push("_");
         filename.push(suffix);
         let mut file = BufWriter::new(File::create(&filename)?);
-        file.write_all(bytes).and_then(|_| Ok(()))
+        file.write_all(bytes).map(|_| ())
     }
 
     fn run_and_save_output_to(&self, suffix: &str, args: &[&str]) -> std::result::Result<(),std::io::Error>{
@@ -67,7 +67,7 @@ impl CaptureTo{
         file.write_all(&output.stdout)?;
         Ok(())
     }
-    pub fn run(&self) -> (){
+    pub fn run(&self){
 
         let mut cmd = Command::new(&self.executable);
         cmd.args(&self.args).env("RUST_BACKTRACE", "1");
@@ -118,7 +118,7 @@ impl CaptureTo{
 
 
             //TODO: get local operating system information
-            ()
+            
     }
     pub fn exit_code(&self) -> i32 {
         0

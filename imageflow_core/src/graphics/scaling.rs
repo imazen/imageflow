@@ -212,7 +212,7 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
             from.w() as usize,
             h_scaled_buf_window.slice_mut(),
             params.w as usize,
-            &weights_x,
+            weights_x,
             out_row_ix as u32,
         );
 
@@ -237,8 +237,8 @@ fn get_pixel(b: &BitmapWindowMut<f32>, x: i32, y: i32) -> [f32; 4] {
 
 
     let y_offset = (y) as usize * b.info().t_stride() as usize;
-    let x_start = (x) as usize * b.t_per_pixel() as usize + y_offset;
-    let pixel = b.get_slice()[x_start..x_start + b.t_per_pixel() as usize].as_ref();
+    let x_start = (x) as usize * b.t_per_pixel() + y_offset;
+    let pixel = b.get_slice()[x_start..x_start + b.t_per_pixel()].as_ref();
 
     [pixel[0], pixel[1], pixel[2], pixel[3]]
 }
@@ -422,11 +422,11 @@ fn composite_linear_over_srgb(
         compose_linear_over_srgb(cc, src, canvas);
     } else {
         if src.info().alpha_meaningful() {
-            if let &crate::graphics::bitmaps::BitmapCompositing::BlendWithMatte(ref color) = canvas.info().compose() {
+            if let crate::graphics::bitmaps::BitmapCompositing::BlendWithMatte(color) = canvas.info().compose() {
                 let matte = color.to_bgra8().map(
                     |bgra| [bgra.b, bgra.g, bgra.r, bgra.a]
                 ).unwrap_or([0, 0, 0, 0]);
-                blend_matte(&cc, src, matte).map_err(|e| e.at(here!()))?;
+                blend_matte(cc, src, matte).map_err(|e| e.at(here!()))?;
             }
             if src.info().alpha_premultiplied() {
                 demultiply_alpha(src).map_err(|e| e.at(here!()))?;
@@ -450,8 +450,8 @@ fn blend_matte(cc: &ColorContext, bitmap: &mut BitmapWindowMut<f32>, matte: [u8;
             let alpha = slice[col * 4 + 3];
             let a: f32 = (1.0f32 - alpha) * matte_a;
             let final_alpha: f32 = alpha + a;
-            if alpha > 0 as i32 as f32 {
-                slice[col * 4 + 0] = (slice[col * 4 + 0] + b * a) / final_alpha;
+            if alpha > 0_i32 as f32 {
+                slice[col * 4] = (slice[col * 4] + b * a) / final_alpha;
                 slice[col * 4 + 1] = (slice[col * 4 + 1] + g * a) / final_alpha;
                 slice[col * 4 + 2] = (slice[col * 4 + 2] + r * a) / final_alpha;
             }
@@ -471,10 +471,10 @@ fn demultiply_alpha(bitmap: &mut BitmapWindowMut<f32>) -> Result<(), FlowError> 
         let slice = bitmap.row_mut(row).unwrap();
 
 
-        for col in 0..w as usize {
+        for col in 0..w {
             let alpha = slice[col * 4 + 3];
-            if alpha > 0 as i32 as f32 {
-                slice[col * 4 + 0] /= alpha;
+            if alpha > 0_i32 as f32 {
+                slice[col * 4] /= alpha;
                 slice[col * 4 + 1] /= alpha;
                 slice[col * 4 + 2] /= alpha;
             }
@@ -508,7 +508,7 @@ fn compose_linear_over_srgb(
         for col in 0..src.w() as usize {
             let src_a = src_slice[col * 4 + 3];
             if src_a > 0.994f32 || !src.info().alpha_meaningful() {
-                canvas_slice[col * 4 + 0] = cc.floatspace_to_srgb(src_slice[col * 4 + 0]);
+                canvas_slice[col * 4] = cc.floatspace_to_srgb(src_slice[col * 4]);
                 canvas_slice[col * 4 + 1] = cc.floatspace_to_srgb(src_slice[col * 4 + 1]);
                 canvas_slice[col * 4 + 2] = cc.floatspace_to_srgb(src_slice[col * 4 + 2]);
                 canvas_slice[col * 4 + 3] = 255;
@@ -517,10 +517,10 @@ fn compose_linear_over_srgb(
 
                 let dest_coeff = (1.0f32 - src_a) * (dest_alpha_coeff * dest_a as i32 as f32 + dest_alpha_offset);
                 let final_alpha = src_a + dest_coeff;
-                canvas_slice[col * 4 + 0] = cc.floatspace_to_srgb((src_slice[col * 4 + 0] + dest_coeff * cc.srgb_to_floatspace(canvas_slice[col * 4 + 0])) / final_alpha);
+                canvas_slice[col * 4] = cc.floatspace_to_srgb((src_slice[col * 4] + dest_coeff * cc.srgb_to_floatspace(canvas_slice[col * 4])) / final_alpha);
                 canvas_slice[col * 4 + 1] = cc.floatspace_to_srgb((src_slice[col * 4 + 1] + dest_coeff * cc.srgb_to_floatspace(canvas_slice[col * 4 + 1])) / final_alpha);
                 canvas_slice[col * 4 + 2] = cc.floatspace_to_srgb((src_slice[col * 4 + 2] + dest_coeff * cc.srgb_to_floatspace(canvas_slice[col * 4 + 2])) / final_alpha);
-                canvas_slice[col * 4 + 3] = uchar_clamp_ff(final_alpha * 255 as i32 as f32);
+                canvas_slice[col * 4 + 3] = uchar_clamp_ff(final_alpha * 255_f32);
             }
         }
         // let src_pixels = bytemuck::cast_slice::<f32, rgb::Bgra<f32>>(src_slice);
@@ -577,7 +577,7 @@ fn copy_linear_over_srgb(
         //     }
         // }
         for col in 0..from.w() as usize {
-            canvas_slice[col * 4 + 0] = cc.floatspace_to_srgb(input_slice[col * 4 + 0]);
+            canvas_slice[col * 4] = cc.floatspace_to_srgb(input_slice[col * 4]);
             canvas_slice[col * 4 + 1] = cc.floatspace_to_srgb(input_slice[col * 4 + 1]);
             canvas_slice[col * 4 + 2] = cc.floatspace_to_srgb(input_slice[col * 4 + 2]);
             if copy_alpha {

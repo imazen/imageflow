@@ -1,4 +1,3 @@
-use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{Context, Result, JsonResponse};
@@ -40,7 +39,7 @@ impl WebPDecoder {
     fn ensure_data_buffered(&mut self) -> Result<()>{
         if self.bytes.is_none() {
             let mut bytes = Vec::with_capacity(2048);
-            let _ = self.io.read_to_end(&mut bytes).map_err(|e| FlowError::from_decoder(e));
+            let _ = self.io.read_to_end(&mut bytes).map_err(FlowError::from_decoder);
             self.bytes = Some(bytes);
         }
         Ok(())
@@ -272,7 +271,7 @@ impl Encoder for WebPEncoder {
         let length = mut_slice.len();
 
         let lossless = self.lossless.unwrap_or(false);
-        let quality = self.quality.unwrap_or(85.0).clamp(0.0, 100.0) as f32;
+        let quality = self.quality.unwrap_or(85.0).clamp(0.0, 100.0);
 
         unsafe {
             let mut output: *mut u8 = ptr::null_mut();
@@ -283,23 +282,19 @@ impl Encoder for WebPEncoder {
                 } else if layout == PixelLayout::BGR {
                     output_len = WebPEncodeBGR(mut_slice.as_ptr(), w, h, stride, quality, &mut output);
                 }
-            } else {
-                if layout == PixelLayout::BGRA {
-                    output_len = WebPEncodeLosslessBGRA(mut_slice.as_ptr(), w, h, stride, &mut output);
-                } else if layout == PixelLayout::BGR {
-                        output_len = WebPEncodeLosslessBGR(mut_slice.as_ptr(), w, h, stride, &mut output);
-                }
+            } else if layout == PixelLayout::BGRA {
+                output_len = WebPEncodeLosslessBGRA(mut_slice.as_ptr(), w, h, stride, &mut output);
+            } else if layout == PixelLayout::BGR {
+                    output_len = WebPEncodeLosslessBGR(mut_slice.as_ptr(), w, h, stride, &mut output);
             }
 
-            if output_len == 0 || output == ptr::null_mut() {
+            if output_len == 0 || output.is_null() {
                 return Err(nerror!(ErrorKind::ImageEncodingError, "libwebp encoding error"));
             } else {
                 let bytes = slice::from_raw_parts(output, output_len);
                 let result = self.io.write_all(bytes).map_err(|e| FlowError::from_encoder(e).at(here!()));
                 WebPFree(output as *mut libc::c_void);
-                if let Err(e) = result {
-                    return Err(e);
-                }
+                result?
             }
         }
 

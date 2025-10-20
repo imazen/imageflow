@@ -1,6 +1,5 @@
 // Taken from https://github.com/kornelski/image-gif-dispose (MIT/Apache dual license)
 
-use gif;
 
 use super::disposal::Disposal;
 use rgb::*;
@@ -30,11 +29,11 @@ impl Screen {
     /// Make sure Reader is set to use Indexed color.
     /// `decoder.set(gif::ColorOutput::Indexed);`
     pub fn new<T: io::Read>(reader: &gif::Decoder<T>) -> Self {
-        let pal = reader.global_palette().map(|palette_bytes| to_bgra(palette_bytes));
+        let pal = reader.global_palette().map(to_bgra);
 
         let pixels = reader.width() as usize * reader.height() as usize;
         let bg_color = if let (Some(bg_index), Some(pal)) = (reader.bg_color(), pal.as_ref()) {
-            pal[bg_index].clone()
+            pal[bg_index]
         } else {
             BGRA8::default()
         };
@@ -65,7 +64,7 @@ impl Screen {
                     continue;
                 }
             }
-            *dst = pal[src as usize].clone();
+            *dst = pal[src as usize];
         }
 
         Ok(())

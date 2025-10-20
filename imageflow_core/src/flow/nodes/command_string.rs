@@ -214,10 +214,8 @@ impl NodeDef for CommandStringDef{
                 if has_parent {
                     return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node."));
                 }
-            } else {
-                if !has_parent {
-                    return Err(nerror!(crate::ErrorKind::InvalidNodeParams,"CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. "));
-                }
+            } else if !has_parent {
+                return Err(nerror!(crate::ErrorKind::InvalidNodeParams,"CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. "));
             }
             let translation_result = ::imageflow_riapi::ir4::Ir4Translate {
                 i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),

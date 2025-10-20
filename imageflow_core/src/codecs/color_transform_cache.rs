@@ -1,10 +1,8 @@
-use std;
 use std::sync::*;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::graphics::bitmaps::BitmapWindowMut;
 use imageflow_types::PixelLayout;
 use lcms2::*;
-use lcms2;
 use crate::ffi;
 use crate::errors::{FlowError, ErrorKind, ErrorCategory, Result};
 use crate::ffi::DecoderColorInfo;
@@ -61,7 +59,7 @@ lazy_static!{
 }
 
 
-thread_local!(static LAST_PROFILE_ERROR_MESSAGE: RefCell<Option<String>> = RefCell::new(None));
+thread_local!(static LAST_PROFILE_ERROR_MESSAGE: RefCell<Option<String>> = const { RefCell::new(None) });
 
 
 impl ColorTransformCache{
@@ -180,7 +178,7 @@ impl ColorTransformCache{
                         let transform = ColorTransformCache::create_gama_transform(color, pixel_format).map_err(|e| e.at(here!()))?;
                         GAMA_TRANSFORMS.insert(hash, transform);
                     }
-                    ColorTransformCache::apply_transform(frame, &*GAMA_TRANSFORMS.get(&hash).unwrap());
+                    ColorTransformCache::apply_transform(frame, &GAMA_TRANSFORMS.get(&hash).unwrap());
                     Ok(())
                 }
             },
@@ -196,7 +194,7 @@ impl ColorTransformCache{
                         let transform = ColorTransformCache::create_profile_transform(color, input_pixel_format, output_pixel_format).map_err(|e| e.at(here!()))?;
                         PROFILE_TRANSFORMS.insert(hash, transform);
                     }
-                    ColorTransformCache::apply_transform(frame, &*PROFILE_TRANSFORMS.get(&hash).unwrap());
+                    ColorTransformCache::apply_transform(frame, &PROFILE_TRANSFORMS.get(&hash).unwrap());
                     Ok(())
                 }
             }

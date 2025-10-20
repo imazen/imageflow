@@ -1,11 +1,11 @@
 pub const IR_PI: f64 = std::f64::consts::PI;
 #[inline]
 fn int_max(a: i32, b: i32) -> i32 {
-    return if a >= b { a } else { b };
+    if a >= b { a } else { b }
 }
 #[inline]
 fn int_min(a: i32, b: i32) -> i32 {
-    return if a <= b { a } else { b };
+    if a <= b { a } else { b }
 }
 
 
@@ -18,8 +18,8 @@ pub union UnionU32F32 {
 
 #[inline]
 fn fastpow2(p: f32) -> f32 {
-    let offset: f32 = if p < 0 as i32 as f32 { 1.0f32 } else { 0.0f32 };
-    let clipp: f32 = if p < -(126 as i32) as f32 {
+    let offset: f32 = if p < 0_i32 as f32 { 1.0f32 } else { 0.0f32 };
+    let clipp: f32 = if p < -126_f32 {
         -126.0f32
     } else {
         p
@@ -31,14 +31,14 @@ fn fastpow2(p: f32) -> f32 {
             * (clipp + 121.2740575f32 + 27.7280233f32 / (4.84252568f32 - z) - 1.49012907f32 * z))
             as u32,
     };
-    return unsafe { v.f };
+    unsafe { v.f }
 }
 #[inline]
 fn fastlog2(x: f32) -> f32 {
     unsafe {
         let vx: UnionU32F32 = UnionU32F32 { f: x };
         let mx: UnionU32F32 = UnionU32F32 {
-            i: vx.i & 0x7fffff as i32 as u32 | 0x3f000000 as i32 as u32,
+            i: vx.i & 0x7fffff_i32 as u32 | 0x3f000000_i32 as u32,
         };
         let mut y: f32 = vx.i as f32;
         y *= 1.1920928955078125e-7f32;
@@ -47,5 +47,5 @@ fn fastlog2(x: f32) -> f32 {
 }
 #[inline]
 pub(crate) fn fastpow(x: f32, p: f32) -> f32 {
-    return fastpow2(p * fastlog2(x));
+    fastpow2(p * fastlog2(x))
 }

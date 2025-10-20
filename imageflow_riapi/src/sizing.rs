@@ -83,11 +83,11 @@ impl AspectRatio {
         let recreate_y = self.h as f64 * target_x_to_self_x;
         let rounded_y = recreate_y.round();
         let recreate_x_from_rounded_y = rounded_y * self.ratio_f64();
-        let loss_x = (target_width  as f64 - recreate_x_from_rounded_y).abs();
+        
 
         // println!("rounding_loss_based_on_target_width: original {:?}, target_width: {:?}, loss_x=abs(round(round(({}/{})*{})*({}/{}))-{})=>{}", 
         // self, target_width, target_width, self.w, self.h, self.w, self.h, target_width, loss_x);
-        loss_x
+        (target_width  as f64 - recreate_x_from_rounded_y).abs()
     }
 
     pub fn rounding_loss_based_on_target_height(&self, target_height: i32) -> f64 {
@@ -102,10 +102,10 @@ impl AspectRatio {
         let recreate_x = self.w as f64 * target_y_to_self_y;
         let rounded_x = recreate_x.round();
         let recreate_y_from_rounded_x = rounded_x / self.ratio_f64();
-        let loss_y = (target_height as f64 - recreate_y_from_rounded_x).abs();
+        
         // println!("rounding_loss_using_target_y: self={:?}, target_y={:?}, loss_y=abs(round(round(({}/{})*{})/({}/{}))-{})=>{}", 
         // self, target_height, target_height, self.h, self.w, self.w, self.h, target_height, loss_y);
-        loss_y
+        (target_height as f64 - recreate_y_from_rounded_x).abs()
     }
 
     
@@ -155,7 +155,10 @@ impl AspectRatio {
 
         
         
-        let result = if delta_a.abs() <= snap_amount && delta_a.abs() <= delta_b.abs() {
+        
+        // println!("proportional: self: {:?} ratio: {:?} basis: {:?} basis_is_width: {:?} target_snap: {:?} snap_amount: {:?} snap_a: {:?} snap_b: {:?} => {:?} => {:?}", 
+        //    self, self.ratio_f64(), basis, basis_is_width, potential_rounding_target, snap_amount, snap_a, snap_b, float, result);
+        if delta_a.abs() <= snap_amount && delta_a.abs() <= delta_b.abs() {
             Ok(snap_a)
         } else if delta_b.abs() <= snap_amount{
             Ok(snap_b)
@@ -184,10 +187,7 @@ impl AspectRatio {
             } else {
                 Ok(v)
             }
-        );
-        // println!("proportional: self: {:?} ratio: {:?} basis: {:?} basis_is_width: {:?} target_snap: {:?} snap_amount: {:?} snap_a: {:?} snap_b: {:?} => {:?} => {:?}", 
-        //    self, self.ratio_f64(), basis, basis_is_width, potential_rounding_target, snap_amount, snap_a, snap_b, float, result);
-        result
+        )
     }
 
 
@@ -356,7 +356,7 @@ impl Layout {
     }
     pub fn pad_canvas(self, target: AspectRatio) -> Result<Layout> {
         if self.canvas.exceeds_any(&target) {
-            return Err(LayoutError::ImpossiblePad { target: target, current: self.canvas });
+            return Err(LayoutError::ImpossiblePad { target, current: self.canvas });
         }
         Ok(Layout {
             canvas: target,
@@ -366,7 +366,7 @@ impl Layout {
 
     pub fn crop(self, target: AspectRatio) -> Result<Layout> {
         if target.exceeds_any(&self.canvas) {
-            return Err(LayoutError::ImpossibleCrop { target: target, current: self.canvas });
+            return Err(LayoutError::ImpossibleCrop { target, current: self.canvas });
         }
         let new_image = self.image.intersection(&target)?;
         let new_source = new_image.box_of(&self.source, BoxKind::Inner)?;

@@ -1,6 +1,5 @@
 // Taken from https://github.com/kornelski/image-gif-dispose (MIT/Apache dual license)
 
-use gif;
 use gif::DisposalMethod::*;
 use super::subimage::Subimage;
 use std::default::Default;

@@ -1,6 +1,5 @@
 extern crate imageflow_helpers;
 
-use std;
 use std::fmt;
 use std::str;
 mod shellout;

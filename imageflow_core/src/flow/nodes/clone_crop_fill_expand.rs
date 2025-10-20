@@ -98,7 +98,7 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
             }
             let mut window = bitmap.get_window_u8().unwrap();
 
-            window.fill_rect(x1, y1, x2, y2, &color)
+            window.fill_rect(x1, y1, x2, y2, color)
                 .map_err(|e| e.at(here!()))?;
 
             Ok(())
@@ -126,7 +126,7 @@ impl NodeDefOneInputExpand for CloneDef{
         let canvas_params = s::Node::CreateCanvas {
             w: parent.w as usize,
             h: parent.h as usize,
-            format: s::PixelFormat::from(parent.fmt),
+            format: parent.fmt,
             color: s::Color::Transparent,
         };
         let copy_params = s::Node::CopyRectToCanvas {
@@ -166,7 +166,7 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
                     w: info.w + left as i32 + right as i32,
                     h: info.h + top as i32 + bottom as i32,
                     fmt: if color.is_opaque() {
-                        ffi::PixelFormat::from(info.fmt)
+                        info.fmt
                     } else{
                         PixelFormat::Bgra32
                     }
@@ -184,10 +184,10 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
             let new_w = w as usize + left as usize + right as usize;
             let new_h = h as usize + top as usize + bottom as usize;
             let canvas_params = s::Node::CreateCanvas {
-                w: new_w as usize,
-                h: new_h as usize,
+                w: new_w,
+                h: new_h,
                 format: if color.is_opaque() {
-                    ffi::PixelFormat::from(fmt)
+                    fmt
                 } else{
                     PixelFormat::Bgra32
                 },
@@ -232,7 +232,7 @@ impl RegionPercentDef {
             y2 = y1 + 1;
         }
         //eprintln!("{}x{} {},{},{},{} -> {},{},{},{}", info.w, info.h, left, top, right, bottom, x1,y1,x2,y2);
-        return (x1,y1,x2,y2);
+        (x1,y1,x2,y2)
 
     }
 }
@@ -252,7 +252,7 @@ impl NodeDefOneInputExpand for RegionPercentDef {
                 Ok(FrameInfo {
                     w: x2 - x1,
                     h: y2 - y1,
-                    fmt: ffi::PixelFormat::from(info.fmt)
+                    fmt: info.fmt
                 })
             })
         } else {
@@ -310,7 +310,7 @@ impl NodeDefOneInputExpand for RegionDef {
                 Ok(FrameInfo {
                     w: x2 - x1,
                     h: y2 - y1,
-                    fmt: ffi::PixelFormat::from(info.fmt)
+                    fmt: info.fmt
                 })
             })
         } else {
@@ -329,7 +329,7 @@ impl NodeDefOneInputExpand for RegionDef {
                 let canvas_params = s::Node::CreateCanvas {
                     w: (x2-x1) as usize,
                     h: (y2-y1) as usize,
-                    format: s::PixelFormat::from(input.fmt),
+                    format: input.fmt,
                     color: background_color.clone(),
                 };
                 let canvas = ctx.graph
@@ -388,7 +388,7 @@ impl CropMutNodeDef {
                     Ok(FrameEstimate::Some(FrameInfo {
                         w: x2 as i32 - x1 as i32,
                         h: y2 as i32 - y1 as i32,
-                        fmt: ffi::PixelFormat::from(input.fmt),
+                        fmt: input.fmt,
                     }))
                 }
                 //TODO: we can estimate with other FrameEstimate values

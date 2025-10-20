@@ -24,7 +24,7 @@ impl<T:rgb::Zeroable> AlignedBuffer<T>{
         if alignment < 2 {
             return Err(AlignedBufferError::InvalidAlignment);
         }
-        let capacity_bytes = ((length_bytes + alignment - 1) / alignment) * alignment;
+        let capacity_bytes = length_bytes.div_ceil(alignment) * alignment;
         let capacity = capacity_bytes / element_bytes;
             if length_bytes / element_bytes != size ||
             capacity_bytes / element_bytes < size{

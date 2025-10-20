@@ -44,7 +44,7 @@ pub fn notify_graph_changed(c: &crate::Context,
         let prev_filename =
             format!("job_{}_graph_version_{}.dot", r.debug_job_id, prev_graph_version);
         if files_identical(&current_filename, &prev_filename)
-            .expect(&format!("Comparison err'd for {} and {}", &current_filename, &prev_filename)) {
+            .unwrap_or_else(|_| panic!("Comparison err'd for {} and {}", &current_filename, &prev_filename)) {
             std::fs::remove_file(&current_filename).unwrap();
 
             // Next time we will overwrite the duplicate graph. The last two graphs may
@@ -84,7 +84,7 @@ pub fn render_dotfile_to_png(dotfile_path: &str) {
 
 
 
-static INDENT: &'static str = "    ";
+static INDENT: &str = "    ";
 
 
 fn get_pixel_format_name(fmt: PixelFormat) -> &'static str {
@@ -102,11 +102,11 @@ pub fn print_graph(c: &crate::Context,
                    g: &Graph,
                    node_frame_filename_prefix: Option<&str>)
                    -> Result<()> {
-    writeln!(f, "digraph g {{\n").map_err(|e| FlowError::from_visualizer(e))?;
+    writeln!(f, "digraph g {{\n").map_err(FlowError::from_visualizer)?;
     writeln!(f, "{}node [shape=box, fontsize=20, fontcolor=\"#5AFA0A\" fontname=\"sans-serif bold\"]\n  size=\"12,18\"\n", INDENT)
-        .map_err(|e| FlowError::from_visualizer(e))?;
+        .map_err(FlowError::from_visualizer)?;
     writeln!(f, "{}edge [fontsize=20, fontname=\"sans-serif\"]\n", INDENT)
-        .map_err(|e| FlowError::from_visualizer(e))?;
+        .map_err(FlowError::from_visualizer)?;
 
 
     // output all edges
@@ -115,7 +115,7 @@ pub fn print_graph(c: &crate::Context,
                INDENT,
                edge.source().index(),
                edge.target().index())
-            .map_err(|e| FlowError::from_visualizer(e))?;
+            .map_err(FlowError::from_visualizer)?;
 
         let weight = g.node_weight(edge.source()).unwrap();
 
@@ -138,10 +138,10 @@ pub fn print_graph(c: &crate::Context,
                 }
             }
         };
-        write!(f, " [label=\"e{}: {}{}\"]\n", i, dimensions, match *g.edge_weight(EdgeIndex::new(i)).unwrap() {
+        writeln!(f, " [label=\"e{}: {}{}\"]", i, dimensions, match *g.edge_weight(EdgeIndex::new(i)).unwrap() {
             EdgeKind::Canvas => " canvas",
             _ => ""
-        }).map_err(|e| FlowError::from_visualizer(e))?;
+        }).map_err(FlowError::from_visualizer)?;
     }
 
     let mut total_ns: u64 = 0;
@@ -149,35 +149,35 @@ pub fn print_graph(c: &crate::Context,
     // output all labels
     for index in g.graph().node_indices() {
         let weight: &Node = g.node_weight(index).unwrap();
-        total_ns += u64::from(weight.cost.wall_ns);
+        total_ns += weight.cost.wall_ns;
         let ms = weight.cost.wall_ns as f64 / 1000f64;
 
         write!(f, "{}n{} [", INDENT, index.index())
-            .map_err(|e| FlowError::from_visualizer(e))?;
+            .map_err(FlowError::from_visualizer)?;
 
         if let Some(prefix) = node_frame_filename_prefix {
             write!(f, "image=\"{}{}.png\", ", prefix, weight.stable_id)
-                .map_err(|e| FlowError::from_visualizer(e))?;
+                .map_err(FlowError::from_visualizer)?;
         }
         write!(f, "label=\"n{}: ", index.index())
-            .map_err(|e| FlowError::from_visualizer(e))?;
+            .map_err(FlowError::from_visualizer)?;
         weight.graphviz_node_label(f)
-            .map_err(|e| FlowError::from_visualizer(e))?;
+            .map_err(FlowError::from_visualizer)?;
         write!(f, "\n{:.5}ms\"]\n", ms)
-            .map_err(|e| FlowError::from_visualizer(e))?;
+            .map_err(FlowError::from_visualizer)?;
     }
     let total_ms = (total_ns as f64) / 1000.0f64;
     writeln!(f, "{}graphinfo [label=\"{} nodes\n{} edges\nExecution time: {:.3}ms\"]\n",
              INDENT, g.node_count(), g.edge_count(), total_ms)
-        .map_err(|e| FlowError::from_visualizer(e))?;
+        .map_err(FlowError::from_visualizer)?;
     writeln!(f, "}}")
-        .map_err(|e| FlowError::from_visualizer(e))?;
+        .map_err(FlowError::from_visualizer)?;
     Ok(())
 }
 
 fn remove_file_if_exists(path: &str) -> io::Result<()> {
     let result = std::fs::remove_file(path);
-    if result.as_ref().err().and_then(|e| Some(e.kind() == io::ErrorKind::NotFound)) == Some(true) {
+    if result.as_ref().err().map(|e| e.kind() == io::ErrorKind::NotFound) == Some(true) {
         return Ok(());
     }
     result

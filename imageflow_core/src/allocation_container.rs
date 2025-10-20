@@ -3,6 +3,12 @@ use crate::graphics::aligned_buffer::{AlignedBuffer, AlignedBufferError};
 pub struct AllocationContainer{
     allocations: Vec<AlignedBuffer<u8>>
 }
+impl Default for AllocationContainer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AllocationContainer{
 
     pub fn new() -> AllocationContainer{

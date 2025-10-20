@@ -155,7 +155,7 @@ impl<'a,T>  BitmapWindowMut<'a, T>
 
 
     pub fn get_pixel(&self, x: u32, y: u32) -> Option<&[T]>   {
-        let t_per_pixel = self.t_per_pixel() as usize;
+        let t_per_pixel = self.t_per_pixel();
         let index = (y * self.info.t_stride + x * t_per_pixel as u32) as usize;
         self.slice.get(index..index + t_per_pixel)
     }
@@ -265,7 +265,7 @@ impl<'a,T>  BitmapWindowMut<'a, T>
 
     #[inline]
     pub fn t_per_pixel(&self) -> usize{
-        self.info.t_per_pixel() as usize
+        self.info.t_per_pixel()
     }
 
 
@@ -273,7 +273,7 @@ impl<'a,T>  BitmapWindowMut<'a, T>
         if index >= self.info.h as usize {
             None
         }else {
-            let start_index = (self.info.t_stride as usize).checked_mul(index).unwrap() as usize;
+            let start_index = (self.info.t_stride as usize).checked_mul(index).unwrap();
             let end_index = start_index + self.info.w as usize * self.t_per_pixel();
             Some(&mut self.slice[start_index..end_index])
         }
@@ -282,7 +282,7 @@ impl<'a,T>  BitmapWindowMut<'a, T>
         if index >= self.info.h as usize {
             None
         }else {
-            let start_index = (self.info.t_stride as usize).checked_mul(index).unwrap() as usize;
+            let start_index = (self.info.t_stride as usize).checked_mul(index).unwrap();
             let end_index = start_index + self.info.w as usize * self.t_per_pixel();
             Some(&self.slice[start_index..end_index])
         }
@@ -292,13 +292,10 @@ impl<'a,T>  BitmapWindowMut<'a, T>
         if index >= self.info.h as usize{
             None
         }else {
-            let start_index = (self.info.t_stride as usize).checked_mul(index).unwrap() as usize;
+            let start_index = (self.info.t_stride as usize).checked_mul(index).unwrap();
             let end_index = start_index + self.info.w as usize * self.t_per_pixel();
             let subslice = &self.slice[start_index..end_index];
-            match bytemuck::try_cast_slice::<T,K>(subslice){
-                Ok(slice) => Some(slice),
-                Err(_) => None
-            }
+            bytemuck::try_cast_slice::<T,K>(subslice).ok()
         }
     }
     pub fn cast_row<K>(&self, index: usize) -> &[K]
@@ -306,7 +303,7 @@ impl<'a,T>  BitmapWindowMut<'a, T>
         if index >= self.info.h as usize{
             panic!("Image row index {} out of bounds (height = {})", index, self.info.h);
         }else {
-            let start_index = (self.info.t_stride as usize).checked_mul(index).unwrap() as usize;
+            let start_index = (self.info.t_stride as usize).checked_mul(index).unwrap();
             let end_index = start_index + self.info.w as usize * self.t_per_pixel();
             let subslice = &self.slice[start_index..end_index];
             bytemuck::cast_slice::<T,K>(subslice)
@@ -381,7 +378,7 @@ impl<'a,T>  BitmapWindowMut<'a, T>
         let mut info2 = self.info.clone();
         info2.h = self.h() - y;
 
-        let s = std::mem::replace(&mut self.slice,  &mut []);
+        let s = std::mem::take(&mut self.slice);
 
         let (top, bottom) = s.split_at_mut(y as usize * self.info.t_stride as usize);
         self.slice = top;
@@ -399,70 +396,54 @@ impl Bitmap{
     pub fn get_window_u8(&mut self) -> Option<BitmapWindowMut<u8>>{
         let info = self.info().clone();
 
-        if let Some(slice) = self.get_u8_slice(){
-            return Some(BitmapWindowMut{
+        self.get_u8_slice().map(|slice| BitmapWindowMut{
                 slice,
                 info,
                 is_sub_window: false
             })
-        }else{
-            None
-        }
     }
     pub fn get_window_bgra32(&mut self) -> Option<BitmapWindowMut<rgb::alt::BGRA<u8, u8>>>{
         let mut info = self.info().clone();
-        if info.t_stride % 4 != 0{
+        if !info.t_stride.is_multiple_of(4){
             return None;
         }
-        info.t_stride = info.t_stride / 4;
+        info.t_stride /= 4;
         info.t_per_pixel = 1;
 
-        if let Some(slice) = self.get_bgra32_slice(){
-            return Some(BitmapWindowMut{
+        self.get_bgra32_slice().map(|slice| BitmapWindowMut{
                 slice,
                 info,
                 is_sub_window: false
             })
-        }else{
-            None
-        }
     }
 
     pub fn get_window_bgra_f32(&mut self) -> Option<BitmapWindowMut<Bgra<f32>>>{
         let mut info = self.info().clone();
-        if info.t_stride % 4 != 0{
+        if !info.t_stride.is_multiple_of(4){
             return None;
         }
-        info.t_stride = info.t_stride / 4;
+        info.t_stride /= 4;
         info.t_per_pixel = 1;
 
-        if let Some(slice) = self.get_bgra_f32_slice(){
-            return Some(BitmapWindowMut{
+        self.get_bgra_f32_slice().map(|slice| BitmapWindowMut{
                 slice,
                 info,
                 is_sub_window: false
             })
-        }else{
-            None
-        }
     }
     pub fn get_window_f32(&mut self) -> Option<BitmapWindowMut<f32>>{
         let info = self.info().clone();
-        if let Some(slice) = self.get_f32_slice(){
-            return Some(BitmapWindowMut{
+        self.get_f32_slice().map(|slice| BitmapWindowMut{
                 slice,
                 info,
                 is_sub_window: false
             })
-        }else{
-            None
-        }
     }
 
     fn get_u8_slice(&mut self) -> Option<&mut [u8]>{
         let offset = self.offset() as usize;
-        if let BitmapBuffer::Bytes(ref mut buf) = &mut (*(self)).buffer{
-            return Some(&mut buf.as_slice_mut()[offset..])
+        if let BitmapBuffer::Bytes(ref mut buf) = &mut (self).buffer{
+            Some(&mut buf.as_slice_mut()[offset..])
         }else{
             None
         }
@@ -472,7 +453,7 @@ impl Bitmap{
             return None;
         }
         let offset = self.offset() as usize / 4;
-        if let BitmapBuffer::Bytes(ref mut buf) = &mut (*(self)).buffer{
+        if let BitmapBuffer::Bytes(ref mut buf) = &mut (self).buffer{
             match bytemuck::try_cast_slice_mut::<u8, rgb::alt::BGRA<u8, u8>>(buf.as_slice_mut()){
                 Ok(slice) => Some(&mut slice[offset..]),
                 Err(_) => None
@@ -483,8 +464,8 @@ impl Bitmap{
     }
     fn get_f32_slice(&mut self) -> Option<&mut [f32]>{
         let offset = self.offset() as usize;
-        if let BitmapBuffer::Floats(ref mut buf) = &mut (*(self)).buffer{
-            return Some(&mut buf.as_slice_mut()[offset..])
+        if let BitmapBuffer::Floats(ref mut buf) = &mut (self).buffer{
+            Some(&mut buf.as_slice_mut()[offset..])
         }else{
             None
         }
@@ -494,7 +475,7 @@ impl Bitmap{
             return None;
         }
         let offset = self.offset() as usize / 4;
-        if let BitmapBuffer::Floats(ref mut buf) = &mut (*(self)).buffer{
+        if let BitmapBuffer::Floats(ref mut buf) = &mut (self).buffer{
             match bytemuck::try_cast_slice_mut::<f32, Bgra<f32>>(buf.as_slice_mut()){
                 Ok(slice) => Some(&mut slice[offset..]),
                 Err(_) => None
@@ -689,11 +670,11 @@ impl Bitmap{
 
         let un_padded_stride = w * t_per_pixel;
         let alignment = alignment_in_bytes / std::mem::size_of::<T>();
-        if alignment_in_bytes % std::mem::size_of::<T>() != 0{
+        if !alignment_in_bytes.is_multiple_of(std::mem::size_of::<T>()){
             return Err(nerror!(ErrorKind::InvalidArgument, "Bitmap alignment must be multiple of type size"));
         }
 
-        let padding = if un_padded_stride % alignment == 0 { 0 } else { alignment - (un_padded_stride % alignment)};
+        let padding = if un_padded_stride.is_multiple_of(alignment) { 0 } else { alignment - (un_padded_stride % alignment)};
 
         let stride = un_padded_stride.saturating_add(padding);
 
@@ -779,7 +760,7 @@ impl Bitmap{
             let color_val = c.clone();
             if color_val != imageflow_types::Color::Transparent {
                 b.get_window_u8().unwrap()
-                    .fill_rect(0, 0, w as u32, h as u32, &color_val)
+                    .fill_rect(0, 0, w, h, &color_val)
                     .map_err(|e| e.at(here!()))?;
             }
         }
@@ -850,10 +831,10 @@ impl<'a, T> FlowPixelBuffer<'a, T>{
                 let r = Self { slice,
                      t_per_pixel, t_per_row, t_stride, w, h };
                 //println!("try_cast_from::{}", &r);
-                return Ok(r);
+                Ok(r)
             }
             Err(e) => {
-                return Err(nerror!(ErrorKind::InvalidArgument, "Failed to cast slice: {}", e));
+                Err(nerror!(ErrorKind::InvalidArgument, "Failed to cast slice: {}", e))
             }
         }
     }
@@ -874,7 +855,7 @@ impl<'a, T> FlowPixelBufferMut<'a, T>{
         let h = info.height() as usize;
         let old_slice_len = from_slice.len();
         let old_stride = info.t_stride as usize;
-        let old_t_per_pixel = info.t_per_pixel() as usize;
+        let old_t_per_pixel = info.t_per_pixel();
         if h == 0 || old_stride == 0{
             return Ok(Self::empty());
         }
@@ -890,10 +871,10 @@ impl<'a, T> FlowPixelBufferMut<'a, T>{
                 let r = Self { slice,
                      t_per_pixel, t_per_row, t_stride, w, h };
                 //println!("try_cast_from::{}", &r);
-                return Ok(r);
+                Ok(r)
             }
             Err(e) => {
-                return Err(nerror!(ErrorKind::InvalidArgument, "Failed to cast slice: {}", e));
+                Err(nerror!(ErrorKind::InvalidArgument, "Failed to cast slice: {}", e))
             }
         }
     }
@@ -904,7 +885,7 @@ fn calculate_cast_buffer_results(old_w: usize, old_h: usize, old_t_per_pixel: us
     new_slice_length: usize,
     require_trailing_padding: bool) -> Result<(usize, usize, usize), FlowError>{
 
-    if old_slice_length % new_slice_length != 0{
+    if !old_slice_length.is_multiple_of(new_slice_length){
         panic!("::try_cast_from: new casted slice length {} not a multiple of old slice length {}: ", new_slice_length, old_slice_length);
     }
     let (t_per_pixel, t_stride) = if old_slice_length > new_slice_length{
@@ -914,7 +895,7 @@ fn calculate_cast_buffer_results(old_w: usize, old_h: usize, old_t_per_pixel: us
         (t_per_pixel, t_stride)
     }else if old_slice_length < new_slice_length{
         let inverse_factor = new_slice_length / old_slice_length;
-        if new_slice_length % old_slice_length != 0{
+        if !new_slice_length.is_multiple_of(old_slice_length){
             panic!("::try_cast_from: new casted slice length {} not a multiple of old slice length {}: ", new_slice_length, old_slice_length);
         }
         let t_per_pixel = old_t_per_pixel * inverse_factor;
@@ -934,7 +915,7 @@ fn calculate_cast_buffer_results(old_w: usize, old_h: usize, old_t_per_pixel: us
     new_slice_length < t_stride * old_h{
         return Err(nerror!(ErrorKind::InvalidArgument, "FlowPixelBuffer::try_cast_from: new slice too short (trailing padding {} required): {} < {} * {}", padding, new_slice_length, t_stride, old_h));
     }
-    return Ok((t_stride, t_per_row, t_per_pixel));
+    Ok((t_stride, t_per_row, t_per_pixel))
 }
 
 
@@ -989,7 +970,7 @@ impl<'a, T> ScanlineIterMut<'a, T> {
 
     }
     pub fn new(slice: &'a mut [T], info: &'a BitmapInfo, reverse: bool) -> Option<Self> {
-        let t_per_pixel = info.t_per_pixel() as usize;
+        let t_per_pixel = info.t_per_pixel();
         let t_per_row = info.width() as usize * t_per_pixel;
         let t_stride = info.t_stride as usize;
         let w = info.width() as usize;
@@ -1099,18 +1080,18 @@ impl<'a, T> ExactSizeIterator for ScanlineIterMut<'a, T> {
 impl<'a, T> ScanlineIterMut<'a, T> {
     #[inline]
     pub fn length(&self) -> usize{
-        let len = {
+        
+        //eprintln!("length::{} (h={}, y={}, finished={})", len, self.h, self.next_y, self.finished);
+        {
             if self.finished {
                 return 0;
             }
             if self.reverse {
                 (self.next_y + 1) as usize
             }else{
-                (self.h as i32 - self.next_y) as usize
+                (self.h - self.next_y) as usize
             }
-        };
-        //eprintln!("length::{} (h={}, y={}, finished={})", len, self.h, self.next_y, self.finished);
-        len
+        }
     }
 }
 
@@ -1127,9 +1108,9 @@ impl<'a, T> Iterator for ScanlineIterMut<'a, T> {
         }
         self.finished = self.length() <= 1;
         // Take ownership of the slice temporarily
-        let slice = std::mem::replace(&mut self.remaining_slice, &mut []);
+        let slice = std::mem::take(&mut self.remaining_slice);
 
-        let chop_len = if self.next_y + 1 == self.h as i32 {
+        let chop_len = if self.next_y + 1 == self.h {
             self.t_per_row
         }else{
             self.t_stride
@@ -1160,17 +1141,17 @@ impl<'a, T> Iterator for ScanlineIterMut<'a, T> {
             self.next_y += 1;
         }
 
-        let r = Some(Scanline {
+        
+        //eprintln!("next::Some{}", &r.as_ref().unwrap());
+        //eprintln!("{}", &self);
+        Some(Scanline {
             y: y as usize,
             info: self.info,
             row: return_row,
             t_per_pixel: self.t_per_pixel,
             w: self.w,
             h: self.h as usize,
-        });
-        //eprintln!("next::Some{}", &r.as_ref().unwrap());
-        //eprintln!("{}", &self);
-        r
+        })
     }
 
     #[inline]
@@ -1275,7 +1256,7 @@ impl<'a> BitmapWindowMut<'a, u8> {
         info.t_per_pixel = buffer.t_per_pixel as u32;
         info.t_stride = buffer.t_stride as u32;
 
-        Ok(BitmapWindowMut { slice: buffer.slice, info: info, is_sub_window: self.is_sub_window })
+        Ok(BitmapWindowMut { slice: buffer.slice, info, is_sub_window: self.is_sub_window })
     }
 
     /// Creates an iterator over BGRA scanlines. Stride padding is not included.
@@ -1402,7 +1383,7 @@ impl<'a> BitmapWindowMut<'a, u8> {
 
 
     pub fn slice_of_pixels_first_row(&mut self) -> Option<&mut [rgb::alt::BGRA8]>{
-        if self.info().t_per_pixel() != 4 || self.slice.len() %4 != 0{
+        if self.info().t_per_pixel() != 4 || !self.slice.len().is_multiple_of(4){
             return None;
         }
         unsafe {
@@ -1411,7 +1392,7 @@ impl<'a> BitmapWindowMut<'a, u8> {
     }
 
     pub fn get_pixel_bgra8(&self, x: u32, y: u32) -> Option<rgb::alt::BGRA<u8>>   {
-        if self.t_per_pixel() != 4 || self.slice.len() %4 != 0{
+        if self.t_per_pixel() != 4 || !self.slice.len().is_multiple_of(4){
             return None;
         }
         let index = (y * self.info.t_stride + x * 4) as usize;
@@ -1439,7 +1420,7 @@ where T: Pod
 
         let buffer = FlowPixelBuffer::try_cast_from(self.slice, &self.info, false, false)
             .map_err(|e| e.at(here!()))?;
-        Ok(ImgRef::new_stride(buffer.slice, buffer.w, buffer.h, buffer.t_stride as usize))
+        Ok(ImgRef::new_stride(buffer.slice, buffer.w, buffer.h, buffer.t_stride))
     }
 
 
@@ -1462,7 +1443,7 @@ impl<'a>  BitmapWindowMut<'a, u8> {
             BitmapCompositing::ReplaceSelf | BitmapCompositing::BlendWithSelf =>{
                 let mut v = vec![rgb::RGBA8::new(0,0,0,255);w * h];
 
-                if self.info().t_per_pixel() != 4 || self.slice.len() %4 != 0{
+                if self.info().t_per_pixel() != 4 || !self.slice.len().is_multiple_of(4){
                     return Err(unimpl!("Only Bgr(a)32 supported"));
                 }
 
@@ -1471,12 +1452,12 @@ impl<'a>  BitmapWindowMut<'a, u8> {
                 let mut y = 0;
                 for stride_row in self.slice.chunks(self.info().t_stride() as usize){
                     for x in 0..w{
-                        v[y * w + x].b = stride_row[x * 4 + 0];
+                        v[y * w + x].b = stride_row[x * 4];
                         v[y * w + x].g = stride_row[x * 4 + 1];
                         v[y * w + x].r = stride_row[x * 4 + 2];
                         v[y * w + x].a = stride_row[x * 4 + 3];
                     }
-                    y = y + 1;
+                    y += 1;
                 }
 
 

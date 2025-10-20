@@ -17,10 +17,10 @@ use std::arch::x86_64::*;
 #[allow(unused_assignments)]
 #[cfg(target_arch = "x86_64")]
 unsafe fn transpose4x4_sse(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
-    let mut row1: __m128 = _mm_loadu_ps(&mut *A.offset((0 as i32 * lda) as isize));
-    let mut row2: __m128 = _mm_loadu_ps(&mut *A.offset((1 as i32 * lda) as isize));
-    let mut row3: __m128 = _mm_loadu_ps(&mut *A.offset((2 as i32 * lda) as isize));
-    let mut row4: __m128 = _mm_loadu_ps(&mut *A.offset((3 as i32 * lda) as isize));
+    let mut row1: __m128 = _mm_loadu_ps(&mut *A.offset((0_i32 * lda) as isize));
+    let mut row2: __m128 = _mm_loadu_ps(&mut *A.offset(lda as isize));
+    let mut row3: __m128 = _mm_loadu_ps(&mut *A.offset((2_i32 * lda) as isize));
+    let mut row4: __m128 = _mm_loadu_ps(&mut *A.offset((3_i32 * lda) as isize));
     let mut tmp3: __m128 = _mm_setzero_ps();
     let mut tmp2: __m128 = _mm_setzero_ps();
     let mut tmp1: __m128 = _mm_setzero_ps();
@@ -33,10 +33,10 @@ unsafe fn transpose4x4_sse(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
     row2 = _mm_movehl_ps(tmp2, tmp0);
     row3 = _mm_movelh_ps(tmp1, tmp3);
     row4 = _mm_movehl_ps(tmp3, tmp1);
-    _mm_storeu_ps(&mut *B.offset((0 as i32 * ldb) as isize), row1);
-    _mm_storeu_ps(&mut *B.offset((1 as i32 * ldb) as isize), row2);
-    _mm_storeu_ps(&mut *B.offset((2 as i32 * ldb) as isize), row3);
-    _mm_storeu_ps(&mut *B.offset((3 as i32 * ldb) as isize), row4);
+    _mm_storeu_ps(&mut *B.offset((0_i32 * ldb) as isize), row1);
+    _mm_storeu_ps(&mut *B.offset(ldb as isize), row2);
+    _mm_storeu_ps(&mut *B.offset((2_i32 * ldb) as isize), row3);
+    _mm_storeu_ps(&mut *B.offset((3_i32 * ldb) as isize), row4);
 }
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "sse2")]

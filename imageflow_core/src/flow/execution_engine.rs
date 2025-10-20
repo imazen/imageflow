@@ -465,7 +465,7 @@ impl<'a> Engine<'a> {
                     }
 
                 } else if !def.can_expand(){
-                    return Err(nerror!(crate::ErrorKind::MethodNotImplemented, "Nodes must can_execute() or can_expand(). {:?} does neither", def).into());
+                    return Err(nerror!(crate::ErrorKind::MethodNotImplemented, "Nodes must can_execute() or can_expand(). {:?} does neither", def));
                 }
             }
             match next {
@@ -477,7 +477,7 @@ impl<'a> Engine<'a> {
                         let result = def.execute(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
 
                         if result == NodeResult::None {
-                            return Err(nerror!(crate::ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
+                            return Err(nerror!(crate::ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result));
                         }else{
                             // Force update the estimate to match reality
                             if let NodeResult::Frame(bitmap_key) = result {

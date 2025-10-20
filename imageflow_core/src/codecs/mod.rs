@@ -1,4 +1,3 @@
-use std;
 use std::sync::*;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
@@ -14,7 +13,6 @@ use std::borrow::BorrowMut;
 use std::ops::DerefMut;
 use std::any::Any;
 use lcms2::*;
-use lcms2;
 mod gif;
 mod pngquant;
 mod lode;
@@ -158,7 +156,7 @@ impl EnabledCodecs{
                 return decoder.create(c, io, io_id);
             }
         }
-        return Err(nerror!(ErrorKind::NoEnabledDecoderFound,  "No ENABLED decoder found for file starting in {:X?}", bytes))
+        Err(nerror!(ErrorKind::NoEnabledDecoderFound,  "No ENABLED decoder found for file starting in {:X?}", bytes))
     }
 }
 

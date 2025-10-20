@@ -23,7 +23,7 @@ impl NodeDefOneInputExpand for ConstrainDef{
                 Ok(FrameInfo {
                     w: constraint_results.final_canvas.width() as i32,
                     h: constraint_results.final_canvas.height() as i32,
-                    fmt: ffi::PixelFormat::from(input.fmt),
+                    fmt: input.fmt,
                 })
             })
         }else{

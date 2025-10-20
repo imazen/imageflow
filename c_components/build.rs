@@ -54,7 +54,7 @@ fn main() {
         // Step 5: Apply GCC/Clang flags
         // Goal: If the architecture indicates aarch64/arm64, skip SSE flags.
         if let Ok(cpu) = target_cpu {
-            cc.flag_if_supported(&format!("-march={}", cpu));
+            cc.flag_if_supported(format!("-march={}", cpu));
             cc.flag("-funroll-loops");
             cc.flag("-ffast-math");
 
