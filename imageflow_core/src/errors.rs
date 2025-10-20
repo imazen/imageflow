@@ -67,7 +67,7 @@ macro_rules! nerror {
         }.at(here!())
     );
     ($kind:expr, $fmt:expr, $($arg:tt)*) => (
-        crate::FlowError{
+        $crate::FlowError{
             kind: $kind,
             message:  format!(concat!("{:?}: ", $fmt), $kind, $($arg)*),
             at: ::smallvec::SmallVec::new(),
@@ -88,8 +88,8 @@ macro_rules! unimpl {
         }.at(here!())
     );
     ($fmt:expr) => (
-        crate::FlowError{
-            kind: crate::ErrorKind::MethodNotImplemented,
+        $crate::FlowError{
+            kind: $crate::ErrorKind::MethodNotImplemented,
             message: format!(concat!("{:?}: ",$fmt ), crate::ErrorKind::MethodNotImplemented),
             at: ::smallvec::SmallVec::new(),
             node: None

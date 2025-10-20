@@ -449,7 +449,7 @@ impl Ir4Layout{
             w: image.width() as u32,
             h: image.height() as u32,
             hints: Some(imageflow_types::ResampleHints {
-                sharpen_percent: self.i.f_sharpen.map(|v| v),
+                sharpen_percent: self.i.f_sharpen,
                 down_filter: self.i.down_filter.map(|v| v.to_filter()),
                 up_filter: self.i.up_filter.map(|v| v.to_filter()),
                 scaling_colorspace,

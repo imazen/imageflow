@@ -1470,13 +1470,13 @@ impl Framewise {
     }
 
     fn io_ids_and_directions(&self) -> Vec<(i32, IoDirection)>{
-        let mut vec = self.clone_nodes().into_iter().map(|n|{
+        let mut vec = self.clone_nodes().into_iter().filter_map(|n|{
             match *n{
                 Node::Decode{io_id, ..} => Some((io_id, IoDirection::In)),
                 Node::Encode{io_id, ..} => Some((io_id, IoDirection::Out)),
                 _ => None
             }
-        }).flatten().collect::<Vec<(i32, IoDirection)>>();
+        }).collect::<Vec<(i32, IoDirection)>>();
         vec.sort_by(|&(a,_), &(b,_)| a.cmp(&b));
         vec
     }
