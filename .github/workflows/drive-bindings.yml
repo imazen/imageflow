@@ -1,0 +1,20 @@
+name: Drive Binding Generation
+on:
+  workflow_run:
+    workflows: ["Schema Update Check"]
+    types: [completed]
+  push:
+    paths:
+      - "bindings/templates/**"
+      - "bindings/docker/**"
+  workflow_dispatch:
+
+jobs:
+  call-gen:
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: [node, ruby, php, typescript]
+    uses: ./.github/workflows/gen-binding.yml
+    with:
+      lang: ${{ matrix.lang }}

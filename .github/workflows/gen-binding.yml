@@ -1,0 +1,64 @@
+name: Generate & test binding
+on:
+  workflow_call:
+    inputs:
+      lang:
+        description: 'Language to generate binding for'
+        required: true
+        type: string
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Native Binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-binaries-*
+          path: artifacts/native_binaries/
+          merge-multiple: true
+
+      - name: Generate models only
+        uses: docker://ghcr.io/imageflow/bindings-${{ inputs.lang }}:latest
+        with:
+          args: |
+            --schema-path imageflow_core/src/json/endpoints/openapi_schema_v1.json
+            --output-path bindings/imageflow-${{ inputs.lang }}/
+            --native-path artifacts/native_binaries/
+            --global-property models
+
+      - name: Run AI Agent to update manual code (Placeholder)
+        run: |
+          echo "[Placeholder] AI agent is now analyzing the schema changes and updating the manual FFI and public API code for ${{ inputs.lang }}."
+          echo "[Placeholder] In a real implementation, this step would invoke an AI service and apply its suggested changes."
+
+      - name: Run smoke test
+        run: |
+          chmod +x ./bindings/scripts/run_smoke_test.sh
+          ./bindings/scripts/run_smoke_test.sh ${{ inputs.lang }} local
+
+      - name: Create/Update PR
+        if: success()
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GH_PAT }}
+          branch: ci/${{ inputs.lang }}/regen-${{ github.run_number }}
+          title: "feat(${{ inputs.lang }}): Auto-update binding from schema change"
+          body: |
+            This PR was auto-generated in response to a schema update.
+
+            It includes:
+            1.  Newly generated data models.
+            2.  AI-assisted updates to the manual FFI and public API code.
+
+            Generated from schema in commit: ${{ github.sha }}
+            **This PR replaces any previous ${{ inputs.lang }} binding PRs**
+          labels: automerge
+          delete-branch: true
