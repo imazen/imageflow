@@ -24,4 +24,15 @@ module ImageflowFFI
   # These functions are part of the stable ABI.
   attach_function :imageflow_abi_version_major, [], :long
   attach_function :imageflow_abi_version_minor, [], :long
+
+  # Attach context management functions
+  attach_function :imageflow_context_create, [:uint, :uint], :pointer
+  attach_function :imageflow_context_destroy, [:pointer], :void
+
+  # Attach JSON and error handling functions
+  attach_function :imageflow_context_send_json, [:pointer, :string, :pointer, :size_t], :pointer
+  attach_function :imageflow_json_response_destroy, [:pointer, :pointer], :bool
+  attach_function :imageflow_json_response_read, [:pointer, :pointer, :pointer, :pointer, :pointer], :bool
+  attach_function :imageflow_context_has_error, [:pointer], :bool
+  attach_function :imageflow_context_error_write_to_buffer, [:pointer, :pointer, :size_t, :pointer], :bool
 end

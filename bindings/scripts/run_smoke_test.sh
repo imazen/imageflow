@@ -57,9 +57,9 @@ case "$LANGUAGE" in
         exit 0
         ;;
     ruby)
-        # A simple test to ensure the library can be loaded and the version function called.
-        TEST_COMMAND="bundle install --quiet && ruby -r ./lib/imageflow -e 'puts Imageflow.version'"
-        VERIFY_COMMAND="^[0-9]+\.[0-9]+$"
+        # Test context creation and the JSON send/receive loop via the version endpoint.
+        TEST_COMMAND="bundle install --quiet && ruby -r ./lib/imageflow -e 'ctx = Imageflow::Context.new; response = ctx.send_json(\"v1/get_version_info\", nil); if response[\"data\"][\"abi_major\"] == 3; puts \"JSON API version check passed.\"; end'"
+        VERIFY_COMMAND="JSON API version check passed."
         run_test "$TEST_COMMAND" "$VERIFY_COMMAND"
         ;;
     *)
