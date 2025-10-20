@@ -236,7 +236,7 @@ impl ChecksumCtx{
         ::serde_json::to_writer_pretty(&mut f, map).unwrap();
         f.sync_all().unwrap();
 
-       
+
         // Write the URL list
         // We can use this to prefetch required images in the background on CI)
         // TODO: add simple script to do this
@@ -304,7 +304,7 @@ impl ChecksumCtx{
                 uploaded.push(name);
                 missing.remove(index);
                 self.save_uploaded(&uploaded).unwrap();
-                self.record_missing(&missing);           
+                self.record_missing(&missing);
             }
         }
         if !missing.is_empty(){
@@ -380,6 +380,14 @@ impl ChecksumCtx{
 
 
     fn save_lines(&self, path: &Path, lines: &[String]) -> Result<(),()>{
+        // empty? delete file IF exists
+        if lines.is_empty(){
+            if path.exists(){
+                ::std::fs::remove_file(path).unwrap();
+            }
+            return Ok(());
+        }
+
         let mut f = ::std::fs::File::create(path).unwrap();
         use self::itertools::Itertools;
         let list_contents = lines.iter().join("\n");
