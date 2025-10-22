@@ -368,7 +368,7 @@ static double filter_window_jinc (const struct flow_interpolation_details * d, d
         let ans2 = 0.04687499995 + y * (-0.2002690873e-3
             + y * (0.8449199096e-5 + y * (-0.88228987e-6
             + y * 0.105787412e-6)));
-        (0.636619772 / ax).sqrt() * ((xx).cos() * ans1 - z * (xx).sin() * ans2)
+        (std::f64::consts::FRAC_2_PI / ax).sqrt() * ((xx).cos() * ans1 - z * (xx).sin() * ans2)
     };
     if x < 0f64 {
         -ans

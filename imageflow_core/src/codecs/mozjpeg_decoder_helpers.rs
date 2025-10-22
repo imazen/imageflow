@@ -77,7 +77,7 @@ pub fn read_icc_profile(codec: &mozjpeg_sys::jpeg_decompress_struct) -> Option<V
         data_offset[seq_no] = total_length;
         total_length += data_length[seq_no];
     }
-    if total_length <= 0{
+    if total_length == 0{
         // Found only empty markers
         return None
     }

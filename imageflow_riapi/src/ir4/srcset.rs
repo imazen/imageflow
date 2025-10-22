@@ -15,6 +15,7 @@
 
 // The srcset string is a comma-delimited list of commands. Each command is a hyphen-delimited list of values. The first value is the command name, and the rest are arguments.
 
+use std::str::FromStr;
 use imageflow_types::BoolKeep;
 use imageflow_types::QualityProfile;
 use super::parsing::{FitMode, ScaleMode, OutputFormat, ParseWarning, Instructions};
@@ -196,16 +197,16 @@ pub fn apply_srcset_string (i: &mut Instructions, srcset: &str, warnings: &mut V
             i.mode = Some(FitMode::Max);
 
             let format = match OutputFormat::from_str(command_name) {
-                Some(format) => Some(format),
-                None if command_name.eq_ignore_ascii_case("lossy") => {
+                Ok(format) => Some(format),
+                Err(_) if command_name.eq_ignore_ascii_case("lossy") => {
                     i.lossless = Some(BoolKeep::False);
                     Some(OutputFormat::Auto)
                 },
-                None if command_name.eq_ignore_ascii_case("lossless") => {
+                Err(_) if command_name.eq_ignore_ascii_case("lossless") => {
                     i.lossless = Some(BoolKeep::True);
                     Some(OutputFormat::Auto)
                 },
-                None => None
+                Err(_) => None
             };
 
             match command_name {
@@ -358,4 +359,3 @@ pub fn apply_srcset_string (i: &mut Instructions, srcset: &str, warnings: &mut V
     }
         // ok
 }
-

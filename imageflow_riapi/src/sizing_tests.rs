@@ -139,7 +139,7 @@ fn step_kits() -> Vec<Kit>{
     let no_upscaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Neither(Ordering::Less), b: ExpectVal::Image};
     // let no_downscaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Neither(Ordering::Greater), b: ExpectVal::Image};
     let never_larger_than_target = Expect::CanvasAgainstTarget(Cond::Neither(Ordering::Greater));
- 
+
     let no_4_side_padding = Expect::CanvasAgainstImage(Cond::Either(Ordering::Equal));
 
     kits.push(kit_for_strategy(Strategy::Distort)
@@ -200,8 +200,12 @@ fn step_kits() -> Vec<Kit>{
     //    for s in from_strategies.into_iter(){
     //        kits.push( strategy_to_steps(*s).unwrap());
     //    }
+    let mut full_panic_str: String = String::new();
     for bad_kitty in kits.iter().filter(|k| k.expectations.iter().any(|e| e.when == When::Placeholder || e.expect == Expect::Placeholder)){
-        panic!("{:?}\nYou forgot a .when, or a .expect, or something. you need an IF and a THEN, 'kay?", bad_kitty);
+        full_panic_str += format!("{:?}\nYou forgot a .when, or a .expect, or something. you need an IF and a THEN, 'kay?", bad_kitty).as_str();
+    }
+    if !full_panic_str.is_empty() {
+        panic!("{}", full_panic_str);
     }
     //kits.push(steps().into_vec());
     kits
@@ -727,7 +731,7 @@ fn test_shrink_within(test: ShrinkWithinTest, cropper: &sizing::IdentityCropProv
     return None;
 }
 
-// skipping, takes minutes. 
+// skipping, takes minutes.
 #[ignore]
 #[test]
 fn test_double_rounding_errors_exhaustive () {
@@ -744,12 +748,12 @@ fn test_double_rounding_errors_exhaustive () {
 
     let mut count = 0;
     let max_dim = 1400;
-    let max_target_side = 400;  
+    let max_target_side = 400;
     for origin_width in (1..max_dim).rev() {
         for origin_height in (1..max_dim).rev() {
             let origin = AspectRatio::create(origin_width, origin_height).unwrap();
             for target_side in (1..max_target_side).rev() {
-               
+
                 count += 2;
 
                 let test_w = ShrinkWithinTest::new(origin, Some(target_side), None);

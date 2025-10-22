@@ -90,7 +90,7 @@ macro_rules! unimpl {
     ($fmt:expr) => (
         $crate::FlowError{
             kind: $crate::ErrorKind::MethodNotImplemented,
-            message: format!(concat!("{:?}: ",$fmt ), crate::ErrorKind::MethodNotImplemented),
+            message: format!(concat!("{:?}: ",$fmt ), $crate::ErrorKind::MethodNotImplemented),
             at: ::smallvec::SmallVec::new(),
             node: None
         }.at(here!())

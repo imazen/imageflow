@@ -323,7 +323,7 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
 
 impl fmt::Display for Instructions{
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", &self.to_string())
+        write!(f, "{}", &self.to_string_internal())
     }
 }
 
@@ -337,7 +337,7 @@ pub(crate) fn iter_all_eq<T: PartialEq>(iter: impl IntoIterator<Item = T>) -> Op
 impl Instructions{
 
 
-    pub fn to_string(&self) -> String{
+    fn to_string_internal(&self) -> String{
         let mut s = String::with_capacity(100);
         let mut vec = Vec::new();
         for (k,v) in self.to_map() {
@@ -986,10 +986,7 @@ fn parse_colorspace(&mut self, key: &'static str) -> Option<ScalingColorspace> {
     }
     fn parse_format(&mut self, key: &'static str) -> Option<OutputFormat>{
         self.parse(key, |value| {
-            match OutputFormat::from_str(value){
-                Some(v) => Ok(v),
-                None => Err(())
-            }
+            OutputFormat::from_str(value)
         })
     }
 
@@ -1291,15 +1288,21 @@ pub enum OutputFormat{
 }
 
 
-impl OutputFormat {
-    pub fn from_str(text: &str) -> Option<OutputFormat> {
+impl FromStr for OutputFormat {
+    type Err = String;
+
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
         for (k, v) in OutputFormatStrings::iter_variant_names().zip(OutputFormatStrings::iter_variants()) {
             if k.eq_ignore_ascii_case(text) {
-                return Some(v.clean())
+                return Ok(v.clean())
             }
         }
-        None
+        Err(format!("Invalid output format: {}", text))
     }
+}
+
+impl OutputFormat {
+
 
     pub fn to_output_image_format(&self) -> Option<OutputImageFormat>{
         match self {
@@ -1728,4 +1731,3 @@ fn test_tostr(){
 
 
 }
-
