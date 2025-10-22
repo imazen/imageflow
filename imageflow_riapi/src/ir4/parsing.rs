@@ -238,6 +238,7 @@ pub enum ScalingColorspace {
 
 
 }
+#[rustfmt::skip]
 
 pub static IR4_KEYS: [&str;100] = [
     "mode", "anchor", "flip", "sflip", "scale", "cache", "process",
@@ -1620,6 +1621,8 @@ fn test_url_parsing() {
 
 
 }
+
+#[rustfmt::skip]
 
 #[test]
 fn test_tostr(){
