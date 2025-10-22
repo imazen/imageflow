@@ -9,6 +9,12 @@ extern crate rgb;
 extern crate itertools;
 extern crate twox_hash;
 extern crate imgref;
+
+pub mod bitmap_diff_stats;
+use bitmap_diff_stats::*;
+
+use std::io::{BufWriter, Seek};
+use serde::de::DeserializeOwned;
 use std::marker::PhantomPinned;
 use std::ffi::CString;
 use std::path::Path;
@@ -19,8 +25,8 @@ use s::PixelLayout;
 use std::collections::{BTreeMap};
 use std::fs::File;
 use std::path::PathBuf;
-use std::io::{Write};
-use std;
+use std::io::{BufReader, Write};
+use std::{self, panic};
 use std::pin::Pin;
 use imageflow_core;
 
@@ -55,7 +61,6 @@ pub enum IoTestEnum {
     Url(String)
 }
 
-
 pub fn get_url_bytes_with_retry(url: &str) -> Result<Vec<u8>, FlowError> {
     let mut retry_count = 3;
     let mut retry_wait = 100;
@@ -88,20 +93,6 @@ impl IoTestTranslator {
             IoTestEnum::ByteArray(vec) => {
                 c.add_copied_input_buffer(io_id, &vec).map_err(|e| e.at(here!()))
             }
-            // IoTestEnum::Base64(b64_string) => {
-            //     //TODO: test and disable slow methods
-            //     let bytes = b64_string.as_str().from_base64()
-            //         .map_err(|e| nerror!(ErrorKind::InvalidArgument, "base64: {}", e))?;
-            //     c.add_copied_input_buffer(io_id, &bytes).map_err(|e| e.at(here!()))
-            // }
-            // IoTestEnum::BytesHex(hex_string) => {
-            //     let bytes = hex_string.as_str().from_hex().unwrap();
-            //     c.add_copied_input_buffer(io_id, &bytes).map_err(|e| e.at(here!()))
-            // }
-            // IoTestEnum::Filename(path) => {
-            //
-            //     c.add_file(io_id, dir, &path )
-            // }
             IoTestEnum::Url(url) => {
                 let bytes = get_url_bytes_with_retry(&url).map_err(|e| e.at(here!()))?;
                 c.add_input_vector(io_id, bytes).map_err(|e| e.at(here!()))
@@ -110,9 +101,6 @@ impl IoTestTranslator {
             IoTestEnum::OutputBuffer  => {
                 c.add_output_buffer(io_id).map_err(|e| e.at(here!()))
             },
-            // IoTestEnum::Placeholder => {
-            //     Err(nerror!(ErrorKind::GraphInvalid, "Io Placeholder {} was never substituted", io_id))
-            // }
         }
     }
 
@@ -120,14 +108,9 @@ impl IoTestTranslator {
 }
 
 
-
-
 pub fn build_steps(context: &mut Context, steps: &[s::Node], io: Vec<IoTestEnum>, security: Option<imageflow_types::ExecutionSecurity>,  debug: bool) -> Result<ResponsePayload, FlowError>{
-
     build_framewise(context, s::Framewise::Steps(steps.to_vec()), io, security, debug).map_err(|e| e.at(here!()))
 }
-
-
 
 pub fn build_framewise(context: &mut Context, framewise: s::Framewise, io: Vec<IoTestEnum>, security: Option<imageflow_types::ExecutionSecurity>,  debug: bool) -> Result<ResponsePayload, FlowError>{
 
@@ -184,6 +167,8 @@ pub fn smoke_test(input: Option<IoTestEnum>, output: Option<IoTestEnum>, securit
 /// TODO: Add upload support; it's very annoying to do it manually
 pub struct ChecksumCtx{
     checksum_file: PathBuf,
+    alternate_checksums_file: PathBuf,
+    actual_file: PathBuf,
     url_list_file: PathBuf,
     uploaded_index: PathBuf,
     missing_index: PathBuf,
@@ -197,9 +182,14 @@ pub struct ChecksumCtx{
 }
 
 lazy_static! {
-    static ref CHECKSUM_FILE: RwLock<()> = RwLock::new(());
+    static ref CHECKSUM_FILE: RwLock<BTreeMap<String, String>> = RwLock::new(BTreeMap::new());
 }
-
+lazy_static! {
+    static ref ALTERNATE_CHECKSUMS_FILE: RwLock<BTreeMap<String, Vec<String>>> = RwLock::new(BTreeMap::new());
+}
+lazy_static! {
+    static ref ACTUAL_FILE: RwLock<BTreeMap<String, String>> = RwLock::new(BTreeMap::new());
+}
 impl ChecksumCtx{
 
     /// A checksum context configured for tests/visuals/*
@@ -211,6 +201,8 @@ impl ChecksumCtx{
             cache_dir: visuals.join(Path::new("cache")),
             create_if_missing: true,
             checksum_file: visuals.join(Path::new("checksums.json")),
+            alternate_checksums_file: visuals.join(Path::new("alternate_checksums.json")),
+            actual_file: visuals.join(Path::new("actual.json")),
             url_list_file:  visuals.join(Path::new("images.txt")),
             uploaded_index: visuals.join(Path::new("uploaded.txt")),
             missing_index: visuals.join(Path::new("missing_on_s3.txt")),
@@ -220,39 +212,80 @@ impl ChecksumCtx{
         }
     }
 
-    /// Load the checksum map
-    fn load_list(&self) -> Result<BTreeMap<String,String>,()>{
-        if self.checksum_file.exists() {
-            let map: BTreeMap<String, String> = ::serde_json::from_reader(::std::fs::File::open(&self.checksum_file).unwrap()).unwrap();
-            Ok(map)
-        }else{
-            Ok(BTreeMap::new())
-        }
-    }
 
-    /// Save the checksum map and url_list to disk
-    fn save_list(&self, map: &BTreeMap<String,String>) -> Result<(),()>{
-        let mut f = ::std::fs::File::create(&self.checksum_file).unwrap();
-        ::serde_json::to_writer_pretty(&mut f, map).unwrap();
-        f.sync_all().unwrap();
-
-
-        // Write the URL list
-        // We can use this to prefetch required images in the background on CI)
-        // TODO: add simple script to do this
+    fn write_url_list(&self, checksum_values: Vec<String>) -> Result<(), ()> {
         let mut f = ::std::fs::File::create(&self.url_list_file).unwrap();
         use self::itertools::Itertools;
-        let list_contents = map.values().map(|key| self.image_url(key)).join("\n");
+        let list_contents = checksum_values.iter().map(|key| self.image_url(key)).join("\n");
         f.write_all(list_contents.as_bytes()).unwrap();
         f.sync_all().unwrap();
 
-        self.track_missing(map.values().map(|v| self.image_name(v)).collect());
-
+        self.track_missing(checksum_values.iter().map(|v| self.image_name(v)).collect());
         Ok(())
     }
 
+    fn load_map<K, V>(&self, filename: &Path) -> Result<BTreeMap<K,V>,anyhow::Error>
+        where K: Ord + Clone + serde::Serialize + DeserializeOwned,
+              V: Ord + Clone + serde::Serialize + DeserializeOwned
+    {
+        self.mutate_map(filename, |_| Ok(false)).map(|(_, map)| map )
+    }
+
+    // Using OS file locks, load, set a key/value (and if it was a change - returning true, save the file)
+    fn mutate_map<F, K, V>(&self, filename: &Path, mutator: F) -> Result<(bool, BTreeMap<K,V>),anyhow::Error>
+        where F: FnOnce(&mut BTreeMap<K,V>) -> Result<bool,anyhow::Error>,
+              K: Ord + Clone + serde::Serialize + DeserializeOwned,
+              V: Ord + Clone + serde::Serialize + DeserializeOwned
+    {
+        if filename.exists(){
+            let mut open_options = ::std::fs::OpenOptions::new();
+            open_options.read(true).write(true);
+            let mut file = open_options.open(filename)?;
+            file.lock()?;
+            let mut map_result = ::serde_json::from_reader(
+                    BufReader::new(&mut file));
+            if let Err(e) = map_result {
+                let file_contents = std::fs::read_to_string(filename).unwrap_or_else(|_| String::new());
+                eprintln!("Error loading map: {} from {}: {}", e, filename.display(), file_contents);
+                map_result = Ok(BTreeMap::new());
+            }
+            let mut map = map_result?;
+            let changed = mutator(&mut map)?;
+            if changed {
+                file.seek(std::io::SeekFrom::Start(0))?;
+                file.set_len(0).unwrap();
+
+                ::serde_json::to_writer_pretty(BufWriter::new(file), &map)?;
+
+            }
+            Ok((changed, map))
+        } else {
+            let mut map = BTreeMap::new();
+            let changed = mutator(&mut map)?;
+            if changed {
+                ::serde_json::to_writer_pretty(BufWriter::new(::std::fs::File::create(filename).unwrap()), &map).unwrap();
+            }
+            Ok((changed, map))
+        }
+    }
+
+    fn set_map_value<K, V>(&self, filename: &Path, key: &K, value: &V) -> Result<(bool, BTreeMap<K,V>),()>
+     where  K: Ord + Clone + serde::Serialize + DeserializeOwned + PartialEq,
+         V: Ord + Clone + serde::Serialize + DeserializeOwned + PartialEq
+    {
+        let (changed, map) = self.mutate_map(filename,|map| {
+            if map.get(key) == Some(&value.clone()){
+                Ok(false)
+            }else{
+                map.insert(key.clone(),value.clone());
+                Ok(true)
+            }
+        }).unwrap();
+        Ok((changed, map))
+    }
+
     pub fn verify_all_active_images_uploaded(&self){
-        let map = self.load_list().unwrap();
+        let map = self.load_map::<String, String>(&self.checksum_file).unwrap();
         if !self.track_missing(map.values().map(|v| self.image_name(v)).collect()){
             panic!("Missing images");
         }
@@ -403,7 +436,71 @@ impl ChecksumCtx{
     pub fn get(&self, name: &str) -> Option<String>{
         #[allow(unused_variables)]
         let lock = CHECKSUM_FILE.read().unwrap();
-        self.load_list().unwrap().get(name).and_then(|v|Some(v.to_owned()))
+        self.load_map::<String, String>(&self.checksum_file).unwrap().get(name).and_then(|v|Some(v.to_owned()))
+    }
+
+    pub fn get_cached(&self, name: &str) -> Option<String>{
+        let mut lock = CHECKSUM_FILE.write().unwrap();
+        if lock.is_empty() {
+            let loaded = self.load_map::<String, String>(&self.checksum_file).unwrap();
+            let value = loaded.get(name).and_then(|v|Some(v.to_owned()));
+            *lock = loaded;
+            value
+        } else {
+            lock.get(name).and_then(|v|Some(v.to_owned()))
+        }
+    }
+
+    pub fn get_alternate_checksums_cached(&self, primary_checksum: &str) -> Option<Vec<String>>{
+        let mut lock = ALTERNATE_CHECKSUMS_FILE.write().unwrap();
+        if lock.is_empty() {
+            let loaded = self.load_map::<String, Vec<String>>(&self.alternate_checksums_file).unwrap();
+            let value = loaded.get(primary_checksum).and_then(|v|Some(v.to_owned()));
+            *lock = loaded;
+            value
+        } else {
+            lock.get(primary_checksum).and_then(|v|Some(v.to_owned()))
+        }
+    }
+    pub fn contains_alternate_checksum_cached(&self, primary_checksum: &str, alternate_checksum: &String) -> bool{
+        let mut lock = ALTERNATE_CHECKSUMS_FILE.write().unwrap();
+        if lock.is_empty() {
+            let loaded = self.load_map::<String, Vec<String>>(&self.alternate_checksums_file).unwrap();
+            let value = loaded.get(primary_checksum).and_then(|v|Some(v.to_owned()));
+            *lock = loaded;
+            value.map(|v|v.contains(alternate_checksum)).unwrap_or(false)
+        } else {
+            lock.get(primary_checksum).map(|v| v.contains(alternate_checksum)).unwrap_or(false)
+        }
+    }
+    pub fn add_alternate_checksum_cached(&self, primary_checksum: &str, alternate_checksum: String) -> Result<(),()>{
+        if !self.contains_alternate_checksum_cached(primary_checksum, &alternate_checksum){
+            let mut lock = ALTERNATE_CHECKSUMS_FILE.write().unwrap();
+            let (_changed, map) = self.mutate_map(&self.alternate_checksums_file, |map| {
+                let vec = map.entry(primary_checksum.to_string()).or_insert_with(Vec::new);
+                if !vec.contains(&alternate_checksum) {
+                    vec.push(alternate_checksum);
+                    vec.sort();
+                    Ok(true)
+                }else{
+                    Ok(false)
+                }
+            }).unwrap();
+
+            *lock = map;
+
+        }
+        Ok(())
+
+    }
+
+
+    /// Get the stored result checksum for a named test
+    #[allow(unused_variables)]
+    pub fn get_actual(&self, name: &str) -> Option<String>{
+        #[allow(unused_variables)]
+        let lock = ACTUAL_FILE.read().unwrap();
+        self.load_map::<String, String>(&self.actual_file).unwrap().get(name).and_then(|v|Some(v.to_owned()))
     }
 
     /// Set the result checksum for a named test
@@ -411,13 +508,25 @@ impl ChecksumCtx{
     #[allow(unused_variables)]
     pub fn set(&self, name: String, checksum: String) -> Result<(),()>{
         #[allow(unused_variables)]
-        let lock = CHECKSUM_FILE.write().unwrap();
-        let mut map = self.load_list().unwrap();
-        map.insert(name,checksum);
-        self.save_list(&map).unwrap();
+        let mut lock = CHECKSUM_FILE.write().unwrap();
+        let (changed, map) = self.set_map_value(&self.checksum_file, &name, &checksum)?;
+        if changed {
+            self.write_url_list(map.values().map(|v| v.to_owned()).collect::<Vec<_>>()).unwrap()
+        }
+        *lock = map;
         Ok(())
     }
 
+    /// Set the result checksum for a named test
+    /// Doesn't work right under nextest when new checksums are added
+    #[allow(unused_variables)]
+    pub fn set_actual(&self, name: String, checksum: String) -> Result<(),()>{
+        #[allow(unused_variables)]
+        let mut lock = ACTUAL_FILE.write().unwrap();
+        let (changed, map) = self.set_map_value(&self.actual_file, &name, &checksum)?;
+        *lock = map;
+        Ok(())
+    }
 
     pub fn image_url(&self, checksum: &str) -> String{
         if !checksum.contains("."){
@@ -531,21 +640,10 @@ impl ChecksumCtx{
     /// This format is preserved from legacy C tests, thus its rudimentary (but, I suppose, sufficient) nature.
     pub fn checksum_bitmap_window(bitmap_window: &mut BitmapWindowMut<u8>) -> String {
         let info = format!("{}x{} fmt={}", bitmap_window.w(), bitmap_window.h(), bitmap_window.info().calculate_pixel_format().unwrap() as i32);
-
-        return format!("{:02$X}_{:02$X}", bitmap_window.short_hash_pixels(), hlp::hashing::legacy_djb2(info.as_bytes()), 17)
-
+        format!("{:02$X}_{:02$X}", bitmap_window.short_hash_pixels(), hlp::hashing::legacy_djb2(info.as_bytes()), 17)
     }
 
-
-    /// Checksums the result, saves it to disk, the compares the actual checksum to the expected checksum.
-    ///
-    /// Complains loudly and returns false if the checksums don't match. Also returns the trusted checksum.
-    ///
-    /// if there is no trusted checksum, create_if_missing is set, then
-    /// the checksum will be stored, and the function will return true.
-    pub fn bitmap_matches(&self, c: &Context, bitmap_key: BitmapKey, name: &str) -> (ChecksumMatch, String){
-
-
+    pub fn checksum_bitmap(c: &Context, bitmap_key: BitmapKey) -> String {
         let bitmaps = c.borrow_bitmaps()
             .map_err(|e| e.at(here!())).unwrap();
 
@@ -555,12 +653,30 @@ impl ChecksumCtx{
         let mut window = bitmap.get_window_u8().unwrap();
 
         window.normalize_unused_alpha().unwrap();
+        Self::checksum_bitmap_window(&mut window)
+    }
+    pub fn save_bitmap(&self, c: &Context, bitmap_key: BitmapKey, checksum: &str) {
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!())).unwrap();
 
-        let actual = Self::checksum_bitmap_window(&mut window);
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!())).unwrap();
+
+        let mut window = bitmap.get_window_u8().unwrap();
+        self.save_frame(&mut window, checksum)
+    }
+
+    /// Checksums the result, saves it to disk, the compares the actual checksum to the expected checksum.
+    ///
+    /// Complains loudly and returns false if the checksums don't match. Also returns the trusted checksum.
+    ///
+    /// if there is no trusted checksum, create_if_missing is set, then
+    /// the checksum will be stored, and the function will return true.
+    pub fn bitmap_matches(&self, c: &Context, bitmap_key: BitmapKey, name: &str) -> (ChecksumMatch, String){
+        let actual = Self::checksum_bitmap(c,bitmap_key);
         //println!("actual = {}", &actual);
         // Always write a copy if it doesn't exist
-        self.save_frame(&mut window, &actual);
-
+        self.save_bitmap(c, bitmap_key, &actual);
         self.exact_match(actual, name)
     }
 
@@ -572,12 +688,7 @@ impl ChecksumCtx{
     /// the checksum will be stored, and the function will return true.
     pub fn bytes_match(&self, bytes: &[u8], name: &str) -> (ChecksumMatch, String){
         let actual = Self::checksum_bytes(bytes);
-
-        //println!("actual = {}", &actual);
-
-        // Always write a copy if it doesn't exist
         self.save_bytes(bytes, &actual);
-
         self.exact_match(actual, name)
     }
 
@@ -589,21 +700,24 @@ impl ChecksumCtx{
     /// if there is no trusted checksum, create_if_missing is set, then
     /// the checksum will be stored, and the function will return true.
     pub fn exact_match(&self, actual_checksum: String, name: &str) -> (ChecksumMatch, String){
-        if let Some(trusted) = self.get(name){
+        if let Some(trusted) = self.get_cached(name){
             if trusted == actual_checksum{
+                self.set_actual(name.to_owned(), actual_checksum.clone()).unwrap();
                 (ChecksumMatch::Match, trusted)
             }else{
-                println!("====================\n{}\nThe stored checksum {} differs from the actual_checksum one {}\nTrusted: {}\nActual: {}\n",
+                eprintln!("====================\n{}\nThe stored checksum {} differs from the actual_checksum one {}\nTrusted: {}\nActual: {}\n",
                          name, &trusted,
                          &actual_checksum,
                          self.image_path(&trusted).to_str().unwrap(),
                          self.image_path(&actual_checksum).to_str().unwrap());
+                self.set_actual(name.to_owned(), actual_checksum.clone()).unwrap();
                 (ChecksumMatch::Mismatch, trusted)
             }
         }else{
             if self.create_if_missing {
                 println!("====================\n{}\nStoring checksum {}", name, &actual_checksum);
                 self.set(name.to_owned(), actual_checksum.clone()).unwrap();
+                self.set_actual(name.to_owned(), actual_checksum.clone()).unwrap();
                 (ChecksumMatch::NewStored, actual_checksum)
             } else {
                 panic!("There is no stored checksum for {}; rerun with create_if_missing=true", name);
@@ -647,68 +761,6 @@ pub fn decode_input(c: &mut Context, input: IoTestEnum) -> BitmapKey {
 }
 
 
-
-
-/// Returns the number of bytes that differ, followed by the total value of all differences
-/// If these are equal, then only off-by-one errors are occurring
-// fn diff_bytes(a: &[u8], b: &[u8]) ->(i64,i64){
-//     a.iter().zip(b.iter()).fold((0,0), |(count, delta), (a,b)| if a != b { (count + 1, delta + (i64::from(*a) - i64::from(*b)).abs()) } else { (count,delta)})
-// }
-
-fn diff_bytes(a: &[u8], b: &[u8]) -> (i64, i64, i64) {
-    let mut count = 0;
-    let mut premultiplied_delta = 0;
-    let mut abs_diff = 0;
-
-    for (a_pixel, b_pixel) in a.chunks_exact(4).zip(b.chunks_exact(4)) {
-        let a_alpha = a_pixel[3] as f32 / 255.0;
-        let b_alpha = b_pixel[3] as f32 / 255.0;
-
-        if a_pixel != b_pixel {
-            count += 1;
-
-            // Calculate premultiplied delta for RGB channels
-            for i in 0..3 {
-                let a_premultiplied = (a_pixel[i] as f32 * a_alpha).round() as i64;
-                let b_premultiplied = (b_pixel[i] as f32 * b_alpha).round() as i64;
-                premultiplied_delta += (a_premultiplied - b_premultiplied).abs();
-            }
-
-            // Add alpha channel difference to premultiplied delta
-            premultiplied_delta += (i64::from(a_pixel[3]) - i64::from(b_pixel[3])).abs();
-
-            // Calculate absolute difference for all channels
-            for i in 0..4 {
-                abs_diff += (i64::from(a_pixel[i]) - i64::from(b_pixel[i])).abs();
-            }
-        }
-    }
-
-    (count, premultiplied_delta, abs_diff)
-}
-
-
-
-fn diff_bitmap_windows(a: &mut BitmapWindowMut<u8>, b: &mut BitmapWindowMut<u8>) -> (i64, i64, i64) {
-    if a.w() != b.w() || a.h() != b.h() || a.info().pixel_layout() != b.info().pixel_layout() {
-        panic!("Bitmap dimensions differ. a:\n{:#?}\nb:\n{:#?}", a, b);
-    }
-    if a.info().pixel_layout() != PixelLayout::BGRA {
-        panic!("Bitmap layout is not BGRA");
-    }
-
-    a.scanlines().into_iter().zip(b.scanlines().into_iter()).map(|(a_scanline, b_scanline)| {
-
-        if a_scanline.row() == b_scanline.row() {
-            (0, 0, 0)
-        } else {
-            diff_bytes(a_scanline.row(), b_scanline.row())
-        }
-    }).fold((0, 0, 0), |(a, b, c), (d, e, f)| (a + d, b + e, c + f))
-}
-
-
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Similarity{
     AllowOffByOneBytesCount(i64),
@@ -717,21 +769,20 @@ pub enum Similarity{
 }
 
 impl Similarity{
-    fn report_on_bytes(&self, count: i64, premultiplied_delta: i64, abs_diff: i64, len: usize) -> Option<String>{
+    fn report_on_bytes(&self, stats: &BitmapDiffStats) -> Option<String>{
         let allowed_off_by_one_bytes: i64 = match *self {
             Similarity::AllowOffByOneBytesCount(v) => v,
-            Similarity::AllowOffByOneBytesRatio(ratio) => (ratio * len as f32) as i64,
+            Similarity::AllowOffByOneBytesRatio(ratio) => (ratio * stats.values as f32) as i64,
             Similarity::AllowDssimMatch(..) => return None,
         };
-        eprintln!("{} {} {} {} {:?}", count, premultiplied_delta, abs_diff, len, self);
+        eprintln!("{} {:?}", stats.legacy_report(), self);
 
         //TODO: This doesn't really work, since off-by-one errors are averaged and thus can hide +/- 4
+        let bad_approx_of_differing_pixels = stats.values_abs_delta_sum as i64 / 4;
 
-        if count < premultiplied_delta / 4 || premultiplied_delta > allowed_off_by_one_bytes{
-            let premult_degree = premultiplied_delta as f64 / (count * 4) as f64;
-            let abs_degree = abs_diff as f64 / (count * 4) as f64;
-            return Some(format!("Bitmaps mismatched: after adjusting for transparency, an average channel error of {} (total {}) on {} ({}% of {}) pixels. Absolute error avg {} (total {})",
-                                premult_degree, premultiplied_delta, count, (count as f64 * 100f64 / len as f64), len, abs_degree, abs_diff));
+        if stats.pixels_differing < bad_approx_of_differing_pixels
+                || stats.values_differing_by_more_than_1 > allowed_off_by_one_bytes{
+            return Some(format!("Bitmaps mismatched: {}", stats.legacy_report()));
         }
 
         None
@@ -775,11 +826,27 @@ fn get_imgref_bgra32(b: &mut BitmapWindowMut<u8>) -> imgref::ImgVec<rgb::Rgba<f3
     imgref::Img::new_stride(cast_to_bgra8.to_rgbaplu(), w, h, new_stride)
 }
 
+pub struct CompareBitmapsResult {
+    pub stats: Option<BitmapDiffStats>,
+    pub dssim: Option<f64>,
+    pub close_enough: bool,
+    pub exact_match: bool,
+    pub failure_message: Option<String>,
+    pub actual_checksum: Option<String>
+}
 /// Compare two bgra32 or bgr32 frames using the given similarity requirements
-pub fn compare_bitmaps(_c: &ChecksumCtx, mut actual: &mut BitmapWindowMut<u8>, mut expected: &mut BitmapWindowMut<u8>, require: Similarity, panic: bool) -> bool{
-    let (count, premultiplied_delta, abs_diff) = diff_bitmap_windows(&mut actual, &mut expected);
-    if count == 0 {
-        return true;
+pub fn compare_bitmaps(_c: &ChecksumCtx, mut actual: &mut BitmapWindowMut<u8>, mut expected: &mut BitmapWindowMut<u8>,
+         require: Similarity, panic: bool) -> CompareBitmapsResult{
+    let stats = BitmapDiffStats::diff_bitmap_windows(&mut actual, &mut expected);
+    if stats.pixels_differing == 0 {
+        return CompareBitmapsResult{
+            stats: Some(stats),
+            dssim: None,
+            close_enough: true,
+            exact_match: true,
+            failure_message: None,
+            actual_checksum: None
+        }
     }
     if let Similarity::AllowDssimMatch(minval, maxval) = require {
         let actual_ref = get_imgref_bgra32(&mut actual);
@@ -798,72 +865,48 @@ pub fn compare_bitmaps(_c: &ChecksumCtx, mut actual: &mut BitmapWindowMut<u8>, m
         } else {
             None
         };
+        let result = CompareBitmapsResult{
+            stats: Some(stats),
+            dssim: Some(dssim.into()),
+            close_enough: dssim >= minval && dssim <= maxval,
+            exact_match: false,
+            failure_message: failure.clone(),
+            actual_checksum: None
+        };
+
 
         if let Some(message) = failure {
             if panic {
                 panic!("{}", message);
             } else {
                 eprintln!("{}", message);
-                false
             }
-        } else {
-            true
         }
+        result
     } else {
-        if let Some(message) = require.report_on_bytes(count, premultiplied_delta, abs_diff, actual.info().width() as usize * actual.info().height() as usize * actual.t_per_pixel() as usize) {
+        let failure = require.report_on_bytes(&stats);
+
+        let result = CompareBitmapsResult{
+            stats: Some(stats),
+            dssim: None,
+            close_enough: failure.is_none(),
+            exact_match: false,
+            failure_message: failure.clone(),
+            actual_checksum: None
+        };
+
+        if let Some(message) = failure {
             if panic {
                 panic!("{}", message);
             } else {
                 eprintln!("{}", message);
-                return false;
             }
         }
-        true
+        result
     }
 
 }
 
-/// Evaluates the given result against known truth, applying the given constraints
-pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_context: &Context,  expected_bitmap_key: BitmapKey, result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
-    if !check_size(&result, require.clone(), panic) {
-        return false;
-    }
-
-
-    let mut image_context = Context::create().unwrap();
-    let (actual_context, actual_bitmap_key) = match result {
-        ResultKind::Bitmap{ context, key } => (context, key ),
-        ResultKind::Bytes(actual_bytes) => {
-            let key = decode_input(&mut image_context, IoTestEnum::ByteArray(actual_bytes.to_vec()));
-            (image_context.as_ref(), key)
-        }
-    };
-
-
-
-    let actual_bitmaps = actual_context.borrow_bitmaps()
-        .map_err(|e| e.at(here!())).unwrap();
-
-    let mut actual_bitmap = actual_bitmaps.try_borrow_mut(actual_bitmap_key)
-        .map_err(|e| e.at(here!())).unwrap();
-
-    let mut actual = actual_bitmap.get_window_u8().unwrap();
-
-    let result_checksum =  ChecksumCtx::checksum_bitmap_window(&mut actual);
-
-    if result_checksum == expected_checksum {
-        true
-    } else{
-        let expected_bitmaps = expected_context.borrow_bitmaps()
-            .map_err(|e| e.at(here!())).unwrap();
-
-        let mut expected_bitmap = expected_bitmaps.try_borrow_mut(expected_bitmap_key)
-            .map_err(|e| e.at(here!())).unwrap();
-        let mut expected = expected_bitmap.get_window_u8().unwrap();
-
-        compare_bitmaps(c, &mut actual, &mut expected, require.similarity, panic)
-    }
-}
 
 pub fn check_size(result: &ResultKind, require: Constraints, panic: bool) -> bool{
     if let ResultKind::Bytes(ref actual_bytes) = *result {
@@ -881,64 +924,77 @@ pub fn check_size(result: &ResultKind, require: Constraints, panic: bool) -> boo
     true
 }
 
-
-
-
 /// Evaluates the given result against known truth, applying the given constraints
-pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
-    let (exact, trusted) = result.exact_match_verbose(c, name);
-
-
+pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_context: Box<Context>, expected_bitmap_key: BitmapKey, result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
     if !check_size(&result, require.clone(), panic) {
         return false;
     }
 
+    let res = compare_bitmaps_result_to_expected(c, result,
+        true, expected_context, expected_bitmap_key, require.similarity, panic);
+    res.close_enough
+}
 
+/// Evaluates the given result against known truth, applying the given constraints
+pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
+    if !check_size(&result, require.clone(), panic) {
+        return false;
+    }
+    let (exact, trusted) = result.exact_match_verbose(c, name);
     if exact == ChecksumMatch::Match {
         true
     } else {
+
         let (expected_context, expected_bitmap_key) = c.load_image(&trusted);
-        let mut image_context = Context::create().unwrap();
-        let (actual_context, actual_bitmap_key) = match result {
-            ResultKind::Bitmap{ context, key } => (context, key),
-            ResultKind::Bytes(actual_bytes) => {
-                image_context.add_input_bytes(0, actual_bytes).unwrap();
-                let key =  decode_image(&mut image_context, 0);
-                (image_context.as_ref(),key )
-            }
-        };
-        let res ;
-        {
-                let expected_bitmaps = expected_context.borrow_bitmaps()
-                .map_err(|e| e.at(here!())).unwrap();
-
-            let mut expected_bitmap = expected_bitmaps.try_borrow_mut(expected_bitmap_key)
-                .map_err(|e| e.at(here!())).unwrap();
-            let mut expected = expected_bitmap.get_window_u8().unwrap();
-
-            let actual_bitmaps = actual_context.borrow_bitmaps()
-                .map_err(|e| e.at(here!())).unwrap();
-
-            let mut actual_bitmap = actual_bitmaps.try_borrow_mut(actual_bitmap_key)
-                .map_err(|e| e.at(here!())).unwrap();
-            let mut actual = actual_bitmap.get_window_u8().unwrap();
-
-            res = compare_bitmaps(c, &mut actual, &mut expected, require.similarity, panic);
-        }
-        drop(expected_context); // Context must remain in scope until we are done with expected_bitmap
-        res
+        let res = compare_bitmaps_result_to_expected(c,
+            result, false,
+            expected_context, expected_bitmap_key,
+            require.similarity, panic);
+        res.close_enough
     }
 }
 
-/// Complains loudly and returns false  if `bitmap` doesn't match the stored checksum and isn't within the off-by-one grace window.
-pub fn bitmap_regression_check(c: &ChecksumCtx, context: &Context, bitmap_key: BitmapKey, name: &str, allowed_off_by_one_bytes: usize) -> bool{
+pub fn compare_bitmaps_result_to_expected<'a>(c: &ChecksumCtx, result: ResultKind<'a>,
+    calculate_checksum: bool,
+   expected_context: Box<Context>, expected_bitmap_key: BitmapKey, require: Similarity, panic: bool) -> CompareBitmapsResult{
 
-    evaluate_result(c,  name, ResultKind::Bitmap{context, key: bitmap_key}, Constraints{
-        similarity: Similarity::AllowOffByOneBytesCount(allowed_off_by_one_bytes as i64),
-        max_file_size: None
-    }, true)
+    let mut image_context = Context::create().unwrap();
+    let (actual_context, actual_bitmap_key) = match result {
+        ResultKind::Bitmap{ context, key } => (context, key),
+        ResultKind::Bytes(actual_bytes) => {
+            image_context.add_input_bytes(0, actual_bytes).unwrap();
+            let key =  decode_image(&mut image_context, 0);
+            (image_context.as_ref(),key )
+        }
+    };
+
+    let actual_bitmaps = actual_context.borrow_bitmaps()
+        .map_err(|e| e.at(here!())).unwrap();
+    let mut actual_bitmap = actual_bitmaps.try_borrow_mut(actual_bitmap_key)
+        .map_err(|e| e.at(here!())).unwrap();
+    let mut actual = actual_bitmap.get_window_u8().unwrap();
+
+    let actual_checksum = if calculate_checksum{
+        Some(ChecksumCtx::checksum_bitmap_window(&mut actual))
+    } else {
+        None
+    };
+
+
+    let mut res ;
+    {
+        let expected_bitmaps = expected_context.borrow_bitmaps()
+            .map_err(|e| e.at(here!())).unwrap();
+
+        let mut expected_bitmap = expected_bitmaps.try_borrow_mut(expected_bitmap_key)
+            .map_err(|e| e.at(here!())).unwrap();
+        let mut expected = expected_bitmap.get_window_u8().unwrap();
+        res = compare_bitmaps(c, &mut actual, &mut expected, require, panic);
+    }
+    drop(expected_context); // Context must remain in scope until we are done with expected_bitmap
+    res.actual_checksum = actual_checksum;
+    res
 }
-
 
 
 
@@ -970,6 +1026,14 @@ pub fn compare_with_context(context: &mut Context, inputs: Option<Vec<IoTestEnum
     }else{
         panic!("execution failed {:?}", response);
     }
+}
+/// Complains loudly and returns false  if `bitmap` doesn't match the stored checksum and isn't within the off-by-one grace window.
+pub fn bitmap_regression_check(c: &ChecksumCtx, context: &Context, bitmap_key: BitmapKey, name: &str, allowed_off_by_one_bytes: usize) -> bool{
+
+    evaluate_result(c,  name, ResultKind::Bitmap{context, key: bitmap_key}, Constraints{
+        similarity: Similarity::AllowOffByOneBytesCount(allowed_off_by_one_bytes as i64),
+        max_file_size: None
+    }, true)
 }
 
 

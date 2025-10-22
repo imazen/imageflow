@@ -11,7 +11,7 @@ pub mod common;
 use crate::common::*;
 
 
-use imageflow_core::{Context, FlowError, CodeLocation};
+use imageflow_core::Context;
 use s::{CommandStringKind, ResponsePayload};
 
 
@@ -287,6 +287,6 @@ pub fn compare_encoded_to_source(input: IoTestEnum, debug: bool, require: Constr
         ctx.save_frame(&mut original_window, &original_checksum);
     }
 
-    compare_with(&ctx, &original_checksum, &context2, bitmap_key, ResultKind::Bytes(bytes), require, true)
+    compare_with(&ctx, &original_checksum, context2, bitmap_key, ResultKind::Bytes(bytes), require, true)
 
 }
