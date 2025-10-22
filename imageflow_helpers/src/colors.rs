@@ -11,15 +11,11 @@ fn parse_rgba_slices(r: &str, g: &str, b: &str, a :&str) -> Result<Color32,std::
             2 => u8::from_str_radix(s, 16),
             _ => panic!("segments may be zero to two characters, but no more"),
         }.map( u32::from)
-    }).fold(Ok(0u32), |acc, item| {
-        if let Ok(argb) = acc{
-            if let Ok(v) = item {
-                Ok(argb.checked_shl(8).expect("4 8-bit shifts cannot overflow u32 when starting with zero") | v)
-            }else{
-                item
-            }
+    }).try_fold(0u32, |acc, item| {
+        if let Ok(v) = item {
+            Ok(acc.checked_shl(8).expect("4 8-bit shifts cannot overflow u32 when starting with zero") | v)
         }else{
-            acc
+            item
         }
     }).map(Color32)
 }
@@ -36,7 +32,9 @@ pub fn parse_color_hex(value: &str) -> std::result::Result<Color32, ParseColorEr
         _ => value
     };
     let u32_result = u32::from_str_radix(value, 16);
-    if u32_result.is_ok() {
+    if let Err(u32_error) = u32_result {
+        Err(ParseColorError::NotHexadecimal{desc: "Only hexadecimal colors are permitted here", parse_error: u32_error})
+    } else{
         let why = "Any substring of a valid hexadecimal string should also be a valid hexadecimal string";
         match value.len() {
             3 => Ok(parse_rgba_slices(&value[0..1], &value[1..2], &value[2..3], "").expect(why)),
@@ -45,8 +43,6 @@ pub fn parse_color_hex(value: &str) -> std::result::Result<Color32, ParseColorEr
             8 => Ok(parse_rgba_slices(&value[0..2], &value[2..4], &value[4..6], &value[6..8]).expect(why)),
             _ => Err(ParseColorError::FormatIncorrect("CSS hexadecimal colors must be in the form [#]RGB, [#]RGBA, [#]RRGGBBAA, or [#]RRGGBB. "))
         }
-    } else {
-        Err(ParseColorError::NotHexadecimal{desc: "Only hexadecimal colors are permitted here", parse_error: u32_result.unwrap_err()})
     }
 }
 

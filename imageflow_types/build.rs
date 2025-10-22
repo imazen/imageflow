@@ -152,14 +152,16 @@ fn collect_info(shopping_list: Vec<EnvTidbit>) -> HashMap<String, Option<String>
     results.into_iter().collect()
 }
 fn what_to_collect() -> Vec<EnvTidbit>{
-    let mut c = Vec::new();
-    c.push(EnvTidbit::CmdOrEnvReq {key: "GIT_COMMIT", cmd: "git rev-parse HEAD"});
-    c.push(EnvTidbit::CmdOrEnv{key: "GIT_COMMIT_SHORT", cmd: "git rev-parse --short HEAD"});
-    c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_ALWAYS", cmd: "git describe --always --tags"});
-    c.push(EnvTidbit::CmdOrEnvReq{key: "GIT_DESCRIBE_ALWAYS_LONG", cmd: "git describe --always --tags --long"});
-    c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_ALL", cmd: "git describe --always --all --long"});
-    c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_TAG", cmd: "git describe --exact-match --tags"});
-    c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_BRANCH", cmd: "git symbolic-ref --short HEAD"});
+    let mut c = vec![
+        EnvTidbit::CmdOrEnvReq {key: "GIT_COMMIT", cmd: "git rev-parse HEAD"},
+        EnvTidbit::CmdOrEnv{key: "GIT_COMMIT_SHORT", cmd: "git rev-parse --short HEAD"},
+        EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_ALWAYS", cmd: "git describe --always --tags"},
+        EnvTidbit::CmdOrEnvReq{key: "GIT_DESCRIBE_ALWAYS_LONG", cmd: "git describe --always --tags --long"},
+        EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_ALL", cmd: "git describe --always --all --long"},
+        EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_TAG", cmd: "git describe --exact-match --tags"},
+        EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_BRANCH", cmd: "git symbolic-ref --short HEAD"},
+    ];
+
     static ENV_VARS: [&str;22] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",
         "CI_PULL_REQUEST_INFO", "CI_TAG", "CI_RELEASE", "CI_REPO", "CI_RELATED_BRANCH", "CI", "TARGET", "OUT_DIR", "HOST", "OPT_LEVEL", "DEBUG", "PROFILE", "RUSTC", "RUSTFLAGS","TARGET_CPU"
     ];

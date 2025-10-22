@@ -104,7 +104,7 @@ impl Debounce{
         self.next
     }
     pub fn allow(&mut self, clock: &dyn AppClock) -> bool{
-        if self.interval <= 0{
+        if self.interval == 0{
             false
         } else {
             let now = clock.get_timestamp_ticks();
