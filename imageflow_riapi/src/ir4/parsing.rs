@@ -1371,6 +1371,7 @@ where T: fmt::Debug, T: PartialEq {
 }
 
 #[test]
+#[rustfmt::skip]
 fn test_url_parsing() {
     #[track_caller]
     fn t(rel_url: &str, expected: Instructions, expected_warnings: Vec<ParseWarning>){

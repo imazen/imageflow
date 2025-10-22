@@ -141,6 +141,7 @@ const ABSOLUTE_LOWEST_HINTS: QualityProfileHints = QualityProfileHints {
     png_max: 4,
     png_s: 4
 };
+#[rustfmt::skip]
 const QUALITY_HINTS: [QualityProfileHints; 8] = [
     QualityProfileHints { profile: Some(QualityProfile::Lowest),
         p: 15.0, ssim2: 10.0, moz: 15.0, jpegli: 15.0, webp: 15.0, webp_m: 6, avif: 23.0, avif_s: 6, jxl: 13.0, jxl_e: 5, png: 0, png_max: 10, png_s: 4 },
