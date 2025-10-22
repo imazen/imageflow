@@ -605,6 +605,7 @@ pub enum ErrorCategory {
     Unknown = 19,
     /// A custom error defined by a third-party plugin
     Custom = 20,
+    OperationCancelled = 21,
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // NOTE - safe use of transmute in from_i32 requires that there be no numbering gaps in this list
     // Also keep ErrorCategory::last() up-to-date
@@ -613,7 +614,7 @@ pub enum ErrorCategory {
 
 impl ErrorCategory {
     pub fn last() -> ErrorCategory {
-        ErrorCategory::Custom
+        ErrorCategory::OperationCancelled
     }
     fn from_i32(v: i32) -> Option<ErrorCategory> {
         if v >= 0 && v <= ErrorCategory::last() as i32 {
@@ -629,36 +630,7 @@ impl ErrorCategory {
     pub fn to_outward_error_code(&self) -> i32 {
         self.to_i32()
     }
-    // Was intendend to be used by the C abi, but we accidentally used
-    // to_outward_error_code for imageflow_context_error_code
-    pub fn from_c_error_code(status: i32) -> Option<ErrorCategory> {
-        if let Some(v) = ErrorCategory::from_i32(status - 200) {
-            Some(v)
-        } else {
-            match status {
-                0 => Some(ErrorCategory::Ok),
-                10 => Some(ErrorCategory::OutOfMemory),
-                20 => Some(ErrorCategory::IoError),
-                30 | 40 | 50 | 51 | 52 | 53 | 54 | 61 => Some(ErrorCategory::InternalError),
-                60 => Some(ErrorCategory::ImageMalformed),
-                _ => None,
-            }
-        }
-    }
-    // Was intendend to be used by the C abi, but we accidentally used
-    // to_outward_error_code for imageflow_context_error_code
-    pub fn to_c_error_code(&self) -> i32 {
-        match *self {
-            ErrorCategory::Ok => 0,
-            ErrorCategory::Custom => 1025,
-            ErrorCategory::Unknown => 1024,
-            ErrorCategory::OutOfMemory => 10,
-            ErrorCategory::IoError => 20,
-            ErrorCategory::InternalError => 30,
-            ErrorCategory::ImageMalformed => 60,
-            other => 200 + *self as i32,
-        }
-    }
+
 
     pub fn process_exit_code(&self) -> i32 {
         match *self {
