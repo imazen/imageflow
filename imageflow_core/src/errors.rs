@@ -163,6 +163,7 @@ pub enum ErrorKind {
     FetchError,
     SizeLimitExceeded,
     InvalidBitmapType,
+    OperationCancelled,
     Category(ErrorCategory),
 }
 impl CategorizedError for ErrorKind {
@@ -208,7 +209,8 @@ impl CategorizedError for ErrorKind {
             | ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,
             ErrorKind::FetchError | ErrorKind::DecodingIoError | ErrorKind::EncodingIoError => {
                 ErrorCategory::IoError
-            }
+            },
+            ErrorKind::OperationCancelled => ErrorCategory::OperationCancelled,
             ErrorKind::Category(c) => c,
         }
     }
@@ -653,6 +655,7 @@ impl ErrorCategory {
             ErrorCategory::LicenseError => 402,
             ErrorCategory::AuthorizationRequired => 401,
             ErrorCategory::Ok => 0,
+            ErrorCategory::OperationCancelled => 130
         }
     }
     pub fn http_status_code(&self) -> i32 {
@@ -682,6 +685,7 @@ impl ErrorCategory {
             ErrorCategory::UpstreamError => 502,
             ErrorCategory::OutOfMemory => 503,
             ErrorCategory::UpstreamTimeout => 504,
+            ErrorCategory::OperationCancelled => 499,
         }
     }
 
