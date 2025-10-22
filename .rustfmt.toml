@@ -1,9 +1,9 @@
-max_width=120
+style_edition = "2021"
+
+max_width=100
 use_small_heuristics="Max"
 newline_style="Unix"
-fn_args_layout="Compressed"
-group_imports = "StdExternalCrate"
-format_strings = false
+
 reorder_imports = true
 
 # Once these stabilize, they'd be nice
