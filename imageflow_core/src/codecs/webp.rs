@@ -310,7 +310,7 @@ impl Encoder for WebPEncoder {
 
     }
 
-    fn get_io(&self) -> Result<IoProxyRef> {
+    fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Borrow(&self.io))
     }
 }

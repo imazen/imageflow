@@ -54,7 +54,7 @@ impl<T> AppendOnlySet<T> {
         self.slots.get_mut()
     }
 
-    pub fn iter(&self) -> IterAppendOnlySet<T>{
+    pub fn iter(&self) -> IterAppendOnlySet<'_,T>{
         IterAppendOnlySet{
             set: self,
             index: 0
@@ -99,14 +99,14 @@ impl<T> AddRemoveSet<T> {
             inner: AppendOnlySet::with_capacity(slots)
         }
     }
-    pub fn add(&self, value: T) -> Ref<T> {
+    pub fn add(&self, value: T) -> Ref<'_,T> {
         Ref::map(self.inner.add(RefCell::new(Some(value))).borrow(), |t| t.as_ref().unwrap())
     }
-    pub fn add_mut(&self, value: T) -> RefMut<T> {
+    pub fn add_mut(&self, value: T) -> RefMut<'_,T> {
         RefMut::map(self.inner.add(RefCell::new(Some(value))).borrow_mut(), |t| t.as_mut().unwrap())
     }
 
-    pub fn iter(&self) -> IterAddRemoveSet<T>{
+    pub fn iter(&self) -> IterAddRemoveSet<'_,T>{
         IterAddRemoveSet{ inner: self.inner.iter() }
     }
 
@@ -116,7 +116,7 @@ impl<T> AddRemoveSet<T> {
     //        self.iter().find(|r| if let Ok(reference) = r { reference as *const T == ptr } else {false}).map(|v| Some(v)).unwrap_or(Ok(None))
     //    }
 
-    pub fn iter_mut(&self) -> IterMutAddRemoveSet<T>{
+    pub fn iter_mut(&self) -> IterMutAddRemoveSet<'_,T>{
         IterMutAddRemoveSet{ inner: self.inner.iter() }
     }
 
@@ -148,7 +148,7 @@ impl<T> AddRemoveSet<T> {
         self.try_get_reference(v).map(|opt| opt.is_some())
     }
 
-    pub fn try_get_reference(&self, v: *const T) -> Result<Option<Ref<T>>, BorrowError>{
+    pub fn try_get_reference(&self, v: *const T) -> Result<Option<Ref<'_,T>>, BorrowError>{
         let mut last_error = None;
         for refcell in self.inner.iter() {
             match refcell.try_borrow() {
@@ -167,12 +167,12 @@ impl<T> AddRemoveSet<T> {
             Ok(None)
         }
     }
-    pub fn try_get_reference_mut(&self, v: *const T) -> Result<Option<RefMut<T>>, BorrowMutError>{
+    pub fn try_get_reference_mut(&self, v: *const T) -> Result<Option<RefMut<'_,T>>, BorrowMutError>{
         self.try_get_option_reference_mut(v).map(|opt| opt.and_then(|ref_obj| {
             if ref_obj.is_some() { Some(RefMut::map(ref_obj, |r| r.as_mut().unwrap())) } else {None}
         }))
     }
-    fn try_get_option_reference_mut(&self, v: *const T) -> Result<Option<RefMut<Option<T>>>, BorrowMutError>{
+    fn try_get_option_reference_mut(&self, v: *const T) -> Result<Option<RefMut<'_, Option<T>>>, BorrowMutError>{
         let mut last_error = None;
         for refcell in self.inner.iter() {
             match refcell.try_borrow_mut() {
@@ -267,7 +267,7 @@ mod tests{
             self.objects.add(RefCell::new(Some(Child{})))
         }
 
-        pub fn add_child_get_ref(&self) -> RefMut<Option<Child>>{
+        pub fn add_child_get_ref(&self) -> RefMut<'_,Option<Child>>{
             self.objects.add(RefCell::new(Some(Child{}))).borrow_mut()
         }
 

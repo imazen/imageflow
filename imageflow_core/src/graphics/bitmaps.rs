@@ -33,7 +33,7 @@ impl BitmapsContainer{
         self.map.get(key)
     }
 
-    pub fn try_borrow_mut(&self, key: BitmapKey) -> Result<RefMut<Bitmap>, FlowError> {
+    pub fn try_borrow_mut(&self, key: BitmapKey) -> Result<RefMut<'_, Bitmap>, FlowError> {
         let lookup = self.get(key);
         if lookup.is_none(){
             // collect all the slotmap keys
@@ -311,7 +311,7 @@ impl<'a,T>  BitmapWindowMut<'a, T>
     }
 
 
-    pub fn row_window(&mut self, index: u32) -> Option<BitmapWindowMut<T>>{
+    pub fn row_window(&mut self, index: u32) -> Option<BitmapWindowMut<'_, T>>{
         let w= self.w();
         self.window(0, index, w, index + 1)
     }
@@ -349,7 +349,7 @@ impl<'a,T>  BitmapWindowMut<'a, T>
         }
     }
 
-    pub fn window(&mut self, x1: u32, y1: u32, x2: u32, y2: u32) -> Option<BitmapWindowMut<T>>{
+    pub fn window(&mut self, x1: u32, y1: u32, x2: u32, y2: u32) -> Option<BitmapWindowMut<'_, T>>{
         if x1 >= x2 || y1 >= y2 || x2 > self.info.width() || y2 > self.info.height(){
             return None;// Err(nerror!(ErrorKind::InvalidArgument, "x1,y1,x2,y2 must be within window bounds"));
         }
@@ -393,7 +393,7 @@ impl<'a,T>  BitmapWindowMut<'a, T>
 }
 
 impl Bitmap{
-    pub fn get_window_u8(&mut self) -> Option<BitmapWindowMut<u8>>{
+    pub fn get_window_u8(&mut self) -> Option<BitmapWindowMut<'_, u8>>{
         let info = self.info().clone();
 
         self.get_u8_slice().map(|slice| BitmapWindowMut{
@@ -402,7 +402,7 @@ impl Bitmap{
                 is_sub_window: false
             })
     }
-    pub fn get_window_bgra32(&mut self) -> Option<BitmapWindowMut<rgb::alt::BGRA<u8, u8>>>{
+    pub fn get_window_bgra32(&mut self) -> Option<BitmapWindowMut<'_,rgb::alt::BGRA<u8, u8>>>{
         let mut info = self.info().clone();
         if !info.t_stride.is_multiple_of(4){
             return None;
@@ -417,7 +417,7 @@ impl Bitmap{
             })
     }
 
-    pub fn get_window_bgra_f32(&mut self) -> Option<BitmapWindowMut<Bgra<f32>>>{
+    pub fn get_window_bgra_f32(&mut self) -> Option<BitmapWindowMut<'_, Bgra<f32>>>{
         let mut info = self.info().clone();
         if !info.t_stride.is_multiple_of(4){
             return None;
@@ -431,7 +431,7 @@ impl Bitmap{
                 is_sub_window: false
             })
     }
-    pub fn get_window_f32(&mut self) -> Option<BitmapWindowMut<f32>>{
+    pub fn get_window_f32(&mut self) -> Option<BitmapWindowMut<'_,f32>>{
         let info = self.info().clone();
         self.get_f32_slice().map(|slice| BitmapWindowMut{
                 slice,
@@ -954,7 +954,7 @@ impl<'a, T> fmt::Display for ScanlineIterMut<'a, T> {
 
 impl<'a, T> ScanlineIterMut<'a, T> {
     pub fn empty(info: &'a BitmapInfo) -> Self{
-        
+
         Self {
             info: info.surface_info(),
             remaining_slice: &mut [],
@@ -1080,7 +1080,7 @@ impl<'a, T> ExactSizeIterator for ScanlineIterMut<'a, T> {
 impl<'a, T> ScanlineIterMut<'a, T> {
     #[inline]
     pub fn length(&self) -> usize{
-        
+
         //eprintln!("length::{} (h={}, y={}, finished={})", len, self.h, self.next_y, self.finished);
         {
             if self.finished {
@@ -1141,7 +1141,7 @@ impl<'a, T> Iterator for ScanlineIterMut<'a, T> {
             self.next_y += 1;
         }
 
-        
+
         //eprintln!("next::Some{}", &r.as_ref().unwrap());
         //eprintln!("{}", &self);
         Some(Scanline {
@@ -1194,7 +1194,7 @@ impl<'a> BitmapWindowMut<'a, BGRA8> {
 
         Ok((v, w, h))
     }
-    pub fn get_pixel_buffer(&self) -> Result<PixelBuffer, FlowError>{
+    pub fn get_pixel_buffer(&self) -> Result<PixelBuffer<'_>, FlowError>{
         if self.info.pixel_layout() != PixelLayout::BGRA {
             return Err(nerror!(ErrorKind::InvalidArgument, "Bitmap is not BGRA"));
         }
@@ -1298,7 +1298,7 @@ impl<'a> BitmapWindowMut<'a, u8> {
     }
 
 
-    pub fn get_pixel_buffer(&self) -> Result<PixelBuffer, FlowError>{
+    pub fn get_pixel_buffer(&self) -> Result<PixelBuffer<'_>, FlowError>{
 
         Ok(match self.pixel_format() {
             PixelFormat::Bgra32 => {
@@ -1415,7 +1415,7 @@ where T: Pod
         ScanlineIterMut::new(self.slice, &self.info, true).unwrap()
     }
 
-    pub fn try_cast_imgref<K: Copy>(&self) -> Result<ImgRef<K>, FlowError>
+    pub fn try_cast_imgref<K: Copy>(&self) -> Result<ImgRef<'_,K>, FlowError>
     where K: rgb::Pod{
 
         let buffer = FlowPixelBuffer::try_cast_from(self.slice, &self.info, false, false)
@@ -1655,4 +1655,3 @@ fn test_scanline_iterator_f32_reverse() {
         assert_eq!(scanline.row.len(), scanline.w as usize * scanline.t_per_pixel() as usize);
     }
 }
-

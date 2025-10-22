@@ -925,7 +925,7 @@ pub fn check_size(result: &ResultKind, require: Constraints, panic: bool) -> boo
 }
 
 /// Evaluates the given result against known truth, applying the given constraints
-pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_context: Box<Context>, expected_bitmap_key: BitmapKey, result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
+pub fn compare_with<'a, 'b>(c: &ChecksumCtx, _expected_checksum: &str, expected_context: Box<Context>, expected_bitmap_key: BitmapKey, result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
     if !check_size(&result, require.clone(), panic) {
         return false;
     }

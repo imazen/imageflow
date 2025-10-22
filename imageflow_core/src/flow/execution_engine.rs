@@ -23,7 +23,7 @@ impl<'a> Engine<'a> {
         }
     }
 
-    pub fn ctx(&self) -> OpCtx{
+    pub fn ctx(&self) -> OpCtx<'_> {
         OpCtx{
             c: self.c,
             graph: &self.g
@@ -498,7 +498,7 @@ impl<'a> Engine<'a> {
 
                     self.more_frames = self.more_frames || more_frames;
 
-                
+
                     if self.c.graph_recording.record_frame_images.unwrap_or(false) {
                         if let NodeResult::Frame(bitmap_key) = self.g
                             .node_weight(next_ix)
@@ -521,13 +521,13 @@ impl<'a> Engine<'a> {
 
                         }
                     }
-                    
+
                 }
             }
 
         }
     }
-    fn op_ctx_mut(&mut self) -> OpCtxMut{
+    fn op_ctx_mut(&mut self) -> OpCtxMut<'_>{
         OpCtxMut {
             c: self.c,
             graph: &mut self.g,

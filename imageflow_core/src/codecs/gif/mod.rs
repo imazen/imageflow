@@ -102,7 +102,7 @@ impl GifDecoder {
         Ok(bitmap_key)
 
     }
-    pub fn current_frame(&self) -> Option<&Frame>{
+    pub fn current_frame(&self) -> Option<&Frame<'static>> {
         self.last_frame.as_ref()
     }
 
@@ -231,7 +231,7 @@ impl<T> Encoder for EncoderAdapter<T>  where T: EasyEncoder{
         })
     }
 
-    fn get_io(&self) -> Result<IoProxyRef> {
+    fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Ref(self.io_ref.borrow()))
     }
 }
@@ -346,7 +346,7 @@ impl Encoder for GifEncoder{
         )
 
     }
-    fn get_io(&self) -> Result<IoProxyRef> {
+    fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Ref(self.io_ref.borrow()))
     }
 }

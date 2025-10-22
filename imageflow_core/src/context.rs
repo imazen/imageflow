@@ -108,12 +108,12 @@ impl Context {
         crate::json::invoke_with_json_error(self, method, json)
     }
 
-    pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<BitmapsContainer>>{
+    pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<'_, BitmapsContainer>>{
         self.bitmaps.try_borrow_mut()
             .map_err(|e| nerror!(ErrorKind::FailedBorrow, "Failed to mutably borrow bitmaps collection: {:?}", e))
 
     }
-    pub fn borrow_bitmaps(&self) -> Result<Ref<BitmapsContainer>>{
+    pub fn borrow_bitmaps(&self) -> Result<Ref<'_, BitmapsContainer>>{
         self.bitmaps.try_borrow()
             .map_err(|e| nerror!(ErrorKind::FailedBorrow, "Failed to borrow bitmaps collection: {:?}", e))
 
@@ -301,7 +301,7 @@ impl Context {
 
     }
 
-    pub fn get_codec(&self, io_id: i32) -> Result<RefMut<CodecInstanceContainer>> {
+    pub fn get_codec(&self, io_id: i32) -> Result<RefMut<'_,CodecInstanceContainer>> {
         let mut borrow_errors = 0;
         for item_result in self.codecs.iter_mut() {
             if let Ok(container) = item_result{

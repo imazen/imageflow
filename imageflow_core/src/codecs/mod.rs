@@ -52,7 +52,7 @@ pub trait Encoder{
     // encode entire frames and enable transparency (default)
     fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: BitmapKey, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>;
 
-    fn get_io(&self) -> Result<IoProxyRef>;
+    fn get_io(&self) -> Result<IoProxyRef<'_>>;
 }
 
 
@@ -239,7 +239,7 @@ impl CodecInstanceContainer{
          }
     }
 
-    pub fn get_encode_io(&self) -> Result<Option<IoProxyRef>>{
+    pub fn get_encode_io(&self) -> Result<Option<IoProxyRef<'_>>>{
         if let CodecKind::Encoder(ref e) = self.codec {
             Ok(Some(e.get_io().map_err(|e| e.at(here!()))?))
         }else if let Some(ref e) = self.encode_io{
@@ -249,5 +249,3 @@ impl CodecInstanceContainer{
         }
     }
 }
-
-
