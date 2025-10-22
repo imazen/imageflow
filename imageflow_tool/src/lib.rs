@@ -1,4 +1,3 @@
-
 extern crate clap;
 extern crate imageflow_helpers;
 extern crate imageflow_types as s;
@@ -7,25 +6,28 @@ extern crate imageflow_core;
 extern crate imageflow_core as fc;
 use self::imageflow_core::for_other_imageflow_crates::preludes::default::*;
 
-
 extern crate serde_json;
 extern crate zip;
 
 extern crate smallvec;
 
-use std::{ffi::OsStr, fs::File, io::{Read, Write}};
 use imageflow_helpers as hlp;
+use std::{
+    ffi::OsStr,
+    fs::File,
+    io::{Read, Write},
+};
 
-use std::path::{Path,PathBuf};
+use std::path::{Path, PathBuf};
 mod cmd_build;
 pub mod self_test;
 
+use clap::{Arg, ArgAction, Command, ValueHint};
 
-use clap::{Arg, Command, ValueHint, ArgAction};
-
-
-fn artifact_source() -> hlp::process_capture::IncludeBinary{
-    hlp::process_capture::IncludeBinary::UrlOrCopy(s::version::get_build_env_value("ESTIMATED_ARTIFACT_URL").map(|v| v.to_owned()))
+fn artifact_source() -> hlp::process_capture::IncludeBinary {
+    hlp::process_capture::IncludeBinary::UrlOrCopy(
+        s::version::get_build_env_value("ESTIMATED_ARTIFACT_URL").map(|v| v.to_owned()),
+    )
 }
 
 pub fn main_with_exit_code() -> i32 {
@@ -149,13 +151,13 @@ pub fn main_with_exit_code() -> i32 {
 
         );
     let matches = app.get_matches();
-    if let Some(capture_dest) = matches.get_one("capture-to"){
+    if let Some(capture_dest) = matches.get_one("capture-to") {
         let mut filtered_args = std::env::args().collect::<Vec<String>>();
         for ix in 0..filtered_args.len() {
-            if filtered_args[ix] == "--capture-to"{
+            if filtered_args[ix] == "--capture-to" {
                 //Remove this and the next arg
                 filtered_args.remove(ix);
-                if ix < filtered_args.len() - 1{
+                if ix < filtered_args.len() - 1 {
                     filtered_args.remove(ix);
                 }
                 break;
@@ -163,7 +165,12 @@ pub fn main_with_exit_code() -> i32 {
         }
         filtered_args.remove(0); //Remove the tool executable itself
 
-        let cap = hlp::process_capture::CaptureTo::create(capture_dest, None, filtered_args, artifact_source());
+        let cap = hlp::process_capture::CaptureTo::create(
+            capture_dest,
+            None,
+            filtered_args,
+            artifact_source(),
+        );
         cap.run();
         return cap.exit_code();
     }
@@ -172,37 +179,55 @@ pub fn main_with_exit_code() -> i32 {
         // let source = if m.contains_id("demo") {
         //     cmd_build::JobSource::NamedDemo(m.value_of("demo").unwrap().to_owned())
         // } else {
-        let source = cmd_build::JobSource::JsonFile(m.get_one::<PathBuf>("json").unwrap().to_owned());
+        let source =
+            cmd_build::JobSource::JsonFile(m.get_one::<PathBuf>("json").unwrap().to_owned());
         //};
         Some((m, source, "v1/build"))
-    }else { matches.subcommand_matches("v1/querystring").map(|m| (m,cmd_build::JobSource::Ir4QueryString(m.get_one::<String>("command").unwrap().to_owned()), "v1/querystring")) };
+    } else {
+        matches.subcommand_matches("v1/querystring").map(|m| {
+            (
+                m,
+                cmd_build::JobSource::Ir4QueryString(
+                    m.get_one::<String>("command").unwrap().to_owned(),
+                ),
+                "v1/querystring",
+            )
+        })
+    };
 
-    if let Some((m, source, subcommand_name)) = build_triple{
-
-        let builder =
-            cmd_build::CmdBuild::parse(source, m.get_many::<String>("in").map(|v| v.cloned().collect()),
-                                                m.get_many::<String>("out").map(|v| v.cloned().collect()))
-                .build_maybe();
-        if let Some(dir_str) = m.get_one::<PathBuf>("debug-package"){
+    if let Some((m, source, subcommand_name)) = build_triple {
+        let builder = cmd_build::CmdBuild::parse(
+            source,
+            m.get_many::<String>("in").map(|v| v.cloned().collect()),
+            m.get_many::<String>("out").map(|v| v.cloned().collect()),
+        )
+        .build_maybe();
+        if let Some(dir_str) = m.get_one::<PathBuf>("debug-package") {
             builder.write_errors_maybe().unwrap();
             let dir = Path::new(&dir_str);
             builder.bundle_to(dir);
             let current_dir = std::env::current_dir().unwrap();
             std::env::set_current_dir(dir).unwrap();
-            let cap = hlp::process_capture::CaptureTo::create(&OsStr::new("recipe").to_owned().into(), None, vec![subcommand_name.to_owned(), "--json".to_owned(), "recipe.json".to_owned()], artifact_source());
+            let cap = hlp::process_capture::CaptureTo::create(
+                &OsStr::new("recipe").to_owned().into(),
+                None,
+                vec![subcommand_name.to_owned(), "--json".to_owned(), "recipe.json".to_owned()],
+                artifact_source(),
+            );
             cap.run();
             //Restore current directory
             std::env::set_current_dir(&current_dir).unwrap();
             let mut archive_name = dir_str.as_os_str().to_owned();
             archive_name.push(".zip");
-            zip_directory_non_recursive(&dir,&Path::new(&archive_name)).unwrap();
+            zip_directory_non_recursive(&dir, &Path::new(&archive_name)).unwrap();
             return cap.exit_code();
         } else if let Some(dir) = m.get_one::<PathBuf>("bundle-to").map(|v| v.to_owned()) {
-                builder.write_errors_maybe().unwrap();
-                let dir = Path::new(&dir);
-                return builder.bundle_to(dir);
+            builder.write_errors_maybe().unwrap();
+            let dir = Path::new(&dir);
+            return builder.bundle_to(dir);
         } else {
-            builder.write_response_maybe(m.get_one("response"), !m.get_flag("quiet"))
+            builder
+                .write_response_maybe(m.get_one("response"), !m.get_flag("quiet"))
                 .expect("IO error writing JSON output file. Does the directory exist?");
             builder.write_errors_maybe().expect("Writing to stderr failed!");
             return builder.get_exit_code().unwrap();
@@ -213,9 +238,11 @@ pub fn main_with_exit_code() -> i32 {
         let m: &clap::ArgMatches = matches;
 
         if m.get_flag("show-compilation-info") {
-            println!("{}\n{}\n",
-                     s::version::one_line_version(),
-                     s::version::all_build_info_pairs());
+            println!(
+                "{}\n{}\n",
+                s::version::one_line_version(),
+                s::version::all_build_info_pairs()
+            );
 
             return 0;
         }
@@ -225,7 +252,9 @@ pub fn main_with_exit_code() -> i32 {
         }
         if m.get_flag("wait") {
             let mut input_buf = String::new();
-            let input = std::io::stdin().read_line(&mut input_buf).expect("Failed to read from stdin. Are you using --wait in a non-interactive shell?");
+            let input = std::io::stdin().read_line(&mut input_buf).expect(
+                "Failed to read from stdin. Are you using --wait in a non-interactive shell?",
+            );
             println!("{}", input);
             return 0;
         }
@@ -246,16 +275,23 @@ pub fn main_with_exit_code() -> i32 {
 }
 
 #[test]
-fn test_file_macro_for_this_build(){
+fn test_file_macro_for_this_build() {
     assert!(file!().starts_with("imageflow_tool"))
 }
 
-pub fn zip_directory_non_recursive<P: AsRef<Path>>(dir: P, archive_name: P) -> zip::result::ZipResult<()> {
+pub fn zip_directory_non_recursive<P: AsRef<Path>>(
+    dir: P,
+    archive_name: P,
+) -> zip::result::ZipResult<()> {
     let mut zip = zip::ZipWriter::new(File::create(archive_name.as_ref()).unwrap());
 
-    let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    let options =
+        zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-    zip.add_directory(archive_name.as_ref().file_stem().unwrap().to_str().unwrap().to_owned(), options)?;
+    zip.add_directory(
+        archive_name.as_ref().file_stem().unwrap().to_str().unwrap().to_owned(),
+        options,
+    )?;
     let entries = std::fs::read_dir(dir.as_ref()).unwrap();
 
     for entry_maybe in entries {
@@ -268,7 +304,8 @@ pub fn zip_directory_non_recursive<P: AsRef<Path>>(dir: P, archive_name: P) -> z
                 let mut contents = Vec::new();
                 file.read_to_end(&mut contents).unwrap();
 
-                let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+                let options = zip::write::SimpleFileOptions::default()
+                    .compression_method(zip::CompressionMethod::Stored);
 
                 zip.start_file(file_name, options)?;
                 zip.write_all(&contents)?;

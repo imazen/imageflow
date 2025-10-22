@@ -1,60 +1,61 @@
+use crate::sizing;
+use crate::sizing::{
+    steps, AspectRatio, BoxKind, BoxParam, BoxTarget, Cond, Layout, LayoutError, Step,
+};
 use imageflow_helpers::preludes::from_std::*;
 use std;
-use crate::sizing::{steps, BoxParam, BoxTarget, AspectRatio, Cond, Step, Layout, LayoutError, BoxKind};
-use crate::sizing;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum Strategy {
     /// Downscale the image until it fits within the box (less than both and matching at least one dimension).
-/// Never upscale, even if the image is smaller in both dimensions.
-///
-/// `down.fitw=scale(w, auto) down.fith=scale(auto,h) up.fit=none`
-/// `down.fit=proportional(target), up.fit=none`
-/// `down.fit=proportional(ibox), up.fit=none`
+    /// Never upscale, even if the image is smaller in both dimensions.
+    ///
+    /// `down.fitw=scale(w, auto) down.fith=scale(auto,h) up.fit=none`
+    /// `down.fit=proportional(target), up.fit=none`
+    /// `down.fit=proportional(ibox), up.fit=none`
     Max,
     /// Downscale minimally until the image fits one of the dimensions (it may exceed the other). Never upscale.
-///
-/// `down.fitw=scale(max(w, obox.w), auto) down.fith=scale(auto,max(h, obox.h) up.fit=none`
-/// `down.fit=proportional(obox), up.fit=none`
+    ///
+    /// `down.fitw=scale(max(w, obox.w), auto) down.fith=scale(auto,max(h, obox.h) up.fit=none`
+    /// `down.fit=proportional(obox), up.fit=none`
     #[allow(dead_code)]
     MaxAny,
     /// Upscale minimally until one dimension matches. Never downscale, if larger.
-/// `up.fit=scale(max(d, ibox.other), auto) down.fit=none`
-/// `up.fit=proportional(ibox), down.fit=none`
+    /// `up.fit=scale(max(d, ibox.other), auto) down.fit=none`
+    /// `up.fit=proportional(ibox), down.fit=none`
     #[allow(dead_code)]
     MinAny,
     /// Upscale minimally until the image meets or exceeds both specified dimensions. Never downscale.
-/// `up.fit=scale(d, auto) up.fit=none`
-/// `up.fit=proportional(obox), down.fit=none`
+    /// `up.fit=scale(d, auto) up.fit=none`
+    /// `up.fit=proportional(obox), down.fit=none`
     #[allow(dead_code)]
     Min,
     /// Downscale the image and pad to meet aspect ratio. If smaller in both dimensions, give up and leave as-is.
-/// `down.fit=proportional(ibox), pad(target), up.fit=none` - won't work, second dimension will classify as upscale.
-/// `down.fit=proportional(ibox), pad2d(target), up.fit=none`
+    /// `down.fit=proportional(ibox), pad(target), up.fit=none` - won't work, second dimension will classify as upscale.
+    /// `down.fit=proportional(ibox), pad2d(target), up.fit=none`
     PadDownscaleOnly,
     /// Downscale the image and crop to meet aspect ratio. If smaller in both dimensions, give up and leave as-is.
-/// `down.fit=proportional(obox),crop(target) up.fit=none`
+    /// `down.fit=proportional(obox),crop(target) up.fit=none`
     CropDownscaleOnly,
 
     /// Downscale & pad. If smaller, pad to achieve desired aspect ratio.
     PadOrAspect,
 
     /// Downscale & crop. If smaller, crop to achieve desired aspect ratio.
-/// `down.fit=proportional(obox),crop(target) up.fit=cropaspect(target)`
+    /// `down.fit=proportional(obox),crop(target) up.fit=cropaspect(target)`
     CropOrAspect,
     /// Downscale & crop. If smaller, pad to achieve desired aspect ratio.
-/// `down.fit=proportional(obox),crop(target) up.fit=padaspect(target)`
+    /// `down.fit=proportional(obox),crop(target) up.fit=padaspect(target)`
     #[allow(dead_code)]
     CropOrAspectPad,
 
     // perhaps a lint for pad (or distort) in down. but not up. ?
-
     /// Minimally pad to match desired aspect ratio. Downscale or upscale to exact dimensions provided.
-/// `always.fit.xy=proportional(ibox),pad(target)`
+    /// `always.fit.xy=proportional(ibox),pad(target)`
     #[allow(dead_code)]
     ExactPadAllowUpscaling,
     /// Minimally crop to match desired aspect ratio. Downscale or upscale to exact dimensions provided.
-/// `up.fit.xy=proportional(ibox),crop(target)`, `down.fit.xy=proportional(obox), crop(target)
+    /// `up.fit.xy=proportional(ibox),crop(target)`, `down.fit.xy=proportional(obox), crop(target)
     #[allow(dead_code)]
     ExactCropAllowUpscaling,
 
@@ -64,136 +65,181 @@ enum Strategy {
     #[allow(dead_code)]
     CropCarefulDownscale,
     /// `down.fit.xy=proportional(obox),cropcareful(target),proportional(target),pad2d(target)` -doesn't work; second dimension never executes pad. (unless we run smaller dimension first)
-/// `down.fit.xy=proportional(obox),cropcareful(target),proportional(target),pad2d(target.aspect)` -doesn't work; second dimension never executes pad. (unless we run smaller dimension first)
+    /// `down.fit.xy=proportional(obox),cropcareful(target),proportional(target),pad2d(target.aspect)` -doesn't work; second dimension never executes pad. (unless we run smaller dimension first)
     #[allow(dead_code)]
     CropCarefulPadDownscale,
     /// `down.fit.xy=proportional(obox),cropcareful(target),proportional(target),pad(target) up.xy.fit=cropcareful(targetaspect),pad(targetaspect)`
     #[allow(dead_code)]
     CropCarefulDownscaleOrForceAspect,
-
     // When cropping an image to achieve aspect ratio makes it smaller than the desired box, thereby changing the rules...
     // Ie, box of 20x30, image of 60x20. Crop to 14x20 leaves 6x10 gap.
     // Results should match downscaling rules, right?
     //
     // Alternate options: pad mismatched dimension: crop to 20x20, add 10px vertical padding.
     // Alternate: crop to 14x20 and upscale to 20x30
-
-
 }
 
 fn strategy_to_steps(s: Strategy) -> Option<Vec<Step>> {
     let vec = match s {
-        Strategy::Distort => { steps().distort(BoxParam::Exact(BoxTarget::Target)) },
+        Strategy::Distort => steps().distort(BoxParam::Exact(BoxTarget::Target)),
         // Like imageresizer max
-        Strategy::Max => { steps().skip_unless(Cond::Either(Ordering::Greater)).scale_to_inner()}
-        Strategy::MaxAny => { steps().skip_unless(Cond::Larger2D).scale_to_outer() }
-        Strategy::MinAny => { steps().skip_unless(Cond::Smaller2D).scale_to_inner()}
-        Strategy::Min => { steps().skip_unless(Cond::Either(Ordering::Less)).scale_to_outer() },
+        Strategy::Max => steps().skip_unless(Cond::Either(Ordering::Greater)).scale_to_inner(),
+        Strategy::MaxAny => steps().skip_unless(Cond::Larger2D).scale_to_outer(),
+        Strategy::MinAny => steps().skip_unless(Cond::Smaller2D).scale_to_inner(),
+        Strategy::Min => steps().skip_unless(Cond::Either(Ordering::Less)).scale_to_outer(),
 
-        Strategy::PadOrAspect => { steps().skip_if(Cond::Both(Ordering::Less)).scale_to_inner().pad().new_seq().pad_aspect() },
-        Strategy::PadDownscaleOnly => { steps().skip_if(Cond::Both(Ordering::Less)).scale_to_inner().pad() },
+        Strategy::PadOrAspect => steps()
+            .skip_if(Cond::Both(Ordering::Less))
+            .scale_to_inner()
+            .pad()
+            .new_seq()
+            .pad_aspect(),
+        Strategy::PadDownscaleOnly => {
+            steps().skip_if(Cond::Both(Ordering::Less)).scale_to_inner().pad()
+        }
 
         //Scale_to_outer can reduce the width, then crop the height, causing both coordinates to be smaller
         //TODO: perhaps combine scale_to_outer and crop() into a single operation to prevent this?
-        Strategy::CropOrAspect => { steps().skip_if(Cond::Either(Ordering::Less)).fill_crop()
-            .new_seq().skip_unless(Cond::Either(Ordering::Less)).crop_aspect() },
-
+        Strategy::CropOrAspect => steps()
+            .skip_if(Cond::Either(Ordering::Less))
+            .fill_crop()
+            .new_seq()
+            .skip_unless(Cond::Either(Ordering::Less))
+            .crop_aspect(),
 
         //I think we need multiple parts, as we don't offer a way to compare against the obox
-        Strategy::CropDownscaleOnly => { steps().skip_if(Cond::Either(Ordering::Less)).fill_crop().new_seq().skip_unless(Cond::Larger1DSmaller1D).crop_intersection() },
+        Strategy::CropDownscaleOnly => steps()
+            .skip_if(Cond::Either(Ordering::Less))
+            .fill_crop()
+            .new_seq()
+            .skip_unless(Cond::Larger1DSmaller1D)
+            .crop_intersection(),
         //        Strategy::CropCarefulDownscale => StepSet::AnyLarger(vec![Step::ScaleToOuter,
         //        Step::PartialCropAspect, Step::ScaleToInner]),
         //        Strategy::ExactCropAllowUpscaling => StepSet::Always(vec![Step::ScaleToOuter,
         //        Step::Crop]),
         //        Strategy::ExactPadAllowUpscaling => StepSet::Always(vec![Step::ScaleToInner,
         //        Step::Pad]),
-        _ => steps()
-    }.into_vec();
-    if vec.is_empty(){
+        _ => steps(),
+    }
+    .into_vec();
+    if vec.is_empty() {
         None
-    }else{
+    } else {
         Some(vec)
     }
-
 }
 
-
-fn kit_for_strategy(s: Strategy) -> Kit{
-    Kit{
+fn kit_for_strategy(s: Strategy) -> Kit {
+    Kit {
         steps: strategy_to_steps(s).unwrap(),
         expectations: vec![],
         file: file!(),
         line: line!(),
-        strategy: s
-    }.add_defaults()
+        strategy: s,
+    }
+    .add_defaults()
 }
 
-
-fn step_kits() -> Vec<Kit>{
+fn step_kits() -> Vec<Kit> {
     let mut kits = Vec::new();
 
-    let no_crop = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Equal, b: ExpectVal::Source};
-    let no_4_side_cropping = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Either(Ordering::Equal), b: ExpectVal::Source};
+    let no_crop = Expect::That { a: ExpectVal::SourceCrop, is: Cond::Equal, b: ExpectVal::Source };
+    let no_4_side_cropping = Expect::That {
+        a: ExpectVal::SourceCrop,
+        is: Cond::Either(Ordering::Equal),
+        b: ExpectVal::Source,
+    };
     let no_padding = Expect::CanvasAgainstImage(Cond::Equal);
     // let no_scaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Equal, b: ExpectVal::Image};
-    let no_upscaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Neither(Ordering::Less), b: ExpectVal::Image};
+    let no_upscaling = Expect::That {
+        a: ExpectVal::SourceCrop,
+        is: Cond::Neither(Ordering::Less),
+        b: ExpectVal::Image,
+    };
     // let no_downscaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Neither(Ordering::Greater), b: ExpectVal::Image};
     let never_larger_than_target = Expect::CanvasAgainstTarget(Cond::Neither(Ordering::Greater));
 
     let no_4_side_padding = Expect::CanvasAgainstImage(Cond::Either(Ordering::Equal));
 
-    kits.push(kit_for_strategy(Strategy::Distort)
-        .assert(Expect::CanvasMatchesTarget)
-        .assert(Expect::ImageAgainstTarget(Cond::Equal))
-        .assert(no_crop).assert(no_padding));
+    kits.push(
+        kit_for_strategy(Strategy::Distort)
+            .assert(Expect::CanvasMatchesTarget)
+            .assert(Expect::ImageAgainstTarget(Cond::Equal))
+            .assert(no_crop)
+            .assert(no_padding),
+    );
 
-    kits.push(kit_for_strategy(Strategy::Max)
-        .assert(never_larger_than_target)
-        .assert(no_crop).assert(no_padding).assert(no_upscaling)
-        .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Greater))).expect(Expect::CanvasMatchesSource)
-        .when(When::SourceAgainstTarget(Cond::Either(Ordering::Greater))).expect(Expect::Whatever));
+    kits.push(
+        kit_for_strategy(Strategy::Max)
+            .assert(never_larger_than_target)
+            .assert(no_crop)
+            .assert(no_padding)
+            .assert(no_upscaling)
+            .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Greater)))
+            .expect(Expect::CanvasMatchesSource)
+            .when(When::SourceAgainstTarget(Cond::Either(Ordering::Greater)))
+            .expect(Expect::Whatever),
+    );
 
-    kits.push(kit_for_strategy(Strategy::PadOrAspect)
-        .assert(never_larger_than_target)
-        .assert(no_crop)
-        .assert(no_upscaling)
-        .assert(no_4_side_padding)
-        .when(When::SourceAgainstTarget(Cond::Either(Ordering::Equal))).expect(Expect::CanvasMatchesTarget)
-        .when(When::CanvasAgainstTarget(Cond::Equal)).expect(Expect::Whatever)
-        .when(When::SourceAgainstTarget(Cond::Smaller2D)).expect(Expect::Whatever)
-        );
+    kits.push(
+        kit_for_strategy(Strategy::PadOrAspect)
+            .assert(never_larger_than_target)
+            .assert(no_crop)
+            .assert(no_upscaling)
+            .assert(no_4_side_padding)
+            .when(When::SourceAgainstTarget(Cond::Either(Ordering::Equal)))
+            .expect(Expect::CanvasMatchesTarget)
+            .when(When::CanvasAgainstTarget(Cond::Equal))
+            .expect(Expect::Whatever)
+            .when(When::SourceAgainstTarget(Cond::Smaller2D))
+            .expect(Expect::Whatever),
+    );
 
-    kits.push(kit_for_strategy(Strategy::PadDownscaleOnly)
-        .assert(never_larger_than_target)
-        .assert(no_crop)
-        .assert(no_upscaling)
-        .assert(no_4_side_padding)
-        .when(When::SourceAgainstTarget(Cond::Either(Ordering::Equal))).expect(Expect::CanvasMatchesTarget)
-        .when(When::CanvasAgainstTarget(Cond::Equal)).expect(Expect::Whatever)
-        .when(When::SourceAgainstTarget(Cond::Smaller2D)).expect(Expect::CanvasMatchesSource)
+    kits.push(
+        kit_for_strategy(Strategy::PadDownscaleOnly)
+            .assert(never_larger_than_target)
+            .assert(no_crop)
+            .assert(no_upscaling)
+            .assert(no_4_side_padding)
+            .when(When::SourceAgainstTarget(Cond::Either(Ordering::Equal)))
+            .expect(Expect::CanvasMatchesTarget)
+            .when(When::CanvasAgainstTarget(Cond::Equal))
+            .expect(Expect::Whatever)
+            .when(When::SourceAgainstTarget(Cond::Smaller2D))
+            .expect(Expect::CanvasMatchesSource),
     );
 
     //Off-by-one - one pixel cropping on sides it ?shouldn't?
-    kits.push(kit_for_strategy(Strategy::CropOrAspect)
-        .assert(never_larger_than_target)
-        .assert(no_4_side_cropping).or_warn()
-        .assert(no_upscaling).or_warn()
-        .assert(no_padding)
-        .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Less))).expect(Expect::CanvasMatchesTarget)
-        .when(When::SourceAgainstTarget(Cond::Either(Ordering::Less))).expect(Expect::Whatever)
+    kits.push(
+        kit_for_strategy(Strategy::CropOrAspect)
+            .assert(never_larger_than_target)
+            .assert(no_4_side_cropping)
+            .or_warn()
+            .assert(no_upscaling)
+            .or_warn()
+            .assert(no_padding)
+            .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Less)))
+            .expect(Expect::CanvasMatchesTarget)
+            .when(When::SourceAgainstTarget(Cond::Either(Ordering::Less)))
+            .expect(Expect::Whatever),
     );
 
-    kits.push(kit_for_strategy(Strategy::CropDownscaleOnly)
-        .assert(never_larger_than_target)
-        .assert(no_4_side_cropping).or_warn()
-        .assert(no_upscaling).or_warn()
-        .assert(no_padding)
-        .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Less))).expect(Expect::CanvasMatchesTarget)
-        .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Greater))).expect(Expect::CanvasMatchesSource)
+    kits.push(
+        kit_for_strategy(Strategy::CropDownscaleOnly)
+            .assert(never_larger_than_target)
+            .assert(no_4_side_cropping)
+            .or_warn()
+            .assert(no_upscaling)
+            .or_warn()
+            .assert(no_padding)
+            .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Less)))
+            .expect(Expect::CanvasMatchesTarget)
+            .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Greater)))
+            .expect(Expect::CanvasMatchesSource),
     );
     //::sizing::steps().
     //kits.push(steps().skip_unless(Cond::Neither(Ordering::Greater)).
-
 
     //
     //    let from_strategies = [Strategy::Distort, Strategy::Max, Strategy::MaxAny, Strategy::Min, Strategy::MinAny];
@@ -201,7 +247,11 @@ fn step_kits() -> Vec<Kit>{
     //        kits.push( strategy_to_steps(*s).unwrap());
     //    }
     let mut full_panic_str: String = String::new();
-    for bad_kitty in kits.iter().filter(|k| k.expectations.iter().any(|e| e.when == When::Placeholder || e.expect == Expect::Placeholder)){
+    for bad_kitty in kits.iter().filter(|k| {
+        k.expectations
+            .iter()
+            .any(|e| e.when == When::Placeholder || e.expect == Expect::Placeholder)
+    }) {
         full_panic_str += format!("{:?}\nYou forgot a .when, or a .expect, or something. you need an IF and a THEN, 'kay?", bad_kitty).as_str();
     }
     if !full_panic_str.is_empty() {
@@ -211,66 +261,61 @@ fn step_kits() -> Vec<Kit>{
     kits
 }
 
-
-
-
-
-fn next_pow2(v: u32) -> u32{
+fn next_pow2(v: u32) -> u32 {
     let mut v = v;
-    v-=1;
+    v -= 1;
     v |= v >> 1;
     v |= v >> 2;
     v |= v >> 4;
     v |= v >> 8;
     v |= v >> 16;
-    v+1
+    v + 1
 }
 
-
-#[derive(PartialEq,Debug,Copy,Clone)]
-enum NumberKind{
+#[derive(PartialEq, Debug, Copy, Clone)]
+enum NumberKind {
     Larger,
-    Smaller
+    Smaller,
 }
 
-
-fn spot_in_primes(v: i32) -> usize{
-    match SMALL_PRIMES.binary_search(&v){
+fn spot_in_primes(v: i32) -> usize {
+    match SMALL_PRIMES.binary_search(&v) {
         Ok(ix) => ix,
-        Err(ix) => ix
+        Err(ix) => ix,
     }
 }
-fn next_prime(v: i32, kind: NumberKind) -> Option<i32>{
+fn next_prime(v: i32, kind: NumberKind) -> Option<i32> {
     let ix = spot_in_primes(v);
     if ix >= SMALL_PRIMES.len() {
         None
-    }else{
+    } else {
         let cur = SMALL_PRIMES[ix];
-        if kind == NumberKind::Larger{
-            if cur == v{
+        if kind == NumberKind::Larger {
+            if cur == v {
                 next_prime(v + 1, kind) //TODO: Problem for 2->3. next_prime(2,Larger) will return 5, likely.
-            }else{
+            } else {
                 Some(cur)
             }
-        }else{
-            if ix == 0{
-                if cur == v{
+        } else {
+            if ix == 0 {
+                if cur == v {
                     None
-                }else{
+                } else {
                     Some(cur)
                 }
-            }else{
-                Some(SMALL_PRIMES[ix -1])
+            } else {
+                Some(SMALL_PRIMES[ix - 1])
             }
         }
-
     }
 }
 /// Returns a variety of changes to the given number (as well as some fixed values)
 /// If given i32::MAX, returns the number of variations
-fn vary_number(v: i32, variation_kind: u8) -> Option<i32>{
-    if v < 1 { return None };
-    match variation_kind{
+fn vary_number(v: i32, variation_kind: u8) -> Option<i32> {
+    if v < 1 {
+        return None;
+    };
+    match variation_kind {
         0 => Some(v),
         1 => next_prime(v, NumberKind::Larger),
         2 => next_prime(v, NumberKind::Smaller),
@@ -281,8 +326,8 @@ fn vary_number(v: i32, variation_kind: u8) -> Option<i32>{
         7 => v.checked_mul(10),
         8 => v.checked_mul(2),
         9 => v.checked_div(2),
-        10 =>  v.checked_div(3),
-        11 =>  v.checked_div(10),
+        10 => v.checked_div(3),
+        11 => v.checked_div(10),
         12 => Some(::std::i32::MAX),
         13 => Some(1),
         14 => Some(2),
@@ -296,8 +341,9 @@ fn vary_number(v: i32, variation_kind: u8) -> Option<i32>{
         22 => Some((next_pow2(v as u32) / 2) as i32),
         23 => v.checked_add(66),
         ::std::u8::MAX => Some(24), // Return the upper bound number of variations
-        _ => None
-    }.and_then(|v| if v > 0 { Some(v) } else { None })
+        _ => None,
+    }
+    .and_then(|v| if v > 0 { Some(v) } else { None })
 }
 
 //Not used or ever tested
@@ -320,7 +366,6 @@ fn r(w: i32, h: i32) -> AspectRatio {
 fn generate_aspects(into: &mut Vec<AspectRatio>, temp: &mut Vec<AspectRatio>, seed: AspectRatio) {
     into.clear();
     temp.clear();
-
 
     // We use into as the first temp vec
     let n = into;
@@ -351,10 +396,9 @@ fn generate_aspects(into: &mut Vec<AspectRatio>, temp: &mut Vec<AspectRatio>, se
     n_boxes.sort();
     n_boxes.dedup();
 
-
     //Clear and reuse the first vector
     n.clear();
-    let vary_count = vary_number(1,::std::u8::MAX).unwrap();
+    let vary_count = vary_number(1, ::std::u8::MAX).unwrap();
     n.reserve(n_boxes.len() * vary_count as usize * vary_count as usize);
     for base_ver in n_boxes {
         let (w, h) = base_ver.size();
@@ -372,16 +416,43 @@ fn generate_aspects(into: &mut Vec<AspectRatio>, temp: &mut Vec<AspectRatio>, se
     n.dedup();
 }
 
-
-
-fn target_sizes(fewer: bool) -> Vec<AspectRatio>{
-    if fewer{
-        [(1,1), (1,3), (3,1), (7,3),(90,45),(10,10),(100,33),(1621,883),(971,967), (17,1871), (512,512)].iter().map(|&(w,h)| AspectRatio::create(w, h).unwrap()).collect()
-    }else{
-        [(1,1), (1,3), (3,1), (7,3),(90,45),(10,10),(100,33),(1621,883),(971,967), (17,1871), (512,512)].iter().map(|&(w,h)| AspectRatio::create(w, h).unwrap()).collect()
+fn target_sizes(fewer: bool) -> Vec<AspectRatio> {
+    if fewer {
+        [
+            (1, 1),
+            (1, 3),
+            (3, 1),
+            (7, 3),
+            (90, 45),
+            (10, 10),
+            (100, 33),
+            (1621, 883),
+            (971, 967),
+            (17, 1871),
+            (512, 512),
+        ]
+        .iter()
+        .map(|&(w, h)| AspectRatio::create(w, h).unwrap())
+        .collect()
+    } else {
+        [
+            (1, 1),
+            (1, 3),
+            (3, 1),
+            (7, 3),
+            (90, 45),
+            (10, 10),
+            (100, 33),
+            (1621, 883),
+            (971, 967),
+            (17, 1871),
+            (512, 512),
+        ]
+        .iter()
+        .map(|&(w, h)| AspectRatio::create(w, h).unwrap())
+        .collect()
     }
 }
-
 
 macro_rules! w(
     ($($arg:tt)*) => { {
@@ -390,8 +461,8 @@ macro_rules! w(
     } }
 );
 
-#[derive(Copy,Clone,Debug,PartialEq, Eq, Hash)]
-enum ExpectVal{
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+enum ExpectVal {
     #[allow(dead_code)]
     Val(AspectRatio),
     #[allow(dead_code)]
@@ -400,9 +471,9 @@ enum ExpectVal{
     SourceCrop,
     Image,
     #[allow(dead_code)]
-    Target
+    Target,
 }
-#[derive(Copy,Clone,Debug,PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum Expect {
     Placeholder,
     /// Just end the noise, okay?
@@ -411,23 +482,27 @@ enum Expect {
     #[allow(dead_code)]
     Error,
     Ok,
-    That{a: ExpectVal, is: Cond, b: ExpectVal},
+    That {
+        a: ExpectVal,
+        is: Cond,
+        b: ExpectVal,
+    },
     CanvasMatchesTarget,
     CanvasMatchesSource,
     #[allow(dead_code)]
     Canvas {
         against: AspectRatio,
-        expect: Cond
+        expect: Cond,
     },
     #[allow(dead_code)]
     Image {
         against: AspectRatio,
-        expect: Cond
+        expect: Cond,
     },
     #[allow(dead_code)]
     Source {
         against: AspectRatio,
-        expect: Cond
+        expect: Cond,
     },
     #[allow(dead_code)]
     CanvasAgainstSource(Cond),
@@ -436,39 +511,39 @@ enum Expect {
     CanvasAgainstTarget(Cond),
     ImageAgainstTarget(Cond),
     CanvasAgainstImage(Cond),
-    SourceAgainstTarget(Cond)
+    SourceAgainstTarget(Cond),
 }
 enum SimplifiedExpect {
     Bool(bool),
-    That{a: ExpectVal, is: Cond, b: ExpectVal},
-    Canvas {
-        against: AspectRatio,
-        expect: Cond
-    },
-    Image {
-        against: AspectRatio,
-        expect: Cond
-    },
-    Source {
-        against: AspectRatio,
-        expect: Cond
-    },
+    That { a: ExpectVal, is: Cond, b: ExpectVal },
+    Canvas { against: AspectRatio, expect: Cond },
+    Image { against: AspectRatio, expect: Cond },
+    Source { against: AspectRatio, expect: Cond },
 }
 
-#[derive(Copy,Clone,Debug,PartialEq)]
-struct EvaluationContext{
+#[derive(Copy, Clone, Debug, PartialEq)]
+struct EvaluationContext {
     result: sizing::Result<Layout>,
     target: AspectRatio,
-    source: AspectRatio
+    source: AspectRatio,
 }
-impl EvaluationContext{
-    fn to_compact(&self) -> String{
+impl EvaluationContext {
+    fn to_compact(&self) -> String {
         if let Ok(l) = self.result {
-            format!("target: {:?}, source: {:?}, canvas: {:?}, image: {:?}, source_crop: {:?}", self.target, self.source, l.get_box(BoxTarget::CurrentCanvas), l.get_box(BoxTarget::CurrentImage), l.get_source_crop())
-        }else{
-            format!("target: {:?}, source: {:?}, result: {:?}", self.target, self.source, self.result)
+            format!(
+                "target: {:?}, source: {:?}, canvas: {:?}, image: {:?}, source_crop: {:?}",
+                self.target,
+                self.source,
+                l.get_box(BoxTarget::CurrentCanvas),
+                l.get_box(BoxTarget::CurrentImage),
+                l.get_source_crop()
+            )
+        } else {
+            format!(
+                "target: {:?}, source: {:?}, result: {:?}",
+                self.target, self.source, self.result
+            )
         }
-
     }
 }
 
@@ -480,63 +555,93 @@ impl ExpectVal {
             ExpectVal::SourceCrop => c.result.map(|r| r.get_source_crop()).ok(),
             ExpectVal::Source => Some(c.source),
             ExpectVal::Target => Some(c.target),
-            ExpectVal::Val(v) => Some(v)
+            ExpectVal::Val(v) => Some(v),
         }
     }
 }
-impl Expect{
-
+impl Expect {
     fn simplify(&self, c: &EvaluationContext) -> SimplifiedExpect {
         match *self {
             Expect::Placeholder | Expect::Whatever | Expect::Always => SimplifiedExpect::Bool(true),
             Expect::Ok => SimplifiedExpect::Bool(c.result.is_ok()),
             Expect::Error => SimplifiedExpect::Bool(c.result.is_err()),
             _ if c.result.is_err() => SimplifiedExpect::Bool(false),
-            Expect::CanvasMatchesTarget => SimplifiedExpect::Canvas { against: c.target, expect: Cond::Equal },
-            Expect::CanvasMatchesSource => SimplifiedExpect::Canvas { against: c.source, expect: Cond::Equal },
-            Expect::CanvasAgainstSource(cond) => SimplifiedExpect::Canvas { against: c.source, expect: cond },
-            Expect::CanvasAgainstTarget(cond) => SimplifiedExpect::Canvas { against: c.target, expect: cond },
-            Expect::CanvasAgainstImage(cond) => SimplifiedExpect::Canvas { against: c.result.as_ref().unwrap().get_box(BoxTarget::CurrentImage), expect: cond },
-            Expect::ImageAgainstSource(cond) => SimplifiedExpect::Image { against: c.source, expect: cond },
-            Expect::ImageAgainstTarget(cond) => SimplifiedExpect::Image { against: c.target, expect: cond },
-            Expect::SourceAgainstTarget(cond) => SimplifiedExpect::Source { against: c.target, expect: cond },
-            Expect::Canvas { against, expect } => SimplifiedExpect::Canvas { against: against, expect: expect },
-            Expect::Image { against, expect } => SimplifiedExpect::Image { against: against, expect: expect },
-            Expect::Source { against, expect } => SimplifiedExpect::Source { against: against, expect: expect },
-            Expect::That{a, is, b} =>  SimplifiedExpect::That{a: a, is: is, b: b},
+            Expect::CanvasMatchesTarget => {
+                SimplifiedExpect::Canvas { against: c.target, expect: Cond::Equal }
+            }
+            Expect::CanvasMatchesSource => {
+                SimplifiedExpect::Canvas { against: c.source, expect: Cond::Equal }
+            }
+            Expect::CanvasAgainstSource(cond) => {
+                SimplifiedExpect::Canvas { against: c.source, expect: cond }
+            }
+            Expect::CanvasAgainstTarget(cond) => {
+                SimplifiedExpect::Canvas { against: c.target, expect: cond }
+            }
+            Expect::CanvasAgainstImage(cond) => SimplifiedExpect::Canvas {
+                against: c.result.as_ref().unwrap().get_box(BoxTarget::CurrentImage),
+                expect: cond,
+            },
+            Expect::ImageAgainstSource(cond) => {
+                SimplifiedExpect::Image { against: c.source, expect: cond }
+            }
+            Expect::ImageAgainstTarget(cond) => {
+                SimplifiedExpect::Image { against: c.target, expect: cond }
+            }
+            Expect::SourceAgainstTarget(cond) => {
+                SimplifiedExpect::Source { against: c.target, expect: cond }
+            }
+            Expect::Canvas { against, expect } => {
+                SimplifiedExpect::Canvas { against: against, expect: expect }
+            }
+            Expect::Image { against, expect } => {
+                SimplifiedExpect::Image { against: against, expect: expect }
+            }
+            Expect::Source { against, expect } => {
+                SimplifiedExpect::Source { against: against, expect: expect }
+            }
+            Expect::That { a, is, b } => SimplifiedExpect::That { a: a, is: is, b: b },
         }
     }
 
-
-    fn is_true(&self, c: &EvaluationContext) -> bool{
+    fn is_true(&self, c: &EvaluationContext) -> bool {
         match self.simplify(c) {
-            SimplifiedExpect::Canvas { against, expect } => c.result.map(|r| expect.matches(r.get_box(BoxTarget::CurrentCanvas).cmp_size(&against))).unwrap_or(false),
-            SimplifiedExpect::Image { against, expect } =>  c.result.map(|r| expect.matches(r.get_box(BoxTarget::CurrentImage).cmp_size(&against))).unwrap_or(false),
-            SimplifiedExpect::Source { against, expect } => expect.matches(c.source.cmp_size(&against)),
-            SimplifiedExpect::That{a, is, b} => {
-                a.resolve(c).and_then(|a_v| b.resolve(c).map(|b_v| is.matches(a_v.cmp_size(&b_v)))).unwrap_or(false)
+            SimplifiedExpect::Canvas { against, expect } => c
+                .result
+                .map(|r| expect.matches(r.get_box(BoxTarget::CurrentCanvas).cmp_size(&against)))
+                .unwrap_or(false),
+            SimplifiedExpect::Image { against, expect } => c
+                .result
+                .map(|r| expect.matches(r.get_box(BoxTarget::CurrentImage).cmp_size(&against)))
+                .unwrap_or(false),
+            SimplifiedExpect::Source { against, expect } => {
+                expect.matches(c.source.cmp_size(&against))
             }
-            SimplifiedExpect::Bool(v) => v
+            SimplifiedExpect::That { a, is, b } => a
+                .resolve(c)
+                .and_then(|a_v| b.resolve(c).map(|b_v| is.matches(a_v.cmp_size(&b_v))))
+                .unwrap_or(false),
+            SimplifiedExpect::Bool(v) => v,
         }
     }
 }
 
 use self::Expect as When;
-#[derive(Copy,Clone,Debug,PartialEq, Eq, Hash)]
-enum ViolationAction{
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+enum ViolationAction {
     Warn,
     Panic,
-    FailTest
+    FailTest,
 }
-#[derive(Copy,Clone,Debug,PartialEq, Eq,Hash)]
-struct Expectation{
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+struct Expectation {
     when: When,
     expect: Expect,
-    action: ViolationAction
+    action: ViolationAction,
 }
 
-#[derive(Clone,Debug,PartialEq)]
-struct Kit{
+#[derive(Clone, Debug, PartialEq)]
+struct Kit {
     expectations: Vec<Expectation>,
     steps: Vec<Step>,
     file: &'static str,
@@ -544,86 +649,108 @@ struct Kit{
     strategy: Strategy,
 }
 
-impl Kit{
-    pub fn add(mut self, e: Expectation) -> Self{
+impl Kit {
+    pub fn add(mut self, e: Expectation) -> Self {
         self.expectations.push(e);
         self
     }
 
     pub fn mut_last<F>(mut self, c: F) -> Self
-        where F: Fn(&mut Expectation) -> ()
+    where
+        F: Fn(&mut Expectation) -> (),
     {
-        let last = self.expectations.pop().map(|mut e| { c(&mut e); e });
-        if let Some(item) = last{
+        let last = self.expectations.pop().map(|mut e| {
+            c(&mut e);
+            e
+        });
+        if let Some(item) = last {
             self.expectations.push(item);
         }
         self
     }
-    pub fn or_warn(self) -> Self{
+    pub fn or_warn(self) -> Self {
         self.mut_last(|e| e.action = ViolationAction::Warn)
     }
-    pub fn or_panic(self) -> Self{
+    pub fn or_panic(self) -> Self {
         self.mut_last(|e| e.action = ViolationAction::Panic)
     }
-    pub fn peek(&self) -> Option<Expectation>{
+    pub fn peek(&self) -> Option<Expectation> {
         if self.expectations.len() > 0 {
             Some(self.expectations[self.expectations.len() - 1])
-        }else{
+        } else {
             None
         }
     }
-    pub fn expect(self, expect: Expect) -> Self{
+    pub fn expect(self, expect: Expect) -> Self {
         if self.peek().map(|e| e.expect == Expect::Placeholder) == Some(true) {
             self.mut_last(|e| e.expect = expect)
-        }else{
-            self.add(Expectation{when: When::Placeholder, expect: expect, action: ViolationAction::FailTest})
+        } else {
+            self.add(Expectation {
+                when: When::Placeholder,
+                expect: expect,
+                action: ViolationAction::FailTest,
+            })
         }
     }
-    pub fn when(self, when: When) -> Self{
+    pub fn when(self, when: When) -> Self {
         if self.peek().map(|e| e.when == When::Placeholder) == Some(true) {
             self.mut_last(|e| e.when = when)
-        }else{
-            self.add(Expectation{when: when, expect: Expect::Placeholder, action: ViolationAction::FailTest})
+        } else {
+            self.add(Expectation {
+                when: when,
+                expect: Expect::Placeholder,
+                action: ViolationAction::FailTest,
+            })
         }
     }
-    pub fn when_source(self, c: Cond) -> Self{
+    pub fn when_source(self, c: Cond) -> Self {
         self.when(When::SourceAgainstTarget(c))
     }
 
-    pub fn assert(mut self, e: Expect) -> Self{
-        self.expectations.push(Expectation{when: When::Always, expect: e, action: ViolationAction::Panic});
+    pub fn assert(mut self, e: Expect) -> Self {
+        self.expectations.push(Expectation {
+            when: When::Always,
+            expect: e,
+            action: ViolationAction::Panic,
+        });
         self
     }
 
-    pub fn add_defaults(self) -> Self{
+    pub fn add_defaults(self) -> Self {
         self.assert(Expect::Ok)
-            .expect(Expect::CanvasMatchesTarget).when_source(Cond::Equal).or_panic()
+            .expect(Expect::CanvasMatchesTarget)
+            .when_source(Cond::Equal)
+            .or_panic()
             .assert(Expect::CanvasAgainstImage(Cond::Neither(Ordering::Less)))
     }
 }
 
-
-
 #[test]
-fn test_scale_to_outer(){
+fn test_scale_to_outer() {
     let cropper = sizing::IdentityCropProvider::new();
-    let result = Layout::create(r(2,4), r(1,3)).execute_all(&steps().scale_to_outer().into_vec(), &cropper).unwrap();
-    assert_eq!(result.get_box(BoxTarget::CurrentCanvas), r(2,3));
-    assert_eq!(result.get_source_crop(), r(2,4))
+    let result = Layout::create(r(2, 4), r(1, 3))
+        .execute_all(&steps().scale_to_outer().into_vec(), &cropper)
+        .unwrap();
+    assert_eq!(result.get_box(BoxTarget::CurrentCanvas), r(2, 3));
+    assert_eq!(result.get_source_crop(), r(2, 4))
 }
 
 #[test]
-fn test_scale_to_outer_and_crop(){
+fn test_scale_to_outer_and_crop() {
     let cropper = sizing::IdentityCropProvider::new();
-    let result = Layout::create(r(2,4), r(1,3)).execute_all(&steps().fill_crop().into_vec(), &cropper).unwrap();
-    assert_eq!(result.get_source_crop(), r(1,4))
+    let result = Layout::create(r(2, 4), r(1, 3))
+        .execute_all(&steps().fill_crop().into_vec(), &cropper)
+        .unwrap();
+    assert_eq!(result.get_source_crop(), r(1, 4))
 }
 
 #[test]
-fn test_crop_aspect(){
+fn test_crop_aspect() {
     let cropper = sizing::IdentityCropProvider::new();
-    let result = Layout::create(r(638,423), r(200,133)).execute_all(&steps().crop_aspect().into_vec(), &cropper).unwrap();
-    assert_eq!(result.get_source_crop(), r(636,423))
+    let result = Layout::create(r(638, 423), r(200, 133))
+        .execute_all(&steps().crop_aspect().into_vec(), &cropper)
+        .unwrap();
+    assert_eq!(result.get_source_crop(), r(636, 423))
 }
 
 // to fix this, 99 is wrong
@@ -633,36 +760,37 @@ fn test_crop_aspect(){
 // layout: Layout { source_max: 1200x400, source: 1200x400, target: 100x33, canvas: 100x33, image: 99x33 }
 
 #[test]
-fn test_rounding_99 () {
+fn test_rounding_99() {
     let cropper = sizing::IdentityCropProvider::new();
-    let result = Layout::create(r(1200,400), r(100,33)).execute_all(&steps().scale_to_inner().into_vec(), &cropper).unwrap();
-    assert_eq!(result.get_box(BoxTarget::CurrentCanvas), r(100,33), "canvas");
-    assert_eq!(result.get_box(BoxTarget::CurrentImage), r(100,33), "image");
-    assert_eq!(result.get_source_crop(), r(1200,400), "source_crop");
+    let result = Layout::create(r(1200, 400), r(100, 33))
+        .execute_all(&steps().scale_to_inner().into_vec(), &cropper)
+        .unwrap();
+    assert_eq!(result.get_box(BoxTarget::CurrentCanvas), r(100, 33), "canvas");
+    assert_eq!(result.get_box(BoxTarget::CurrentImage), r(100, 33), "image");
+    assert_eq!(result.get_source_crop(), r(1200, 400), "source_crop");
 }
 
-#[derive(Copy,Clone,Debug, PartialEq)]
-struct ShrinkWithinTest{
+#[derive(Copy, Clone, Debug, PartialEq)]
+struct ShrinkWithinTest {
     origin: AspectRatio,
     target_within: AspectRatio,
     w: Option<i32>,
     h: Option<i32>,
     loss_w: f64,
-    loss_h: f64
+    loss_h: f64,
 }
 
 // auto convert from (i32,i32, Option<i32>, Option<i32>)
-impl From<(i32,i32, i32, i32)> for ShrinkWithinTest{
-    fn from(tuple: (i32, i32, i32, i32)) -> Self{
+impl From<(i32, i32, i32, i32)> for ShrinkWithinTest {
+    fn from(tuple: (i32, i32, i32, i32)) -> Self {
         let w = if tuple.2 < 1 { None } else { Some(tuple.2) };
         let h = if tuple.3 < 1 { None } else { Some(tuple.3) };
         ShrinkWithinTest::new(AspectRatio::create(tuple.0, tuple.1).unwrap(), w, h).unwrap()
     }
 }
 
-impl ShrinkWithinTest{
-    fn new(origin: AspectRatio, w: Option<i32>, h: Option<i32>) -> Option<Self>{
-
+impl ShrinkWithinTest {
+    fn new(origin: AspectRatio, w: Option<i32>, h: Option<i32>) -> Option<Self> {
         if w.is_some() && h.is_some() {
             panic!("Cannot specify both width and height");
         }
@@ -670,47 +798,57 @@ impl ShrinkWithinTest{
             panic!("Must specify at least one dimension");
         }
         let mut target_within = origin;
-        if w.is_some(){
+        if w.is_some() {
             if w.unwrap() > origin.width() {
                 return None;
             }
-            target_within = AspectRatio::create(w.unwrap(), origin.height_for(w.unwrap(), None).unwrap()).unwrap();
+            target_within =
+                AspectRatio::create(w.unwrap(), origin.height_for(w.unwrap(), None).unwrap())
+                    .unwrap();
         }
-        if h.is_some(){
+        if h.is_some() {
             if h.unwrap() > origin.height() {
                 return None;
             }
-            target_within = AspectRatio::create(origin.width_for(h.unwrap(), None).unwrap(), h.unwrap()).unwrap();
+            target_within =
+                AspectRatio::create(origin.width_for(h.unwrap(), None).unwrap(), h.unwrap())
+                    .unwrap();
         }
         let loss_w = origin.rounding_loss_based_on_target_width(target_within.width());
         let loss_h = origin.rounding_loss_based_on_target_height(target_within.height());
-        let v = Self{origin, target_within, w, h, loss_w, loss_h};
+        let v = Self { origin, target_within, w, h, loss_w, loss_h };
         Some(v)
     }
-
 }
 
-impl fmt::Display for ShrinkWithinTest{
+impl fmt::Display for ShrinkWithinTest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let char = if self.w.is_some() { "w" } else { "h" };
         let dim = if self.w.is_some() { self.w.unwrap() } else { self.h.unwrap() };
-        write!(f, "{:?} -> {}={} -> [{:?}] (loss w={:.2} h={:.2})", self.origin,  char,dim, self.target_within, self.loss_w, self.loss_h)
+        write!(
+            f,
+            "{:?} -> {}={} -> [{:?}] (loss w={:.2} h={:.2})",
+            self.origin, char, dim, self.target_within, self.loss_w, self.loss_h
+        )
     }
 }
 
 // st
 
-fn test_shrink_within(test: ShrinkWithinTest, cropper: &sizing::IdentityCropProvider, steps: &[Step]) -> Option<(AspectRatio,AspectRatio,AspectRatio)>{
-    let result = Layout::create(test.origin, test.target_within)
-            .execute_all(steps, cropper).unwrap();
+fn test_shrink_within(
+    test: ShrinkWithinTest,
+    cropper: &sizing::IdentityCropProvider,
+    steps: &[Step],
+) -> Option<(AspectRatio, AspectRatio, AspectRatio)> {
+    let result =
+        Layout::create(test.origin, test.target_within).execute_all(steps, cropper).unwrap();
 
     let canvas = result.get_box(BoxTarget::CurrentCanvas);
     let image = result.get_box(BoxTarget::CurrentImage);
     let crop = result.get_source_crop();
 
-
     let mut failed = false;
-    if canvas != image{
+    if canvas != image {
         //eprintln!("canvas and image mismatch: {:?} != {:?}", result.get_box(BoxTarget::CurrentCanvas), result.get_box(BoxTarget::CurrentImage));
         failed = true;
     }
@@ -734,13 +872,11 @@ fn test_shrink_within(test: ShrinkWithinTest, cropper: &sizing::IdentityCropProv
 // skipping, takes minutes.
 #[ignore]
 #[test]
-fn test_double_rounding_errors_exhaustive () {
-
+fn test_double_rounding_errors_exhaustive() {
     println!("Starting double rounding error test");
     let mut worst_tests = Vec::new();
     let cropper = sizing::IdentityCropProvider::new();
     let steps = steps().scale_to_inner().into_vec();
-
 
     let mut fail_count = 0;
     let mut worst_w_loss = 0.0;
@@ -753,13 +889,12 @@ fn test_double_rounding_errors_exhaustive () {
         for origin_height in (1..max_dim).rev() {
             let origin = AspectRatio::create(origin_width, origin_height).unwrap();
             for target_side in (1..max_target_side).rev() {
-
                 count += 2;
 
                 let test_w = ShrinkWithinTest::new(origin, Some(target_side), None);
                 let test_h = ShrinkWithinTest::new(origin, None, Some(target_side));
                 if let Some(test_w) = test_w {
-                    if  test_shrink_within(test_w, &cropper, &steps).is_some(){
+                    if test_shrink_within(test_w, &cropper, &steps).is_some() {
                         fail_count += 1;
                         if test_w.loss_w > worst_w_loss + 0.01 {
                             worst_w_loss = test_w.loss_w;
@@ -772,7 +907,7 @@ fn test_double_rounding_errors_exhaustive () {
                     }
                 }
                 if let Some(test_h) = test_h {
-                    if test_shrink_within(test_h, &cropper, &steps).is_some(){
+                    if test_shrink_within(test_h, &cropper, &steps).is_some() {
                         fail_count += 1;
                         if test_h.loss_w > worst_w_loss + 0.01 {
                             worst_w_loss = test_h.loss_w;
@@ -791,30 +926,54 @@ fn test_double_rounding_errors_exhaustive () {
     eprintln!("Failed {} of {} double rounding error tests", fail_count, count);
     if fail_count > 0 {
         let array_length = worst_tests.len();
-        let format_iter = worst_tests.iter().map(|t| format!("({},{}, {:?}, {:?})", t.origin.width(), t.origin.height() , t.w.unwrap_or(-1), t.h.unwrap_or(-1)));
-        eprintln!("static SHRINK_WITHIN_TESTS:[(i32,i32,i32,i32);{}]=[{}];", array_length, format_iter.collect::<Vec<String>>().join(","));
+        let format_iter = worst_tests.iter().map(|t| {
+            format!(
+                "({},{}, {:?}, {:?})",
+                t.origin.width(),
+                t.origin.height(),
+                t.w.unwrap_or(-1),
+                t.h.unwrap_or(-1)
+            )
+        });
+        eprintln!(
+            "static SHRINK_WITHIN_TESTS:[(i32,i32,i32,i32);{}]=[{}];",
+            array_length,
+            format_iter.collect::<Vec<String>>().join(",")
+        );
     }
-
 }
 
 #[test]
-fn test_shrink_within_specific(){
+fn test_shrink_within_specific() {
     let cropper = sizing::IdentityCropProvider::new();
     let steps = steps().scale_to_inner().into_vec();
     let mut failed = Vec::new();
-    for tuple in SHRINK_WITHIN_TESTS{
+    for tuple in SHRINK_WITHIN_TESTS {
         let test = ShrinkWithinTest::from(tuple);
-        if let Some((canvas, image, crop)) = test_shrink_within(test, &cropper, &steps){
-            failed.push((test,canvas, image, crop));
+        if let Some((canvas, image, crop)) = test_shrink_within(test, &cropper, &steps) {
+            failed.push((test, canvas, image, crop));
         }
     }
-    if !failed.is_empty(){
-        eprintln!(" {:?} (of {}) failed ShrinkWithinTest tests:", failed.len(), SHRINK_WITHIN_TESTS.len());
-        for (test,canvas, image, crop) in failed.iter(){
+    if !failed.is_empty() {
+        eprintln!(
+            " {:?} (of {}) failed ShrinkWithinTest tests:",
+            failed.len(),
+            SHRINK_WITHIN_TESTS.len()
+        );
+        for (test, canvas, image, crop) in failed.iter() {
             eprintln!("{} -> canvas {:?} image {:?} crop {:?}", test, canvas, image, crop);
         }
-        eprintln!(" {:?} (of {}) failed ShrinkWithinTest tests:", failed.len(), SHRINK_WITHIN_TESTS.len());
-        assert!(false, "Failed {} of {} ShrinkWithinTest tests", failed.len(), SHRINK_WITHIN_TESTS.len());
+        eprintln!(
+            " {:?} (of {}) failed ShrinkWithinTest tests:",
+            failed.len(),
+            SHRINK_WITHIN_TESTS.len()
+        );
+        assert!(
+            false,
+            "Failed {} of {} ShrinkWithinTest tests",
+            failed.len(),
+            SHRINK_WITHIN_TESTS.len()
+        );
     }
 }
 
@@ -832,7 +991,7 @@ fn test_steps() {
 
     let mut failed_kits = Vec::new();
 
-    for kit in kits{
+    for kit in kits {
         let start_time = ::imageflow_helpers::timeywimey::precise_time_ns();
         let mut test_failed = false;
         for target in target_sizes.iter() {
@@ -841,14 +1000,13 @@ fn test_steps() {
             let mut target_header_printed = false;
 
             //We want to filter into 9 groups, lt,eq,gt x w,h.
-            source_sizes.sort_by_key(|a| a.cmp_size(&target) );
+            source_sizes.sort_by_key(|a| a.cmp_size(&target));
 
             current.invalidate();
 
             for source in source_sizes.iter() {
-
                 let group = source.cmp_size(&target);
-                if !current.valid_for(group){
+                if !current.valid_for(group) {
                     current.end_report(&kit, &mut target_header_printed);
                     current = current.reset(group, *target, source_sizes.len());
                 }
@@ -858,37 +1016,37 @@ fn test_steps() {
                 let result = Layout::create(*source, *target).execute_all(&kit.steps, &cropper);
 
                 match result {
-                    Err(LayoutError::ValueScalingFailed { .. }) if source.width() > 2147483646 || source.height() > 2147483646 => {},
+                    Err(LayoutError::ValueScalingFailed { .. })
+                        if source.width() > 2147483646 || source.height() > 2147483646 => {}
                     r => {
-
-                        if !current.report(&kit,  &mut target_header_printed, r, *source){
+                        if !current.report(&kit, &mut target_header_printed, r, *source) {
                             test_failed = true;
                         }
                     }
                 }
             }
             current.end_report(&kit, &mut target_header_printed);
-
         }
 
         let duration = ::imageflow_helpers::timeywimey::precise_time_ns() - start_time;
-        w!("\nSpent {:.0}ms testing {:?}\n\n", (duration  as f64) / 1000000., &kit.steps);
+        w!("\nSpent {:.0}ms testing {:?}\n\n", (duration as f64) / 1000000., &kit.steps);
 
-        if test_failed{
+        if test_failed {
             failed_kits.push(kit);
         }
     }
 
-    if !failed_kits.is_empty(){
+    if !failed_kits.is_empty() {
         panic!("The following kits failed:\n {:#?}\n", &failed_kits);
-
     }
 }
 
+type ResultKey = (AspectRatio, AspectRatio);
 
-type ResultKey = (AspectRatio,AspectRatio);
-
-struct GroupData<T> where T: fmt::Debug{
+struct GroupData<T>
+where
+    T: fmt::Debug,
+{
     name: T,
     padded_name: String,
     count: usize,
@@ -909,14 +1067,18 @@ struct GroupData<T> where T: fmt::Debug{
     truncate_failures: usize,
 }
 
-fn invalid_group_data() -> GroupData<(Ordering,Ordering)> {
-    let mut g = GroupData::new((Ordering::Equal, Ordering::Equal), AspectRatio::create(1, 1).unwrap(), 0);
+fn invalid_group_data() -> GroupData<(Ordering, Ordering)> {
+    let mut g =
+        GroupData::new((Ordering::Equal, Ordering::Equal), AspectRatio::create(1, 1).unwrap(), 0);
     g.invalidate();
     g
 }
 
 impl<T> GroupData<T>
-where T: std::fmt::Debug, T: std::cmp::PartialEq {
+where
+    T: std::fmt::Debug,
+    T: std::cmp::PartialEq,
+{
     fn new(value: T, target: AspectRatio, sources_for_all_groups: usize) -> GroupData<T> {
         let mut s = format!("{:?}", value);
         for _ in s.len()..20 {
@@ -937,11 +1099,16 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
             truncate_unique: 16,
             truncate_failures: 64,
             invalidated: false,
-            sources_for_all_groups: sources_for_all_groups
+            sources_for_all_groups: sources_for_all_groups,
         }
     }
 
-    fn reset(mut self, value: T, target: AspectRatio, sources_for_all_groups: usize) -> GroupData<T> {
+    fn reset(
+        mut self,
+        value: T,
+        target: AspectRatio,
+        sources_for_all_groups: usize,
+    ) -> GroupData<T> {
         self.invalidate();
         GroupData {
             unique: self.unique,
@@ -960,9 +1127,14 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
         !self.invalidated && self.name == group
     }
 
-    fn print_header(&self, kit: &Kit){
+    fn print_header(&self, kit: &Kit) {
         w!("\n======================================================\n");
-        w!("  Targeting {}x{} using {:?}\n\n", self.target.width(), self.target.height(), &kit.steps);
+        w!(
+            "  Targeting {}x{} using {:?}\n\n",
+            self.target.width(),
+            self.target.height(),
+            &kit.steps
+        );
         w!("  Testing {} source sizes\n\n", self.sources_for_all_groups);
     }
     fn end_report(&self, kit: &Kit, header_printed: &mut bool) {
@@ -970,18 +1142,16 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
             return; //Nothing to print
         }
 
-
-
-        let met_target_covered = self.applicable.keys().any(|e| e.expect == Expect::CanvasMatchesTarget);
-        let kept_size_covered = self.applicable.keys().any(|e| e.expect == Expect::CanvasMatchesSource);
+        let met_target_covered =
+            self.applicable.keys().any(|e| e.expect == Expect::CanvasMatchesTarget);
+        let kept_size_covered =
+            self.applicable.keys().any(|e| e.expect == Expect::CanvasMatchesSource);
         let shut_up_already = self.applicable.keys().any(|e| e.expect == Expect::Whatever);
 
-
-        let silent = self.failures.is_empty() &&
-            (self.target_count == self.count && met_target_covered) ||
-            (self.identity_count == self.count && kept_size_covered) ||
-            shut_up_already;
-
+        let silent = self.failures.is_empty()
+            && (self.target_count == self.count && met_target_covered)
+            || (self.identity_count == self.count && kept_size_covered)
+            || shut_up_already;
 
         if !silent {
             if !*header_printed {
@@ -990,38 +1160,67 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
             }
 
             let (w, h) = self.target.size();
-            w!("{:04} {} against ({},{}) - ", self.count, self.padded_name, w, h, );
+            w!("{:04} {} against ({},{}) - ", self.count, self.padded_name, w, h,);
 
             let unique_truncated = if self.unique.len() == self.truncate_unique { "+" } else { "" };
-            let failures_truncated = if self.failures.len() == self.truncate_failures { "+" } else { "" };
+            let failures_truncated =
+                if self.failures.len() == self.truncate_failures { "+" } else { "" };
 
             if self.target_count == self.count {
                 w!("met target, a {}x{} canvas - ({})\n", w, h, self.count);
             } else if self.identity_count == self.count {
                 w!("kept size - ({})\n", self.count);
             } else if self.different_count == self.count {
-                w!("{}{} unique of {}\n",  self.unique.len(), &unique_truncated, self.count);
+                w!("{}{} unique of {}\n", self.unique.len(), &unique_truncated, self.count);
             } else if self.failures.len() > 0 {
                 w!("{}{} failures, {}{} unique of {} different, {} met target, {} maintained canvas size\n", self.failures.len(), failures_truncated, self.unique.len(), &unique_truncated, self.different_count, self.target_count, self.identity_count);
             } else {
-                w!("{}{} unique of {} different, {} met target, {} maintained canvas size\n", self.unique.len(), &unique_truncated, self.different_count, self.target_count, self.identity_count);
+                w!(
+                    "{}{} unique of {} different, {} met target, {} maintained canvas size\n",
+                    self.unique.len(),
+                    &unique_truncated,
+                    self.different_count,
+                    self.target_count,
+                    self.identity_count
+                );
             }
-
 
             if !self.failures.is_empty() {
                 let display_limit = 10;
-                w!("Displaying {} of {}{} failures\n", display_limit, self.failures.len(), &failures_truncated);
+                w!(
+                    "Displaying {} of {}{} failures\n",
+                    display_limit,
+                    self.failures.len(),
+                    &failures_truncated
+                );
                 for &(k, v) in self.failures.iter().take(display_limit) {
-                    w!("({},{}) produced {:?}, violating {:?}\n", k.source.width(), k.source.height(), k.result, v);
+                    w!(
+                        "({},{}) produced {:?}, violating {:?}\n",
+                        k.source.width(),
+                        k.source.height(),
+                        k.result,
+                        v
+                    );
                 }
                 w!("\n");
             }
             if !self.unique.is_empty() {
                 let display_limit = 10;
-                w!("Displaying {} of {}{} unique results\n", display_limit, self.unique.len(), &unique_truncated);
+                w!(
+                    "Displaying {} of {}{} unique results\n",
+                    display_limit,
+                    self.unique.len(),
+                    &unique_truncated
+                );
                 for (k, v) in self.unique.iter().take(display_limit) {
                     if k.0 == k.1 {
-                        w!("({},{}) - from {} unique source sizes. aspect: {}\n", k.0.width(), k.0.height(), v, k.0.ratio_f64());
+                        w!(
+                            "({},{}) - from {} unique source sizes. aspect: {}\n",
+                            k.0.width(),
+                            k.0.height(),
+                            v,
+                            k.0.ratio_f64()
+                        );
                     } else {
                         w!("({},{}) canvas, ({},{}) image - from {} unique source sizes. {:?} {:?}\n", k.0.width(), k.0.height(), k.1.width(), k.1.height(),  v, k.0, k.1);
                         //w!("{} source sizes produced canvas {:?} image {:?}\n", v, k.0, k.1);
@@ -1033,9 +1232,14 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
     }
     /// Expects the canvas to be the first in the ResultKey tuple
     ///
-    fn report(&mut self, kit: &Kit, header_printed: &mut bool, result: sizing::Result<Layout>, source: AspectRatio) -> bool {
+    fn report(
+        &mut self,
+        kit: &Kit,
+        header_printed: &mut bool,
+        result: sizing::Result<Layout>,
+        source: AspectRatio,
+    ) -> bool {
         self.count += 1;
-
 
         if let Ok(layout) = result {
             let canvas = layout.get_box(BoxTarget::CurrentCanvas);
@@ -1049,7 +1253,8 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
                 self.identity_count += 1;
             } else {
                 self.different_count += 1;
-                if self.unique.contains_key(&unique_key) || self.unique.len() < self.truncate_unique {
+                if self.unique.contains_key(&unique_key) || self.unique.len() < self.truncate_unique
+                {
                     *self.unique.entry(unique_key).or_insert(0) += 1;
                 }
             }
@@ -1058,18 +1263,14 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
         // Unused rules for a group
 
         //Evaluate rules and panic right away as requested
-        let ctx = EvaluationContext {
-            result: result,
-            target: self.target,
-            source: source
-        };
+        let ctx = EvaluationContext { result: result, target: self.target, source: source };
 
         let mut failed_test = false;
         let mut fail_panic = false;
         let mut fail_any = false;
 
         for e in kit.expectations.iter().filter(|e| e.when.is_true(&ctx)) {
-            *self.applicable.entry(*e).or_insert(0) +=1;
+            *self.applicable.entry(*e).or_insert(0) += 1;
             if !e.expect.is_true(&ctx) {
                 fail_any = true;
                 if e.action != ViolationAction::Warn {
@@ -1078,7 +1279,6 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
                 if e.action == ViolationAction::Panic {
                     fail_panic = true;
                 }
-
 
                 if self.failures.len() < self.truncate_failures {
                     self.failures.push((ctx, *e));
@@ -1095,14 +1295,25 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
                 self.print_header(kit);
                 *header_printed = true;
             }
-            let failed = kit.expectations.iter().filter(|e| e.when.is_true(&ctx) && !e.expect.is_true(&ctx)).cloned().collect::<Vec<Expectation>>();
+            let failed = kit
+                .expectations
+                .iter()
+                .filter(|e| e.when.is_true(&ctx) && !e.expect.is_true(&ctx))
+                .cloned()
+                .collect::<Vec<Expectation>>();
             eprintln!("kit strategy: {:?}", kit.strategy);
             eprintln!("kit file: {:?}", kit.file);
             eprintln!("kit line: {:?}", kit.line);
             eprintln!("failed: {:?}", failed);
-            panic!("\n  at {}/{}:{}\n\n{}\n\n{:#?}", env!("CARGO_MANIFEST_DIR"), kit.file, kit.line, ctx.to_compact(), &failed);
+            panic!(
+                "\n  at {}/{}:{}\n\n{}\n\n{:#?}",
+                env!("CARGO_MANIFEST_DIR"),
+                kit.file,
+                kit.line,
+                ctx.to_compact(),
+                &failed
+            );
         }
-
 
         !failed_test
     }
@@ -1112,8 +1323,6 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
         [InlineData(1600, 1200, "w=10;h=10;mode=crop",10,10,10,10, 200, 0, 1400, 1200)]
 [InlineData(1600, 1200, "w=10;h=10;mode=max", 10, 8, 10, 8, 0, 0, 1600, 1200)]
 */
-
-
 
 #[rustfmt::skip]
 static SMALL_PRIMES:[i32;1000] = [

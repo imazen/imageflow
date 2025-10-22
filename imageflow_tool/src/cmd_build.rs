@@ -2,20 +2,18 @@ use crate::fc;
 use crate::s;
 extern crate serde;
 
+use crate::fc::errors::CategorizedError;
+use crate::fc::{ErrorCategory, JsonResponse};
 use std::collections::HashMap;
 use std::fs::File;
+use std::io::{BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
-use std::io::{Write, Read, BufWriter};
-use crate::fc::{JsonResponse,  ErrorCategory};
-use crate::fc::errors::CategorizedError;
 
 pub enum JobSource {
     JsonFile(PathBuf),
     // NamedDemo(String),
-    Ir4QueryString(String)
+    Ir4QueryString(String),
 }
-
-
 
 // CmdBuild
 // --bundle-into folder
@@ -24,12 +22,10 @@ pub enum JobSource {
 // Fetches remote URLs into folder
 // Fetches remote paths in b
 
-
 // CmdBuild
 // --debug-?
 // Export transformed .json recipe post-injection
 //
-
 
 //pub struct CmdProxy {
 //    invocation_args: Args,
@@ -53,7 +49,6 @@ pub enum JobSource {
 //}
 
 pub struct CmdBuild {
-
     job: Result<s::Build001>,
     response: Option<Result<s::ResponsePayload>>,
 }
@@ -72,8 +67,8 @@ pub enum CmdError {
     FlowError(fc::FlowError),
     Incomplete,
 }
-impl CategorizedError for CmdError{
-    fn category(&self) -> ErrorCategory{
+impl CategorizedError for CmdError {
+    fn category(&self) -> ErrorCategory {
         match *self{
             CmdError::JsonRecipeNotFound(_) |
            // CmdError::DemoNotFound(_) => ErrorCategory::PrimaryResourceNotFound,
@@ -88,7 +83,7 @@ impl CategorizedError for CmdError{
     }
 }
 impl CmdError {
-    pub fn to_json(&self) -> JsonResponse{
+    pub fn to_json(&self) -> JsonResponse {
         let message = format!("{:#?}", self);
         JsonResponse::fail_with_message(i64::from(self.category().http_status_code()), &message)
     }
@@ -98,7 +93,6 @@ impl CmdError {
 }
 
 pub type Result<T> = std::result::Result<T, CmdError>;
-
 
 impl From<std::io::Error> for CmdError {
     fn from(e: std::io::Error) -> CmdError {
@@ -116,7 +110,6 @@ impl From<fc::FlowError> for CmdError {
     }
 }
 
-
 impl std::fmt::Display for CmdError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if let CmdError::FlowError(ref e) = *self {
@@ -127,12 +120,12 @@ impl std::fmt::Display for CmdError {
     }
 }
 
-
-
 fn parse_io_enum(s: &str) -> s::IoEnum {
     match s {
         "base64:" => s::IoEnum::OutputBase64,
-        s if s.starts_with("http://") || s.starts_with("https://") => panic!("URLs are not permitted"),
+        s if s.starts_with("http://") || s.starts_with("https://") => {
+            panic!("URLs are not permitted")
+        }
         s => s::IoEnum::Filename(s.to_owned()),
     }
 }
@@ -154,40 +147,38 @@ impl CmdBuild {
                 Ok(parsed)
             }
             JobSource::Ir4QueryString(query) => {
-                let build = s::Build001{
+                let build = s::Build001 {
                     builder_config: None,
                     io: vec![
-                        s::IoObject{
+                        s::IoObject {
                             io_id: 0,
                             direction: s::IoDirection::In,
-                            io: s::IoEnum::Placeholder
+                            io: s::IoEnum::Placeholder,
                         },
-                        s::IoObject{
+                        s::IoObject {
                             io_id: 1,
                             direction: s::IoDirection::Out,
-                            io: s::IoEnum::Placeholder
-                        }
+                            io: s::IoEnum::Placeholder,
+                        },
                     ],
-                    framewise: s::Framewise::Steps(vec![
-                        s::Node::CommandString {
+                    framewise: s::Framewise::Steps(vec![s::Node::CommandString {
                         decode: Some(0),
                         encode: Some(1),
                         kind: s::CommandStringKind::ImageResizer4,
                         value: query,
-                            watermarks: None
-                        }])
+                        watermarks: None,
+                    }]),
                 };
                 Ok(build)
-            }
-            // JobSource::NamedDemo(name) => Err(CmdError::DemoNotFound(name)),
+            } // JobSource::NamedDemo(name) => Err(CmdError::DemoNotFound(name)),
         }
     }
 
-
-    fn inject(before: s::Build001,
-              inject: Option<Vec<String>>,
-              dir: s::IoDirection)
-              -> Result<s::Build001> {
+    fn inject(
+        before: s::Build001,
+        inject: Option<Vec<String>>,
+        dir: s::IoDirection,
+    ) -> Result<s::Build001> {
         if inject.is_none() {
             return Ok(before);
         }
@@ -202,26 +193,26 @@ impl CmdBuild {
         // /old_io_ids.sort(); //ascending
         // /let all_consecutive = old_io_ids.as_slice().iter().fold(Some(old_io_ids[0] -1),|prev, current| if let Some(p) = prev && current == p + 1 { Some(current)} else {None}  ).is_some();
         // /let first_existing_io_id = old_io_ids.as_slice().iter().min().unwrap();
-        let old_io_ids = before.io
+        let old_io_ids = before
+            .io
             .as_slice()
             .iter()
             .filter(|io| io.direction == dir)
             .map(|io| io.io_id)
             .collect::<Vec<i32>>();
 
-
-
         let max_possible_args = if user_providing_numbers { args.len() / 2 } else { args.len() };
 
         if max_possible_args > old_io_ids.len() {
-            return Err(CmdError::BadArguments(format!("Too many arguments provided for {:?}. Only {} openings in the recipe ({:?}).",
-                                                      dir,
-                                                      old_io_ids.len(),
-                                                      &old_io_ids)));
+            return Err(CmdError::BadArguments(format!(
+                "Too many arguments provided for {:?}. Only {} openings in the recipe ({:?}).",
+                dir,
+                old_io_ids.len(),
+                &old_io_ids
+            )));
         }
 
         let vec_of_io_results = if user_providing_numbers {
-
             args.as_slice().chunks(2).map(|pair| {
                 if pair.len() == 1 {
                     return Err(CmdError::InconsistentUseOfIoId(
@@ -247,32 +238,27 @@ impl CmdBuild {
                 .collect::<Vec<Result<(i32, &str)>>>()
         };
 
-
-
         let mut hash = HashMap::new();
         for item in vec_of_io_results {
             let (k, v) = item?;
 
             if let Some(old_value) = hash.insert(k, v) {
-                return Err(CmdError::BadArguments(format!("Duplicate values for io_id {}: {} and {}",
-                                                          k,
-                                                          old_value,
-                                                          v)));
+                return Err(CmdError::BadArguments(format!(
+                    "Duplicate values for io_id {}: {} and {}",
+                    k, old_value, v
+                )));
             }
         }
 
         let old_io_copy = before.io.clone();
 
         Ok(s::Build001 {
-            io: old_io_copy.into_iter()
+            io: old_io_copy
+                .into_iter()
                 .map(|io| {
                     let id = io.io_id;
                     if let Some(v) = hash.get(&id) {
-                        s::IoObject {
-                            direction: dir,
-                            io_id: id,
-                            io: parse_io_enum(v),
-                        }
+                        s::IoObject { direction: dir, io_id: id, io: parse_io_enum(v) }
                     } else {
                         io
                     }
@@ -282,88 +268,97 @@ impl CmdBuild {
         })
     }
 
-    fn parse_maybe(source: JobSource,
-                   in_args: Option<Vec<String>>,
-                   out_args: Option<Vec<String>>)
-                   -> Result<s::Build001> {
+    fn parse_maybe(
+        source: JobSource,
+        in_args: Option<Vec<String>>,
+        out_args: Option<Vec<String>>,
+    ) -> Result<s::Build001> {
         let original = CmdBuild::load_job(source)?;
         let a = CmdBuild::inject(original, in_args, s::IoDirection::In)?;
         CmdBuild::inject(a, out_args, s::IoDirection::Out)
     }
-    pub fn parse(source: JobSource,
-                 in_args: Option<Vec<String>>,
-                 out_args: Option<Vec<String>>)
-                 -> CmdBuild {
-        CmdBuild {
-            job: CmdBuild::parse_maybe(source, in_args, out_args),
-            response: None,
-        }
+    pub fn parse(
+        source: JobSource,
+        in_args: Option<Vec<String>>,
+        out_args: Option<Vec<String>>,
+    ) -> CmdBuild {
+        CmdBuild { job: CmdBuild::parse_maybe(source, in_args, out_args), response: None }
     }
 
-
-
-
-    fn transform_build(b: s::Build001, directory: &Path) -> Result<(Vec<String>,s::Build001)>{
-
+    fn transform_build(b: s::Build001, directory: &Path) -> Result<(Vec<String>, s::Build001)> {
         let mut log = Vec::new();
-        let transformed = b.io.into_iter().map(|obj| {
-            let e: s::IoEnum = obj.io;
-            let new_enum = if obj.direction == s::IoDirection::In{
-                match e{
-                    s::IoEnum::Filename(path) => {
-                        let fname = format!("input_{}_{}", obj.io_id, std::path::Path::new(&path).file_name().unwrap().to_str().unwrap());
-                        let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
-                        std::fs::copy(&path, &new_path).unwrap();
-                        log.push(format!("Copied {} to {} (referenced as {})", &path, &new_path, &fname));
-                        s::IoEnum::Filename(fname)
+        let transformed = b
+            .io
+            .into_iter()
+            .map(|obj| {
+                let e: s::IoEnum = obj.io;
+                let new_enum = if obj.direction == s::IoDirection::In {
+                    match e {
+                        s::IoEnum::Filename(path) => {
+                            let fname = format!(
+                                "input_{}_{}",
+                                obj.io_id,
+                                std::path::Path::new(&path).file_name().unwrap().to_str().unwrap()
+                            );
+                            let new_path =
+                                directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
+                            std::fs::copy(&path, &new_path).unwrap();
+                            log.push(format!(
+                                "Copied {} to {} (referenced as {})",
+                                &path, &new_path, &fname
+                            ));
+                            s::IoEnum::Filename(fname)
+                        }
+                        // s::IoEnum::Url(url) => {
+                        //
+                        //     let fname = format!("input_{}", obj.io_id);
+                        //     let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
+                        //     let bytes = ::imageflow_http_helpers::fetch_bytes(&url).unwrap();
+                        //     let mut file = BufWriter::new(File::create(&new_path).unwrap());
+                        //     file.write_all(&bytes).unwrap();
+                        //     log.push(format!("Downloaded {} to {} (referenced as {})", &url, &new_path, &fname));
+                        //     s::IoEnum::Filename(fname)
+                        // }
+                        other => other,
                     }
-                    // s::IoEnum::Url(url) => {
-                    //
-                    //     let fname = format!("input_{}", obj.io_id);
-                    //     let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
-                    //     let bytes = ::imageflow_http_helpers::fetch_bytes(&url).unwrap();
-                    //     let mut file = BufWriter::new(File::create(&new_path).unwrap());
-                    //     file.write_all(&bytes).unwrap();
-                    //     log.push(format!("Downloaded {} to {} (referenced as {})", &url, &new_path, &fname));
-                    //     s::IoEnum::Filename(fname)
-                    // }
-                    other => other
-                }
-            }else{
-                match e{
-                    s::IoEnum::Filename(path) => {
-                        let fname = format!("output_{}_{}", obj.io_id, &std::path::Path::new(&path).file_name().unwrap().to_str().unwrap());
-                        //let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
-                        log.push(format!("Changed output {} to {}", &path, &fname));
-                        s::IoEnum::Filename(fname)
+                } else {
+                    match e {
+                        s::IoEnum::Filename(path) => {
+                            let fname = format!(
+                                "output_{}_{}",
+                                obj.io_id,
+                                &std::path::Path::new(&path).file_name().unwrap().to_str().unwrap()
+                            );
+                            //let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
+                            log.push(format!("Changed output {} to {}", &path, &fname));
+                            s::IoEnum::Filename(fname)
+                        }
+                        other => other,
                     }
-                    other => other
-                }
-            };
-            s::IoObject{
-                direction: obj.direction,
-                io: new_enum,
-                io_id: obj.io_id
-            }
-        }).collect::<Vec<s::IoObject>>();
-        Ok((log, s::Build001{
-            io: transformed,
-            builder_config: b.builder_config,
-            framewise: b.framewise
-        }))
-
+                };
+                s::IoObject { direction: obj.direction, io: new_enum, io_id: obj.io_id }
+            })
+            .collect::<Vec<s::IoObject>>();
+        Ok((
+            log,
+            s::Build001 {
+                io: transformed,
+                builder_config: b.builder_config,
+                framewise: b.framewise,
+            },
+        ))
     }
-    fn write_json<T,P: AsRef<Path>>(path: &P, info: &T)
-        where T: serde::Serialize
+    fn write_json<T, P: AsRef<Path>>(path: &P, info: &T)
+    where
+        T: serde::Serialize,
     {
         let mut file = BufWriter::new(File::create(path).unwrap());
         write!(file, "{}", serde_json::to_string_pretty(info).unwrap()).unwrap();
     }
 
-
     // Write new invocation to STDOUT, for execution in 'directory'.
     // Will write recipe and dependencies into directory
-    pub fn bundle_to(self, directory: &Path) -> i32{
+    pub fn bundle_to(self, directory: &Path) -> i32 {
         match std::fs::create_dir(directory) {
             Ok(_) => (),
             Err(e) => {
@@ -381,7 +376,7 @@ impl CmdBuild {
         println!("cd {:?}", &directory);
         println!("imageflow_tool --json recipe.json\n\n");
         for s in log {
-            println!("# {}",&s);
+            println!("# {}", &s);
         }
         0
     }
@@ -396,11 +391,10 @@ impl CmdBuild {
         CmdBuild { response: Some(response), ..self }
     }
 
-
-    pub fn get_json_response(&self) -> JsonResponse{
-        if let Some(e) = self.get_first_error(){
+    pub fn get_json_response(&self) -> JsonResponse {
+        if let Some(e) = self.get_first_error() {
             e.to_json()
-        } else if let Some(Ok(ref r)) = self.response{
+        } else if let Some(Ok(ref r)) = self.response {
             JsonResponse::from_result(Ok(r.clone()))
         } else {
             // Should not be called before maybe_build
@@ -409,16 +403,18 @@ impl CmdBuild {
     }
     ///
     /// Write the JSON response (if present) to the given file or STDOUT
-    pub fn write_response_maybe(&self, response_file: Option<&PathBuf>, allow_stdout: bool) -> std::io::Result<()> {
-        if  self.response.is_some() {
-
+    pub fn write_response_maybe(
+        &self,
+        response_file: Option<&PathBuf>,
+        allow_stdout: bool,
+    ) -> std::io::Result<()> {
+        if self.response.is_some() {
             if let Some(filename) = response_file {
                 let mut file = BufWriter::new(File::create(filename).unwrap());
                 file.write_all(&self.get_json_response().response_json)?;
             } else if allow_stdout {
                 std::io::stdout().write_all(&self.get_json_response().response_json)?;
             }
-
         }
         Ok(())
     }
@@ -430,20 +426,22 @@ impl CmdBuild {
         Ok(())
     }
 
-    pub fn get_first_error(&self) -> Option<&CmdError>{
+    pub fn get_first_error(&self) -> Option<&CmdError> {
         if let Err(ref e) = self.job {
             return Some(e);
         }
-        match self.response{
+        match self.response {
             Some(Err(ref e)) => Some(e),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn get_exit_code(&self) -> Option<i32> {
-        self.get_first_error()
-            .map(|e| e.exit_code())
-            .or( if self.response.is_some() { Some(0) } else { None })
+        self.get_first_error().map(|e| e.exit_code()).or(if self.response.is_some() {
+            Some(0)
+        } else {
+            None
+        })
     }
 
     fn build(data: s::Build001) -> Result<s::ResponsePayload> {

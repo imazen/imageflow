@@ -1,14 +1,13 @@
 use std::io::Read;
 
-use crate::{Context, Result, FlowError, ErrorKind};
-use crate::io::IoProxy;
-use crate::graphics::bitmaps::{BitmapKey, ColorSpace, BitmapCompositing};
 use crate::codecs::Decoder;
-use imageflow_types as s;
+use crate::graphics::bitmaps::{BitmapCompositing, BitmapKey, ColorSpace};
+use crate::io::IoProxy;
+use crate::{Context, ErrorKind, FlowError, Result};
 use imageflow_helpers::preludes::from_std::*;
+use imageflow_types as s;
 //use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::graphics::bitmaps::BitmapRowAccess;
-
 
 pub struct ImagePngDecoder {
     reader: png::Reader<IoProxy>,
@@ -23,15 +22,11 @@ impl ImagePngDecoder {
         //decoder.set_transformations(png::Transformations::EXPAND);
         decoder.set_transformations(png::Transformations::normalize_to_color8());
 
-        let reader = decoder.read_info()
-            .map_err(|e| FlowError::from_png_decoder(e).at(here!()))?;
+        let reader = decoder.read_info().map_err(|e| FlowError::from_png_decoder(e).at(here!()))?;
 
         let info = reader.info().clone();
 
-        Ok(ImagePngDecoder {
-            reader,
-            info,
-        })
+        Ok(ImagePngDecoder { reader, info })
     }
 }
 impl Decoder for ImagePngDecoder {
@@ -67,35 +62,41 @@ impl Decoder for ImagePngDecoder {
         let mut bitmaps = c.borrow_bitmaps_mut().map_err(|e| e.at(here!()))?;
         let info = self.reader.info();
 
-        let canvas_key = bitmaps.create_bitmap_u8(
-            info.width,
-            info.height,
-            imageflow_types::PixelLayout::BGRA,
-            false,
-            true,
-            ColorSpace::StandardRGB,
-            BitmapCompositing::ReplaceSelf,
-        ).map_err(|e| e.at(here!()))?;
+        let canvas_key = bitmaps
+            .create_bitmap_u8(
+                info.width,
+                info.height,
+                imageflow_types::PixelLayout::BGRA,
+                false,
+                true,
+                ColorSpace::StandardRGB,
+                BitmapCompositing::ReplaceSelf,
+            )
+            .map_err(|e| e.at(here!()))?;
 
-        let mut bitmap =
-            bitmaps.try_borrow_mut(canvas_key)
-                .map_err(|e| e.at(here!()))?;
+        let mut bitmap = bitmaps.try_borrow_mut(canvas_key).map_err(|e| e.at(here!()))?;
 
         let mut canvas = bitmap.get_window_u8().unwrap();
 
-
         let mut buffer = vec![0; self.reader.output_buffer_size()];
-        let output_info = self.reader.next_frame(&mut buffer).map_err(|e| FlowError::from_png_decoder(e).at(here!()))?;
+        let output_info = self
+            .reader
+            .next_frame(&mut buffer)
+            .map_err(|e| FlowError::from_png_decoder(e).at(here!()))?;
 
         let h = output_info.height as usize;
         let stride = output_info.line_size;
         let w = output_info.width as usize;
-        if output_info.bit_depth != png::BitDepth::Eight{
-            return Err(nerror!(ErrorKind::ImageDecodingError, "image/png decoder did not expand to 8-bit channels").at(here!()));
+        if output_info.bit_depth != png::BitDepth::Eight {
+            return Err(nerror!(
+                ErrorKind::ImageDecodingError,
+                "image/png decoder did not expand to 8-bit channels"
+            )
+            .at(here!()));
         }
-        match output_info.color_type{
-            png::ColorType::Rgb =>{
-                for row_ix in 0..h{
+        match output_info.color_type {
+            png::ColorType::Rgb => {
+                for row_ix in 0..h {
                     let from = buffer.row_mut_rgb8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
                     from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
@@ -105,9 +106,9 @@ impl Decoder for ImagePngDecoder {
                         to.a = 255;
                     });
                 }
-            },
+            }
             png::ColorType::Rgba => {
-                for row_ix in 0..h{
+                for row_ix in 0..h {
                     let from = buffer.row_mut_rgba8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
                     from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
@@ -117,10 +118,10 @@ impl Decoder for ImagePngDecoder {
                         to.a = from.a;
                     });
                 }
-            },
+            }
 
             png::ColorType::Grayscale => {
-                for row_ix in 0..h{
+                for row_ix in 0..h {
                     let from = buffer.row_mut_gray8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
                     from.iter_mut().zip(to.iter_mut()).for_each(|(f, to)| {
@@ -130,13 +131,12 @@ impl Decoder for ImagePngDecoder {
                         to.a = 255;
                     });
                 }
-
-            },
+            }
             png::ColorType::GrayscaleAlpha => {
-                for row_ix in 0..h{
+                for row_ix in 0..h {
                     let from = buffer.row_mut_grayalpha8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
-                        from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
+                    from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
                         to.r = from.v;
                         to.g = from.v;
                         to.b = from.v;
@@ -145,7 +145,7 @@ impl Decoder for ImagePngDecoder {
                 }
             }
 
-            _ => panic!("png decoder bug: indexed image was not expanded despite flags.")
+            _ => panic!("png decoder bug: indexed image was not expanded despite flags."),
         }
 
         Ok(canvas_key)

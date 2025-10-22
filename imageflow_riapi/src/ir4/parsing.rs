@@ -1,18 +1,19 @@
+use super::srcset::apply_srcset_string;
+use imageflow_helpers::colors::*;
+use imageflow_helpers::preludes::from_std::fmt::Formatter;
 use imageflow_helpers::preludes::from_std::*;
+use imageflow_types as s;
 use imageflow_types::json_messages::*;
 use imageflow_types::BoolKeep;
+use imageflow_types::Filter;
 use imageflow_types::OutputImageFormat;
 use imageflow_types::QualityProfile;
+#[allow(unused)]
+use option_filter::OptionFilterExt;
 use std;
-use url::Url;
-use imageflow_types as s;
-#[allow(unused)] use option_filter::OptionFilterExt;
-use imageflow_helpers::colors::*;
-use imageflow_types::Filter;
-use imageflow_helpers::preludes::from_std::fmt::Formatter;
 use std::num;
 use std::result;
-use super::srcset::apply_srcset_string;
+use url::Url;
 
 macro_attr! {
 
@@ -41,7 +42,6 @@ pub enum FlipStrings{
 }
 
 }
-
 
 macro_attr! {
 
@@ -258,39 +258,38 @@ pub static IR4_KEYS: [&str;100] = [
     "accept.avif","accept.jxl", "accept.color_profiles", "c", "c.gravity", "qp", "qp.dpr", "qp.dppx",
     "avif.speed", "avif.quality", "jxl.effort", "jxl.distance", "jxl.quality", "jxl.lossless", "jpeg.li", "lossless"];
 
-
-#[derive(PartialEq,Debug, Clone)]
-pub enum ParseWarning{
+#[derive(PartialEq, Debug, Clone)]
+pub enum ParseWarning {
     // We don't really support comma concatenation like ImageResizer (in theory) did
     DuplicateKey((String, String)),
     // Not an IR4
     KeyNotRecognized((String, String)),
     KeyNotSupported((String, String)),
-    ValueInvalid((&'static str, String))
+    ValueInvalid((&'static str, String)),
 }
 
-impl ParseWarning{
-    pub fn to_query_string_validation_issue(&self) -> QueryStringValidationIssue{
-        match self{
-            ParseWarning::DuplicateKey((k, v)) => QueryStringValidationIssue{
+impl ParseWarning {
+    pub fn to_query_string_validation_issue(&self) -> QueryStringValidationIssue {
+        match self {
+            ParseWarning::DuplicateKey((k, v)) => QueryStringValidationIssue {
                 message: format!("Duplicate key: {}", k),
                 key: k.clone(),
                 value: v.clone(),
                 kind: QueryStringValidationIssueKind::DuplicateKeyError,
             },
-            ParseWarning::KeyNotRecognized((k, v)) => QueryStringValidationIssue{
+            ParseWarning::KeyNotRecognized((k, v)) => QueryStringValidationIssue {
                 message: format!("Key not recognized: {}", k),
                 key: k.clone(),
                 value: v.clone(),
                 kind: QueryStringValidationIssueKind::UnrecognizedKey,
             },
-            ParseWarning::KeyNotSupported((k, v)) => QueryStringValidationIssue{
+            ParseWarning::KeyNotSupported((k, v)) => QueryStringValidationIssue {
                 message: format!("Key not supported: {}", k),
                 key: k.clone(),
                 value: v.clone(),
                 kind: QueryStringValidationIssueKind::IgnoredKey,
             },
-            ParseWarning::ValueInvalid((k, v)) => QueryStringValidationIssue{
+            ParseWarning::ValueInvalid((k, v)) => QueryStringValidationIssue {
                 message: format!("Value invalid: {}", v),
                 key: k.to_string(),
                 value: v.clone(),
@@ -305,7 +304,6 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
     for (key, value) in url.query_pairs() {
         let k = key.to_lowercase(); //Trim whitespace?
         let v = value.into_owned();
-
 
         if map.contains_key(&k) {
             warnings.push(ParseWarning::DuplicateKey((k, v)));
@@ -322,12 +320,11 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
     (i, warnings)
 }
 
-impl fmt::Display for Instructions{
+impl fmt::Display for Instructions {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", &self.to_string_internal())
     }
 }
-
 
 pub(crate) fn iter_all_eq<T: PartialEq>(iter: impl IntoIterator<Item = T>) -> Option<T> {
     let mut iter = iter.into_iter();
@@ -335,43 +332,44 @@ pub(crate) fn iter_all_eq<T: PartialEq>(iter: impl IntoIterator<Item = T>) -> Op
     iter.all(|elem| elem == first).then_some(first)
 }
 
-impl Instructions{
-
-
-    fn to_string_internal(&self) -> String{
+impl Instructions {
+    fn to_string_internal(&self) -> String {
         let mut s = String::with_capacity(100);
         let mut vec = Vec::new();
-        for (k,v) in self.to_map() {
+        for (k, v) in self.to_map() {
             vec.push((k, v));
         }
-        vec.sort_by_key(|&(a,_)| a);
-        for (k,v) in vec{
+        vec.sort_by_key(|&(a, _)| a);
+        for (k, v) in vec {
             s.push_str(k);
             s.push('=');
             s.push_str(&v);
             s.push('&');
         }
         let len = s.len();
-        if len > 0{
+        if len > 0 {
             s.remove(len - 1);
         }
         s
     }
 
     #[allow(deprecated)]
-    pub fn to_map(&self) -> HashMap<&'static str,String>{
+    pub fn to_map(&self) -> HashMap<&'static str, String> {
         let mut m = HashMap::new();
-        fn add<T>(m: &mut HashMap<&'static str,String>, key: &'static str, value: Option<T>) where T: fmt::Display{
-            if value.is_some(){
+        fn add<T>(m: &mut HashMap<&'static str, String>, key: &'static str, value: Option<T>)
+        where
+            T: fmt::Display,
+        {
+            if value.is_some() {
                 m.insert(key, format!("{}", value.unwrap()));
             }
         }
-        fn flip_str(f: Option<(bool, bool)>) -> Option<String>{
-            match f{
+        fn flip_str(f: Option<(bool, bool)>) -> Option<String> {
+            match f {
                 Some((true, true)) => Some("xy".to_owned()),
                 Some((true, false)) => Some("x".to_owned()),
                 Some((false, true)) => Some("y".to_owned()),
-                _ => None
+                _ => None,
             }
         }
         add(&mut m, "w", self.w);
@@ -389,7 +387,6 @@ impl Instructions{
         add(&mut m, "ignoreicc", self.ignoreicc);
         add(&mut m, "ignore_icc_errors", self.ignore_icc_errors);
         add(&mut m, "quality", self.quality);
-
 
         add(&mut m, "webp.quality", self.webp_quality);
         add(&mut m, "webp.lossless", self.webp_lossless);
@@ -411,7 +408,6 @@ impl Instructions{
         add(&mut m, "jxl.quality", self.jxl_quality);
         add(&mut m, "jxl.lossless", self.jxl_lossless);
 
-
         add(&mut m, "zoom", self.zoom); // TODO: ImageResizer4 uses zoom, not dpr, but it feels outdated
 
         add(&mut m, "s.contrast", self.s_contrast);
@@ -421,24 +417,36 @@ impl Instructions{
         add(&mut m, "s.saturation", self.s_saturation);
         add(&mut m, "s.sepia", self.s_sepia);
         add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
-        add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
+        add(
+            &mut m,
+            "a.balancewhite",
+            self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()),
+        );
         add(&mut m, "subsampling", self.jpeg_subsampling);
         add(&mut m, "bgcolor", self.bgcolor_srgb.map(|v| v.to_rrggbbaa_string().to_lowercase()));
         add(&mut m, "f.sharpen", self.f_sharpen);
-        add(&mut m, "f.sharpen_when", self.f_sharpen_when.map(|v| format!("{:?}", v).to_lowercase()));
+        add(
+            &mut m,
+            "f.sharpen_when",
+            self.f_sharpen_when.map(|v| format!("{:?}", v).to_lowercase()),
+        );
         add(&mut m, "trim.percentpadding", self.trim_whitespace_padding_percent);
         add(&mut m, "trim.threshold", self.trim_whitespace_threshold);
 
-        add(&mut m, "s.roundcorners", self.s_round_corners.map(|a|
-            if let Some(v) = iter_all_eq(a.iter()){
-                format!("{}", v)
-            }else {
-                format!("{},{},{},{}", a[0], a[1], a[2], a[3])
-            }
-        ));
-        if self.cropxunits == Some(100.0) && self.cropyunits == Some(100.0){
+        add(
+            &mut m,
+            "s.roundcorners",
+            self.s_round_corners.map(|a| {
+                if let Some(v) = iter_all_eq(a.iter()) {
+                    format!("{}", v)
+                } else {
+                    format!("{},{},{},{}", a[0], a[1], a[2], a[3])
+                }
+            }),
+        );
+        if self.cropxunits == Some(100.0) && self.cropyunits == Some(100.0) {
             add(&mut m, "c", self.crop.map(|a| format!("{},{},{},{}", a[0], a[1], a[2], a[3])));
-        }else {
+        } else {
             add(&mut m, "cropxunits", self.cropxunits);
             add(&mut m, "cropyunits", self.cropyunits);
             add(&mut m, "crop", self.crop.map(|a| format!("{},{},{},{}", a[0], a[1], a[2], a[3])));
@@ -449,8 +457,11 @@ impl Instructions{
         add(&mut m, "qp.dpr", self.qp_dpr);
         add(&mut m, "qp", self.qp);
 
-
-        add(&mut m, "down.colorspace", self.down_colorspace.map(|v| format!("{:?}", v).to_lowercase()));
+        add(
+            &mut m,
+            "down.colorspace",
+            self.down_colorspace.map(|v| format!("{:?}", v).to_lowercase()),
+        );
         add(&mut m, "up.colorspace", self.up_colorspace.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "down.filter", self.down_filter.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "up.filter", self.up_filter.map(|v| format!("{:?}", v).to_lowercase()));
@@ -466,7 +477,10 @@ impl Instructions{
     }
 
     #[allow(deprecated)]
-    pub fn delete_from_map(map: &mut HashMap<String,String>, warnings: Option<&mut Vec<ParseWarning>>) -> Instructions {
+    pub fn delete_from_map(
+        map: &mut HashMap<String, String>,
+        warnings: Option<&mut Vec<ParseWarning>>,
+    ) -> Instructions {
         let mut p = Parser { m: map, w: warnings, delete_supported: true };
         let mut i = Instructions::new();
 
@@ -487,13 +501,26 @@ impl Instructions{
 
         // fit mode and scale
         let mode_string = p.parse_fit_mode("mode");
-        if mode_string == Some(FitModeStrings::Carve){
-           p.warn(ParseWarning::ValueInvalid(("mode", "carve".to_owned())).to_owned());
+        if mode_string == Some(FitModeStrings::Carve) {
+            p.warn(ParseWarning::ValueInvalid(("mode", "carve".to_owned())).to_owned());
         }
         // Side effects wanted for or()
-        i.mode = mode_string.and_then(|v| v.clean())
-            .or(p.parse_test_pair("stretch", "fill").and_then(|b| if b { Some(FitMode::Stretch) } else { None }))
-            .or(p.parse_test_pair("crop", "auto").and_then(|b| if b { Some(FitMode::Crop) } else { None }));
+        i.mode = mode_string
+            .and_then(|v| v.clean())
+            .or(p.parse_test_pair("stretch", "fill").and_then(|b| {
+                if b {
+                    Some(FitMode::Stretch)
+                } else {
+                    None
+                }
+            }))
+            .or(p.parse_test_pair("crop", "auto").and_then(|b| {
+                if b {
+                    Some(FitMode::Crop)
+                } else {
+                    None
+                }
+            }));
 
         i.scale = p.parse_scale("scale").map(|v| v.clean());
 
@@ -508,9 +535,8 @@ impl Instructions{
         i.trim_whitespace_padding_percent = p.parse_f32("trim.percentpadding");
         i.trim_whitespace_threshold = p.parse_i32("trim.threshold");
 
-
         // parse c as crop, set cropxunits/yunits to 100
-        if let Some(c) = p.parse_crop_strict("c"){
+        if let Some(c) = p.parse_crop_strict("c") {
             i.cropxunits = Some(100.0);
             i.cropyunits = Some(100.0);
             i.crop = Some(c);
@@ -533,12 +559,16 @@ impl Instructions{
         i.s_saturation = p.parse_f32("s.saturation");
         i.s_brightness = p.parse_f32("s.brightness");
         i.s_sepia = p.parse_bool("s.sepia");
-        i.a_balance_white = match p.parse_white_balance("a.balancewhite"){
-            Some(HistogramThresholdAlgorithm::True) |
-            Some(HistogramThresholdAlgorithm::Area) => Some(HistogramThresholdAlgorithm::Area),
+        i.a_balance_white = match p.parse_white_balance("a.balancewhite") {
+            Some(HistogramThresholdAlgorithm::True) | Some(HistogramThresholdAlgorithm::Area) => {
+                Some(HistogramThresholdAlgorithm::Area)
+            }
             None => None,
             Some(other) => {
-                p.warn(ParseWarning::ValueInvalid(("a.balancewhite", format!("{:?}", other).to_lowercase())));
+                p.warn(ParseWarning::ValueInvalid((
+                    "a.balancewhite",
+                    format!("{:?}", other).to_lowercase(),
+                )));
                 Some(other)
             }
         };
@@ -568,7 +598,7 @@ impl Instructions{
         i.png_lossless = p.parse_bool_keep("png.lossless");
         i.png_min_quality = p.parse_u8("png.min_quality");
         i.png_quality = p.parse_u8("png.quality");
-        i.png_quantization_speed= p.parse_u8("png.quantization_speed");
+        i.png_quantization_speed = p.parse_u8("png.quantization_speed");
         i.png_libpng = p.parse_bool("png.libpng");
         i.png_max_deflate = p.parse_bool("png.max_deflate");
         i.avif_quality = p.parse_f32("avif.quality");
@@ -592,7 +622,7 @@ impl Instructions{
 
         // qp is its replacement
         i.qp = p.parse_quality_profile("qp", i.quality);
-        i.qp_dpr = p.parse_qp_dpr("qp.dpr", i.zoom).or(p.parse_qp_dpr("qp.dppx",i.zoom));
+        i.qp_dpr = p.parse_qp_dpr("qp.dpr", i.zoom).or(p.parse_qp_dpr("qp.dppx", i.zoom));
 
         i.watermark_red_dot = p.parse_bool("watermark_red_dot");
 
@@ -601,87 +631,92 @@ impl Instructions{
         i
     }
 
-    fn anchor1d_numeric_string(a:Anchor1D) -> String{
-        match a{
+    fn anchor1d_numeric_string(a: Anchor1D) -> String {
+        match a {
             Anchor1D::Near => "0".to_owned(),
             Anchor1D::Center => "50".to_owned(),
             Anchor1D::Far => "100".to_owned(),
-            Anchor1D::Percent(v) => format!("{:.2}", v)
+            Anchor1D::Percent(v) => format!("{:.2}", v),
         }
     }
-    fn anchor_string(&self) -> Option<String>{
-        if let Some((h,v)) = self.anchor{
-            match (h,v){
-                (Anchor1D::Percent(_), _) | (_, Anchor1D::Percent(_))=> {
-                    return Some(format!("{},{}", Self::anchor1d_numeric_string(h), Self::anchor1d_numeric_string(v)))
+    fn anchor_string(&self) -> Option<String> {
+        if let Some((h, v)) = self.anchor {
+            match (h, v) {
+                (Anchor1D::Percent(_), _) | (_, Anchor1D::Percent(_)) => {
+                    return Some(format!(
+                        "{},{}",
+                        Self::anchor1d_numeric_string(h),
+                        Self::anchor1d_numeric_string(v)
+                    ))
                 }
                 _ => {}
             }
 
-            let first = match v{
+            let first = match v {
                 Anchor1D::Near => "top",
                 Anchor1D::Center => "middle",
                 Anchor1D::Far => "bottom",
-                Anchor1D::Percent(_) => unimplemented!()
+                Anchor1D::Percent(_) => unimplemented!(),
             };
-            let last = match h{
+            let last = match h {
                 Anchor1D::Near => "left",
                 Anchor1D::Center => "center",
                 Anchor1D::Far => "right",
-                Anchor1D::Percent(_) => unimplemented!()
+                Anchor1D::Percent(_) => unimplemented!(),
             };
             Some(format!("{}{}", first, last))
-        }else{
+        } else {
             None
         }
     }
-    fn gravity_string(&self) -> Option<String>{
-        if let Some([x,y]) = self.c_gravity{
+    fn gravity_string(&self) -> Option<String> {
+        if let Some([x, y]) = self.c_gravity {
             Some(format!("{:.2},{:.2}", x, y))
-        }else{
+        } else {
             None
         }
     }
 
-    pub fn to_framewise(&self) -> s::Framewise{
+    pub fn to_framewise(&self) -> s::Framewise {
         s::Framewise::example_graph()
     }
-    pub fn new() -> Instructions{
+    pub fn new() -> Instructions {
         Default::default()
     }
 }
 
 //
-struct Parser<'a>{
-    m: &'a mut HashMap<String,String>,
+struct Parser<'a> {
+    m: &'a mut HashMap<String, String>,
     w: Option<&'a mut Vec<ParseWarning>>,
     /// We leave pairs in the map if we do not support them (or we support them, but they are invalid)
-    delete_supported: bool
+    delete_supported: bool,
 }
-impl<'a> Parser<'a>{
-
-    fn remove(&mut self, key: &str) -> Option<String>{
+impl<'a> Parser<'a> {
+    fn remove(&mut self, key: &str) -> Option<String> {
         self.m.remove(key).map(|v| v.trim().to_owned())
     }
 
-    fn apply_srcset(&mut self, i: &mut Instructions){
+    fn apply_srcset(&mut self, i: &mut Instructions) {
         if let Some(srcset) = self.remove("srcset").or_else(|| self.remove("short")) {
-            if self.w.is_some(){
+            if self.w.is_some() {
                 apply_srcset_string(i, &srcset, self.w.as_mut().unwrap());
-            }else{
+            } else {
                 let mut w = Vec::new();
                 apply_srcset_string(i, &srcset, &mut w);
             }
         }
     }
 
-    fn warn(&mut self, warning: ParseWarning){
+    fn warn(&mut self, warning: ParseWarning) {
         if self.w.is_some() {
             self.w.as_mut().unwrap().push(warning);
         }
     }
-    fn warning_parse<F,T,E>(&mut self, key: &'static str, f: F) -> Option<T>
-        where F: Fn(&str) -> result::Result<(T,Option<ParseWarning>, bool),E>{
+    fn warning_parse<F, T, E>(&mut self, key: &'static str, f: F) -> Option<T>
+    where
+        F: Fn(&str) -> result::Result<(T, Option<ParseWarning>, bool), E>,
+    {
         //Coalesce null and whitespace values to None
         let (r, supported) = {
             let v = self.m.get(key).map(|v| v.trim().to_owned()).filter(|v| !v.is_empty());
@@ -691,10 +726,10 @@ impl<'a> Parser<'a>{
                     Err(_) => {
                         self.warn(ParseWarning::ValueInvalid((key, s.to_owned())));
                         (None, false) // We assume an error means the value wasn't supported
-                    },
-                    Ok((v,w,supported)) => {
-                        if w.is_some(){
-                           self.warn(w.unwrap());
+                    }
+                    Ok((v, w, supported)) => {
+                        if w.is_some() {
+                            self.warn(w.unwrap());
                         }
                         (Some(v), supported)
                     }
@@ -708,9 +743,11 @@ impl<'a> Parser<'a>{
         }
         r
     }
-    fn parse<F,T,E>(&mut self, key: &'static str, f: F) -> Option<T>
-            where F: Fn(&str) -> result::Result<T,E>{
-        self.warning_parse(key, |s| f(s).map(|v| (v, None, true)) )
+    fn parse<F, T, E>(&mut self, key: &'static str, f: F) -> Option<T>
+    where
+        F: Fn(&str) -> result::Result<T, E>,
+    {
+        self.warning_parse(key, |s| f(s).map(|v| (v, None, true)))
     }
 
     fn parse_test_pair(&mut self, key: &'static str, value: &'static str) -> Option<bool> {
@@ -723,94 +760,118 @@ impl<'a> Parser<'a>{
         })
     }
 
-    fn parse_crop_strict(&mut self, key: &'static str) -> Option<[f64;4]> {
+    fn parse_crop_strict(&mut self, key: &'static str) -> Option<[f64; 4]> {
         self.warning_parse(key, |s| {
-            let values = s.split(',').map(|v| v.trim().parse::<f64>()).collect::<Vec<std::result::Result<f64,num::ParseFloatError>>>();
+            let values = s
+                .split(',')
+                .map(|v| v.trim().parse::<f64>())
+                .collect::<Vec<std::result::Result<f64, num::ParseFloatError>>>();
             if let Some(Err(e)) = values.iter().find(|v| v.is_err()) {
                 Err(ParseCropError::InvalidNumber(e.clone()))
             } else if values.len() != 4 {
-                Err(ParseCropError::InvalidNumberOfValues("Crops must contain exactly 4 values, separated by commas"))
+                Err(ParseCropError::InvalidNumberOfValues(
+                    "Crops must contain exactly 4 values, separated by commas",
+                ))
             } else {
-                Ok(([*values[0].as_ref().unwrap(), *values[1].as_ref().unwrap(), *values[2].as_ref().unwrap(), *values[3].as_ref().unwrap()], None, true))
+                Ok((
+                    [
+                        *values[0].as_ref().unwrap(),
+                        *values[1].as_ref().unwrap(),
+                        *values[2].as_ref().unwrap(),
+                        *values[3].as_ref().unwrap(),
+                    ],
+                    None,
+                    true,
+                ))
             }
-        }
-        )
+        })
     }
 
-
-    fn parse_crop(&mut self, key: &'static str) -> Option<[f64;4]> {
+    fn parse_crop(&mut self, key: &'static str) -> Option<[f64; 4]> {
         self.warning_parse(key, |s| {
             // TODO: We're also supposed to trim leading/trailing commas along with whitespace
             let str = s.replace("(", "").replace(")", "");
             // .unwrap_or(0) is ugly, but it's what IR4 does. :(
-            let values = str.trim().split(',').map(|v| v.trim().parse::<f64>().unwrap_or(0f64)).collect::<Vec<f64>>();
+            let values = str
+                .trim()
+                .split(',')
+                .map(|v| v.trim().parse::<f64>().unwrap_or(0f64))
+                .collect::<Vec<f64>>();
             if values.len() == 4 {
                 Ok(([values[0], values[1], values[2], values[3]], None, true))
             } else {
                 Err(())
             }
-        }
-        )
+        })
     }
 
-
-    fn parse_round_corners(&mut self, key: &'static str) -> Option<[f64;4]> {
+    fn parse_round_corners(&mut self, key: &'static str) -> Option<[f64; 4]> {
         self.warning_parse(key, |s| {
-            let values = s.split(',').map(|v| v.trim().parse::<f64>()).collect::<Vec<std::result::Result<f64,num::ParseFloatError>>>();
+            let values = s
+                .split(',')
+                .map(|v| v.trim().parse::<f64>())
+                .collect::<Vec<std::result::Result<f64, num::ParseFloatError>>>();
             if let Some(Err(e)) = values.iter().find(|v| v.is_err()) {
                 Err(ParseRoundCornersError::InvalidNumber(e.clone()))
-            } else if values.len() == 4{
-                Ok(([*values[0].as_ref().unwrap(), *values[1].as_ref().unwrap(), *values[2].as_ref().unwrap(), *values[3].as_ref().unwrap()], None, true))
-            } else if values.len() == 1{
+            } else if values.len() == 4 {
+                Ok((
+                    [
+                        *values[0].as_ref().unwrap(),
+                        *values[1].as_ref().unwrap(),
+                        *values[2].as_ref().unwrap(),
+                        *values[3].as_ref().unwrap(),
+                    ],
+                    None,
+                    true,
+                ))
+            } else if values.len() == 1 {
                 let v = *values[0].as_ref().unwrap();
-                Ok(([v,v,v,v], None, true))
-            } else{
-                Err(ParseRoundCornersError::InvalidNumberOfValues("s.roundcorners must contain exactly 1 value or 4 values, separated by commas"))
+                Ok(([v, v, v, v], None, true))
+            } else {
+                Err(ParseRoundCornersError::InvalidNumberOfValues(
+                    "s.roundcorners must contain exactly 1 value or 4 values, separated by commas",
+                ))
             }
-
-        }
-        )
+        })
     }
 
-
-    fn parse_bool(&mut self, key: &'static str) -> Option<bool>{
-        self.parse(key, |s|
-            match s.to_lowercase().as_str(){
-                "true" | "1" | "yes" | "on" => Ok(true),
-                "false" | "0" | "no" | "off" => Ok(false),
-                _ => Err(())
-            }
-        )
+    fn parse_bool(&mut self, key: &'static str) -> Option<bool> {
+        self.parse(key, |s| match s.to_lowercase().as_str() {
+            "true" | "1" | "yes" | "on" => Ok(true),
+            "false" | "0" | "no" | "off" => Ok(false),
+            _ => Err(()),
+        })
     }
-    fn parse_bool_keep(&mut self, key: &'static str) -> Option<BoolKeep>{
-        self.parse(key, |s|
-            match s.to_lowercase().as_str(){
-                "true" | "1" | "yes" | "on" => Ok(BoolKeep::True),
-                "false" | "0" | "no" | "off" => Ok(BoolKeep::False),
-                "keep" => Ok(BoolKeep::Keep),
-                "preserve" => Ok(BoolKeep::Keep),
-                _ => Err(())
-            }
-        )
+    fn parse_bool_keep(&mut self, key: &'static str) -> Option<BoolKeep> {
+        self.parse(key, |s| match s.to_lowercase().as_str() {
+            "true" | "1" | "yes" | "on" => Ok(BoolKeep::True),
+            "false" | "0" | "no" | "off" => Ok(BoolKeep::False),
+            "keep" => Ok(BoolKeep::Keep),
+            "preserve" => Ok(BoolKeep::Keep),
+            _ => Err(()),
+        })
     }
-    fn parse_u8(&mut self, key: &'static str) -> Option<u8>{
-        self.parse(key, |s| s.parse::<u8>() )
+    fn parse_u8(&mut self, key: &'static str) -> Option<u8> {
+        self.parse(key, |s| s.parse::<u8>())
     }
-    fn parse_i32(&mut self, key: &'static str) -> Option<i32>{
-        self.parse(key, |s| s.parse::<i32>() )
+    fn parse_i32(&mut self, key: &'static str) -> Option<i32> {
+        self.parse(key, |s| s.parse::<i32>())
     }
-    fn parse_f64(&mut self, key: &'static str) -> Option<f64>{
-        self.parse(key, |s| s.parse::<f64>() )
+    fn parse_f64(&mut self, key: &'static str) -> Option<f64> {
+        self.parse(key, |s| s.parse::<f64>())
     }
-    fn parse_f32(&mut self, key: &'static str) -> Option<f32>{
-        self.parse(key, |s| s.parse::<f32>() )
+    fn parse_f32(&mut self, key: &'static str) -> Option<f32> {
+        self.parse(key, |s| s.parse::<f32>())
     }
-    fn parse_dpr(&mut self, key: &'static str) -> Option<f32>{
-        self.parse(key, |s| s.trim_end_matches("x").parse::<f32>() )
+    fn parse_dpr(&mut self, key: &'static str) -> Option<f32> {
+        self.parse(key, |s| s.trim_end_matches("x").parse::<f32>())
     }
-    fn parse_qp_dpr(&mut self, key: &'static str, dpr: Option<f32>) -> Option<f32>{
+    fn parse_qp_dpr(&mut self, key: &'static str, dpr: Option<f32>) -> Option<f32> {
         self.parse(key, |s| {
-            if s.eq_ignore_ascii_case("dpr") || s.eq_ignore_ascii_case("dppx") || s.eq_ignore_ascii_case("zoom"){
+            if s.eq_ignore_ascii_case("dpr")
+                || s.eq_ignore_ascii_case("dppx")
+                || s.eq_ignore_ascii_case("zoom")
+            {
                 if let Some(zoom) = dpr {
                     Ok(Some(zoom))
                 } else {
@@ -822,36 +883,45 @@ impl<'a> Parser<'a>{
         })?
     }
 
-    fn parse_gravity(&mut self, key: &'static str) -> Option<[f64;2]>{
+    fn parse_gravity(&mut self, key: &'static str) -> Option<[f64; 2]> {
         self.warning_parse(key, |s| {
-            match Self::parse_f64_list::<2>(s, "c.gravity must contain exactly 2 decimal values, 0..100.0, separated by commas"){
+            match Self::parse_f64_list::<2>(
+                s,
+                "c.gravity must contain exactly 2 decimal values, 0..100.0, separated by commas",
+            ) {
                 Ok(v) => Ok((v, None, true)),
-                Err(e) => Err(e)
+                Err(e) => Err(e),
             }
         })
     }
 
-    fn parse_quality_profile(&mut self, key: &'static str, quality: Option<i32>) -> Option<QualityProfile>{
-
+    fn parse_quality_profile(
+        &mut self,
+        key: &'static str,
+        quality: Option<i32>,
+    ) -> Option<QualityProfile> {
         self.parse(key, |value| {
             // Copy the quality value to the qp field if it's set.
-            if value.eq_ignore_ascii_case("quality"){
+            if value.eq_ignore_ascii_case("quality") {
                 return Ok(quality.map(|v| QualityProfile::Percent(v as f32)));
             }
             match QualityProfile::from_str(value) {
                 Some(v) => Ok(Some(v)),
-                None => Err(QualityProfile::HELP_TEXT)
+                None => Err(QualityProfile::HELP_TEXT),
             }
         })?
     }
 
-    fn parse_f64_list<const N: usize>(text: &str, wrong_count_message: &'static str) -> Result<[f64;N],ParseListError>{
+    fn parse_f64_list<const N: usize>(
+        text: &str,
+        wrong_count_message: &'static str,
+    ) -> Result<[f64; N], ParseListError> {
         let mut array = [0f64; N];
         let mut i = 0;
         for s in text.split(',') {
-            match s.trim().parse::<f64>(){
+            match s.trim().parse::<f64>() {
                 Ok(v) => {
-                    if i < N{
+                    if i < N {
                         array[i] = v;
                     }
                 }
@@ -861,190 +931,183 @@ impl<'a> Parser<'a>{
             }
             i += 1;
         }
-        if i != N{
+        if i != N {
             Err(ParseListError::InvalidNumberOfValues(wrong_count_message))
-        }else{
+        } else {
             Ok(array)
         }
     }
 
-    fn parse_subsampling(&mut self, key: &'static str) -> Option<i32>{
-        self.parse(key, |s|
-            s.parse::<i32>().map_err(|_| ()).and_then(|v|
-                match v {
-                    411 | 420 | 444 | 422 => Ok(v),
-                    _ => Err(())
-                }
-            )
-        )
+    fn parse_subsampling(&mut self, key: &'static str) -> Option<i32> {
+        self.parse(key, |s| {
+            s.parse::<i32>().map_err(|_| ()).and_then(|v| match v {
+                411 | 420 | 444 | 422 => Ok(v),
+                _ => Err(()),
+            })
+        })
     }
 
-    fn parse_rotate(&mut self, key: &'static str) -> Option<i32>{
-        self.warning_parse(key, |s|
-
-            match s.parse::<f32>(){
-                Ok(value) => {
-                    let result = ((((value / 90f32).round() % 4f32) as i32 + 4) % 4) * 90;
-                    if value % 90f32 > 0.1f32{
-                        Ok((result, Some(ParseWarning::ValueInvalid((key, s.to_owned()))), false))
-                    }else {
-                        Ok((result, None, true))
-                    }
+    fn parse_rotate(&mut self, key: &'static str) -> Option<i32> {
+        self.warning_parse(key, |s| match s.parse::<f32>() {
+            Ok(value) => {
+                let result = ((((value / 90f32).round() % 4f32) as i32 + 4) % 4) * 90;
+                if value % 90f32 > 0.1f32 {
+                    Ok((result, Some(ParseWarning::ValueInvalid((key, s.to_owned()))), false))
+                } else {
+                    Ok((result, None, true))
                 }
-                Err(e) => Err(e)
             }
-
-        )
+            Err(e) => Err(e),
+        })
     }
 
-fn parse_colorspace(&mut self, key: &'static str) -> Option<ScalingColorspace> {
-    self.parse(key, |value| {
-        for (k, v) in ScalingColorspace::iter_variant_names().zip(ScalingColorspace::iter_variants()) {
-            if k.eq_ignore_ascii_case(value) {
-                return Ok(v)
-            }
-        }
-        Err(())
-    })
-}
-
-
-    fn parse_fit_mode(&mut self, key: &'static str) -> Option<FitModeStrings>{
+    fn parse_colorspace(&mut self, key: &'static str) -> Option<ScalingColorspace> {
         self.parse(key, |value| {
-            for (k, v) in FitModeStrings::iter_variant_names().zip(FitModeStrings::iter_variants()) {
+            for (k, v) in
+                ScalingColorspace::iter_variant_names().zip(ScalingColorspace::iter_variants())
+            {
                 if k.eq_ignore_ascii_case(value) {
-                    return Ok(v)
+                    return Ok(v);
                 }
             }
             Err(())
         })
     }
-    fn parse_filter(&mut self, key: &'static str) -> Option<FilterStrings>{
+
+    fn parse_fit_mode(&mut self, key: &'static str) -> Option<FitModeStrings> {
+        self.parse(key, |value| {
+            for (k, v) in FitModeStrings::iter_variant_names().zip(FitModeStrings::iter_variants())
+            {
+                if k.eq_ignore_ascii_case(value) {
+                    return Ok(v);
+                }
+            }
+            Err(())
+        })
+    }
+    fn parse_filter(&mut self, key: &'static str) -> Option<FilterStrings> {
         self.parse(key, |value| {
             for (k, v) in FilterStrings::iter_variant_names().zip(FilterStrings::iter_variants()) {
                 if k.eq_ignore_ascii_case(value) {
-                    return Ok(v)
+                    return Ok(v);
                 }
             }
             Err(())
         })
     }
 
-    fn parse_sharpen_when(&mut self, key: &'static str) -> Option<SharpenWhen>{
+    fn parse_sharpen_when(&mut self, key: &'static str) -> Option<SharpenWhen> {
         self.parse(key, |value| {
             for (k, v) in SharpenWhen::iter_variant_names().zip(SharpenWhen::iter_variants()) {
                 if k.eq_ignore_ascii_case(value) {
-                    return Ok(v)
+                    return Ok(v);
                 }
             }
             Err(())
         })
     }
 
-    fn parse_white_balance(&mut self, key: &'static str) -> Option<HistogramThresholdAlgorithm>{
+    fn parse_white_balance(&mut self, key: &'static str) -> Option<HistogramThresholdAlgorithm> {
         self.parse(key, |value| {
-            for (k, v) in HistogramThresholdAlgorithm::iter_variant_names().zip(HistogramThresholdAlgorithm::iter_variants()) {
+            for (k, v) in HistogramThresholdAlgorithm::iter_variant_names()
+                .zip(HistogramThresholdAlgorithm::iter_variants())
+            {
                 if k.eq_ignore_ascii_case(value) {
-                    return Ok(v)
+                    return Ok(v);
                 }
             }
             Err(())
         })
     }
 
-
-    fn parse_grayscale(&mut self, key: &'static str) -> Option<GrayscaleAlgorithm>{
+    fn parse_grayscale(&mut self, key: &'static str) -> Option<GrayscaleAlgorithm> {
         self.parse(key, |value| {
-            for (k, v) in GrayscaleAlgorithm::iter_variant_names().zip(GrayscaleAlgorithm::iter_variants()) {
+            for (k, v) in
+                GrayscaleAlgorithm::iter_variant_names().zip(GrayscaleAlgorithm::iter_variants())
+            {
                 if k.eq_ignore_ascii_case(value) {
-                    return Ok(v)
+                    return Ok(v);
                 }
             }
             Err(())
         })
     }
 
-    fn parse_scale(&mut self, key: &'static str) -> Option<ScaleModeStrings>{
+    fn parse_scale(&mut self, key: &'static str) -> Option<ScaleModeStrings> {
         self.parse(key, |value| {
-            for (k, v) in ScaleModeStrings::iter_variant_names().zip(ScaleModeStrings::iter_variants()) {
+            for (k, v) in
+                ScaleModeStrings::iter_variant_names().zip(ScaleModeStrings::iter_variants())
+            {
                 if k.eq_ignore_ascii_case(value) {
-                    return Ok(v)
+                    return Ok(v);
                 }
             }
             Err(())
         })
     }
 
-    fn parse_flip(&mut self, key: &'static str) -> Option<FlipStrings>{
+    fn parse_flip(&mut self, key: &'static str) -> Option<FlipStrings> {
         self.parse(key, |value| {
             for (k, v) in FlipStrings::iter_variant_names().zip(FlipStrings::iter_variants()) {
                 if k.eq_ignore_ascii_case(value) {
-                    return Ok(v)
+                    return Ok(v);
                 }
             }
             Err(())
         })
     }
-    fn parse_format(&mut self, key: &'static str) -> Option<OutputFormat>{
-        self.parse(key, |value| {
-            OutputFormat::from_str(value)
-        })
+    fn parse_format(&mut self, key: &'static str) -> Option<OutputFormat> {
+        self.parse(key, |value| OutputFormat::from_str(value))
     }
 
-    fn parse_color_srgb(&mut self, key: &'static str) -> Option<Color32>{
-        self.parse(key, |value| {
-            parse_color_hex_or_named(value)
-        })
+    fn parse_color_srgb(&mut self, key: &'static str) -> Option<Color32> {
+        self.parse(key, |value| parse_color_hex_or_named(value))
     }
 
-
-    fn parse_anchor(&mut self, key: &'static str) -> Option<(Anchor1D,Anchor1D)> {
-        self.parse(key, |value| {
-            match value.to_lowercase().as_str() {
-                "topleft" => Ok((Anchor1D::Near, Anchor1D::Near)),
-                "topcenter" => Ok((Anchor1D::Center, Anchor1D::Near)),
-                "topright" => Ok((Anchor1D::Far, Anchor1D::Near)),
-                "middleleft" => Ok((Anchor1D::Near, Anchor1D::Center)),
-                "middlecenter" => Ok((Anchor1D::Center, Anchor1D::Center)),
-                "middleright" => Ok((Anchor1D::Far, Anchor1D::Center)),
-                "bottomleft" => Ok((Anchor1D::Near, Anchor1D::Far)),
-                "bottomcenter" => Ok((Anchor1D::Center, Anchor1D::Far)),
-                "bottomright" => Ok((Anchor1D::Far, Anchor1D::Far)),
-                other => {
-                    let gravity = Self::parse_f64_list::<2>(other, "Anchor must be a string or two numbers, separated by commas");
-                    if let Ok([x,y]) = gravity{
-                        Ok((Anchor1D::Percent(x as f32), Anchor1D::Percent(y as f32)))
-                    }else{
-                        Err(())
-                    }
+    fn parse_anchor(&mut self, key: &'static str) -> Option<(Anchor1D, Anchor1D)> {
+        self.parse(key, |value| match value.to_lowercase().as_str() {
+            "topleft" => Ok((Anchor1D::Near, Anchor1D::Near)),
+            "topcenter" => Ok((Anchor1D::Center, Anchor1D::Near)),
+            "topright" => Ok((Anchor1D::Far, Anchor1D::Near)),
+            "middleleft" => Ok((Anchor1D::Near, Anchor1D::Center)),
+            "middlecenter" => Ok((Anchor1D::Center, Anchor1D::Center)),
+            "middleright" => Ok((Anchor1D::Far, Anchor1D::Center)),
+            "bottomleft" => Ok((Anchor1D::Near, Anchor1D::Far)),
+            "bottomcenter" => Ok((Anchor1D::Center, Anchor1D::Far)),
+            "bottomright" => Ok((Anchor1D::Far, Anchor1D::Far)),
+            other => {
+                let gravity = Self::parse_f64_list::<2>(
+                    other,
+                    "Anchor must be a string or two numbers, separated by commas",
+                );
+                if let Ok([x, y]) = gravity {
+                    Ok((Anchor1D::Percent(x as f32), Anchor1D::Percent(y as f32)))
+                } else {
+                    Err(())
                 }
             }
         })
     }
-
-
-
 }
 
-
-#[derive(Debug,Clone,PartialEq)]
-enum ParseCropError{
+#[derive(Debug, Clone, PartialEq)]
+enum ParseCropError {
     InvalidNumber(std::num::ParseFloatError),
-    InvalidNumberOfValues(&'static str)
+    InvalidNumberOfValues(&'static str),
 }
-#[derive(Debug,Clone,PartialEq)]
-enum ParseListError{
-    InvalidNumber((std::num::ParseFloatError,String)),
-    InvalidNumberOfValues(&'static str)
+#[derive(Debug, Clone, PartialEq)]
+enum ParseListError {
+    InvalidNumber((std::num::ParseFloatError, String)),
+    InvalidNumberOfValues(&'static str),
 }
-#[derive(Debug,Clone,PartialEq)]
-enum ParseRoundCornersError{
+#[derive(Debug, Clone, PartialEq)]
+enum ParseRoundCornersError {
     InvalidNumber(std::num::ParseFloatError),
-    InvalidNumberOfValues(&'static str)
+    InvalidNumberOfValues(&'static str),
 }
-impl QualityProfileStrings{
-    pub fn clean(&self) -> QualityProfile{
-        match *self{
+impl QualityProfileStrings {
+    pub fn clean(&self) -> QualityProfile {
+        match *self {
             QualityProfileStrings::Lowest => QualityProfile::Lowest,
             QualityProfileStrings::Low => QualityProfile::Low,
             QualityProfileStrings::Medium => QualityProfile::Medium,
@@ -1052,13 +1115,13 @@ impl QualityProfileStrings{
             QualityProfileStrings::Good => QualityProfile::Good,
             QualityProfileStrings::High => QualityProfile::High,
             QualityProfileStrings::Highest => QualityProfile::Highest,
-            QualityProfileStrings::Lossless => QualityProfile::Lossless
+            QualityProfileStrings::Lossless => QualityProfile::Lossless,
         }
     }
 }
-impl OutputFormatStrings{
-    pub fn clean(&self) -> OutputFormat{
-        match *self{
+impl OutputFormatStrings {
+    pub fn clean(&self) -> OutputFormat {
+        match *self {
             OutputFormatStrings::Png => OutputFormat::Png,
             OutputFormatStrings::Gif => OutputFormat::Gif,
             OutputFormatStrings::Webp => OutputFormat::Webp,
@@ -1078,33 +1141,32 @@ impl OutputFormatStrings{
     }
 }
 
-impl FlipStrings{
-    pub fn clean(&self) -> (bool,bool){
-        match *self{
-            FlipStrings::None => (false,false),
+impl FlipStrings {
+    pub fn clean(&self) -> (bool, bool) {
+        match *self {
+            FlipStrings::None => (false, false),
             FlipStrings::X | FlipStrings::H => (true, false),
             FlipStrings::Y | FlipStrings::V => (false, true),
-            FlipStrings::XY | FlipStrings::Both => (true, true)
-         }
+            FlipStrings::XY | FlipStrings::Both => (true, true),
+        }
     }
 }
-impl FitModeStrings{
-    pub fn clean(&self) -> Option<FitMode>{
-        match *self{
+impl FitModeStrings {
+    pub fn clean(&self) -> Option<FitMode> {
+        match *self {
             FitModeStrings::None => None,
             FitModeStrings::Max => Some(FitMode::Max),
             FitModeStrings::Pad => Some(FitMode::Pad),
             FitModeStrings::Crop => Some(FitMode::Crop),
-            FitModeStrings::Carve |
-            FitModeStrings::Stretch => Some(FitMode::Stretch),
-            FitModeStrings::AspectCrop => Some(FitMode::AspectCrop)
+            FitModeStrings::Carve | FitModeStrings::Stretch => Some(FitMode::Stretch),
+            FitModeStrings::AspectCrop => Some(FitMode::AspectCrop),
         }
     }
 }
 
-impl FilterStrings{
-    pub fn to_filter(&self) -> Filter{
-        match *self{
+impl FilterStrings {
+    pub fn to_filter(&self) -> Filter {
+        match *self {
             FilterStrings::Robidoux => Filter::Robidoux,
             FilterStrings::Robidoux_Sharp | FilterStrings::RobidouxSharp => Filter::RobidouxSharp,
             FilterStrings::Robidoux_Fast | FilterStrings::RobidouxFast => Filter::RobidouxFast,
@@ -1131,11 +1193,9 @@ impl FilterStrings{
     }
 }
 
-
-
-impl ScaleModeStrings{
-    pub fn clean(&self) -> ScaleMode{
-        match *self{
+impl ScaleModeStrings {
+    pub fn clean(&self) -> ScaleMode {
+        match *self {
             ScaleModeStrings::DownscaleOnly | ScaleModeStrings::Down => ScaleMode::DownscaleOnly,
             ScaleModeStrings::UpscaleOnly | ScaleModeStrings::Up => ScaleMode::UpscaleOnly,
             ScaleModeStrings::UpscaleCanvas | ScaleModeStrings::Canvas => ScaleMode::UpscaleCanvas,
@@ -1159,32 +1219,28 @@ pub enum FitMode {
     AspectCrop,
 }
 
-
-
-
 //TODO, consider using f32 instead of f64 (26x) to halve the struct weight
-#[derive(Default,Debug,Clone,Copy,PartialEq)]
-pub struct Instructions{
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+pub struct Instructions {
     pub w: Option<i32>,
     pub h: Option<i32>,
     pub legacy_max_width: Option<i32>,
     pub legacy_max_height: Option<i32>,
     pub mode: Option<FitMode>,
     pub scale: Option<ScaleMode>,
-    pub flip: Option<(bool,bool)>,
-    pub sflip: Option<(bool,bool)>,
+    pub flip: Option<(bool, bool)>,
+    pub sflip: Option<(bool, bool)>,
     pub srotate: Option<i32>,
     pub rotate: Option<i32>,
     pub autorotate: Option<bool>,
 
     pub anchor: Option<(Anchor1D, Anchor1D)>,
-    pub c_gravity: Option<[f64;2]>,
-    pub crop: Option<[f64;4]>,
-    pub s_round_corners: Option<[f64;4]>,
+    pub c_gravity: Option<[f64; 2]>,
+    pub crop: Option<[f64; 4]>,
+    pub s_round_corners: Option<[f64; 4]>,
     pub cropxunits: Option<f64>,
     pub cropyunits: Option<f64>,
     pub zoom: Option<f32>,
-
 
     pub trim_whitespace_threshold: Option<i32>,
     pub trim_whitespace_padding_percent: Option<f32>,
@@ -1205,8 +1261,6 @@ pub struct Instructions{
     pub watermark_red_dot: Option<bool>,
 
     pub bgcolor_srgb: Option<Color32>,
-
-
 
     /// Default=keep. When format=auto, the best enabled codec for the image/constraints is selected.
     pub format: Option<OutputFormat>,
@@ -1258,26 +1312,24 @@ pub struct Instructions{
     //#[deprecated(since = "0.1.0", note = "replaced with shared &lossless")]
     pub png_lossless: Option<BoolKeep>,
 
-
-    pub jxl_distance: Option<f32>,// recommend 0.5 to 3.0 (96.68 jpeg equiv), default 1, full range 0..25
-    pub jxl_effort: Option<u8>,//clamped to reasonable values 0..7, 8+ blocked
-    pub jxl_quality: Option<f32>, // similar to jpeg quality, 0..100
+    pub jxl_distance: Option<f32>, // recommend 0.5 to 3.0 (96.68 jpeg equiv), default 1, full range 0..25
+    pub jxl_effort: Option<u8>,    //clamped to reasonable values 0..7, 8+ blocked
+    pub jxl_quality: Option<f32>,  // similar to jpeg quality, 0..100
     //#[deprecated(since = "0.1.0", note = "replaced with shared &lossless")]
-    pub jxl_lossless: Option<BoolKeep>,// replaced with shared &lossless
+    pub jxl_lossless: Option<BoolKeep>, // replaced with shared &lossless
 
     pub avif_quality: Option<f32>,
     pub avif_speed: Option<u8>, // 3..10, 1 and 2 are blocked for being too slow.
-
 }
-#[derive(Debug,Copy, Clone,PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Anchor1D {
     Near,
     Center,
     Far,
-    Percent(f32)
+    Percent(f32),
 }
-#[derive(Debug,Copy, Clone,PartialEq)]
-pub enum OutputFormat{
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum OutputFormat {
     Keep, // The default, don't change the format.
     Jpeg,
     Png,
@@ -1288,14 +1340,15 @@ pub enum OutputFormat{
     Auto,
 }
 
-
 impl FromStr for OutputFormat {
     type Err = String;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
-        for (k, v) in OutputFormatStrings::iter_variant_names().zip(OutputFormatStrings::iter_variants()) {
+        for (k, v) in
+            OutputFormatStrings::iter_variant_names().zip(OutputFormatStrings::iter_variants())
+        {
             if k.eq_ignore_ascii_case(text) {
-                return Ok(v.clean())
+                return Ok(v.clean());
             }
         }
         Err(format!("Invalid output format: {}", text))
@@ -1303,9 +1356,7 @@ impl FromStr for OutputFormat {
 }
 
 impl OutputFormat {
-
-
-    pub fn to_output_image_format(&self) -> Option<OutputImageFormat>{
+    pub fn to_output_image_format(&self) -> Option<OutputImageFormat> {
         match self {
             OutputFormat::Keep => Some(OutputImageFormat::Keep),
             OutputFormat::Jpeg => Some(OutputImageFormat::Jpeg),
@@ -1314,12 +1365,12 @@ impl OutputFormat {
             OutputFormat::Webp => Some(OutputImageFormat::Webp),
             OutputFormat::Avif => Some(OutputImageFormat::Avif),
             OutputFormat::Jxl => Some(OutputImageFormat::Jxl),
-            OutputFormat::Auto => None
+            OutputFormat::Auto => None,
         }
     }
 }
 /// Controls whether the image is allowed to upscale, downscale, both, or if only the canvas gets to be upscaled.
-#[derive(Debug,Copy, Clone,PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ScaleMode {
     /// The default. Only downsamples images - never enlarges. If an image is smaller than 'width' and 'height', the image coordinates are used instead.
     DownscaleOnly,
@@ -1328,13 +1379,15 @@ pub enum ScaleMode {
     /// Upscales and downscales images according to 'width' and 'height', within web.config restrictions.
     Both,
     /// When the image is smaller than the requested size, padding is added instead of stretching the image
-    UpscaleCanvas
+    UpscaleCanvas,
 }
 
-
 #[cfg(test)]
-fn debug_diff<T>(a : &T, b: &T, collapse_same: bool) -> String
-where T: fmt::Debug, T: PartialEq {
+fn debug_diff<T>(a: &T, b: &T, collapse_same: bool) -> String
+where
+    T: fmt::Debug,
+    T: PartialEq,
+{
     let mut t = String::new();
     if a != b {
         let text1 = format!("{:#?}", a);
@@ -1351,16 +1404,16 @@ where T: fmt::Debug, T: PartialEq {
                     if !last_same {
                         if collapse_same {
                             t.push_str("...\n");
-                        }else{
+                        } else {
                             t.push_str(&format!(" {}\n", x));
                         }
                         last_same = true;
                     }
-                },
+                }
                 Difference::Add(ref x) => {
                     t.push_str(&format!("+{}\n", x));
                     last_same = false;
-                },
+                }
                 Difference::Rem(ref x) => {
                     t.push_str(&format!("-{}\n", x));
                     last_same = false;

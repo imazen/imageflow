@@ -11,14 +11,17 @@ use std;
 // Serves as a size *and* an aspect ratio. There's benefit to keeping these together.
 // Rounding errors are problematic when they cause an off-by-one versus target width/height or original width/height.
 // So aspect ratios include the fraction they were derived from, and implementors should round to these if one of the 2 dimensions matches.
-#[derive(Copy, Clone,  Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Eq, PartialOrd, Ord)]
 pub struct AspectRatio {
     pub w: i32, //Make private! We loose validation
     pub h: i32,
 }
 
-pub mod prelude{
-    pub use super::{AspectRatio, steps, BoxKind, LayoutError, PartialCropProvider, IdentityCropProvider, Cond, BoxParam, BoxTarget, Step, Step1D};
+pub mod prelude {
+    pub use super::{
+        steps, AspectRatio, BoxKind, BoxParam, BoxTarget, Cond, IdentityCropProvider, LayoutError,
+        PartialCropProvider, Step, Step1D,
+    };
 }
 
 // auto convert a tuple to an AspectRatio
@@ -34,40 +37,44 @@ impl AspectRatio {
             //panic!("");
             Err(LayoutError::InvalidDimensions { w, h })
         } else {
-            Ok(AspectRatio {
-                w,
-                h,
-            })
+            Ok(AspectRatio { w, h })
         }
     }
 
-    pub fn ratio_f64(&self) -> f64{
+    pub fn ratio_f64(&self) -> f64 {
         f64::from(self.w) / f64::from(self.h)
     }
-    pub fn width(&self) -> i32{
+    pub fn width(&self) -> i32 {
         self.w
     }
-    pub fn height(&self) -> i32{
+    pub fn height(&self) -> i32 {
         self.h
     }
-
 
     pub fn aspect_wider_than(&self, other: &AspectRatio) -> bool {
         other.ratio_f64() > self.ratio_f64()
     }
-    pub fn transpose(&self) -> Result<AspectRatio>{
+    pub fn transpose(&self) -> Result<AspectRatio> {
         AspectRatio::create(self.h, self.w)
     }
 
     /// Using own ratio, calculate height for given width
-    pub fn height_for(&self, w: i32, potential_rounding_target: Option<&AspectRatio>) -> Result<i32> {
-        // We need to test the rounding target ratio to determine. 
+    pub fn height_for(
+        &self,
+        w: i32,
+        potential_rounding_target: Option<&AspectRatio>,
+    ) -> Result<i32> {
+        // We need to test the rounding target ratio to determine.
         AspectRatio::proportional(self, w, true, potential_rounding_target)
     }
     /// Using own ratio, calculate height for given width
-    /// The problem is that using the original image ratio, against the rounded value h, is a problem. 
+    /// The problem is that using the original image ratio, against the rounded value h, is a problem.
     /// Ex, 1200x400 is a perfect 3.0 ratio, but 100x33 is the target, and this produces 99x33
-    pub fn width_for(&self, h: i32, potential_rounding_target: Option<&AspectRatio>) -> Result<i32> {
+    pub fn width_for(
+        &self,
+        h: i32,
+        potential_rounding_target: Option<&AspectRatio>,
+    ) -> Result<i32> {
         AspectRatio::proportional(self, h, false, potential_rounding_target)
     }
 
@@ -78,16 +85,15 @@ impl AspectRatio {
         // rounded_y = 33.333333333333336.round() = 33
         // recreate_x_from_rounded_y = 33 * 1200 / 400 = 99
         // loss_x = 100 - 99 = 1
-        
+
         let target_x_to_self_x = target_width as f64 / self.w as f64;
         let recreate_y = self.h as f64 * target_x_to_self_x;
         let rounded_y = recreate_y.round();
         let recreate_x_from_rounded_y = rounded_y * self.ratio_f64();
-        
 
-        // println!("rounding_loss_based_on_target_width: original {:?}, target_width: {:?}, loss_x=abs(round(round(({}/{})*{})*({}/{}))-{})=>{}", 
+        // println!("rounding_loss_based_on_target_width: original {:?}, target_width: {:?}, loss_x=abs(round(round(({}/{})*{})*({}/{}))-{})=>{}",
         // self, target_width, target_width, self.w, self.h, self.w, self.h, target_width, loss_x);
-        (target_width  as f64 - recreate_x_from_rounded_y).abs()
+        (target_width as f64 - recreate_x_from_rounded_y).abs()
     }
 
     pub fn rounding_loss_based_on_target_height(&self, target_height: i32) -> f64 {
@@ -97,38 +103,43 @@ impl AspectRatio {
         // rounded_x = 99.round() = 99
         // recreate_y_from_rounded_x = 99 / (1200 / 400) = 33
         // loss_y = 33 - 33 = 0
-        
+
         let target_y_to_self_y = target_height as f64 / self.h as f64;
         let recreate_x = self.w as f64 * target_y_to_self_y;
         let rounded_x = recreate_x.round();
         let recreate_y_from_rounded_x = rounded_x / self.ratio_f64();
-        
-        // println!("rounding_loss_using_target_y: self={:?}, target_y={:?}, loss_y=abs(round(round(({}/{})*{})/({}/{}))-{})=>{}", 
+
+        // println!("rounding_loss_using_target_y: self={:?}, target_y={:?}, loss_y=abs(round(round(({}/{})*{})/({}/{}))-{})=>{}",
         // self, target_height, target_height, self.h, self.w, self.w, self.h, target_height, loss_y);
         (target_height as f64 - recreate_y_from_rounded_x).abs()
     }
 
-    
-
     /// Does not guarantee that the result will be within potential_rounding_target.
-    pub fn proportional(&self, basis: i32, basis_is_width: bool, potential_rounding_target: Option<&AspectRatio>) -> Result<i32> {
+    pub fn proportional(
+        &self,
+        basis: i32,
+        basis_is_width: bool,
+        potential_rounding_target: Option<&AspectRatio>,
+    ) -> Result<i32> {
         // This is more complex than originally thought. Snapping if the difference is less than 1 is not enough.
         // We need to reverse engineer how much loss was incurred when creating 'basis'
         // For example, given a basis of 33, and a ration of 1200/400=3.0, we would produce 99
-        // So, if potential_rounding_target exists, we should determine if it matches 
+        // So, if potential_rounding_target exists, we should determine if it matches
 
         //eprintln!("proportional: self: {:?} basis: {:?} basis_is_width: {:?} potential_rounding_target: {:?}", self, basis, basis_is_width, potential_rounding_target);
         let mut snap_amount = 1f64 - f64::EPSILON;
         if potential_rounding_target.is_some() {
             if !basis_is_width {
-                let loss_x = self.rounding_loss_based_on_target_width(potential_rounding_target.unwrap().w);
+                let loss_x =
+                    self.rounding_loss_based_on_target_width(potential_rounding_target.unwrap().w);
                 snap_amount = loss_x;
             } else {
-                let loss_y = self.rounding_loss_based_on_target_height(potential_rounding_target.unwrap().h);
+                let loss_y =
+                    self.rounding_loss_based_on_target_height(potential_rounding_target.unwrap().h);
                 snap_amount = loss_y;
             }
         }
-    
+
         // full precision
         let ratio = self.ratio_f64();
         let snap_a = if basis_is_width { self.h } else { self.w };
@@ -141,58 +152,41 @@ impl AspectRatio {
         } else {
             snap_a
         };
-        
 
-        let float = if basis_is_width 
-        {
-            f64::from(basis) / ratio
-        } else {
-            ratio * f64::from(basis)
-        };
+        let float =
+            if basis_is_width { f64::from(basis) / ratio } else { ratio * f64::from(basis) };
 
         let delta_a = float - f64::from(snap_a);
         let delta_b = float - f64::from(snap_b);
 
-        
-        
-        
-        // println!("proportional: self: {:?} ratio: {:?} basis: {:?} basis_is_width: {:?} target_snap: {:?} snap_amount: {:?} snap_a: {:?} snap_b: {:?} => {:?} => {:?}", 
+        // println!("proportional: self: {:?} ratio: {:?} basis: {:?} basis_is_width: {:?} target_snap: {:?} snap_amount: {:?} snap_a: {:?} snap_b: {:?} => {:?} => {:?}",
         //    self, self.ratio_f64(), basis, basis_is_width, potential_rounding_target, snap_amount, snap_a, snap_b, float, result);
         if delta_a.abs() <= snap_amount && delta_a.abs() <= delta_b.abs() {
             Ok(snap_a)
-        } else if delta_b.abs() <= snap_amount{
+        } else if delta_b.abs() <= snap_amount {
             Ok(snap_b)
         } else {
-            
             let rounded = float.round();
             // We replace 0 with 1.
             if rounded <= f64::from(std::i32::MIN) || rounded >= f64::from(std::i32::MAX) {
-                Err(LayoutError::ValueScalingFailed{
-                    ratio,
-                    basis,
-                    invalid_result: rounded
-                })
-            } else{
+                Err(LayoutError::ValueScalingFailed { ratio, basis, invalid_result: rounded })
+            } else {
                 Ok(rounded as i32)
             }
-        }.and_then(|v|
-            if v < 0{
-                Err(LayoutError::ValueScalingFailed{
-                    ratio,
-                    basis,
-                    invalid_result: float
-                })
-            }else if v == 0{
+        }
+        .and_then(|v| {
+            if v < 0 {
+                Err(LayoutError::ValueScalingFailed { ratio, basis, invalid_result: float })
+            } else if v == 0 {
                 Ok(1)
             } else {
                 Ok(v)
             }
-        )
+        })
     }
 
-
     /// Create a ibox (inner box) or obox (outer box) using own ratio, but other's min/max box.
-/// One dimension of the produced box will always match with `target`
+    /// One dimension of the produced box will always match with `target`
     pub fn box_of(&self, target: &AspectRatio, kind: BoxKind) -> Result<AspectRatio> {
         if target.aspect_wider_than(self) == (kind == BoxKind::Inner) {
             //calculate height
@@ -213,12 +207,15 @@ impl AspectRatio {
         self.w > other.w && self.h > other.h
     }
 
-
     pub fn intersection(&self, other: &AspectRatio) -> Result<AspectRatio> {
         AspectRatio::create(cmp::min(self.w, other.w), cmp::min(self.h, other.h))
     }
 
-    pub fn distort_with(&self, other_old: &AspectRatio, other_new: &AspectRatio) -> Result<AspectRatio> {
+    pub fn distort_with(
+        &self,
+        other_old: &AspectRatio,
+        other_new: &AspectRatio,
+    ) -> Result<AspectRatio> {
         let new_w = mult_fraction(self.w, other_new.w, other_old.w)?;
         let new_h = mult_fraction(self.h, other_new.h, other_old.h)?;
         AspectRatio::create(new_w, new_h)
@@ -230,7 +227,6 @@ impl AspectRatio {
     }
 }
 
-
 impl std::hash::Hash for AspectRatio {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.w.hash(state);
@@ -238,7 +234,7 @@ impl std::hash::Hash for AspectRatio {
     }
 }
 
-impl PartialEq for AspectRatio{
+impl PartialEq for AspectRatio {
     fn eq(&self, other: &AspectRatio) -> bool {
         self.w == other.w && self.h == other.h
     }
@@ -249,7 +245,6 @@ impl fmt::Debug for AspectRatio {
     }
 }
 
-
 fn mult_fraction(value: i32, num: i32, denom: i32) -> Result<i32> {
     Ok((i64::from(value) * i64::from(num) / i64::from(denom)) as i32)
 }
@@ -258,7 +253,6 @@ fn mult_fraction(value: i32, num: i32, denom: i32) -> Result<i32> {
 fn test_box_of_() {
     test_box_of();
 }
-
 
 #[cfg(test)]
 fn test_box_of() {
@@ -271,11 +265,10 @@ fn test_box_of() {
     assert_eq!(Ok(ratio(3, 5)), ratio(20, 30).box_of(&ratio(3, 2), BoxKind::Outer));
 }
 
-
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum BoxKind {
     Inner,
-    Outer
+    Outer,
 }
 
 #[derive(Copy, Clone, PartialEq, Debug, Hash)]
@@ -284,7 +277,7 @@ pub struct Layout {
     source: AspectRatio,
     target: AspectRatio,
     canvas: AspectRatio,
-    image: AspectRatio
+    image: AspectRatio,
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -292,23 +285,23 @@ pub enum LayoutError {
     NotImplemented,
     InvalidDimensions {
         w: i32,
-        h: i32
+        h: i32,
     },
     ImpossiblePad {
         target: AspectRatio,
-        current: AspectRatio
+        current: AspectRatio,
     },
     ImpossibleCrop {
         target: AspectRatio,
-        current: AspectRatio
+        current: AspectRatio,
     },
     ValueScalingFailed {
         ratio: f64,
         basis: i32,
-        invalid_result: f64
+        invalid_result: f64,
     },
     /// The result depends on the bitmap contents, and can't be calculated based on input size alone
-    ContentDependent
+    ContentDependent,
 }
 
 pub type Result<T> = ::std::result::Result<T, LayoutError>;
@@ -324,13 +317,7 @@ impl Layout {
     }
     pub fn fill_crop(self, target: AspectRatio) -> Result<Layout> {
         let new_source = target.box_of(&self.source, BoxKind::Inner)?;
-        Ok(Layout {
-            source: new_source,
-            image: target,
-            canvas: target,
-            ..self
-        })
-
+        Ok(Layout { source: new_source, image: target, canvas: target, ..self })
     }
 
     //Also distorts 'image' in a corresponding fashion.
@@ -343,25 +330,16 @@ impl Layout {
         })
     }
 
-
     pub fn virtual_canvas(self, target: AspectRatio) -> Result<Layout> {
         let new_image = self.image.intersection(&target)?;
         let new_source = new_image.box_of(&self.source, BoxKind::Inner)?;
-        Ok(Layout {
-            source: new_source,
-            image: new_image,
-            canvas: target,
-            ..self
-        })
+        Ok(Layout { source: new_source, image: new_image, canvas: target, ..self })
     }
     pub fn pad_canvas(self, target: AspectRatio) -> Result<Layout> {
         if self.canvas.exceeds_any(&target) {
             return Err(LayoutError::ImpossiblePad { target, current: self.canvas });
         }
-        Ok(Layout {
-            canvas: target,
-            ..self
-        })
+        Ok(Layout { canvas: target, ..self })
     }
 
     pub fn crop(self, target: AspectRatio) -> Result<Layout> {
@@ -370,45 +348,56 @@ impl Layout {
         }
         let new_image = self.image.intersection(&target)?;
         let new_source = new_image.box_of(&self.source, BoxKind::Inner)?;
-        Ok(Layout {
-            source: new_source,
-            image: new_image,
-            canvas: target,
-            ..self
-        })
+        Ok(Layout { source: new_source, image: new_image, canvas: target, ..self })
     }
     pub fn get_box(&self, which: BoxTarget) -> AspectRatio {
         match which {
             BoxTarget::Target => self.target,
             BoxTarget::CurrentCanvas => self.canvas,
-            BoxTarget::CurrentImage => self.image
+            BoxTarget::CurrentImage => self.image,
         }
     }
-    pub fn get_source_crop(&self) -> AspectRatio{
+    pub fn get_source_crop(&self) -> AspectRatio {
         self.source
     }
 
     pub fn resolve_box_param(&self, p: BoxParam) -> Result<AspectRatio> {
         match p {
             BoxParam::Exact(which) => Ok(self.get_box(which)),
-            BoxParam::BoxOf { target, kind, ratio_source } => self.get_box(ratio_source).box_of(&self.get_box(target), kind)
+            BoxParam::BoxOf { target, kind, ratio_source } => {
+                self.get_box(ratio_source).box_of(&self.get_box(target), kind)
+            }
         }
     }
 
     /// Modifies the other target dimension so that it isn't in play - then later restores it.
-    pub fn execute_1d<T: PartialCropProvider>(self, horizontal: bool, step: Step1D, cropper: &T) -> Result<Layout> {
+    pub fn execute_1d<T: PartialCropProvider>(
+        self,
+        horizontal: bool,
+        step: Step1D,
+        cropper: &T,
+    ) -> Result<Layout> {
         let target_2d = self.target;
-        let target_1d = if horizontal { AspectRatio::create(self.target.w, self.canvas.h) } else { AspectRatio::create(self.canvas.w, self.target.h) }?;
+        let target_1d = if horizontal {
+            AspectRatio::create(self.target.w, self.canvas.h)
+        } else {
+            AspectRatio::create(self.canvas.w, self.target.h)
+        }?;
         let canvas = self.canvas;
-        let layout1d = Layout {
-            target: target_1d,
-            ..self
-        };
+        let layout1d = Layout { target: target_1d, ..self };
         let step_2d = match step {
-            Step1D::ScaleProportional if canvas.aspect_wider_than(&target_1d) && horizontal => Step::ScaleToInner,
-            Step1D::ScaleProportional if canvas.aspect_wider_than(&target_1d) && !horizontal => Step::ScaleToOuter,
-            Step1D::ScaleProportional if target_1d.aspect_wider_than(&canvas) && horizontal => Step::ScaleToInner,
-            Step1D::ScaleProportional if target_1d.aspect_wider_than(&canvas) && !horizontal => Step::ScaleToOuter,
+            Step1D::ScaleProportional if canvas.aspect_wider_than(&target_1d) && horizontal => {
+                Step::ScaleToInner
+            }
+            Step1D::ScaleProportional if canvas.aspect_wider_than(&target_1d) && !horizontal => {
+                Step::ScaleToOuter
+            }
+            Step1D::ScaleProportional if target_1d.aspect_wider_than(&canvas) && horizontal => {
+                Step::ScaleToInner
+            }
+            Step1D::ScaleProportional if target_1d.aspect_wider_than(&canvas) && !horizontal => {
+                Step::ScaleToOuter
+            }
             Step1D::ScaleProportional => Step::ScaleToInner,
             Step1D::Crop => Step::Crop,
             Step1D::PartialCrop => Step::PartialCrop,
@@ -417,10 +406,7 @@ impl Layout {
             Step1D::VirtualCanvas => Step::VirtualCanvas(BoxParam::Exact(BoxTarget::Target)),
         };
         let modified_layout = layout1d.execute_step(step_2d, cropper)?;
-        Ok(Layout {
-            target: target_2d,
-            ..modified_layout
-        })
+        Ok(Layout { target: target_2d, ..modified_layout })
     }
     pub fn execute_step<T: PartialCropProvider>(self, step: Step, cropper: &T) -> Result<Layout> {
         match step {
@@ -435,7 +421,9 @@ impl Layout {
             Step::CropToIntersection => self.crop(self.image.intersection(&self.target)?),
             Step::VirtualCanvas(param) => self.virtual_canvas(self.resolve_box_param(param)?),
             Step::Distort(param) => self.distort_canvas(self.resolve_box_param(param)?),
-            Step::PartialCropAspect => cropper.crop_size(self, self.target.box_of(&self.canvas, BoxKind::Inner)?),
+            Step::PartialCropAspect => {
+                cropper.crop_size(self, self.target.box_of(&self.canvas, BoxKind::Inner)?)
+            }
             Step::PartialCrop => cropper.crop_size(self, self.target),
             Step::X(x_step) => self.execute_1d(true, x_step, cropper),
             Step::Y(y_step) => self.execute_1d(false, y_step, cropper),
@@ -445,7 +433,11 @@ impl Layout {
     pub fn evaluate_condition(&self, c: Cond) -> bool {
         c.matches(self.canvas.cmp_size(&self.target))
     }
-    pub fn execute_all<T: PartialCropProvider>(self, steps: &[Step], cropper: &T) -> Result<Layout> {
+    pub fn execute_all<T: PartialCropProvider>(
+        self,
+        steps: &[Step],
+        cropper: &T,
+    ) -> Result<Layout> {
         let mut lay = self;
         let mut skipping = false;
         for step in steps {
@@ -453,14 +445,14 @@ impl Layout {
                 Step::SkipIf(c) if lay.evaluate_condition(c) => {
                     //Skip to next Step::BeginSequence
                     skipping = true;
-                },
+                }
                 Step::SkipUnless(c) if !lay.evaluate_condition(c) => {
                     //Skip to next Step::BeginSequence
                     skipping = true;
-                },
+                }
                 Step::BeginSequence => {
                     skipping = false;
-                },
+                }
                 _ => {}
             }
             if !skipping {
@@ -471,25 +463,19 @@ impl Layout {
     }
 
     pub fn create(original: AspectRatio, target: AspectRatio) -> Layout {
-        Layout {
-            canvas: original,
-            image: original,
-            source: original,
-            source_max: original,
-            target
-        }
+        Layout { canvas: original, image: original, source: original, source_max: original, target }
     }
 }
 
 /// Implements `PartialCropProvider` but always crops fully - same as regular crop
 #[derive(Default)]
 pub struct IdentityCropProvider {}
-impl IdentityCropProvider{
-    pub fn new() -> IdentityCropProvider{
-        IdentityCropProvider{}
+impl IdentityCropProvider {
+    pub fn new() -> IdentityCropProvider {
+        IdentityCropProvider {}
     }
 }
-impl PartialCropProvider for IdentityCropProvider{
+impl PartialCropProvider for IdentityCropProvider {
     fn crop_size(&self, lay: Layout, target: AspectRatio) -> Result<Layout> {
         lay.crop(target)
     }
@@ -500,7 +486,6 @@ pub trait PartialCropProvider {
 }
 
 /// After distortion, Crop/VirtualCanvas will undo stretching by cropping proportionally.
-
 
 //(ratio(canvas|target|image), outer(canvas|target|image)|inner(canvas|target|image)
 //scale uses the canvas ratio
@@ -515,16 +500,11 @@ pub enum BoxTarget {
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum BoxParam {
     Exact(BoxTarget),
-    BoxOf {
-        target: BoxTarget,
-        kind: BoxKind,
-        ratio_source: BoxTarget
-    }
+    BoxOf { target: BoxTarget, kind: BoxKind, ratio_source: BoxTarget },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Cond {
-
     Is((Ordering, Ordering)),
     Not((Ordering, Ordering)),
     WidthIs(Ordering),
@@ -548,15 +528,18 @@ pub enum Cond {
     True,
 }
 impl Cond {
-    pub fn matches(&self, cmp: (Ordering, Ordering)) -> bool{
-        match *self{
+    pub fn matches(&self, cmp: (Ordering, Ordering)) -> bool {
+        match *self {
             Cond::Is(pair) => pair == cmp,
             Cond::Not(pair) => pair != cmp,
             Cond::Larger2D => Cond::Both(Ordering::Greater).matches(cmp),
             Cond::Smaller2D => Cond::Both(Ordering::Less).matches(cmp),
             Cond::Equal => Cond::Both(Ordering::Equal).matches(cmp),
             Cond::True => true,
-            Cond::Larger1DSmaller1D => cmp == (Ordering::Greater, Ordering::Less) || cmp == (Ordering::Less, Ordering::Greater),
+            Cond::Larger1DSmaller1D => {
+                cmp == (Ordering::Greater, Ordering::Less)
+                    || cmp == (Ordering::Less, Ordering::Greater)
+            }
             //Cond::Larger1D => Cond::Either(Ordering::Greater).matches(cmp),
             //Cond::Smaller1D => Cond::Either(Ordering::Less).matches(cmp),
             Cond::Differs2D => Cond::Neither(Ordering::Equal).matches(cmp),
@@ -578,7 +561,7 @@ pub enum Step1D {
     PartialCrop,
     VirtualCanvas,
     Distort,
-    ScaleProportional
+    ScaleProportional,
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -609,14 +592,13 @@ pub enum Step {
     X(Step1D),
     /// Work on heights
     Y(Step1D),
-
     // Uncrop (within source_max)?
 
     // PermitBlockAlignedEdges(4/8) - crop more, uncrop, scaleup, scaledown, unpad, distort?
 }
 
 pub struct StepsBuilder {
-    steps: Vec<Step>
+    steps: Vec<Step>,
 }
 
 impl StepsBuilder {
@@ -695,7 +677,5 @@ impl StepsBuilder {
 }
 
 pub fn steps() -> StepsBuilder {
-    StepsBuilder {
-        steps: vec![]
-    }
+    StepsBuilder { steps: vec![] }
 }

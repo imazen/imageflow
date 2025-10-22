@@ -1,8 +1,5 @@
-
-
 // intellij-rust flags this anyway
 // #![feature(field_init_shorthand)]
-
 
 #![allow(unused_features)]
 #![allow(unused_imports)]
@@ -10,14 +7,13 @@
 #![allow(unused_variables)]
 #![cfg_attr(feature = "nightly", feature(portable_simd))]
 
-
-extern crate petgraph;
 extern crate daggy;
-extern crate imageflow_types;
 extern crate imageflow_c_components;
 extern crate imageflow_helpers;
 extern crate imageflow_riapi;
+extern crate imageflow_types;
 extern crate num;
+extern crate petgraph;
 
 // for testing
 #[cfg(test)]
@@ -28,55 +24,54 @@ extern crate lazy_static;
 
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_json;
+extern crate dashmap;
+extern crate evalchroma;
+extern crate gif;
+extern crate imagequant;
+extern crate imgref;
 extern crate lcms2;
 extern crate libc;
-extern crate uuid;
-extern crate imagequant;
-extern crate gif;
-extern crate smallvec;
-extern crate dashmap;
-extern crate rgb;
-extern crate imgref;
+extern crate libwebp_sys;
 extern crate lodepng;
 extern crate mozjpeg;
 extern crate mozjpeg_sys;
-extern crate evalchroma;
+extern crate rgb;
+extern crate serde_json;
+extern crate smallvec;
 extern crate twox_hash;
-extern crate libwebp_sys;
+extern crate uuid;
 
 #[macro_use]
 pub mod errors;
 pub use crate::errors::*;
 
-
-pub mod json;
-mod flow;
-mod context;
 mod codecs;
-mod io;
+mod context;
+mod flow;
 pub mod graphics;
+mod io;
+pub mod json;
 
+pub use crate::codecs::NamedDecoders;
 pub use crate::context::Context;
-pub use crate::io::IoProxy;
 pub use crate::ffi::IoDirection;
 pub use crate::flow::definitions::Graph;
+pub use crate::io::IoProxy;
 pub use crate::json::JsonResponse;
-pub use crate::codecs::NamedDecoders;
 // use std::ops::DerefMut;
+mod allocation_container;
 pub mod clients;
 pub mod ffi;
 pub mod parsing;
 pub mod test_helpers;
-mod allocation_container;
 
-use std::fmt;
-use std::borrow::Cow;
 use petgraph::graph::NodeIndex;
+use std::borrow::Cow;
+use std::fmt;
 
 pub use crate::graphics::bitmaps::BitmapKey;
 
-pub mod helpers{
+pub mod helpers {
     pub use crate::codecs::write_png;
 }
 #[doc(hidden)]
@@ -85,26 +80,25 @@ mod internal_prelude {
     pub mod external_without_std {
         pub extern crate imageflow_helpers;
 
-        pub use imageflow_helpers::preludes::from_std::*;
         pub use daggy::{Dag, EdgeIndex, NodeIndex};
-        pub use libc::{c_void, c_float, size_t};
+        pub use imageflow_helpers::preludes::from_std::*;
+        pub use libc::{c_float, c_void, size_t};
         pub extern crate daggy;
+        pub extern crate imageflow_types as s;
+        pub extern crate libc;
         pub extern crate petgraph;
         pub extern crate serde;
         pub extern crate serde_json;
         pub extern crate time;
-        pub extern crate libc;
-        pub extern crate imageflow_types as s;
-
     }
     #[doc(hidden)]
     pub mod imageflow_core_all {
         #[doc(no_inline)]
-        pub use crate::{Graph, Context, JsonResponse};
-        #[doc(no_inline)]
-        pub use crate::{clients, FlowError, Result, ErrorKind, CodeLocation};
-        #[doc(no_inline)]
         pub use crate::clients::fluent;
+        #[doc(no_inline)]
+        pub use crate::{clients, CodeLocation, ErrorKind, FlowError, Result};
+        #[doc(no_inline)]
+        pub use crate::{Context, Graph, JsonResponse};
     }
     #[doc(hidden)]
     pub mod external {
@@ -115,16 +109,16 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod works_everywhere {
         #[doc(no_inline)]
-        pub use crate::{clients, FlowError, Result, ErrorKind};
-        #[doc(no_inline)]
         pub use crate::internal_prelude::external::*;
+        #[doc(no_inline)]
+        pub use crate::{clients, ErrorKind, FlowError, Result};
     }
     #[doc(hidden)]
     pub mod default {
         #[doc(no_inline)]
-        pub use crate::{Graph, Context, JsonResponse};
-        #[doc(no_inline)]
         pub use crate::internal_prelude::works_everywhere::*;
+        #[doc(no_inline)]
+        pub use crate::{Context, Graph, JsonResponse};
     }
     #[doc(hidden)]
     pub mod c_components {}

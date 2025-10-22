@@ -1,23 +1,23 @@
-use std;
 use crate::preludes::from_std::*;
+use std;
 
 use std::process::{Command, Output};
 
-pub struct CaptureTo{
+pub struct CaptureTo {
     args: Vec<String>,
     executable: PathBuf,
     base_path: PathBuf,
-    include_binary: IncludeBinary
+    include_binary: IncludeBinary,
 }
 
 /// How do we include the binary?
 #[derive(Debug, Clone, PartialEq)]
-pub enum IncludeBinary{
+pub enum IncludeBinary {
     Copy,
     // imageflow_types::version::get_build_env_value("ESTIMATED_ARTIFACT_URL")
     UrlOrCopy(Option<String>),
     UrlOnly(Option<String>),
-    No
+    No,
 }
 // stay minimal
 // --capture-to basename
@@ -26,21 +26,18 @@ pub enum IncludeBinary{
 // Copies target executable to basename_imageflow_tool
 // Captures current operating system info
 
-impl CaptureTo{
-
-    pub fn create(capture_to: &PathBuf, bin_location: Option<PathBuf>, args: Vec<String>, include_binary: IncludeBinary) -> CaptureTo{
+impl CaptureTo {
+    pub fn create(
+        capture_to: &PathBuf,
+        bin_location: Option<PathBuf>,
+        args: Vec<String>,
+        include_binary: IncludeBinary,
+    ) -> CaptureTo {
         let executable= bin_location.unwrap_or_else(|| std::env::current_exe().expect("For CaptureTo to work, we need to know the binary's location. env::current_exe failed"));
 
-        CaptureTo{
-            args,
-            executable,
-            base_path: capture_to.to_owned(),
-            include_binary
-        }
-
+        CaptureTo { args, executable, base_path: capture_to.to_owned(), include_binary }
     }
-    fn write_bytes(&self, suffix: &str, bytes: &[u8]) -> std::result::Result<(),std::io::Error>{
-
+    fn write_bytes(&self, suffix: &str, bytes: &[u8]) -> std::result::Result<(), std::io::Error> {
         let mut filename = self.base_path.as_os_str().to_owned();
         filename.push("_");
         filename.push(suffix);
@@ -48,9 +45,13 @@ impl CaptureTo{
         file.write_all(bytes).map(|_| ())
     }
 
-    fn run_and_save_output_to(&self, suffix: &str, args: &[&str]) -> std::result::Result<(),std::io::Error>{
+    fn run_and_save_output_to(
+        &self,
+        suffix: &str,
+        args: &[&str],
+    ) -> std::result::Result<(), std::io::Error> {
         let mut cmd = Command::new(&self.executable);
-        cmd.args(args).env("RUST_BACKTRACE","1");
+        cmd.args(args).env("RUST_BACKTRACE", "1");
         let output = cmd.output()?;
 
         let mut filename = self.base_path.as_os_str().to_owned();
@@ -67,12 +68,11 @@ impl CaptureTo{
         file.write_all(&output.stdout)?;
         Ok(())
     }
-    pub fn run(&self){
-
+    pub fn run(&self) {
         let mut cmd = Command::new(&self.executable);
         cmd.args(&self.args).env("RUST_BACKTRACE", "1");
 
-        let invocation = format!("{:?}",cmd).into_bytes();
+        let invocation = format!("{:?}", cmd).into_bytes();
         self.write_bytes("run.txt", &invocation).unwrap();
 
         let output: Output = cmd.output().unwrap(); //Better, log the ioError
@@ -91,22 +91,26 @@ impl CaptureTo{
 
         self.write_bytes("stdout.txt", &output.stdout).unwrap();
         self.write_bytes("stderr.txt", &output.stderr).unwrap();
-        self.run_and_save_output_to("version.txt",&["--version"]).unwrap();
-        self.run_and_save_output_to("compilation_info.txt",&["diagnose", "--show-compilation-info"]).unwrap();
+        self.run_and_save_output_to("version.txt", &["--version"]).unwrap();
+        self.run_and_save_output_to(
+            "compilation_info.txt",
+            &["diagnose", "--show-compilation-info"],
+        )
+        .unwrap();
         //To many bytes. Maybe just the summary, not the folder?
         //self.run_and_save_output_to("self-test.txt",&["diagnose", "--self-test"]).unwrap();
 
         //If it is expected to be stored, we just save the URL
-        let (url, or_copy) = match self.include_binary.clone(){
+        let (url, or_copy) = match self.include_binary.clone() {
             IncludeBinary::Copy => (None, true),
             IncludeBinary::No => (None, false),
             IncludeBinary::UrlOnly(s) => (s, false),
-            IncludeBinary::UrlOrCopy(s) => (s, true)
+            IncludeBinary::UrlOrCopy(s) => (s, true),
         };
 
-        if let  Some(s) = url{
+        if let Some(s) = url {
             self.write_bytes("artifact_url.txt", s.as_bytes()).unwrap();
-        }else if or_copy{
+        } else if or_copy {
             //Otherwise copy the binary
             let mut target_path = self.base_path.as_os_str().to_owned();
             target_path.push("_");
@@ -115,10 +119,7 @@ impl CaptureTo{
             std::fs::copy(&self.executable, &target_path).unwrap();
         }
 
-
-
-            //TODO: get local operating system information
-            
+        //TODO: get local operating system information
     }
     pub fn exit_code(&self) -> i32 {
         0

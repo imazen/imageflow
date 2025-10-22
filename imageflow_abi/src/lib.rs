@@ -114,24 +114,21 @@
 // These functions are not for use from Rust, so marking them unsafe just reduces compile-time verification and safety
 //#![cfg_attr(feature = "cargo-clippy", allow(not_unsafe_ptr_arg_deref))]
 
-
-
 #[macro_use]
 extern crate imageflow_core as c;
 
+extern crate backtrace;
 extern crate libc;
 extern crate smallvec;
-extern crate backtrace;
 
-pub use crate::c::{Context, ErrorCategory};
 pub use crate::c::ffi::ImageflowJsonResponse as JsonResponse;
+pub use crate::c::{Context, ErrorCategory};
 //use c::IoDirection;
 use crate::c::ErrorKind;
-use std::ptr;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::ptr;
 #[cfg(test)]
 use std::str;
-
 
 //
 // What is possible with the IO object
@@ -159,7 +156,7 @@ use std::str;
 ///
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Lifetime{
+pub enum Lifetime {
     /// Pointer will outlive function call. If the host language has a garbage collector, call the appropriate method to ensure the object pointed to will not be collected or moved until the call returns. You may think host languages do this automatically in their FFI system. Most do not.
     OutlivesFunctionCall = 0,
     /// Pointer will outlive context. If the host language has a GC, ensure that you are using a data type guaranteed to neither be moved or collected automatically.
@@ -173,9 +170,8 @@ pub enum Lifetime{
 macro_rules! static_char {
     ($lit:expr) => {
         concat!($lit, "\0").as_ptr() as *const libc::c_char
-    }
+    };
 }
-
 
 fn type_name_of<T>(_: T) -> &'static str {
     extern crate core;
@@ -197,8 +193,8 @@ macro_rules! context {
             eprintln!("{:?}", bt);
             ::std::process::abort();
         }
-        (unsafe{&mut *$ptr})
-    }}
+        (unsafe { &mut *$ptr })
+    }};
 }
 
 macro_rules! context_ready {
@@ -225,16 +221,18 @@ macro_rules! context_ready {
 }
 macro_rules! handle_result {
     ($context:ident, $result:expr, $failure_value:expr) => {{
-        match $result{
+        match $result {
             Ok(Ok(v)) => v,
             Err(p) => {
-                $context.outward_error_mut().try_set_panic_error(p); $failure_value
-            },
+                $context.outward_error_mut().try_set_panic_error(p);
+                $failure_value
+            }
             Ok(Err(error)) => {
-                $context.outward_error_mut().try_set_error(error); $failure_value
+                $context.outward_error_mut().try_set_error(error);
+                $failure_value
             }
         }
-        }}
+    }};
 }
 
 include!("abi_version.rs");
@@ -249,8 +247,12 @@ include!("abi_version.rs");
 ///
 #[no_mangle]
 #[allow(clippy::absurd_extreme_comparisons)]
-pub extern "C" fn imageflow_abi_compatible(imageflow_abi_ver_major: u32, imageflow_abi_ver_minor: u32) -> bool {
-    imageflow_abi_ver_major == IMAGEFLOW_ABI_VER_MAJOR && imageflow_abi_ver_minor <= IMAGEFLOW_ABI_VER_MINOR
+pub extern "C" fn imageflow_abi_compatible(
+    imageflow_abi_ver_major: u32,
+    imageflow_abi_ver_minor: u32,
+) -> bool {
+    imageflow_abi_ver_major == IMAGEFLOW_ABI_VER_MAJOR
+        && imageflow_abi_ver_minor <= IMAGEFLOW_ABI_VER_MINOR
 }
 #[no_mangle]
 pub extern "C" fn imageflow_abi_version_major() -> u32 {
@@ -275,10 +277,13 @@ pub extern "C" fn imageflow_abi_version_minor() -> u32 {
 ///
 /// Returns a null pointer if allocation fails or the provided interface version is incompatible
 #[no_mangle]
-pub extern "C" fn imageflow_context_create(imageflow_abi_ver_major: u32, imageflow_abi_ver_minor: u32) -> *mut Context {
+pub extern "C" fn imageflow_context_create(
+    imageflow_abi_ver_major: u32,
+    imageflow_abi_ver_minor: u32,
+) -> *mut Context {
     if imageflow_abi_compatible(imageflow_abi_ver_major, imageflow_abi_ver_minor) {
         Context::create_cant_panic().map(Box::into_raw).unwrap_or(std::ptr::null_mut())
-    }else{
+    } else {
         ptr::null_mut()
     }
 }
@@ -305,15 +310,12 @@ pub unsafe extern "C" fn imageflow_context_destroy(context: *mut Context) {
     }
 }
 
-
 #[test]
 fn test_create_destroy() {
     unsafe {
         exercise_create_destroy();
     }
 }
-
-
 
 pub unsafe fn exercise_create_destroy() {
     let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
@@ -344,7 +346,6 @@ pub unsafe extern "C" fn imageflow_context_error_recoverable(context: *mut Conte
 pub unsafe extern "C" fn imageflow_context_error_try_clear(context: *mut Context) -> bool {
     context!(context).outward_error_mut().try_clear()
 }
-
 
 /// Returns the numeric code associated with the error category. 0 means no error.
 ///
@@ -406,37 +407,41 @@ pub unsafe extern "C" fn imageflow_context_error_as_http_code(context: *mut Cont
 ///
 /// Please be accurate with the buffer length, or a buffer overflow will occur.
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(context: *mut Context,
-                                                                buffer: *mut libc::c_char,
-                                                                buffer_length: libc::size_t,
-                                                                bytes_written: *mut libc::size_t) -> bool {
-    if buffer.is_null(){
+pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(
+    context: *mut Context,
+    buffer: *mut libc::c_char,
+    buffer_length: libc::size_t,
+    bytes_written: *mut libc::size_t,
+) -> bool {
+    if buffer.is_null() {
         false
-    }else {
+    } else {
         use crate::c::errors::writing_to_slices::WriteResult;
         let c = context!(context);
 
-        if buffer_length.leading_zeros() == 0{
+        if buffer_length.leading_zeros() == 0 {
             c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `buffer_length` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
             return false;
         }
 
         let result = unsafe {
-            c.outward_error_mut().get_buffer_writer().write_and_write_errors_to_cstring(buffer as *mut u8, buffer_length, Some("\n[truncated]\n"))
+            c.outward_error_mut().get_buffer_writer().write_and_write_errors_to_cstring(
+                buffer as *mut u8,
+                buffer_length,
+                Some("\n[truncated]\n"),
+            )
         };
-        if !bytes_written.is_null(){
+        if !bytes_written.is_null() {
             unsafe {
                 *bytes_written = result.bytes_written();
             }
         }
         match result {
-            WriteResult::AllWritten(_) |
-            WriteResult::Error { .. } => true,
+            WriteResult::AllWritten(_) | WriteResult::Error { .. } => true,
             WriteResult::TruncatedAt(_) => false,
         }
     }
 }
-
 
 /// Prints the error to stderr and exits the process if an error has been raised on the context.
 /// If no error is present, the function returns false.
@@ -445,16 +450,13 @@ pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(context: *mut C
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut Context) -> bool {
     let e = context!(context).outward_error();
-    if e.has_error(){
-        eprintln!("{}",e);
+    if e.has_error() {
+        eprintln!("{}", e);
         std::process::exit(e.category().process_exit_code())
-    }else{
+    } else {
         false
     }
-
 }
-
-
 
 ///
 /// Writes fields from the given `imageflow_json_response` to the locations referenced.
@@ -466,15 +468,20 @@ pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut
 /// Most errors are not recoverable; you must destroy the context and retry.
 ///
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_json_response_read(context: *mut Context,
-                                                  response_in: *const JsonResponse,
-                                                  status_as_http_code_out: *mut i64,
-                                                  buffer_utf8_no_nulls_out: *mut *const u8,
-                                                  buffer_size_out: *mut libc::size_t) -> bool {
+pub unsafe extern "C" fn imageflow_json_response_read(
+    context: *mut Context,
+    response_in: *const JsonResponse,
+    status_as_http_code_out: *mut i64,
+    buffer_utf8_no_nulls_out: *mut *const u8,
+    buffer_size_out: *mut libc::size_t,
+) -> bool {
     let c = context!(context); // Must be readable in error state
 
     if response_in.is_null() {
-        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument response_in (* JsonResponse) is null."));
+        c.outward_error_mut().try_set_error(nerror!(
+            ErrorKind::NullArgument,
+            "The argument response_in (* JsonResponse) is null."
+        ));
         return false;
     }
     unsafe {
@@ -504,9 +511,10 @@ pub unsafe extern "C" fn imageflow_json_response_read(context: *mut Context,
 /// object was created.
 ///
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
-                                                         response: *mut JsonResponse)
-                                                         -> bool {
+pub unsafe extern "C" fn imageflow_json_response_destroy(
+    context: *mut Context,
+    response: *mut JsonResponse,
+) -> bool {
     imageflow_context_memory_free(context, response as *mut libc::c_void, ptr::null(), 0)
 }
 
@@ -533,38 +541,42 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 /// A `JsonResponse` is returned for success and most error conditions.
 /// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_send_json(context: *mut Context,
-                                                     method: *const libc::c_char,
-                                                     json_buffer: *const u8,
-                                                     json_buffer_size: libc::size_t)
-                                                     -> *const JsonResponse {
-
+pub unsafe extern "C" fn imageflow_context_send_json(
+    context: *mut Context,
+    method: *const libc::c_char,
+    json_buffer: *const u8,
+    json_buffer_size: libc::size_t,
+) -> *const JsonResponse {
     let c: &mut Context = context_ready!(context);
     if method.is_null() {
-        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'method' is null."));
+        c.outward_error_mut()
+            .try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'method' is null."));
         return ptr::null();
     }
     if json_buffer.is_null() {
-        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'json_buffer' is null."));
+        c.outward_error_mut()
+            .try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'json_buffer' is null."));
         return ptr::null();
     }
-    if json_buffer_size.leading_zeros() == 0{
+    if json_buffer_size.leading_zeros() == 0 {
         c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `json_buffer_size` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
         return ptr::null();
     }
 
     let panic_result = catch_unwind(AssertUnwindSafe(|| {
-        let method_str = if let Ok(str) = unsafe { ::std::ffi::CStr::from_ptr(method)}.to_str() {
+        let method_str = if let Ok(str) = unsafe { ::std::ffi::CStr::from_ptr(method) }.to_str() {
             str
         } else {
-            return (ptr::null(), Err(nerror!(ErrorKind::InvalidArgument, "The argument 'method' is invalid UTF-8.")));
+            return (
+                ptr::null(),
+                Err(nerror!(ErrorKind::InvalidArgument, "The argument 'method' is invalid UTF-8.")),
+            );
         };
 
-        let json_bytes = unsafe{ std::slice::from_raw_parts(json_buffer, json_buffer_size) };
+        let json_bytes = unsafe { std::slice::from_raw_parts(json_buffer, json_buffer_size) };
 
         // Segfault early
         let _ = (json_bytes.first(), json_bytes.last());
-
 
         let (json, result) = c.message(method_str, json_bytes);
 
@@ -572,56 +584,55 @@ pub unsafe extern "C" fn imageflow_context_send_json(context: *mut Context,
         (create_abi_json_response(c, &json.response_json, json.status_code), result)
     }));
 
-    match panic_result{
+    match panic_result {
         Ok((json, Ok(_))) => json,
         Ok((json, Err(e))) => {
             c.outward_error_mut().try_set_error(e);
             json
         }
         Err(p) => {
-         c.outward_error_mut().try_set_panic_error(p); ptr::null_mut()
-        },
+            c.outward_error_mut().try_set_panic_error(p);
+            ptr::null_mut()
+        }
     }
 }
 
-
-pub fn create_abi_json_response(c: &mut Context,
-                                json_bytes: &[u8],
-                                status_code: i64)
-                                -> *const JsonResponse {
+pub fn create_abi_json_response(
+    c: &mut Context,
+    json_bytes: &[u8],
+    status_code: i64,
+) -> *const JsonResponse {
     unsafe {
         let sizeof_struct = std::mem::size_of::<JsonResponse>();
         let alloc_size = sizeof_struct + json_bytes.len();
 
-        if json_bytes.len().leading_zeros() == 0{
+        if json_bytes.len().leading_zeros() == 0 {
             c.outward_error_mut().try_set_error(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error in creating JSON structure; length overflow prevented (most significant bit set)."));
             return ptr::null();
         }
 
-        let pointer = match c.mem_calloc(alloc_size, 16, ptr::null(), -1){
+        let pointer = match c.mem_calloc(alloc_size, 16, ptr::null(), -1) {
             Err(e) => {
                 c.outward_error_mut().try_set_error(e);
                 return ptr::null();
             }
-            Ok(v) => v
+            Ok(v) => v,
         };
 
-        let pointer_to_final_buffer =
-            pointer.add(sizeof_struct) as *mut u8;
+        let pointer_to_final_buffer = pointer.add(sizeof_struct) as *mut u8;
         let imageflow_response = &mut (*(pointer as *mut JsonResponse));
         imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
         imageflow_response.buffer_size = json_bytes.len();
         imageflow_response.status_code = status_code;
 
-        let out_json_bytes = std::slice::from_raw_parts_mut(pointer_to_final_buffer,
-                                                                json_bytes.len());
+        let out_json_bytes =
+            std::slice::from_raw_parts_mut(pointer_to_final_buffer, json_bytes.len());
 
         out_json_bytes.clone_from_slice(json_bytes);
 
         imageflow_response as *const JsonResponse
     }
 }
-
 
 //
 /////
@@ -666,7 +677,6 @@ pub fn create_abi_json_response(c: &mut Context,
 //    handle_result!(c, result, false)
 //}
 
-
 ///
 /// Adds an input buffer to the job context.
 /// You are ALWAYS responsible for freeing the memory provided (at the time specified by Lifetime).
@@ -674,41 +684,42 @@ pub fn create_abi_json_response(c: &mut Context,
 ///
 ///
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_add_input_buffer(context: *mut Context,
-                                                         io_id: i32,
-                                                         buffer: *const u8,
-                                                         buffer_byte_count: libc::size_t,
-                                                            lifetime: Lifetime)
-                                                         -> bool {
-
+pub unsafe extern "C" fn imageflow_context_add_input_buffer(
+    context: *mut Context,
+    io_id: i32,
+    buffer: *const u8,
+    buffer_byte_count: libc::size_t,
+    lifetime: Lifetime,
+) -> bool {
     let c: &mut Context = context_ready!(context);
     if buffer.is_null() {
-        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'buffer' is null."));
+        c.outward_error_mut()
+            .try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'buffer' is null."));
         return false;
     }
-    if buffer_byte_count.leading_zeros() == 0{
+    if buffer_byte_count.leading_zeros() == 0 {
         c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `buffer_byte_count` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
         return false;
     }
-    if c.io_id_present(io_id){
-        c.outward_error_mut().try_set_error(nerror!(ErrorKind::DuplicateIoId, "The io_id provided is already in use."));
+    if c.io_id_present(io_id) {
+        c.outward_error_mut().try_set_error(nerror!(
+            ErrorKind::DuplicateIoId,
+            "The io_id provided is already in use."
+        ));
         return false;
     }
     let result = catch_unwind(AssertUnwindSafe(|| {
-        let bytes = unsafe {
-            std::slice::from_raw_parts(buffer, buffer_byte_count)
-        };
+        let bytes = unsafe { std::slice::from_raw_parts(buffer, buffer_byte_count) };
 
         if lifetime == Lifetime::OutlivesFunctionCall {
-            c.add_copied_input_buffer(io_id,bytes).map_err(|e| e.at(here!()))?;
-        }else {
-            c.add_input_buffer(io_id,bytes).map_err(|e| e.at(here!()))?;
+            c.add_copied_input_buffer(io_id, bytes).map_err(|e| e.at(here!()))?;
+        } else {
+            c.add_input_buffer(io_id, bytes).map_err(|e| e.at(here!()))?;
         }
         Ok(true)
     }));
     handle_result!(c, result, false)
 }
-
 
 ///
 /// Adds an output buffer to the job context.
@@ -717,37 +728,42 @@ pub unsafe extern "C" fn imageflow_context_add_input_buffer(context: *mut Contex
 ///
 /// Returns null if allocation failed; check the context for error details.
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_add_output_buffer(context: *mut Context, io_id: i32)
-                                                               -> bool {
+pub unsafe extern "C" fn imageflow_context_add_output_buffer(
+    context: *mut Context,
+    io_id: i32,
+) -> bool {
     let c = context_ready!(context);
     let result = catch_unwind(AssertUnwindSafe(|| {
         c.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
         Ok(true)
     }));
     handle_result!(c, result, false)
-
 }
-
-
-
 
 ///
 /// Provides access to the underlying buffer for the given io id
 ///
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(context: *mut Context,
-                                                               io_id: i32,
-                                                               result_buffer: *mut *const u8,
-                                                               result_buffer_length: *mut libc::size_t)
-                                                               -> bool {
+pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
+    context: *mut Context,
+    io_id: i32,
+    result_buffer: *mut *const u8,
+    result_buffer_length: *mut libc::size_t,
+) -> bool {
     let c: &mut Context = context_ready!(context);
     if result_buffer.is_null() {
-        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'result_buffer' is null."));
+        c.outward_error_mut().try_set_error(nerror!(
+            ErrorKind::NullArgument,
+            "The argument 'result_buffer' is null."
+        ));
         return false;
     }
 
     if result_buffer_length.is_null() {
-        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'result_buffer_length' is null."));
+        c.outward_error_mut().try_set_error(nerror!(
+            ErrorKind::NullArgument,
+            "The argument 'result_buffer_length' is null."
+        ));
         return false;
     }
     let result = catch_unwind(AssertUnwindSafe(|| {
@@ -766,9 +782,6 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(context: *mut
     handle_result!(c, result, false)
 }
 
-
-
-
 ///
 /// Allocates zeroed memory that will be freed with the context.
 ///
@@ -778,22 +791,24 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(context: *mut
 /// Returns null(0) on failure.
 ///
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_memory_allocate(context: *mut Context,
-                                                    bytes: libc::size_t,
-                                                    filename: *const libc::c_char,
-                                                    line: i32) -> *mut libc::c_void {
+pub unsafe extern "C" fn imageflow_context_memory_allocate(
+    context: *mut Context,
+    bytes: libc::size_t,
+    filename: *const libc::c_char,
+    line: i32,
+) -> *mut libc::c_void {
     let c = context_ready!(context);
 
     if bytes.leading_zeros() == 0 {
         c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `bytes` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
         return ptr::null_mut();
     }
-    let pointer = match unsafe{ c.mem_calloc(bytes, 16, filename, line) }{
+    let pointer = match unsafe { c.mem_calloc(bytes, 16, filename, line) } {
         Err(e) => {
             c.outward_error_mut().try_set_error(e);
             return ptr::null_mut();
         }
-        Ok(v) => v
+        Ok(v) => v,
     };
     pointer as *mut libc::c_void
 }
@@ -807,18 +822,19 @@ pub unsafe extern "C" fn imageflow_context_memory_allocate(context: *mut Context
 /// Returns false on failure. Returns true on success, or if `pointer` is null.
 ///
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_memory_free(context: *mut Context,
-                                                       pointer: *mut libc::c_void,
-                                                       _filename: *const libc::c_char,
-                                                       _line: i32) -> bool {
+pub unsafe extern "C" fn imageflow_context_memory_free(
+    context: *mut Context,
+    pointer: *mut libc::c_void,
+    _filename: *const libc::c_char,
+    _line: i32,
+) -> bool {
     let c = context!(context); // We must be able to free in an errored state
     if !pointer.is_null() {
-        unsafe{ c.mem_free(pointer as *const u8) }
-    }else {
+        unsafe { c.mem_free(pointer as *const u8) }
+    } else {
         true
     }
 }
-
 
 #[test]
 fn test_message() {
@@ -833,15 +849,11 @@ pub fn exercise_json_message() {
         let method_in = static_char!("brew_coffee");
         let json_in = "{}";
         let expected_response = c::JsonResponse::teapot();
-        let expected_json_out = ::std::str::from_utf8(
-            expected_response.response_json.as_ref()).unwrap();
+        let expected_json_out =
+            ::std::str::from_utf8(expected_response.response_json.as_ref()).unwrap();
         let expected_response_status = expected_response.status_code;
 
-        let response = imageflow_context_send_json(c,
-
-                                           method_in,
-                                           json_in.as_ptr(),
-                                           json_in.len());
+        let response = imageflow_context_send_json(c, method_in, json_in.as_ptr(), json_in.len());
 
         assert_ne!(response, ptr::null());
 
@@ -849,12 +861,13 @@ pub fn exercise_json_message() {
         let mut json_out_size: usize = 0;
         let mut json_status_code: i64 = 0;
 
-        assert!(imageflow_json_response_read(c,
-                                             response,
-                                             &mut json_status_code,
-                                             &mut json_out_ptr,
-                                             &mut json_out_size));
-
+        assert!(imageflow_json_response_read(
+            c,
+            response,
+            &mut json_status_code,
+            &mut json_out_ptr,
+            &mut json_out_size
+        ));
 
         let json_out_str =
             ::std::str::from_utf8(std::slice::from_raw_parts(json_out_ptr, json_out_size)).unwrap();
@@ -866,21 +879,24 @@ pub fn exercise_json_message() {
     }
 }
 
-
 #[test]
 fn test_allocate_free() {
-    unsafe{
+    unsafe {
         let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
         let bytes = 100;
-        let ptr = imageflow_context_memory_allocate(c, bytes, static_char!(file!()),
-                                                    line!() as i32) as *mut u8;
+        let ptr = imageflow_context_memory_allocate(c, bytes, static_char!(file!()), line!() as i32)
+            as *mut u8;
         assert!(ptr != ptr::null_mut());
 
-        for x in 0..bytes{
+        for x in 0..bytes {
             assert_eq!(*ptr.offset(x as isize), 0);
         }
-        assert!(imageflow_context_memory_free(c, ptr as *mut libc::c_void, static_char!(file!()),
-                                              line!() as i32));
+        assert!(imageflow_context_memory_free(
+            c,
+            ptr as *mut libc::c_void,
+            static_char!(file!()),
+            line!() as i32
+        ));
 
         imageflow_context_destroy(c);
         //imageflow_context_destroy(c);
@@ -889,7 +905,6 @@ fn test_allocate_free() {
 
 #[cfg(test)]
 extern crate base64;
-
 
 #[test]
 fn test_job_with_buffers() {
@@ -901,9 +916,13 @@ fn test_job_with_buffers() {
 
         let input_bytes = base64::engine::general_purpose::STANDARD.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=").unwrap();
 
-
-
-        let res = imageflow_context_add_input_buffer(c, 0, input_bytes.as_ptr(), input_bytes.len(), Lifetime::OutlivesContext);
+        let res = imageflow_context_add_input_buffer(
+            c,
+            0,
+            input_bytes.as_ptr(),
+            input_bytes.len(),
+            Lifetime::OutlivesContext,
+        );
         imageflow_context_print_and_exit_if_error(c);
         assert!(res);
 
@@ -914,10 +933,7 @@ fn test_job_with_buffers() {
         let method_in = static_char!("v1/execute");
         let json_in = r#"{"framewise":{"steps":[{"decode":{"io_id":0}},{"flip_h":null},{"rotate_90":null},{"resample_2d":{"w":30,"h":20,"hints":{"sharpen_percent":null}}},{"constrain":{ "mode" :"within", "w": 5,"h": 5}},{"encode":{"io_id":1,"preset":{"gif":null}}}]}}"#;
 
-        let response = imageflow_context_send_json(c,
-                                                   method_in,
-                                                   json_in.as_ptr(),
-                                                   json_in.len());
+        let response = imageflow_context_send_json(c, method_in, json_in.as_ptr(), json_in.len());
 
         assert!(!response.is_null());
 
@@ -925,19 +941,24 @@ fn test_job_with_buffers() {
         let mut json_out_size: usize = 0;
         let mut json_status_code: i64 = 0;
 
-        assert!(imageflow_json_response_read(c,
-                                             response,
-                                             &mut json_status_code,
-                                             &mut json_out_ptr,
-                                             &mut json_out_size));
-
+        assert!(imageflow_json_response_read(
+            c,
+            response,
+            &mut json_status_code,
+            &mut json_out_ptr,
+            &mut json_out_size
+        ));
 
         imageflow_context_print_and_exit_if_error(c);
 
-
         let mut buf: *const u8 = ptr::null();
         let mut buf_len: usize = 0;
-        let res = imageflow_context_get_output_buffer_by_id(c, 1, &mut buf as *mut *const u8, &mut buf_len as *mut usize);
+        let res = imageflow_context_get_output_buffer_by_id(
+            c,
+            1,
+            &mut buf as *mut *const u8,
+            &mut buf_len as *mut usize,
+        );
         imageflow_context_print_and_exit_if_error(c);
         assert!(res);
 
@@ -947,7 +968,6 @@ fn test_job_with_buffers() {
         imageflow_context_destroy(c);
     }
 }
-
 
 #[test]
 fn test_job_with_bad_json() {
@@ -959,9 +979,13 @@ fn test_job_with_bad_json() {
 
         let input_bytes = base64::engine::general_purpose::STANDARD.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=").unwrap();
 
-
-
-        let res = imageflow_context_add_input_buffer(c, 0, input_bytes.as_ptr(), input_bytes.len(), Lifetime::OutlivesContext);
+        let res = imageflow_context_add_input_buffer(
+            c,
+            0,
+            input_bytes.as_ptr(),
+            input_bytes.len(),
+            Lifetime::OutlivesContext,
+        );
         imageflow_context_print_and_exit_if_error(c);
         assert!(res);
 
@@ -972,23 +996,21 @@ fn test_job_with_bad_json() {
         let method_in = static_char!("v1/execute");
         let json_in = r#"{"framewise":{"steps":[{"decode":{"io_id":0}},{"flip_h":null},{"rotate_90":null},{"resample_2d":{"w":30,"h":20,"down_filter":null,"up_filter":null,"hints":{"sharpen_percent":null}}},{"constrain":{"within":{"w":5,"h":5}}},{"encode":{"io_id":1,"preset":{"gif":null}}}]}}"#;
 
-        let response = imageflow_context_send_json(c,
-                                                   method_in,
-                                                   json_in.as_ptr(),
-                                                   json_in.len());
+        let response = imageflow_context_send_json(c, method_in, json_in.as_ptr(), json_in.len());
 
         assert!(!response.is_null());
-
 
         let mut json_out_ptr: *const u8 = ptr::null_mut();
         let mut json_out_size: usize = 0;
         let mut json_status_code: i64 = 0;
 
-        assert!(imageflow_json_response_read(c,
-                                             response,
-                                             &mut json_status_code,
-                                             &mut json_out_ptr,
-                                             &mut json_out_size));
+        assert!(imageflow_json_response_read(
+            c,
+            response,
+            &mut json_status_code,
+            &mut json_out_ptr,
+            &mut json_out_size
+        ));
         assert!(imageflow_context_has_error(c));
 
         let expected_response_status = 400; //bad request
@@ -998,34 +1020,30 @@ fn test_job_with_bad_json() {
     }
 }
 
-
 #[test]
 fn test_get_version_info() {
     unsafe {
         let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
         assert!(!c.is_null());
 
-
         let method_in = static_char!("v1/get_version_info");
         let json_in = "{}";
 
-        let response = imageflow_context_send_json(c,
-                                                method_in,
-                                                json_in.as_ptr(),
-                                                json_in.len());
+        let response = imageflow_context_send_json(c, method_in, json_in.as_ptr(), json_in.len());
 
         assert!(!response.is_null());
-
 
         let mut json_out_ptr: *const u8 = ptr::null_mut();
         let mut json_out_size: usize = 0;
         let mut json_status_code: i64 = 0;
 
-        assert!(imageflow_json_response_read(c,
-                                            response,
-                                            &mut json_status_code,
-                                            &mut json_out_ptr,
-                                            &mut json_out_size));
+        assert!(imageflow_json_response_read(
+            c,
+            response,
+            &mut json_status_code,
+            &mut json_out_ptr,
+            &mut json_out_size
+        ));
         assert!(!imageflow_context_has_error(c));
 
         let expected_response_status = 200; //bad request
@@ -1036,6 +1054,6 @@ fn test_get_version_info() {
 }
 
 #[test]
-fn test_file_macro_for_this_build(){
+fn test_file_macro_for_this_build() {
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
 }

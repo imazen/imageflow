@@ -11,13 +11,19 @@ fn main() {
     cc.include(root.join("lib"));
     cc.include(&root);
 
-    for path in env::split_paths(&env::var_os("DEP_JPEG_INCLUDE").expect("include paths from mozjpeg-sys")) {
+    for path in
+        env::split_paths(&env::var_os("DEP_JPEG_INCLUDE").expect("include paths from mozjpeg-sys"))
+    {
         cc.include(path);
     }
-    for path in env::split_paths(&env::var_os("DEP_PNG_INCLUDE").expect("include paths from libpng-sys")) {
+    for path in
+        env::split_paths(&env::var_os("DEP_PNG_INCLUDE").expect("include paths from libpng-sys"))
+    {
         cc.include(path);
     }
-    for path in env::split_paths(&env::var_os("DEP_LCMS2_INCLUDE").expect("include paths from lcms2-sys")) {
+    for path in
+        env::split_paths(&env::var_os("DEP_LCMS2_INCLUDE").expect("include paths from lcms2-sys"))
+    {
         cc.include(path);
     }
 
@@ -27,7 +33,6 @@ fn main() {
     cc.warnings_into_errors(false);
     cc.define("imageflow_c_BUILD_STATIC", Some("1"));
     // -Dimageflow_c_BUILD_SHARED for DLL
-
 
     // Step 3: Retrieve target CPU and compiler, detect MSVC or GCC/Clang
     // Goal: Apply architecture-specific flags in an intelligent way.
@@ -87,13 +92,11 @@ fn main() {
         cc.flag("-Wc++-compat");
     }
 
-
     // Step 7: Gather source files, conditionally excluding graphics.c if not c_rendering
     // Goal: Add each .c file to the build, except for the optional skip.
     for file in glob::glob("lib/*.c").unwrap() {
         let path = file.unwrap();
         cc.file(path);
-
     }
 
     // Step 8: Optional coverage and profiling flags

@@ -1,70 +1,169 @@
-use imageflow_types as s;
-use imageflow_types::*;
-use std::sync::*;
-use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
-use crate::ffi::DecoderColorInfo;
 use crate::ffi::ColorProfileSource;
-use imageflow_types::collections::AddRemoveSet;
+use crate::ffi::DecoderColorInfo;
+use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::io::IoProxy;
-use uuid::Uuid;
+use imageflow_types as s;
+use imageflow_types::collections::AddRemoveSet;
 use imageflow_types::IoDirection;
+use imageflow_types::*;
+use std::any::Any;
 use std::borrow::BorrowMut;
 use std::ops::DerefMut;
-use std::any::Any;
+use std::sync::*;
+use uuid::Uuid;
 
-use crate::io::IoProxyRef;
 use crate::codecs::color_transform_cache::ColorTransformCache;
+use crate::codecs::Encoder;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
-use crate::codecs::{Encoder};
-use crate::{Context,BitmapKey, Result, JsonResponse, ErrorKind, FlowError, ErrorCategory};
+use crate::io::IoProxyRef;
+use crate::{BitmapKey, Context, ErrorCategory, ErrorKind, FlowError, JsonResponse, Result};
 
-pub(crate) fn create_encoder(c: &Context, io: IoProxy, preset: &s::EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<Box<dyn Encoder>> {
-
+pub(crate) fn create_encoder(
+    c: &Context,
+    io: IoProxy,
+    preset: &s::EncoderPreset,
+    bitmap_key: BitmapKey,
+    decoder_io_ids: &[i32],
+) -> Result<Box<dyn Encoder>> {
     let codec = match *preset {
-        s::EncoderPreset::Auto {quality_profile, quality_profile_dpr, ref matte, lossless, allow} => {
+        s::EncoderPreset::Auto {
+            quality_profile,
+            quality_profile_dpr,
+            ref matte,
+            lossless,
+            allow,
+        } => {
             let matte = matte.clone();
-            let details = build_auto_encoder_details(c,  preset, bitmap_key, decoder_io_ids, None, Some(quality_profile), quality_profile_dpr, matte, lossless, allow,
-                None)
-                                .map_err(|e| e.at(here!()))?;
-            create_encoder_auto(c, io, bitmap_key, decoder_io_ids, details).map_err(|e| e.at(here!()))?
-        },
-        s::EncoderPreset::Format {format, quality_profile, quality_profile_dpr, ref matte, lossless, allow, encoder_hints} => {
+            let details = build_auto_encoder_details(
+                c,
+                preset,
+                bitmap_key,
+                decoder_io_ids,
+                None,
+                Some(quality_profile),
+                quality_profile_dpr,
+                matte,
+                lossless,
+                allow,
+                None,
+            )
+            .map_err(|e| e.at(here!()))?;
+            create_encoder_auto(c, io, bitmap_key, decoder_io_ids, details)
+                .map_err(|e| e.at(here!()))?
+        }
+        s::EncoderPreset::Format {
+            format,
+            quality_profile,
+            quality_profile_dpr,
+            ref matte,
+            lossless,
+            allow,
+            encoder_hints,
+        } => {
             let matte = matte.clone();
-            let details = build_auto_encoder_details(c,  preset, bitmap_key, decoder_io_ids, Some(format), quality_profile, quality_profile_dpr, matte, lossless, allow, encoder_hints)
-                        .map_err(|e| e.at(here!()))?;
-            create_encoder_auto(c, io, bitmap_key, decoder_io_ids, details).map_err(|e| e.at(here!()))?
-        },
+            let details = build_auto_encoder_details(
+                c,
+                preset,
+                bitmap_key,
+                decoder_io_ids,
+                Some(format),
+                quality_profile,
+                quality_profile_dpr,
+                matte,
+                lossless,
+                allow,
+                encoder_hints,
+            )
+            .map_err(|e| e.at(here!()))?;
+            create_encoder_auto(c, io, bitmap_key, decoder_io_ids, details)
+                .map_err(|e| e.at(here!()))?
+        }
         s::EncoderPreset::Gif => {
             //TODO: enforce killbits - if c.enabled_codecs.encoders.contains()
-            Box::new(crate::codecs::gif::GifEncoder::create(c, io, bitmap_key).map_err(|e| e.at(here!()))?)
-        },
-        s::EncoderPreset::Pngquant {speed, quality , minimum_quality, maximum_deflate} => {
-            Box::new(crate::codecs::pngquant::PngquantEncoder::create(c, io, speed, quality, minimum_quality, maximum_deflate, None).map_err(|e| e.at(here!()))?)
-        },
-        s::EncoderPreset::Mozjpeg {quality, progressive, ref matte} => {
-            Box::new(crate::codecs::mozjpeg::MozjpegEncoder::create(c, quality, progressive, matte.clone(), io).map_err(|e| e.at(here!()))?)
-        },
-        s::EncoderPreset::LibjpegTurbo {quality, progressive, optimize_huffman_coding, ref matte} => {
-            Box::new(crate::codecs::mozjpeg::MozjpegEncoder::create_classic(c, quality.map(|q| q as u8), progressive, optimize_huffman_coding, matte.clone(), io).map_err(|e| e.at(here!()))?)
-        },
-        s::EncoderPreset::Lodepng { maximum_deflate }=> {
-            Box::new(crate::codecs::lode::LodepngEncoder::create(c, io, maximum_deflate, None).map_err(|e| e.at(here!()))?)
-        },
-        s::EncoderPreset::Libpng { depth, ref matte, zlib_compression }  => {
-            Box::new(crate::codecs::libpng_encoder::LibPngEncoder::create(c, io, depth, matte.clone(), zlib_compression.map(|z| z.clamp(0,255) as u8)).map_err(|e| e.at(here!()))?)
-        },
-        s::EncoderPreset::WebPLossless => Box::new(crate::codecs::webp::WebPEncoder::create(c, io, None, Some(true), None).map_err(|e| e.at(here!()))?),
-        s::EncoderPreset::WebPLossy {quality}=> Box::new(crate::codecs::webp::WebPEncoder::create(c, io, Some(quality), Some(false), None).map_err(|e| e.at(here!()))?),
+            Box::new(
+                crate::codecs::gif::GifEncoder::create(c, io, bitmap_key)
+                    .map_err(|e| e.at(here!()))?,
+            )
+        }
+        s::EncoderPreset::Pngquant { speed, quality, minimum_quality, maximum_deflate } => {
+            Box::new(
+                crate::codecs::pngquant::PngquantEncoder::create(
+                    c,
+                    io,
+                    speed,
+                    quality,
+                    minimum_quality,
+                    maximum_deflate,
+                    None,
+                )
+                .map_err(|e| e.at(here!()))?,
+            )
+        }
+        s::EncoderPreset::Mozjpeg { quality, progressive, ref matte } => Box::new(
+            crate::codecs::mozjpeg::MozjpegEncoder::create(
+                c,
+                quality,
+                progressive,
+                matte.clone(),
+                io,
+            )
+            .map_err(|e| e.at(here!()))?,
+        ),
+        s::EncoderPreset::LibjpegTurbo {
+            quality,
+            progressive,
+            optimize_huffman_coding,
+            ref matte,
+        } => Box::new(
+            crate::codecs::mozjpeg::MozjpegEncoder::create_classic(
+                c,
+                quality.map(|q| q as u8),
+                progressive,
+                optimize_huffman_coding,
+                matte.clone(),
+                io,
+            )
+            .map_err(|e| e.at(here!()))?,
+        ),
+        s::EncoderPreset::Lodepng { maximum_deflate } => Box::new(
+            crate::codecs::lode::LodepngEncoder::create(c, io, maximum_deflate, None)
+                .map_err(|e| e.at(here!()))?,
+        ),
+        s::EncoderPreset::Libpng { depth, ref matte, zlib_compression } => Box::new(
+            crate::codecs::libpng_encoder::LibPngEncoder::create(
+                c,
+                io,
+                depth,
+                matte.clone(),
+                zlib_compression.map(|z| z.clamp(0, 255) as u8),
+            )
+            .map_err(|e| e.at(here!()))?,
+        ),
+        s::EncoderPreset::WebPLossless => Box::new(
+            crate::codecs::webp::WebPEncoder::create(c, io, None, Some(true), None)
+                .map_err(|e| e.at(here!()))?,
+        ),
+        s::EncoderPreset::WebPLossy { quality } => Box::new(
+            crate::codecs::webp::WebPEncoder::create(c, io, Some(quality), Some(false), None)
+                .map_err(|e| e.at(here!()))?,
+        ),
     };
     Ok(codec)
 }
 
-
-
-fn create_encoder_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_io_ids: &[i32], details: AutoEncoderDetails) -> Result<Box<dyn Encoder>> {
-    let mut final_format = match details.format{
-        None => format_auto_select(&details).ok_or(nerror!(ErrorKind::InvalidArgument, "No formats enabled; try 'allow': {{ 'web_safe':true}}"))?,
+fn create_encoder_auto(
+    ctx: &Context,
+    io: IoProxy,
+    bitmap_key: BitmapKey,
+    decoder_io_ids: &[i32],
+    details: AutoEncoderDetails,
+) -> Result<Box<dyn Encoder>> {
+    let mut final_format = match details.format {
+        None => format_auto_select(&details).ok_or(nerror!(
+            ErrorKind::InvalidArgument,
+            "No formats enabled; try 'allow': {{ 'web_safe':true}}"
+        ))?,
         Some(other) => other,
     };
     // Fallbacks if jxl or avif are not implemented/enabled
@@ -75,24 +174,23 @@ fn create_encoder_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decode
         final_format = format_auto_select(&details).unwrap_or(OutputImageFormat::Jpeg);
     }
 
-
     Ok(match final_format {
         OutputImageFormat::Keep => unreachable!(),
-        OutputImageFormat::Gif => {
-            Box::new(crate::codecs::gif::GifEncoder::create(ctx, io, bitmap_key).map_err(|e| e.at(here!()))?)
-        },
+        OutputImageFormat::Gif => Box::new(
+            crate::codecs::gif::GifEncoder::create(ctx, io, bitmap_key)
+                .map_err(|e| e.at(here!()))?,
+        ),
         OutputImageFormat::Jpeg | OutputImageFormat::Jpg => {
-            create_jpeg_auto(ctx, io, bitmap_key, decoder_io_ids, details).map_err(|e| e.at(here!()))?
-        },
-        OutputImageFormat::Png => {
-            create_png_auto(ctx, io, bitmap_key, decoder_io_ids, details).map_err(|e| e.at(here!()))?
-        },
-        OutputImageFormat::Webp => {
-            create_webp_auto(ctx, io, bitmap_key, decoder_io_ids, details).map_err(|e| e.at(here!()))?
-        },
+            create_jpeg_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+                .map_err(|e| e.at(here!()))?
+        }
+        OutputImageFormat::Png => create_png_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+            .map_err(|e| e.at(here!()))?,
+        OutputImageFormat::Webp => create_webp_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+            .map_err(|e| e.at(here!()))?,
         OutputImageFormat::Jxl => {
             unimplemented!()
-        },
+        }
         OutputImageFormat::Avif => {
             unimplemented!()
         }
@@ -103,12 +201,11 @@ fn create_encoder_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decode
     //jpeg quality default is 90.
     // libjpegturbo optimize_huffman_coding defaults to jpeg_progressive
     // webplossy quality defaults to 80
-
 }
 
 // Static table of values for each quality profile
 #[derive(Debug, Clone, Copy)]
-struct QualityProfileHints{
+struct QualityProfileHints {
     profile: Option<QualityProfile>,
     p: f32,
     ssim2: f32,
@@ -123,7 +220,7 @@ struct QualityProfileHints{
     jxl_e: u8,
     png: u8,
     png_max: u8,
-    png_s: u8
+    png_s: u8,
 }
 const ABSOLUTE_LOWEST_HINTS: QualityProfileHints = QualityProfileHints {
     profile: Some(QualityProfile::Percent(0.0)),
@@ -139,7 +236,7 @@ const ABSOLUTE_LOWEST_HINTS: QualityProfileHints = QualityProfileHints {
     jxl_e: 6,
     png: 0,
     png_max: 4,
-    png_s: 4
+    png_s: 4,
 };
 #[rustfmt::skip]
 const QUALITY_HINTS: [QualityProfileHints; 8] = [
@@ -206,12 +303,16 @@ fn get_quality_hints(qp: &QualityProfile) -> QualityProfileHints {
             if higher.p == percent {
                 return *higher;
             }
-            let lower = QUALITY_HINTS.iter().rev().find(|q| q.p < percent).unwrap_or(&ABSOLUTE_LOWEST_HINTS);
+            let lower = QUALITY_HINTS
+                .iter()
+                .rev()
+                .find(|q| q.p < percent)
+                .unwrap_or(&ABSOLUTE_LOWEST_HINTS);
             if lower.p >= higher.p || percent < lower.p || percent > higher.p {
                 panic!("Invalid interpolation values");
             }
             let interpolation_ratio = (percent - lower.p) / (higher.p - lower.p);
-            QualityProfileHints{
+            QualityProfileHints {
                 profile: Some(QualityProfile::Percent(percent)),
                 p: percent,
                 ssim2: interpolate_value(interpolation_ratio, lower.ssim2, higher.ssim2),
@@ -220,34 +321,40 @@ fn get_quality_hints(qp: &QualityProfile) -> QualityProfileHints {
                 webp: interpolate_value(interpolation_ratio, lower.webp, higher.webp),
                 avif: interpolate_value(interpolation_ratio, lower.avif, higher.avif),
                 jxl: interpolate_value(interpolation_ratio, higher.jxl, lower.jxl), // distance is inverse
-                png: interpolate_value(interpolation_ratio, lower.png as f32, higher.png as f32).clamp(0.0, 100.0) as u8,
-                png_max: interpolate_value(interpolation_ratio, lower.png_max as f32, higher.png_max as f32).clamp(0.0, 100.0) as u8,
+                png: interpolate_value(interpolation_ratio, lower.png as f32, higher.png as f32)
+                    .clamp(0.0, 100.0) as u8,
+                png_max: interpolate_value(
+                    interpolation_ratio,
+                    lower.png_max as f32,
+                    higher.png_max as f32,
+                )
+                .clamp(0.0, 100.0) as u8,
                 png_s: higher.png_s,
                 jxl_e: higher.jxl_e,
                 webp_m: higher.webp_m,
                 avif_s: higher.avif_s,
-
             }
-        },
+        }
         qp => {
             *QUALITY_HINTS.iter().find(|q| q.profile == Some(*qp)).expect("Missing quality profile")
         }
     }
 }
 
-fn get_quality_hints_by_ssim2(ssim2: f32 ) -> QualityProfileHints {
+fn get_quality_hints_by_ssim2(ssim2: f32) -> QualityProfileHints {
     let percent = ssim2.clamp(0.0, 100.0);
     // find next highest value
     let higher = QUALITY_HINTS.iter().find(|q| q.ssim2 >= percent).unwrap();
     if higher.ssim2 == percent {
         return *higher;
     }
-    let lower = QUALITY_HINTS.iter().rev().find(|q| q.ssim2 < percent).unwrap_or(&ABSOLUTE_LOWEST_HINTS);
+    let lower =
+        QUALITY_HINTS.iter().rev().find(|q| q.ssim2 < percent).unwrap_or(&ABSOLUTE_LOWEST_HINTS);
     if lower.ssim2 >= higher.ssim2 || percent < lower.ssim2 || percent > higher.ssim2 {
         panic!("Invalid interpolation values");
     }
     let interpolation_ratio = (percent - lower.p) / (higher.p - lower.p);
-    QualityProfileHints{
+    QualityProfileHints {
         profile: Some(QualityProfile::Percent(percent)),
         p: percent,
         ssim2: interpolate_value(interpolation_ratio, lower.ssim2, higher.ssim2),
@@ -256,8 +363,10 @@ fn get_quality_hints_by_ssim2(ssim2: f32 ) -> QualityProfileHints {
         webp: interpolate_value(interpolation_ratio, lower.webp, higher.webp),
         avif: interpolate_value(interpolation_ratio, lower.avif, higher.avif),
         jxl: interpolate_value(interpolation_ratio, higher.jxl, lower.jxl), // distance is inverse
-        png: interpolate_value(interpolation_ratio, lower.png as f32, higher.png as f32).clamp(0.0, 100.0) as u8,
-        png_max: interpolate_value(interpolation_ratio, lower.png_max as f32, higher.png_max as f32).clamp(0.0, 100.0) as u8,
+        png: interpolate_value(interpolation_ratio, lower.png as f32, higher.png as f32)
+            .clamp(0.0, 100.0) as u8,
+        png_max: interpolate_value(interpolation_ratio, lower.png_max as f32, higher.png_max as f32)
+            .clamp(0.0, 100.0) as u8,
         png_s: higher.png_s,
         jxl_e: higher.jxl_e,
         webp_m: higher.webp_m,
@@ -265,16 +374,21 @@ fn get_quality_hints_by_ssim2(ssim2: f32 ) -> QualityProfileHints {
     }
 }
 
-
-
-fn create_jpeg_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_io_ids: &[i32], details: AutoEncoderDetails) -> Result<Box<dyn Encoder>> {
-
-    let profile_hints = details.quality_profile.map(|qp|
-        get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
+fn create_jpeg_auto(
+    ctx: &Context,
+    io: IoProxy,
+    bitmap_key: BitmapKey,
+    decoder_io_ids: &[i32],
+    details: AutoEncoderDetails,
+) -> Result<Box<dyn Encoder>> {
+    let profile_hints = details
+        .quality_profile
+        .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
 
     let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.jpeg);
 
-    let mut progressive = manual_and_default_hints.and_then(|hints| hints.progressive).unwrap_or(true);
+    let mut progressive =
+        manual_and_default_hints.and_then(|hints| hints.progressive).unwrap_or(true);
     if details.allow.jpeg_progressive != Some(true) {
         progressive = false;
     }
@@ -282,42 +396,76 @@ fn create_jpeg_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_i
     let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
 
     let matte = details.matte;
-    let moz_quality = profile_hints.map(|hints: QualityProfileHints| hints.moz).or(manual_quality)
-    .unwrap_or(90.0).clamp(0.0, 100.0) as u8;
+    let moz_quality = profile_hints
+        .map(|hints: QualityProfileHints| hints.moz)
+        .or(manual_quality)
+        .unwrap_or(90.0)
+        .clamp(0.0, 100.0) as u8;
 
-    let _jpegli_quality = profile_hints.map(|hints: QualityProfileHints| hints.jpegli).or(manual_quality)
-    .unwrap_or(90.0).clamp(0.0, 100.0) as u8;
+    let _jpegli_quality = profile_hints
+        .map(|hints: QualityProfileHints| hints.jpegli)
+        .or(manual_quality)
+        .unwrap_or(90.0)
+        .clamp(0.0, 100.0) as u8;
 
     //TODO: technically we should ignore the manual hint if qp is specified.
     //Once we have tuned the quality profile, we should use that regardless.
-    let style = manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(JpegEncoderStyle::Default);
+    let style =
+        manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(JpegEncoderStyle::Default);
 
     match style {
         JpegEncoderStyle::LibjpegTurbo => {
             let optimize_coding = progressive;
-            Ok(Box::new(crate::codecs::mozjpeg::MozjpegEncoder::create_classic(ctx, Some(moz_quality), Some(progressive), Some(optimize_coding), matte, io)
-                .map_err(|e| e.at(here!()))?))
+            Ok(Box::new(
+                crate::codecs::mozjpeg::MozjpegEncoder::create_classic(
+                    ctx,
+                    Some(moz_quality),
+                    Some(progressive),
+                    Some(optimize_coding),
+                    matte,
+                    io,
+                )
+                .map_err(|e| e.at(here!()))?,
+            ))
         }
-        JpegEncoderStyle::Default | JpegEncoderStyle::Mozjpeg | JpegEncoderStyle::Jpegli=> {
+        JpegEncoderStyle::Default | JpegEncoderStyle::Mozjpeg | JpegEncoderStyle::Jpegli => {
             //TODO: expand when we get jpegli
-            Ok(Box::new(crate::codecs::mozjpeg::MozjpegEncoder::create(ctx, Some(moz_quality), Some(progressive),  matte, io)
-                .map_err(|e| e.at(here!()))?))
+            Ok(Box::new(
+                crate::codecs::mozjpeg::MozjpegEncoder::create(
+                    ctx,
+                    Some(moz_quality),
+                    Some(progressive),
+                    matte,
+                    io,
+                )
+                .map_err(|e| e.at(here!()))?,
+            ))
         }
     }
 }
-fn create_webp_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_io_ids: &[i32], details: AutoEncoderDetails) -> Result<Box<dyn Encoder>> {
-    let profile_hints = details.quality_profile.map(|qp|
-        get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
+fn create_webp_auto(
+    ctx: &Context,
+    io: IoProxy,
+    bitmap_key: BitmapKey,
+    decoder_io_ids: &[i32],
+    details: AutoEncoderDetails,
+) -> Result<Box<dyn Encoder>> {
+    let profile_hints = details
+        .quality_profile
+        .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
     let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.webp);
-    let manual_quality   = manual_and_default_hints.and_then(|hints| hints.quality);
+    let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
     let manual_lossless = match manual_and_default_hints.and_then(|hints| hints.lossless) {
-        Some(BoolKeep::Keep) => Some(details.source_image_info.map(|info| info.lossless).unwrap_or(false)),
+        Some(BoolKeep::Keep) => {
+            Some(details.source_image_info.map(|info| info.lossless).unwrap_or(false))
+        }
         Some(BoolKeep::True) => Some(true),
         Some(BoolKeep::False) => Some(false),
         None => None,
     };
     let matte = details.matte;
-    let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality).unwrap_or(80.0).clamp(0.0, 100.0);
+    let manual_quality =
+        manual_and_default_hints.and_then(|hints| hints.quality).unwrap_or(80.0).clamp(0.0, 100.0);
 
     // If there is no lossless=keep, webp.lossless=keep + lossless format (nor any lossless=true), go lossy
     let lossless = details.needs_lossless.or(manual_lossless).unwrap_or(false);
@@ -327,66 +475,110 @@ fn create_webp_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_i
         None
     };
 
-    Ok(Box::new(crate::codecs::webp::WebPEncoder::create(ctx, io, quality, Some(lossless), matte).map_err(|e| e.at(here!()))?))
+    Ok(Box::new(
+        crate::codecs::webp::WebPEncoder::create(ctx, io, quality, Some(lossless), matte)
+            .map_err(|e| e.at(here!()))?,
+    ))
 }
 
-fn create_png_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_io_ids: &[i32], details: AutoEncoderDetails) -> Result<Box<dyn Encoder>> {
-    let profile_hints = details.quality_profile.map(|qp|
-        get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
+fn create_png_auto(
+    ctx: &Context,
+    io: IoProxy,
+    bitmap_key: BitmapKey,
+    decoder_io_ids: &[i32],
+    details: AutoEncoderDetails,
+) -> Result<Box<dyn Encoder>> {
+    let profile_hints = details
+        .quality_profile
+        .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
     let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.png);
     let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
     let matte = details.matte;
-    let png_style = manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(PngEncoderStyle::Default);
+    let png_style =
+        manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(PngEncoderStyle::Default);
     let manual_lossless = manual_and_default_hints.and_then(|hints| hints.lossless);
     //TODO: Note that PNG has special rules for the default value of lossless - the manual hint wins
     let lossless = match (details.needs_lossless, manual_lossless) {
         (Some(true), _) => Some(true),
-        (_, Some(BoolKeep::Keep)) => Some(details.source_image_info.map(|info| info.lossless).unwrap_or(false)),
+        (_, Some(BoolKeep::Keep)) => {
+            Some(details.source_image_info.map(|info| info.lossless).unwrap_or(false))
+        }
         (_, Some(BoolKeep::True)) => Some(true),
         (_, Some(BoolKeep::False)) => Some(false),
         (Some(false), None) => Some(false),
         (None, None) => Some(manual_quality.is_none() || png_style == PngEncoderStyle::Libpng),
-    }.unwrap();
+    }
+    .unwrap();
 
     let max_deflate = manual_and_default_hints.and_then(|hints| hints.hint_max_deflate);
 
-    if let Some(profile_hints) = profile_hints{
-         if profile_hints.png == 100 || lossless {
-            Ok(Box::new(crate::codecs::lode::LodepngEncoder::create(ctx, io, max_deflate, matte).map_err(|e| e.at(here!()))?))
-         } else {
-            Ok(Box::new(crate::codecs::pngquant::PngquantEncoder::create(ctx, io,
-                Some(profile_hints.png_s),
-                Some(profile_hints.png_max),
-                Some(profile_hints.png),
-                max_deflate,
-                matte).map_err(|e| e.at(here!()))?))
-         }
-    } else{
-        match png_style{
+    if let Some(profile_hints) = profile_hints {
+        if profile_hints.png == 100 || lossless {
+            Ok(Box::new(
+                crate::codecs::lode::LodepngEncoder::create(ctx, io, max_deflate, matte)
+                    .map_err(|e| e.at(here!()))?,
+            ))
+        } else {
+            Ok(Box::new(
+                crate::codecs::pngquant::PngquantEncoder::create(
+                    ctx,
+                    io,
+                    Some(profile_hints.png_s),
+                    Some(profile_hints.png_max),
+                    Some(profile_hints.png),
+                    max_deflate,
+                    matte,
+                )
+                .map_err(|e| e.at(here!()))?,
+            ))
+        }
+    } else {
+        match png_style {
             PngEncoderStyle::Libpng => {
-                let depth = if !details.needs_alpha { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 };
+                let depth = if !details.needs_alpha {
+                    s::PngBitDepth::Png24
+                } else {
+                    s::PngBitDepth::Png32
+                };
                 let zlib_compression = if max_deflate == Some(true) { Some(9) } else { None };
-                Ok(Box::new(crate::codecs::libpng_encoder::LibPngEncoder::create(ctx,  io, Some(depth),  matte, zlib_compression)
-                    .map_err(|e| e.at(here!()))?))
-
+                Ok(Box::new(
+                    crate::codecs::libpng_encoder::LibPngEncoder::create(
+                        ctx,
+                        io,
+                        Some(depth),
+                        matte,
+                        zlib_compression,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ))
             }
             PngEncoderStyle::Pngquant | PngEncoderStyle::Default if !lossless => {
                 let manual_quality = manual_quality.map(|s| s.clamp(0.0, 100.0) as u8);
-                let manual_min_quality = manual_and_default_hints.and_then(|hints| hints.min_quality)
-                .map(|s| s.clamp(0.0, 100.0) as u8);
-                let manual_quantization_speed = manual_and_default_hints.and_then(|hints| hints.quantization_speed)
-                .map(|s| s.clamp(1, 10));
-                Ok(Box::new(crate::codecs::pngquant::PngquantEncoder::create(ctx, io,
-                    manual_quantization_speed,
-                    manual_quality,
-                    manual_min_quality,
-                    max_deflate,
-                    matte).map_err(|e| e.at(here!()))?))
-
+                let manual_min_quality = manual_and_default_hints
+                    .and_then(|hints| hints.min_quality)
+                    .map(|s| s.clamp(0.0, 100.0) as u8);
+                let manual_quantization_speed = manual_and_default_hints
+                    .and_then(|hints| hints.quantization_speed)
+                    .map(|s| s.clamp(1, 10));
+                Ok(Box::new(
+                    crate::codecs::pngquant::PngquantEncoder::create(
+                        ctx,
+                        io,
+                        manual_quantization_speed,
+                        manual_quality,
+                        manual_min_quality,
+                        max_deflate,
+                        matte,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ))
             }
             _ => {
                 let max_deflate = manual_and_default_hints.and_then(|hints| hints.hint_max_deflate);
-                Ok(Box::new(crate::codecs::lode::LodepngEncoder::create(ctx, io, max_deflate, matte).map_err(|e| e.at(here!()))?))
+                Ok(Box::new(
+                    crate::codecs::lode::LodepngEncoder::create(ctx, io, max_deflate, matte)
+                        .map_err(|e| e.at(here!()))?,
+                ))
             }
         }
     }
@@ -405,10 +597,9 @@ fn create_png_auto(ctx: &Context, io: IoProxy, bitmap_key: BitmapKey, decoder_io
     // OutputFormat::Png => s::EncoderPreset::Lodepng{
     //     maximum_deflate: i.png_max_deflate
     // },
-
 }
 #[derive(Debug, Clone)]
-struct AutoEncoderDetails{
+struct AutoEncoderDetails {
     format: Option<OutputImageFormat>,
     quality_profile: Option<s::QualityProfile>,
     quality_profile_dpr: Option<f32>,
@@ -422,43 +613,48 @@ struct AutoEncoderDetails{
     source_image_info: Option<ImageInfo>,
 }
 
-fn build_auto_encoder_details(ctx: &Context, preset: &s::EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32],
-    format: Option<OutputImageFormat>, quality_profile: Option<s::QualityProfile>, quality_profile_dpr: Option<f32>,
-    matte: Option<s::Color>, lossless: Option<BoolKeep>, allow: Option<AllowedFormats>,
-    encoder_hints: Option<s::EncoderHints>) -> Result<AutoEncoderDetails> {
-
+fn build_auto_encoder_details(
+    ctx: &Context,
+    preset: &s::EncoderPreset,
+    bitmap_key: BitmapKey,
+    decoder_io_ids: &[i32],
+    format: Option<OutputImageFormat>,
+    quality_profile: Option<s::QualityProfile>,
+    quality_profile_dpr: Option<f32>,
+    matte: Option<s::Color>,
+    lossless: Option<BoolKeep>,
+    allow: Option<AllowedFormats>,
+    encoder_hints: Option<s::EncoderHints>,
+) -> Result<AutoEncoderDetails> {
     //NB: we assume the first of the decoder_io_ids is the source image, and take our animation/format cue from it
 
     let matte_is_opaque = matte.clone().map(|c| c.is_opaque()).unwrap_or(false);
 
-
-    let source_image_info: Option<ImageInfo> =
-    if !decoder_io_ids.is_empty(){
-        Some(ctx.get_unscaled_unrotated_image_info(*decoder_io_ids.first().unwrap()).map_err(|e| e.at(here!()))?)
-    }else{
+    let source_image_info: Option<ImageInfo> = if !decoder_io_ids.is_empty() {
+        Some(
+            ctx.get_unscaled_unrotated_image_info(*decoder_io_ids.first().unwrap())
+                .map_err(|e| e.at(here!()))?,
+        )
+    } else {
         None
     };
     let source_image_info_copy = source_image_info.clone();
 
-    let bitmaps = ctx.borrow_bitmaps()
-        .map_err(|e| e.at(here!()))?;
-    let final_bitmap = bitmaps.try_borrow_mut(bitmap_key)
-        .map_err(|e| e.at(here!()))?;
+    let bitmaps = ctx.borrow_bitmaps().map_err(|e| e.at(here!()))?;
+    let final_bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
     let needs_alpha = final_bitmap.info().alpha_meaningful() && !matte_is_opaque;
-    let final_pixel_count = final_bitmap.info().width() as u64 * final_bitmap.info().height() as u64;
+    let final_pixel_count =
+        final_bitmap.info().width() as u64 * final_bitmap.info().height() as u64;
 
-
-
-    let source_mime_format = source_image_info.as_ref()
+    let source_mime_format = source_image_info
+        .as_ref()
         .and_then(|i| OutputImageFormat::from_str(&i.preferred_mime_type));
 
-    let needs_animation = source_image_info.as_ref()
-        .map(|i| i.multiple_frames)
-        .unwrap_or(false);
+    let needs_animation = source_image_info.as_ref().map(|i| i.multiple_frames).unwrap_or(false);
 
     // Keep becomes auto if no decoders exist, otherwise inherits from the first io.
-    let explicit_format = match format{
+    let explicit_format = match format {
         Some(OutputImageFormat::Keep) => source_mime_format.or(None),
         other => other,
     };
@@ -469,12 +665,12 @@ fn build_auto_encoder_details(ctx: &Context, preset: &s::EncoderPreset, bitmap_k
         (None, Some(BoolKeep::Keep)) => Some(needs_alpha), //No decoder, no source, default to match alpha
         (_, Some(BoolKeep::True)) => Some(true),
         (_, Some(BoolKeep::False)) => Some(false),
-        (_, None) => None
+        (_, None) => None,
     };
     if quality_profile == Some(s::QualityProfile::Lossless) {
         needs_lossless = Some(true);
     }
-    Ok(AutoEncoderDetails{
+    Ok(AutoEncoderDetails {
         format: explicit_format,
         quality_profile,
         quality_profile_dpr,
@@ -489,7 +685,6 @@ fn build_auto_encoder_details(ctx: &Context, preset: &s::EncoderPreset, bitmap_k
     })
 }
 
-
 fn evaluate_allowed_formats(allowed: Option<AllowedFormats>) -> AllowedFormats {
     match allowed {
         Some(allowed) => allowed.expand_sets(),
@@ -497,22 +692,17 @@ fn evaluate_allowed_formats(allowed: Option<AllowedFormats>) -> AllowedFormats {
     }
 }
 
-
 #[derive(Debug, Clone, Copy)]
-struct FeaturesImplemented{
+struct FeaturesImplemented {
     jxl: bool,
     avif: bool,
     webp_animation: bool,
-    jpegli: bool
+    jpegli: bool,
 }
-const FEATURES_IMPLEMENTED: FeaturesImplemented = FeaturesImplemented{
-    jxl: false,
-    avif: false,
-    webp_animation: false,
-    jpegli: false
-};
+const FEATURES_IMPLEMENTED: FeaturesImplemented =
+    FeaturesImplemented { jxl: false, avif: false, webp_animation: false, jpegli: false };
 
-fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>{
+fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat> {
     let allowed = details.allow;
     let needs_animation = details.needs_animation;
     let wants_alpha = details.needs_alpha;
@@ -536,7 +726,6 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
         }
         return Some(OutputImageFormat::Gif);
     }
-
 
     // DO NOT DELETE THIS COMMENT
     // Now, jpegli beats Webp frequently is within 10% of avif at reasonable encoding speeds.
@@ -580,9 +769,11 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
     // AVIF is 10x slower than jpegli, but might still be in our budget.
     // We'll vary based on the pixel count. We can add budget logic later
     if (pixel_count < 3_000_000 || !can_jpegli)
-        && FEATURES_IMPLEMENTED.avif && allowed.avif == Some(true) {
-            return Some(OutputImageFormat::Avif);
-        }
+        && FEATURES_IMPLEMENTED.avif
+        && allowed.avif == Some(true)
+    {
+        return Some(OutputImageFormat::Avif);
+    }
     // Use jpegli if available, it's way faster than webp and comparable or better on size/quality.
     if can_jpegli {
         return Some(OutputImageFormat::Jpeg);

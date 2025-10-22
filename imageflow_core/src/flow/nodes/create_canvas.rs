@@ -1,37 +1,54 @@
 use super::internal_prelude::*;
-use crate::graphics::bitmaps::{PixelLayout, ColorSpace, BitmapCompositing};
+use crate::graphics::bitmaps::{BitmapCompositing, ColorSpace, PixelLayout};
 
+pub static CREATE_CANVAS: CreateCanvasNodeDef = CreateCanvasNodeDef {};
 
-pub static CREATE_CANVAS: CreateCanvasNodeDef = CreateCanvasNodeDef{};
+#[derive(Debug, Clone)]
+pub struct CreateCanvasNodeDef {}
 
-
-#[derive(Debug,Clone)]
-pub struct CreateCanvasNodeDef{}
-
-impl CreateCanvasNodeDef{
-    fn get(&self, n: &NodeParams) -> Result<(usize, usize, PixelFormat, s::Color)>{
-        if let NodeParams::Json(s::Node::CreateCanvas { format,
-                                    w,
-                                    h,
-                                    ref color }) = *n{
+impl CreateCanvasNodeDef {
+    fn get(&self, n: &NodeParams) -> Result<(usize, usize, PixelFormat, s::Color)> {
+        if let NodeParams::Json(s::Node::CreateCanvas { format, w, h, ref color }) = *n {
             let max_dimension = 2_000_000; // 2million
 
             if w < 1 || w > max_dimension {
-                Err(nerror!(crate::ErrorKind::InvalidCoordinates, "canvas width ({}) must be greater than zero and less than {}.", w, max_dimension))
+                Err(nerror!(
+                    crate::ErrorKind::InvalidCoordinates,
+                    "canvas width ({}) must be greater than zero and less than {}.",
+                    w,
+                    max_dimension
+                ))
             } else if h < 1 || h > max_dimension {
-                Err(nerror!(crate::ErrorKind::InvalidCoordinates, "canvas height ({}) must be greater than zero and less than {}.", w, max_dimension))
+                Err(nerror!(
+                    crate::ErrorKind::InvalidCoordinates,
+                    "canvas height ({}) must be greater than zero and less than {}.",
+                    w,
+                    max_dimension
+                ))
             } else if h * w > 100_000_000 {
-                Err(nerror!(crate::ErrorKind::InvalidCoordinates, "canvas size ({}) cannot exceed 100 megapixels.", w))
+                Err(nerror!(
+                    crate::ErrorKind::InvalidCoordinates,
+                    "canvas size ({}) cannot exceed 100 megapixels.",
+                    w
+                ))
             } else if format == ffi::PixelFormat::Gray8 {
                 Err(nerror!(crate::ErrorKind::InvalidNodeParams, "canvas format cannot be grayscale; single-channel grayscale bitmaps are not yet supported in Imageflow"))
-            }else if format == ffi::PixelFormat::Bgr24{
-                Err(nerror!(crate::ErrorKind::InvalidNodeParams, "canvas format {:?} not permitted. Use Bgr32 instead", format))
-            }else if format != ffi::PixelFormat::Bgr32 && format != ffi::PixelFormat::Bgra32 {
-                Err(nerror!(crate::ErrorKind::InvalidNodeParams, "canvas format {:?} not recognized", format))
+            } else if format == ffi::PixelFormat::Bgr24 {
+                Err(nerror!(
+                    crate::ErrorKind::InvalidNodeParams,
+                    "canvas format {:?} not permitted. Use Bgr32 instead",
+                    format
+                ))
+            } else if format != ffi::PixelFormat::Bgr32 && format != ffi::PixelFormat::Bgra32 {
+                Err(nerror!(
+                    crate::ErrorKind::InvalidNodeParams,
+                    "canvas format {:?} not recognized",
+                    format
+                ))
             } else {
-                Ok((w,h,format,color.clone()))
+                Ok((w, h, format, color.clone()))
             }
-        }else {
+        } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch))
         }
     }
@@ -51,45 +68,40 @@ impl NodeDef for CreateCanvasNodeDef {
 
     fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
         self.get(&ctx.weight(ix).params).map(|(w, h, format, _)| {
-            FrameEstimate::Some(FrameInfo {
-                w: w as i32,
-                h: h as i32,
-                fmt: format,
-            })
+            FrameEstimate::Some(FrameInfo { w: w as i32, h: h as i32, fmt: format })
         })
     }
-    fn can_execute(&self) -> bool{
+    fn can_execute(&self) -> bool {
         true
     }
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         match self.get(&ctx.weight(ix).params) {
             Ok((w, h, format, color)) => {
-
-                let compose = match color{
+                let compose = match color {
                     imageflow_types::Color::Transparent => BitmapCompositing::ReplaceSelf,
-                    other => BitmapCompositing::BlendWithMatte(other)
+                    other => BitmapCompositing::BlendWithMatte(other),
                 };
 
-
-                let key = ctx.c.borrow_bitmaps_mut()
+                let key = ctx
+                    .c
+                    .borrow_bitmaps_mut()
                     .map_err(|e| e.at(here!()))?
                     .create_bitmap_u8(
-                    w as u32,
-                    h as u32,
-                    format.pixel_layout(),
-                    false,
-                    format == PixelFormat::Bgra32,
-                    ColorSpace::StandardRGB,
-                        compose
-                ).map_err(|e| e.at(here!()))?;
+                        w as u32,
+                        h as u32,
+                        format.pixel_layout(),
+                        false,
+                        format == PixelFormat::Bgra32,
+                        ColorSpace::StandardRGB,
+                        compose,
+                    )
+                    .map_err(|e| e.at(here!()))?;
 
                 let weight = &mut ctx.weight_mut(ix);
                 weight.result = NodeResult::Frame(key);
                 Ok(NodeResult::Frame(key))
-            },
-            Err(e) => Err(e)
+            }
+            Err(e) => Err(e),
         }
     }
 }
-
-

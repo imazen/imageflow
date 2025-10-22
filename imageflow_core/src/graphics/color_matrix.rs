@@ -2,15 +2,17 @@ use rgb::alt::BGRA8;
 
 use crate::graphics::prelude::*;
 
-pub fn window_bgra32_apply_color_matrix(window: &mut BitmapWindowMut<BGRA8>, m: &[[f32;5];5]) -> Result<(), FlowError>{
-
+pub fn window_bgra32_apply_color_matrix(
+    window: &mut BitmapWindowMut<BGRA8>,
+    m: &[[f32; 5]; 5],
+) -> Result<(), FlowError> {
     let m40: f32 = m[4][0] * 255.0f32;
     let m41: f32 = m[4][1] * 255.0f32;
     let m42: f32 = m[4][2] * 255.0f32;
     let m43: f32 = m[4][3] * 255.0f32;
 
-    for mut line in window.scanlines(){
-        for pixel in line.row_mut(){
+    for mut line in window.scanlines() {
+        for pixel in line.row_mut() {
             let r = pixel.r as f32;
             let g = pixel.g as f32;
             let b = pixel.b as f32;

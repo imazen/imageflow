@@ -1,7 +1,7 @@
-use std::process::Command;
-use std::io;
+use crate::{FetchConfig, FetchError, FetchResult, FetchedResponse, HttpFetcher};
 use std::env;
-use crate::{HttpFetcher, FetchError, FetchResult, FetchedResponse, FetchConfig};
+use std::io;
+use std::process::Command;
 
 pub struct ShellFetcher;
 
@@ -19,30 +19,39 @@ impl ShellFetcher {
     fn detect_tool() -> Option<(&'static str, Vec<String>)> {
         // Try curl first
         if Command::new("curl").arg("--version").output().is_ok() {
-            return Some(("curl", vec![
-                "-L".to_string(),           // Follow redirects
-                "-s".to_string(),           // Silent mode
-                "-f".to_string(),           // Fail on HTTP errors
-                "-o".to_string(),           // Output to file
-            ]));
+            return Some((
+                "curl",
+                vec![
+                    "-L".to_string(), // Follow redirects
+                    "-s".to_string(), // Silent mode
+                    "-f".to_string(), // Fail on HTTP errors
+                    "-o".to_string(), // Output to file
+                ],
+            ));
         }
 
         // Try wget as fallback
         if Command::new("wget").arg("--version").output().is_ok() {
-            return Some(("wget", vec![
-                "-q".to_string(),           // Quiet mode
-                "--no-check-certificate".to_string(),
-                "-O".to_string(),           // Output to file
-            ]));
+            return Some((
+                "wget",
+                vec![
+                    "-q".to_string(), // Quiet mode
+                    "--no-check-certificate".to_string(),
+                    "-O".to_string(), // Output to file
+                ],
+            ));
         }
 
         // On Windows, try PowerShell
         if cfg!(windows) && Command::new("powershell.exe").arg("-Help").output().is_ok() {
-            return Some(("powershell.exe", vec![
-                "-Command".to_string(),
-                "Invoke-WebRequest".to_string(),
-                "-OutFile".to_string(),
-            ]));
+            return Some((
+                "powershell.exe",
+                vec![
+                    "-Command".to_string(),
+                    "Invoke-WebRequest".to_string(),
+                    "-OutFile".to_string(),
+                ],
+            ));
         }
 
         None
@@ -57,7 +66,7 @@ impl HttpFetcher for ShellFetcher {
         let (tool, base_args) = Self::detect_tool().ok_or_else(|| {
             FetchError::IoError(io::Error::new(
                 io::ErrorKind::NotFound,
-                "No suitable download tool found (curl, wget, or powershell)"
+                "No suitable download tool found (curl, wget, or powershell)",
             ))
         })?;
 
@@ -82,7 +91,7 @@ impl HttpFetcher for ShellFetcher {
                     .args(&args)
                     .stderr(std::fs::File::create(error_path)?)
                     .output()?
-            },
+            }
             "wget" => {
                 let mut args = base_args;
                 args.push(temp_path.to_string());
@@ -92,7 +101,7 @@ impl HttpFetcher for ShellFetcher {
                     .args(&args)
                     .stderr(std::fs::File::create(error_path)?)
                     .output()?
-            },
+            }
             "powershell.exe" => {
                 // Simpler PowerShell approach that works with older versions
                 let args = vec![
@@ -105,22 +114,16 @@ impl HttpFetcher for ShellFetcher {
                     .args(&args)
                     .stderr(std::fs::File::create(error_path)?)
                     .output()?
-            },
-            _ => unreachable!()
+            }
+            _ => unreachable!(),
         };
 
         // Read the downloaded file and error output
-        let bytes = if std::fs::metadata(temp_path).is_ok() {
-            std::fs::read(temp_path)?
-        } else {
-            vec![]
-        };
+        let bytes =
+            if std::fs::metadata(temp_path).is_ok() { std::fs::read(temp_path)? } else { vec![] };
 
-        let error_bytes = if std::fs::metadata(error_path).is_ok() {
-            std::fs::read(error_path)?
-        } else {
-            vec![]
-        };
+        let error_bytes =
+            if std::fs::metadata(error_path).is_ok() { std::fs::read(error_path)? } else { vec![] };
 
         // Clean up
         let _ = std::fs::remove_file(temp_path);
@@ -153,14 +156,19 @@ impl HttpFetcher for ShellFetcher {
         let (tool, _) = Self::detect_tool().ok_or_else(|| {
             FetchError::IoError(io::Error::new(
                 io::ErrorKind::NotFound,
-                "No suitable download tool found (curl, wget, or powershell)"
+                "No suitable download tool found (curl, wget, or powershell)",
             ))
         })?;
 
         // For curl, we can use -I to get headers only
         let status = match tool {
             "curl" => {
-                let mut args = vec!["-I".to_string(), "-s".to_string(), "-o".to_string(), "/dev/null".to_string()];
+                let mut args = vec![
+                    "-I".to_string(),
+                    "-s".to_string(),
+                    "-o".to_string(),
+                    "/dev/null".to_string(),
+                ];
                 args.push(url.to_string());
                 let status = Command::new(tool).args(&args).status()?;
                 // HEAD is not supported by many servers, so if not successful, fall back to self.fetch
@@ -168,7 +176,7 @@ impl HttpFetcher for ShellFetcher {
                     return self.fetch(url, None).map(|r| r.code);
                 }
                 status
-            },
+            }
             // For wget and powershell, just do a HEAD request
             _ => {
                 // Fallback to actual fetch since these tools don't have great header-only options

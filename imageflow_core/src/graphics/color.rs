@@ -1,11 +1,10 @@
 use crate::graphics::math::fastpow;
 
-
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum WorkingFloatspace {
     StandardRGB,
     LinearRGB,
-    Gamma
+    Gamma,
 }
 
 // Gamma correction  http://www.4p8.com/eric.brasseur/gamma.html#formulas
@@ -19,26 +18,23 @@ pub struct ColorContext {
     gamma_inverse: f32,
 }
 
-impl ColorContext{
-
-    pub fn new(space: WorkingFloatspace, gamma: f32) -> ColorContext{
-        let mut c = ColorContext{
+impl ColorContext {
+    pub fn new(space: WorkingFloatspace, gamma: f32) -> ColorContext {
+        let mut c = ColorContext {
             apply_gamma: space == WorkingFloatspace::Gamma,
             apply_srgb: space == WorkingFloatspace::LinearRGB,
             gamma,
             gamma_inverse: (1.0f64 / gamma as f64) as f32,
-            byte_to_float: [0f32;256]
+            byte_to_float: [0f32; 256],
         };
         for n in 0..256 {
-            c.byte_to_float[n] =
-                c.srgb_to_floatspace_uncached(n as u8);
+            c.byte_to_float[n] = c.srgb_to_floatspace_uncached(n as u8);
         }
         c
     }
 
-
     #[inline]
-    pub fn srgb_to_floatspace_uncached(&self, value: u8) -> f32{
+    pub fn srgb_to_floatspace_uncached(&self, value: u8) -> f32 {
         let mut v: f32 = value as f32 * (1.0f32 / 255.0f32);
         if self.apply_srgb {
             v = srgb_to_linear(v)
@@ -49,23 +45,21 @@ impl ColorContext{
     }
 
     #[inline]
-    pub fn remove_gamma(&self, value: f32) -> f32{
+    pub fn remove_gamma(&self, value: f32) -> f32 {
         f32::powf(value, self.gamma)
     }
     #[inline]
-    pub fn apply_gamma(&self, value: f32) -> f32{
+    pub fn apply_gamma(&self, value: f32) -> f32 {
         f32::powf(value, self.gamma_inverse)
     }
 
     #[inline]
-    pub fn srgb_to_floatspace(&self, value: u8) -> f32{
+    pub fn srgb_to_floatspace(&self, value: u8) -> f32 {
         // Safe because array length is larger than u8 max value
-        unsafe {
-            *self.byte_to_float.get_unchecked(value as usize)
-        }
+        unsafe { *self.byte_to_float.get_unchecked(value as usize) }
     }
     #[inline]
-    pub fn floatspace_to_srgb(&self, space_value: f32) -> u8{
+    pub fn floatspace_to_srgb(&self, space_value: f32) -> u8 {
         let v: f32 = space_value;
         if self.apply_gamma {
             return uchar_clamp_ff(self.apply_gamma(v) * 255.0f32);
@@ -75,36 +69,31 @@ impl ColorContext{
         }
         uchar_clamp_ff(255.0f32 * v)
     }
-
 }
 
 #[inline]
-pub fn flow_colorcontext_floatspace_to_srgb(c: &ColorContext, space_value: f32) -> u8{
+pub fn flow_colorcontext_floatspace_to_srgb(c: &ColorContext, space_value: f32) -> u8 {
     c.floatspace_to_srgb(space_value)
 }
 
 #[inline]
-pub fn flow_colorcontext_srgb_to_floatspace(c: &ColorContext, value: u8) -> f32{
+pub fn flow_colorcontext_srgb_to_floatspace(c: &ColorContext, value: u8) -> f32 {
     c.srgb_to_floatspace(value)
 }
-
 
 #[inline]
 fn srgb_to_linear(s: f32) -> f32 {
     if s <= 0.04045f32 {
         s / 12.92f32
     } else {
-        f32::powf(
-            (s + 0.055f32) / (1_f32 + 0.055f32),
-            2.4f32,
-        )
+        f32::powf((s + 0.055f32) / (1_f32 + 0.055f32), 2.4f32)
     }
 }
 #[inline]
 fn linear_to_srgb(clr: f32) -> f32 {
     if clr <= 0.0031308f32 {
         12.92f32 * clr * 255.0f32
-    }else {
+    } else {
         1.055f32 * 255.0f32 * fastpow(clr, 0.41666666f32) - 14.025f32
     }
 }
@@ -113,15 +102,10 @@ pub(crate) fn uchar_clamp_ff(clr: f32) -> u8 {
     let mut result: u16;
     result = (clr as f64 + 0.5f64) as i16 as u16;
     if result as i32 > 255_i32 {
-        result = if clr < 0_i32 as f32 {
-            0_i32
-        } else {
-            255_i32
-        } as u16
+        result = if clr < 0_i32 as f32 { 0_i32 } else { 255_i32 } as u16
     }
     result as u8
 }
-
 
 #[inline]
 #[allow(non_snake_case)]
@@ -129,10 +113,8 @@ pub unsafe fn linear_to_luv(bgr: *mut f32) {
     let xn: f32 = 0.312713f32;
     let yn: f32 = 0.329016f32;
     let Yn: f32 = 1.0f32;
-    let un: f32 =
-        4_f32 * xn / (-2_f32 * xn + 12_f32 * yn + 3_f32);
-    let vn: f32 =
-        9_f32 * yn / (-2_f32 * xn + 12_f32 * yn + 3_f32);
+    let un: f32 = 4_f32 * xn / (-2_f32 * xn + 12_f32 * yn + 3_f32);
+    let vn: f32 = 9_f32 * yn / (-2_f32 * xn + 12_f32 * yn + 3_f32);
     let y_split: f32 = 0.00885645f32;
     let y_adjust: f32 = 903.3f32;
     let R: f32 = *bgr.offset(2);
@@ -178,16 +160,13 @@ pub unsafe fn luv_to_linear(luv: *mut f32) {
     let xn: f32 = 0.312713f32;
     let yn: f32 = 0.329016f32;
     let Yn: f32 = 1.0f32;
-    let un: f32 =
-        4_f32 * xn / (-2_f32 * xn + 12_f32 * yn + 3_f32);
-    let vn: f32 =
-        9_f32 * yn / (-2_f32 * xn + 12_f32 * yn + 3_f32);
+    let un: f32 = 4_f32 * xn / (-2_f32 * xn + 12_f32 * yn + 3_f32);
+    let vn: f32 = 9_f32 * yn / (-2_f32 * xn + 12_f32 * yn + 3_f32);
     let y_adjust_2: f32 = 0.001_107_056_4_f32;
     let u: f32 = U / (13_f32 * L) + un;
     let v: f32 = V / (13_f32 * L) + vn;
     let Y: f32 = if L > 8_f32 {
-        (Yn) * (((L + 16_f32) / 116_f32) as f64).powf(3_f64)
-        as f32
+        (Yn) * (((L + 16_f32) / 116_f32) as f64).powf(3_f64) as f32
     } else {
         (Yn * L) * y_adjust_2
     };

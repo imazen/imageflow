@@ -47,7 +47,7 @@ pub enum FetchError {
     UpstreamResponseError(u16),
     ContentLengthMismatch,
 
-    UpstreamResponseErrorWithResponse{ status: u16, response: FetchedResponse},
+    UpstreamResponseErrorWithResponse { status: u16, response: FetchedResponse },
 }
 
 impl fmt::Display for FetchError {
@@ -55,16 +55,18 @@ impl fmt::Display for FetchError {
         match *self {
             FetchError::ToolError(ref e) => write!(f, "ToolError: {:?}", e),
             FetchError::IoError(ref e) => write!(f, "IoError: {:?}", e),
-            FetchError::UpstreamResponseError(ref status) |
-            FetchError::UpstreamResponseErrorWithResponse {ref status, ..} => {
+            FetchError::UpstreamResponseError(ref status)
+            | FetchError::UpstreamResponseErrorWithResponse { ref status, .. } => {
                 write!(f, "Response status {}", status)
-            },
-            FetchError::ContentLengthMismatch => write!(f, "Content-Length value did not match bytes received.")
+            }
+            FetchError::ContentLengthMismatch => {
+                write!(f, "Content-Length value did not match bytes received.")
+            }
         }
     }
 }
 
-pub type FetchResult = ::std::result::Result<FetchedResponse,FetchError>;
+pub type FetchResult = ::std::result::Result<FetchedResponse, FetchError>;
 
 pub struct FetchedResponse {
     pub code: u16,
@@ -75,25 +77,31 @@ pub struct FetchedResponse {
 impl fmt::Debug for FetchedResponse {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if !self.content_type.is_empty() || self.content_type == "text/plain" {
-            write!(f, "FetchedResponse {{ content_type: {:?}, length: {}, as_string: {:?} }}", self.content_type, self.bytes.len(), std::str::from_utf8(&self.bytes))
-        }else{
-            write!(f, "FetchedResponse {{ content_type: {:?}, length: {} }}", self.content_type, self.bytes.len())
+            write!(
+                f,
+                "FetchedResponse {{ content_type: {:?}, length: {}, as_string: {:?} }}",
+                self.content_type,
+                self.bytes.len(),
+                std::str::from_utf8(&self.bytes)
+            )
+        } else {
+            write!(
+                f,
+                "FetchedResponse {{ content_type: {:?}, length: {} }}",
+                self.content_type,
+                self.bytes.len()
+            )
         }
     }
 }
 
 #[derive(Default, Clone, Debug)]
-pub struct FetchConfig{
-
-    pub read_error_body: Option<bool>
+pub struct FetchConfig {
+    pub read_error_body: Option<bool>,
 }
-
-
 
 impl From<std::io::Error> for FetchError {
     fn from(e: std::io::Error) -> FetchError {
         FetchError::IoError(e)
     }
 }
-
-

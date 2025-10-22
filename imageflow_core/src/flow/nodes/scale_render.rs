@@ -1,19 +1,18 @@
-use imageflow_types::ScalingFloatspace;
 use super::internal_prelude::*;
 use crate::graphics::bitmaps::BitmapCompositing;
 use crate::graphics::color::WorkingFloatspace;
 use crate::graphics::scaling::ScaleAndRenderParams;
 use crate::graphics::weights::Filter;
+use imageflow_types::ScalingFloatspace;
 
-pub static SCALE_2D_RENDER_TO_CANVAS_1D: Scale2dDef = Scale2dDef{};
-pub static SCALE: ScaleDef = ScaleDef{};
-pub static DRAW_IMAGE_EXACT: DrawImageDef = DrawImageDef{};
+pub static SCALE_2D_RENDER_TO_CANVAS_1D: Scale2dDef = Scale2dDef {};
+pub static SCALE: ScaleDef = ScaleDef {};
+pub static DRAW_IMAGE_EXACT: DrawImageDef = DrawImageDef {};
 
-
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct ScaleDef;
-impl NodeDef for ScaleDef{
-    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
+impl NodeDef for ScaleDef {
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand> {
         Some(self)
     }
 }
@@ -23,40 +22,45 @@ impl NodeDefOneInputExpand for ScaleDef {
     }
     fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
         if let NodeParams::Json(s::Node::Resample2D { w, h, .. }) = *params {
-            input.map_frame(|info| {
-                Ok(FrameInfo {
-                    w: w as i32,
-                    h: h as i32,
-                    fmt: info.fmt,
-                })
-            })
+            input.map_frame(|info| Ok(FrameInfo { w: w as i32, h: h as i32, fmt: info.fmt }))
         } else {
-            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Resample2D, got {:?}",params))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Resample2D, got {:?}", params))
         }
     }
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()> {
-        if let NodeParams::Json(s::Node::Resample2D { w, h, hints }) =
-        params {
-            let resample_when = hints.as_ref().and_then(|h| h.resample_when).unwrap_or(s::ResampleWhen::SizeDiffersOrSharpeningRequested);
-
+    fn expand(
+        &self,
+        ctx: &mut OpCtxMut,
+        ix: NodeIndex,
+        params: NodeParams,
+        parent: FrameInfo,
+    ) -> Result<()> {
+        if let NodeParams::Json(s::Node::Resample2D { w, h, hints }) = params {
+            let resample_when = hints
+                .as_ref()
+                .and_then(|h| h.resample_when)
+                .unwrap_or(s::ResampleWhen::SizeDiffersOrSharpeningRequested);
 
             let size_differs = w != parent.w as u32 || h != parent.h as u32;
             let downscaling = w < parent.w as u32 || h < parent.h as u32;
             let upscaling = w > parent.w as u32 || h > parent.h as u32;
             let matte_color = hints.as_ref().and_then(|h| h.background_color.as_ref());
-            let apply_matte = parent.fmt == PixelFormat::Bgra32 &&
-                matte_color != Some(&s::Color::Transparent) && matte_color.is_some();
+            let apply_matte = parent.fmt == PixelFormat::Bgra32
+                && matte_color != Some(&s::Color::Transparent)
+                && matte_color.is_some();
 
-            let sharpen_percent_raw = hints.as_ref().and_then(|h| h.sharpen_percent).unwrap_or(0f32);
+            let sharpen_percent_raw =
+                hints.as_ref().and_then(|h| h.sharpen_percent).unwrap_or(0f32);
 
-            let sharpen_percent = match hints.as_ref()
+            let sharpen_percent = match hints
+                .as_ref()
                 .and_then(|h| h.sharpen_when)
-                .unwrap_or(s::SharpenWhen::Always){
+                .unwrap_or(s::SharpenWhen::Always)
+            {
                 imageflow_types::SharpenWhen::Always => sharpen_percent_raw,
                 imageflow_types::SharpenWhen::Downscaling if downscaling => sharpen_percent_raw,
                 imageflow_types::SharpenWhen::Upscaling if upscaling => sharpen_percent_raw,
                 imageflow_types::SharpenWhen::SizeDiffers if size_differs => sharpen_percent_raw,
-                _ => 0f32
+                _ => 0f32,
             };
 
             let sharpen_requested = sharpen_percent != 0f32;
@@ -64,8 +68,12 @@ impl NodeDefOneInputExpand for ScaleDef {
             let resample = match resample_when {
                 s::ResampleWhen::Always => true,
                 s::ResampleWhen::SizeDiffers if size_differs => true,
-                s::ResampleWhen::SizeDiffersOrSharpeningRequested if size_differs || sharpen_requested => true,
-                _ => false
+                s::ResampleWhen::SizeDiffersOrSharpeningRequested
+                    if size_differs || sharpen_requested =>
+                {
+                    true
+                }
+                _ => false,
             };
 
             // TODO: apply matte in a more efficient way than resampling.
@@ -80,7 +88,7 @@ impl NodeDefOneInputExpand for ScaleDef {
                         scaling_colorspace: hints.as_ref().and_then(|h| h.scaling_colorspace),
                         background_color: hints.as_ref().and_then(|h| h.background_color.clone()),
                         resample_when: Some(s::ResampleWhen::Always),
-                        sharpen_when: hints.as_ref().and_then(|h| h.sharpen_when)
+                        sharpen_when: hints.as_ref().and_then(|h| h.sharpen_when),
                     }),
                 };
 
@@ -88,15 +96,18 @@ impl NodeDefOneInputExpand for ScaleDef {
                     w: w as usize,
                     h: h as usize,
                     format: parent.fmt,
-                    color: hints.as_ref().and_then(|h| h.background_color.clone()).unwrap_or(s::Color::Transparent),
+                    color: hints
+                        .as_ref()
+                        .and_then(|h| h.background_color.clone())
+                        .unwrap_or(s::Color::Transparent),
                 };
 
-                let canvas = ctx.graph
-                    .add_node(Node::n(&CREATE_CANVAS,
-                                      NodeParams::Json(canvas_params)));
-                let scale2d = ctx.graph
-                    .add_node(Node::n(&SCALE_2D_RENDER_TO_CANVAS_1D,
-                                      NodeParams::Json(scale2d_params)));
+                let canvas =
+                    ctx.graph.add_node(Node::n(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
+                let scale2d = ctx.graph.add_node(Node::n(
+                    &SCALE_2D_RENDER_TO_CANVAS_1D,
+                    NodeParams::Json(scale2d_params),
+                ));
                 ctx.graph.add_edge(canvas, scale2d, EdgeKind::Canvas).unwrap();
                 ctx.replace_node_with_existing(ix, scale2d);
             } else {
@@ -104,11 +115,10 @@ impl NodeDefOneInputExpand for ScaleDef {
             }
             Ok(())
         } else {
-            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Resample2D, got {:?}",params))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Resample2D, got {:?}", params))
         }
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Scale2dDef;
@@ -126,29 +136,48 @@ impl NodeDefOneInputOneCanvasExpand for Scale2dDef {
         Ok(())
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, input: FrameInfo, canvas: FrameInfo) -> Result<()> {
-        if let NodeParams::Json(imageflow_types::Node::Resample2D { w, h, hints }) =
-        params {
-
+    fn expand(
+        &self,
+        ctx: &mut OpCtxMut,
+        ix: NodeIndex,
+        params: NodeParams,
+        input: FrameInfo,
+        canvas: FrameInfo,
+    ) -> Result<()> {
+        if let NodeParams::Json(imageflow_types::Node::Resample2D { w, h, hints }) = params {
             if w != canvas.w as u32 || h != canvas.h as u32 {
-                return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "Resample2D target size {}x{} does not match canvas size {}x{}.", w, h, canvas.w, canvas.h));
+                return Err(nerror!(
+                    crate::ErrorKind::InvalidNodeParams,
+                    "Resample2D target size {}x{} does not match canvas size {}x{}.",
+                    w,
+                    h,
+                    canvas.w,
+                    canvas.h
+                ));
             }
             if input.fmt.bytes() != 4 || canvas.fmt.bytes() != 4 {
                 return Err(nerror!(crate::ErrorKind::InvalidNodeConnections, "Resample2D can only operate on Rgb32 and Rgba32 bitmaps. Input pixel format {:?}. Canvas pixel format {:?}.", input.fmt, canvas.fmt));
             }
 
-            match hints.as_ref().and_then(|h| h.resample_when){
-                Some(s::ResampleWhen::Always) | None => {},
+            match hints.as_ref().and_then(|h| h.resample_when) {
+                Some(s::ResampleWhen::Always) | None => {}
                 v => {
                     return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "Resample2D already has a canvas and cannot honor ResampleWhen value {:?}, ", v));
                 }
             }
 
-            let bgcolor = hints.as_ref().and_then(|h| h.background_color.clone()).unwrap_or(s::Color::Transparent);
-            let new_params = s::Node::DrawImageExact { x: 0, y: 0, w: canvas.w as u32, h: canvas.h as u32,
+            let bgcolor = hints
+                .as_ref()
+                .and_then(|h| h.background_color.clone())
+                .unwrap_or(s::Color::Transparent);
+            let new_params = s::Node::DrawImageExact {
+                x: 0,
+                y: 0,
+                w: canvas.w as u32,
+                h: canvas.h as u32,
                 blend: if bgcolor.is_transparent() {
                     Some(::imageflow_types::CompositingMode::Overwrite)
-                }else{
+                } else {
                     None
                 },
                 hints: Some(::imageflow_types::ResampleHints {
@@ -158,21 +187,19 @@ impl NodeDefOneInputOneCanvasExpand for Scale2dDef {
                     scaling_colorspace: hints.as_ref().and_then(|h| h.scaling_colorspace),
                     background_color: Some(bgcolor),
                     resample_when: None, //We already threw and error if this wasn't none or always
-                    sharpen_when: hints.as_ref().and_then(|h| h.sharpen_when)
-                })};
+                    sharpen_when: hints.as_ref().and_then(|h| h.sharpen_when),
+                }),
+            };
 
-            let new_draw_image = ctx.graph
-                .add_node(Node::n(&DRAW_IMAGE_EXACT,
-                                  NodeParams::Json(new_params)));
+            let new_draw_image =
+                ctx.graph.add_node(Node::n(&DRAW_IMAGE_EXACT, NodeParams::Json(new_params)));
             ctx.replace_node_with_existing(ix, new_draw_image);
             Ok(())
         } else {
-            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Resample2D, got {:?}",params))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Resample2D, got {:?}", params))
         }
     }
-
 }
-
 
 #[derive(Debug, Clone)]
 pub struct DrawImageDef;
@@ -191,16 +218,19 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
         Ok(())
     }
 
-    fn render(&self, c: &Context, canvas_key: BitmapKey, input_key: BitmapKey, p: &NodeParams) -> Result<()> {
+    fn render(
+        &self,
+        c: &Context,
+        canvas_key: BitmapKey,
+        input_key: BitmapKey,
+        p: &NodeParams,
+    ) -> Result<()> {
         if let NodeParams::Json(s::Node::DrawImageExact { x, y, w, h, ref hints, blend }) = *p {
-            let bitmaps = c.borrow_bitmaps()
-                .map_err(|e| e.at(here!()))?;
-            let mut canvas_bitmap = bitmaps.try_borrow_mut(canvas_key)
-                .map_err(|e| e.at(here!()))?;
+            let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
+            let mut canvas_bitmap =
+                bitmaps.try_borrow_mut(canvas_key).map_err(|e| e.at(here!()))?;
 
-            let mut input_bitmap = bitmaps.try_borrow_mut(input_key)
-                .map_err(|e| e.at(here!()))?;
-
+            let mut input_bitmap = bitmaps.try_borrow_mut(input_key).map_err(|e| e.at(here!()))?;
 
             let hints = hints.as_ref();
             if x + w > canvas_bitmap.w() || y + h > canvas_bitmap.h() {
@@ -212,7 +242,7 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
                     "DrawImageExact can only operate on Rgb32 and Rgba32 bitmaps. Input pixel format {:?}. Canvas pixel format {:?}.", input_bitmap.frame_info().fmt, canvas_bitmap.frame_info().fmt));
             }
             match hints.and_then(|h| h.resample_when) {
-                Some(s::ResampleWhen::Always) | None => {},
+                Some(s::ResampleWhen::Always) | None => {}
                 v => {
                     return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "DrawImageExact already has a canvas and cannot honor ResampleWhen value {:?}, ", v));
                 }
@@ -228,35 +258,34 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
                 hints.and_then(|h| h.down_filter).unwrap_or(s::Filter::Robidoux)
             };
 
-
             let sharpen_percent_raw = hints.and_then(|h| h.sharpen_percent).unwrap_or(0f32);
 
             let sharpen_percent = match hints
                 .and_then(|h| h.sharpen_when)
-                .unwrap_or(s::SharpenWhen::Always) {
+                .unwrap_or(s::SharpenWhen::Always)
+            {
                 imageflow_types::SharpenWhen::Always => sharpen_percent_raw,
                 imageflow_types::SharpenWhen::Downscaling if downscaling => sharpen_percent_raw,
                 imageflow_types::SharpenWhen::Upscaling if upscaling => sharpen_percent_raw,
                 imageflow_types::SharpenWhen::SizeDiffers if size_differs => sharpen_percent_raw,
-                _ => 0f32
+                _ => 0f32,
             };
 
             let sharpen_requested = sharpen_percent != 0f32;
 
+            let floatspace =
+                hints.and_then(|h| h.scaling_colorspace).unwrap_or(s::ScalingFloatspace::Linear); //TODO: reconsider upscaling in srgb by default //if downscaling { s::ScalingFloatspace::Linear} else {s::ScalingFloatspace::Srgb});
 
-            let floatspace = hints
-                .and_then(|h| h.scaling_colorspace)
-                .unwrap_or(s::ScalingFloatspace::Linear); //TODO: reconsider upscaling in srgb by default //if downscaling { s::ScalingFloatspace::Linear} else {s::ScalingFloatspace::Srgb});
-
-            let compose = blend.unwrap_or(::imageflow_types::CompositingMode::Compose) == s::CompositingMode::Compose;
-
+            let compose = blend.unwrap_or(::imageflow_types::CompositingMode::Compose)
+                == s::CompositingMode::Compose;
 
             if canvas_bitmap.info().compose() == &BitmapCompositing::ReplaceSelf && compose {
                 canvas_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
             }
-            if matches!(canvas_bitmap.info().compose(),BitmapCompositing::BlendWithMatte(_))
+            if matches!(canvas_bitmap.info().compose(), BitmapCompositing::BlendWithMatte(_))
                 && !compose
-                && canvas_bitmap.frame_info().fmt == PixelFormat::Bgra32 {
+                && canvas_bitmap.frame_info().fmt == PixelFormat::Bgra32
+            {
                 canvas_bitmap.set_compositing(BitmapCompositing::ReplaceSelf);
             }
 
@@ -268,13 +297,16 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
                 sharpen_percent_goal: sharpen_percent,
                 scale_in_colorspace: match floatspace {
                     ScalingFloatspace::Srgb => WorkingFloatspace::StandardRGB,
-                    ScalingFloatspace::Linear => WorkingFloatspace::LinearRGB
+                    ScalingFloatspace::Linear => WorkingFloatspace::LinearRGB,
                 },
                 h,
             };
-            match crate::graphics::scaling::scale_and_render(input_bitmap.get_window_u8().unwrap(),
-                                                             canvas_bitmap.get_window_u8().unwrap(), &scale_and_render) {
-                Ok(_) => {},
+            match crate::graphics::scaling::scale_and_render(
+                input_bitmap.get_window_u8().unwrap(),
+                canvas_bitmap.get_window_u8().unwrap(),
+                &scale_and_render,
+            ) {
+                Ok(_) => {}
                 Err(e) => {
                     return Err(e.at(here!()));
                 }
@@ -283,7 +315,7 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
 
             Ok(())
         } else {
-            Err(nerror!( crate::ErrorKind::NodeParamsMismatch, "Need DrawImageExact, got {:?}", p))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need DrawImageExact, got {:?}", p))
         }
     }
 }

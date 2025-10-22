@@ -1,37 +1,32 @@
-use crate::graphics::bitmaps::BitmapCompositing;
 use super::internal_prelude::*;
+use crate::graphics::bitmaps::BitmapCompositing;
 
-
-pub static COLOR_MATRIX_SRGB: MutProtect<ColorMatrixSrgbMutDef> = MutProtect{ node: &COLOR_MATRIX_SRGB_MUTATE, fqn: "imazen.color_matrix_srgb"};
-pub static COLOR_FILTER_SRGB: ColorFilterSrgb = ColorFilterSrgb{};
-pub static COLOR_MATRIX_SRGB_MUTATE: ColorMatrixSrgbMutDef = ColorMatrixSrgbMutDef{};
-
-
+pub static COLOR_MATRIX_SRGB: MutProtect<ColorMatrixSrgbMutDef> =
+    MutProtect { node: &COLOR_MATRIX_SRGB_MUTATE, fqn: "imazen.color_matrix_srgb" };
+pub static COLOR_FILTER_SRGB: ColorFilterSrgb = ColorFilterSrgb {};
+pub static COLOR_MATRIX_SRGB_MUTATE: ColorMatrixSrgbMutDef = ColorMatrixSrgbMutDef {};
 
 #[derive(Debug, Clone)]
 pub struct ColorMatrixSrgbMutDef;
-impl NodeDef for ColorMatrixSrgbMutDef{
-    fn as_one_mutate_bitmap(&self) -> Option<&dyn NodeDefMutateBitmap>{
+impl NodeDef for ColorMatrixSrgbMutDef {
+    fn as_one_mutate_bitmap(&self) -> Option<&dyn NodeDefMutateBitmap> {
         Some(self)
     }
 }
-impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
-    fn fqn(&self) -> &'static str{
+impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef {
+    fn fqn(&self) -> &'static str {
         "imazen.color_matrix_srgb_mut"
     }
-    fn mutate(&self, c: &Context, bitmap_key: BitmapKey,  p: &NodeParams) -> Result<()> {
+    fn mutate(&self, c: &Context, bitmap_key: BitmapKey, p: &NodeParams) -> Result<()> {
         if let NodeParams::Json(s::Node::ColorMatrixSrgb { ref matrix }) = *p {
-
-            let bitmaps = c.borrow_bitmaps()
-                .map_err(|e| e.at(here!()))?;
-            let mut bitmap_bitmap = bitmaps.try_borrow_mut(bitmap_key)
-                .map_err(|e| e.at(here!()))?;
+            let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
+            let mut bitmap_bitmap =
+                bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
             let mut window = bitmap_bitmap.get_window_bgra32().unwrap();
             crate::graphics::color_matrix::window_bgra32_apply_color_matrix(&mut window, matrix)
                 .map_err(|e| e.at(here!()))?;
             bitmap_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
-
 
             Ok(())
         } else {
@@ -40,21 +35,25 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
     }
 }
 
-
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct ColorFilterSrgb;
-impl NodeDef for ColorFilterSrgb{
-    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
+impl NodeDef for ColorFilterSrgb {
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand> {
         Some(self)
     }
 }
-impl NodeDefOneInputExpand for ColorFilterSrgb{
-    fn fqn(&self) -> &'static str{
+impl NodeDefOneInputExpand for ColorFilterSrgb {
+    fn fqn(&self) -> &'static str {
         "imazen.color_filter_srgb"
     }
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
-        if let NodeParams::Json(s::Node::ColorFilterSrgb(filter))= p {
-
+    fn expand(
+        &self,
+        ctx: &mut OpCtxMut,
+        ix: NodeIndex,
+        p: NodeParams,
+        parent: FrameInfo,
+    ) -> Result<()> {
+        if let NodeParams::Json(s::Node::ColorFilterSrgb(filter)) = p {
             let matrix = match filter as s::ColorFilterSrgb {
                 s::ColorFilterSrgb::Sepia => sepia(),
                 s::ColorFilterSrgb::GrayscaleNtsc => grayscale_ntsc(),
@@ -68,32 +67,32 @@ impl NodeDefOneInputExpand for ColorFilterSrgb{
                 s::ColorFilterSrgb::Brightness(a) => brightness(a),
             };
             let mut nodes = Vec::new();
-            if let  imageflow_types::ColorFilterSrgb::Alpha(_) = filter{
+            if let imageflow_types::ColorFilterSrgb::Alpha(_) = filter {
                 nodes.push(Node::n(&ENABLE_TRANSPARENCY, NodeParams::None));
-
             }
-            nodes.push(Node::n(&COLOR_MATRIX_SRGB_MUTATE,
-                               NodeParams::Json(s::Node::ColorMatrixSrgb { matrix })));
+            nodes.push(Node::n(
+                &COLOR_MATRIX_SRGB_MUTATE,
+                NodeParams::Json(s::Node::ColorMatrixSrgb { matrix }),
+            ));
 
             ctx.replace_node(ix, nodes);
             Ok(())
-        }else{
+        } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ColorFilterSrgb, got {:?}", p))
         }
     }
 }
 
-
-fn sepia() -> [[f32;5];5] {
+fn sepia() -> [[f32; 5]; 5] {
     [
         [0.393f32, 0.349f32, 0.272f32, 0f32, 0f32],
         [0.769f32, 0.686f32, 0.534f32, 0f32, 0f32],
         [0.189f32, 0.168f32, 0.131f32, 0f32, 0f32],
         [0f32, 0f32, 0f32, 1f32, 0f32],
-        [0f32, 0f32, 0f32, 0f32, 0f32]
+        [0f32, 0f32, 0f32, 0f32, 0f32],
     ]
 }
-fn grayscale(r: f32, g:f32, b: f32) -> [[f32;5];5] {
+fn grayscale(r: f32, g: f32, b: f32) -> [[f32; 5]; 5] {
     [
         [r, r, r, 0f32, 0f32],
         [g, g, g, 0f32, 0f32],
@@ -102,23 +101,22 @@ fn grayscale(r: f32, g:f32, b: f32) -> [[f32;5];5] {
         [0f32, 0f32, 0f32, 0f32, 1f32],
     ]
 }
-fn grayscale_flat()-> [[f32;5];5] {
+fn grayscale_flat() -> [[f32; 5]; 5] {
     grayscale(0.5f32, 0.5f32, 0.5f32)
 }
 
-fn grayscale_bt709()-> [[f32;5];5] {
+fn grayscale_bt709() -> [[f32; 5]; 5] {
     grayscale(0.2125f32, 0.7154f32, 0.0721f32)
 }
-fn grayscale_ry()-> [[f32;5];5] {
+fn grayscale_ry() -> [[f32; 5]; 5] {
     grayscale(0.5f32, 0.419f32, 0.081f32)
 }
-fn grayscale_y()-> [[f32;5];5] {
+fn grayscale_y() -> [[f32; 5]; 5] {
     grayscale(0.229f32, 0.587f32, 0.114f32)
 }
-fn grayscale_ntsc()-> [[f32;5];5] {
+fn grayscale_ntsc() -> [[f32; 5]; 5] {
     grayscale_y()
 }
-
 
 //Warming Filter (85) #EC8A00
 //Warming Filter (LBA) #FA9600
@@ -140,24 +138,30 @@ fn grayscale_ntsc()-> [[f32;5];5] {
 //Deep Emerald #008C00
 //Deep Yellow #FFD500
 //Underwater #00C1B1
-struct Color{
+struct Color {
     b: u8,
     g: u8,
     r: u8,
-    a: u8
+    a: u8,
 }
 
-fn color_shift(c: &Color) -> [[f32;5];5]{
+fn color_shift(c: &Color) -> [[f32; 5]; 5] {
     let percent = f32::from(c.a) / 255.0f32;
     [
         [1f32 - percent, 0f32, 0f32, 0f32, 0f32],
         [0f32, 1f32 - percent, 0f32, 0f32, 0f32],
         [0f32, 0f32, 1f32 - percent, 0f32, 0f32],
         [0f32, 0f32, 0f32, 1f32, 0f32],
-        [(f32::from(c.r) - 128f32) / 128f32 * percent, (f32::from(c.g) - 128f32) / 128f32 * percent, (f32::from(c.b) - 128f32) / 128f32 * percent, 0f32, 1f32]
+        [
+            (f32::from(c.r) - 128f32) / 128f32 * percent,
+            (f32::from(c.g) - 128f32) / 128f32 * percent,
+            (f32::from(c.b) - 128f32) / 128f32 * percent,
+            0f32,
+            1f32,
+        ],
     ]
 }
-fn invert() -> [[f32;5];5] {
+fn invert() -> [[f32; 5]; 5] {
     [
         [-1f32, 0f32, 0f32, 0f32, 0f32],
         [0f32, -1f32, 0f32, 0f32, 0f32],
@@ -167,8 +171,7 @@ fn invert() -> [[f32;5];5] {
     ]
 }
 
-
-fn alpha(alpha: f32) -> [[f32;5];5] {
+fn alpha(alpha: f32) -> [[f32; 5]; 5] {
     //http://www.codeproject.com/KB/GDI-plus/CsTranspTutorial2.aspx
     [
         [1f32, 0f32, 0f32, 0f32, 0f32],
@@ -179,7 +182,7 @@ fn alpha(alpha: f32) -> [[f32;5];5] {
     ]
 }
 
-fn contrast(c: f32) -> [[f32;5];5] {
+fn contrast(c: f32) -> [[f32; 5]; 5] {
     let c = c + 1f32; //Stop at -1
 
     let factor_t = 0.5f32 * (1.0f32 - c);
@@ -192,8 +195,7 @@ fn contrast(c: f32) -> [[f32;5];5] {
     ]
 }
 
-
-fn brightness(factor: f32) -> [[f32;5];5] {
+fn brightness(factor: f32) -> [[f32; 5]; 5] {
     [
         [1f32, 0f32, 0f32, 0f32, 0f32],
         [0f32, 1f32, 0f32, 0f32, 0f32],
@@ -205,7 +207,7 @@ fn brightness(factor: f32) -> [[f32;5];5] {
 
 // Saturation is between -1 and infinity
 
-fn saturation(saturation: f32) -> [[f32;5];5] {
+fn saturation(saturation: f32) -> [[f32; 5]; 5] {
     //http://www.bobpowell.net/imagesaturation.htm
     let saturation = (saturation + 1f32).max(0f32); //Stop at -1
 

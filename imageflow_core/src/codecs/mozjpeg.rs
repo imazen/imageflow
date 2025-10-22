@@ -1,20 +1,20 @@
+use super::s::{EncodeResult, EncoderPreset};
 use super::Encoder;
-use super::s::{EncoderPreset, EncodeResult};
 use crate::io::IoProxy;
 
-use imageflow_types::{PixelFormat, Color};
-use imageflow_types::PixelBuffer;
-use crate::{Context, Result, ErrorKind, FlowError};
-use std::result::Result as StdResult;
-use crate::io::IoProxyRef;
-use std::slice;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::os::raw::c_int;
-use evalchroma::PixelSize;
 use crate::codecs::lode;
-use std::io::Write;
 use crate::graphics::bitmaps::BitmapKey;
+use crate::io::IoProxyRef;
+use crate::{Context, ErrorKind, FlowError, Result};
+use evalchroma::PixelSize;
+use imageflow_types::PixelBuffer;
+use imageflow_types::{Color, PixelFormat};
+use std::cell::RefCell;
+use std::io::Write;
+use std::os::raw::c_int;
+use std::rc::Rc;
+use std::result::Result as StdResult;
+use std::slice;
 
 #[derive(Copy, Clone)]
 enum Defaults {
@@ -28,34 +28,50 @@ pub struct MozjpegEncoder {
     progressive: Option<bool>,
     optimize_coding: Option<bool>,
     defaults: Defaults,
-    matte: Option<Color>
+    matte: Option<Color>,
 }
 
-const DEFAULT_QUALITY:u8 = 75;
+const DEFAULT_QUALITY: u8 = 75;
 
 impl MozjpegEncoder {
     // Quality is in range 0-100
-    pub(crate) fn create(c: &Context, quality: Option<u8>, progressive: Option<bool>, matte: Option<Color>, io: IoProxy) -> Result<Self> {
-        if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::MozJpegEncoder){
-            return Err(nerror!(ErrorKind::CodecDisabledError, "The MozJpeg encoder has been disabled"));
+    pub(crate) fn create(
+        c: &Context,
+        quality: Option<u8>,
+        progressive: Option<bool>,
+        matte: Option<Color>,
+        io: IoProxy,
+    ) -> Result<Self> {
+        if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::MozJpegEncoder) {
+            return Err(nerror!(
+                ErrorKind::CodecDisabledError,
+                "The MozJpeg encoder has been disabled"
+            ));
         }
 
         Ok(MozjpegEncoder {
             io,
-            quality: Some(u8::min(100,quality.unwrap_or(DEFAULT_QUALITY))),
+            quality: Some(u8::min(100, quality.unwrap_or(DEFAULT_QUALITY))),
             progressive,
             matte,
             optimize_coding: Some(true),
             defaults: Defaults::MozJPEG,
-
         })
     }
 
-    pub(crate) fn create_classic(c: &Context, quality: Option<u8>, progressive: Option<bool>, optimize_coding: Option<bool>, matte: Option<Color>, io: IoProxy) -> Result<Self> {
+    pub(crate) fn create_classic(
+        c: &Context,
+        quality: Option<u8>,
+        progressive: Option<bool>,
+        optimize_coding: Option<bool>,
+        matte: Option<Color>,
+        io: IoProxy,
+    ) -> Result<Self> {
         Ok(MozjpegEncoder {
             io,
-            quality: Some(u8::min(100,quality.unwrap_or(DEFAULT_QUALITY)))
-            ,progressive, matte,
+            quality: Some(u8::min(100, quality.unwrap_or(DEFAULT_QUALITY))),
+            progressive,
+            matte,
             optimize_coding,
             defaults: Defaults::LibJPEGv6,
         })
@@ -63,17 +79,23 @@ impl MozjpegEncoder {
 }
 
 impl Encoder for MozjpegEncoder {
-    fn write_frame(&mut self, c: &Context, _preset: &EncoderPreset, bitmap_key: BitmapKey, _decoder_io_ids: &[i32]) -> Result<EncodeResult> {
+    fn write_frame(
+        &mut self,
+        c: &Context,
+        _preset: &EncoderPreset,
+        bitmap_key: BitmapKey,
+        _decoder_io_ids: &[i32],
+    ) -> Result<EncodeResult> {
+        let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
 
-        let bitmaps = c.borrow_bitmaps()
-            .map_err(|e| e.at(here!()))?;
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
-        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
-            .map_err(|e| e.at(here!()))?;
-
-        bitmap.get_window_bgra32().unwrap()
-            .apply_matte(self.matte.clone().unwrap_or(
-                imageflow_types::Color::Srgb(imageflow_types::ColorSrgb::Hex("FFFFFFFF".to_owned()))))
+        bitmap
+            .get_window_bgra32()
+            .unwrap()
+            .apply_matte(self.matte.clone().unwrap_or(imageflow_types::Color::Srgb(
+                imageflow_types::ColorSrgb::Hex("FFFFFFFF".to_owned()),
+            )))
             .map_err(|e| e.at(here!()))?;
         bitmap.set_alpha_meaningful(false);
 
@@ -88,13 +110,13 @@ impl Encoder for MozjpegEncoder {
         let mut cinfo = mozjpeg::Compress::new(in_color_space);
         cinfo.set_size(window.w() as usize, window.h() as usize);
         match self.defaults {
-            Defaults::MozJPEG => {},
+            Defaults::MozJPEG => {}
             Defaults::LibJPEGv6 => {
                 cinfo.set_fastest_defaults();
-            },
+            }
         }
         if let Some(q) = self.quality {
-            cinfo.set_quality(u8::min(100,q).into());
+            cinfo.set_quality(u8::min(100, q).into());
         }
         if let Some(p) = self.progressive {
             if p {
@@ -109,38 +131,49 @@ impl Encoder for MozjpegEncoder {
 
         let pixel_buffer = window.get_pixel_buffer().unwrap();
 
-        let max_sampling = PixelSize{cb:(2,2), cr:(2,2)}; // Set to 1 to force higher res
+        let max_sampling = PixelSize { cb: (2, 2), cr: (2, 2) }; // Set to 1 to force higher res
         let res = match pixel_buffer {
-            PixelBuffer::Bgra32(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
-            PixelBuffer::Bgr32(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
-            PixelBuffer::Bgr24(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
-            PixelBuffer::Gray8(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
+            PixelBuffer::Bgra32(buf) => {
+                evalchroma::adjust_sampling(buf, max_sampling, chroma_quality)
+            }
+            PixelBuffer::Bgr32(buf) => {
+                evalchroma::adjust_sampling(buf, max_sampling, chroma_quality)
+            }
+            PixelBuffer::Bgr24(buf) => {
+                evalchroma::adjust_sampling(buf, max_sampling, chroma_quality)
+            }
+            PixelBuffer::Gray8(buf) => {
+                evalchroma::adjust_sampling(buf, max_sampling, chroma_quality)
+            }
         };
 
         // Translate chroma pixel size into JPEG's channel-relative samples per pixel
         let max_sampling_h = res.subsampling.cb.0.max(res.subsampling.cr.0);
         let max_sampling_v = res.subsampling.cb.1.max(res.subsampling.cr.1);
-        let px_sizes = &[(1,1), res.subsampling.cb, res.subsampling.cr];
+        let px_sizes = &[(1, 1), res.subsampling.cb, res.subsampling.cr];
         for (c, &(h, v)) in cinfo.components_mut().iter_mut().zip(px_sizes) {
             c.h_samp_factor = (max_sampling_h / h).into();
             c.v_samp_factor = (max_sampling_v / v).into();
         }
 
-        let mut compressor = cinfo.start_compress(&mut self.io)
+        let mut compressor = cinfo
+            .start_compress(&mut self.io)
             .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
 
-
         if window.w() as usize == window.t_stride() {
-            compressor.write_scanlines(window.get_slice())
+            compressor
+                .write_scanlines(window.get_slice())
                 .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
         } else {
-
-            for line in window.scanlines(){
-                compressor.write_scanlines(line.row())
+            for line in window.scanlines() {
+                compressor
+                    .write_scanlines(line.row())
                     .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
             }
         }
-        compressor.finish().map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
+        compressor
+            .finish()
+            .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
 
         Ok(EncodeResult {
             w: window.w_i32(),

@@ -1,16 +1,15 @@
 extern crate cbindgen;
-extern crate regex_lite;
 extern crate imageflow_helpers;
+extern crate regex_lite;
 use imageflow_helpers::identifier_styles::*;
 
-use regex_lite::{Regex, Captures};
+use cbindgen::Builder;
+use rayon::prelude::*;
+use regex_lite::{Captures, Regex};
+use std::env;
+use std::io::Cursor;
 use std::io::Write;
 use std::path;
-use cbindgen::Builder;
-use std::io::Cursor;
-use std::env;
-use rayon::prelude::*;
-
 
 static OPAQUE_STRUCTS: &str = r#"
 struct Context;
@@ -28,55 +27,65 @@ typedef unsigned byte uint8_t;
 
 include!("src/abi_version.rs");
 
-
-fn get_version_consts(include_comments: bool) -> String{
+fn get_version_consts(include_comments: bool) -> String {
     if include_comments {
         format!("\n// Incremented for breaking changes\n#define IMAGEFLOW_ABI_VER_MAJOR {}\n\n// Incremented for non-breaking additions\n#define IMAGEFLOW_ABI_VER_MINOR {}\n\n", IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR)
-    }else{
-        format!("\n#define IMAGEFLOW_ABI_VER_MAJOR {}\n#define IMAGEFLOW_ABI_VER_MINOR {}\n\n", IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR)
+    } else {
+        format!(
+            "\n#define IMAGEFLOW_ABI_VER_MAJOR {}\n#define IMAGEFLOW_ABI_VER_MINOR {}\n\n",
+            IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR
+        )
     }
 }
 
-
-
-fn rename_word_excluding_enum_members(input: String, old_name: &str, new_name_before_casing: &str, change_case: Style) -> String{
+fn rename_word_excluding_enum_members(
+    input: String,
+    old_name: &str,
+    new_name_before_casing: &str,
+    change_case: Style,
+) -> String {
     let find_str = r"\b".to_owned() + old_name + r"\b(\s*)(.)";
     let new_name = style_id(new_name_before_casing, change_case);
     let s = Regex::new(&find_str).unwrap().replace_all(&input, |caps: &Captures| {
-        if &caps[2] == "="  {
+        if &caps[2] == "=" {
             caps[0].to_owned() //This is an enum member, skip
-        }else{
+        } else {
             format!("{}{}{}", new_name, &caps[1], &caps[2])
         }
     });
     s.into_owned()
 }
 
-fn rename_enum_snake_case_and_prefix_members(input: String, old_name: &str, new_name: String, change_case: Style, member_prefix: &str, member_casing: Style) -> String {
-
+fn rename_enum_snake_case_and_prefix_members(
+    input: String,
+    old_name: &str,
+    new_name: String,
+    change_case: Style,
+    member_prefix: &str,
+    member_casing: Style,
+) -> String {
     let new_name = style_id(&new_name, change_case);
 
     let new_ref = &new_name;
 
     let rename_term = format!("\\b{}\\b", old_name);
     let s = input;
-    let s = Regex::new(&rename_term).unwrap().replace_all(&s, |_: &Captures| new_ref.to_owned() );
+    let s = Regex::new(&rename_term).unwrap().replace_all(&s, |_: &Captures| new_ref.to_owned());
 
     let find_def_str = r"\btypedef\s+enum\s+".to_owned() + &new_name + r"\s+(\{[^\}]+\})";
 
     let moz_cheddar_prefix = format!("{}_", old_name);
 
     let s = Regex::new(&find_def_str).unwrap().replace(&s, |outer_caps: &Captures| {
-
         let re_member = Regex::new(r"\b([A-Za-z0-9_]+)\s+=").unwrap();
 
-        let contents = re_member.replace_all(&outer_caps[1], | caps: &Captures| {
-            let without_moz_cheddar_prefix = caps[1].replace(&moz_cheddar_prefix,"");
+        let contents = re_member.replace_all(&outer_caps[1], |caps: &Captures| {
+            let without_moz_cheddar_prefix = caps[1].replace(&moz_cheddar_prefix, "");
             let snake_id = style_id(&without_moz_cheddar_prefix, Style::Snake);
             let full_snake_id = if member_prefix.is_empty() {
                 snake_id
-            }else {
-               format!("{}_{}", style_id(member_prefix, Style::Snake), snake_id)
+            } else {
+                format!("{}_{}", style_id(member_prefix, Style::Snake), snake_id)
             };
             format!("{} =", style_id(&full_snake_id, member_casing))
         });
@@ -85,28 +94,24 @@ fn rename_enum_snake_case_and_prefix_members(input: String, old_name: &str, new_
     s.into()
 }
 
-#[derive(Copy,Clone,PartialEq,Debug)]
-enum StructModification{
+#[derive(Copy, Clone, PartialEq, Debug)]
+enum StructModification {
     //Replace with void
     Erase,
     //You can specify no prefix..
-    Prefix {
-        prefix: &'static str,
-        style: Style
-    }
+    Prefix { prefix: &'static str, style: Style },
 }
 
-
-fn filter_structs(s: String, names: &[&str], how: StructModification) -> String{
+fn filter_structs(s: String, names: &[&str], how: StructModification) -> String {
     let mut temp = s;
-    temp = match  how{
+    temp = match how {
         StructModification::Erase => {
             for n in names {
                 temp = rename_word_excluding_enum_members(temp, n, "void", Style::Snake);
             }
             temp
         }
-        StructModification::Prefix{ prefix, style} => {
+        StructModification::Prefix { prefix, style } => {
             for n in names {
                 let new_name = format!("struct {}{}", prefix, n);
                 temp = rename_word_excluding_enum_members(temp, n, &new_name, style);
@@ -122,25 +127,28 @@ fn filter_structs(s: String, names: &[&str], how: StructModification) -> String{
     temp
 }
 
-#[derive(Copy,Clone,PartialEq,Debug)]
-struct EnumModification{
+#[derive(Copy, Clone, PartialEq, Debug)]
+struct EnumModification {
     name_prefix: &'static str,
     member_prefix: &'static str,
     name_style: Style,
-    member_style: Style
+    member_style: Style,
 }
 
-
-fn filter_enums<'a,'b>(s: String,  names: &'a[&'a str],  how: EnumModification) -> String{
-    let mut temp =s;
-    for n in names{
+fn filter_enums<'a, 'b>(s: String, names: &'a [&'a str], how: EnumModification) -> String {
+    let mut temp = s;
+    for n in names {
         let new_name = format!("{}{}", how.name_prefix, n);
-        let member_prefix = if how.member_prefix.is_empty(){
-            "".to_owned()
-        }else{
-            new_name.to_owned()
-        };
-        temp = rename_enum_snake_case_and_prefix_members(temp, n, new_name, how.name_style, &member_prefix, how.member_style);
+        let member_prefix =
+            if how.member_prefix.is_empty() { "".to_owned() } else { new_name.to_owned() };
+        temp = rename_enum_snake_case_and_prefix_members(
+            temp,
+            n,
+            new_name,
+            how.name_style,
+            &member_prefix,
+            how.member_style,
+        );
     }
     temp
 }
@@ -148,22 +156,22 @@ fn filter_enums<'a,'b>(s: String,  names: &'a[&'a str],  how: EnumModification) 
 static ENUM_NAMES: [&str; 4] = ["IoMode", "Direction", "Lifetime", "CleanupWith"];
 static STRUCT_NAMES: [&str; 4] = ["Job", "JobIo", "Context", "JsonResponse"];
 
-
-
-#[derive(Copy,Clone,PartialEq,Debug)]
-enum Target{
+#[derive(Copy, Clone, PartialEq, Debug)]
+enum Target {
     Raw,
     PInvoke,
     Default,
     Lua,
     SignaturesOnly,
-    PrefixAll{ prefix: &'static str, struct_name: Style, enum_name: Style, enum_member: Style},
-    Other{structs: StructModification, enums: EnumModification}
+    PrefixAll { prefix: &'static str, struct_name: Style, enum_name: Style, enum_member: Style },
+    Other { structs: StructModification, enums: EnumModification },
 }
 
-fn strip_preprocessor_directives(contents: &str) -> String{
+fn strip_preprocessor_directives(contents: &str) -> String {
     //Strip the extern C stuff
-    let temp = Regex::new(r"(?im)^\s*\#\s*ifdef\s+__cplusplus[^\#]+\#\s*endif").unwrap().replace_all(contents, "");
+    let temp = Regex::new(r"(?im)^\s*\#\s*ifdef\s+__cplusplus[^\#]+\#\s*endif")
+        .unwrap()
+        .replace_all(contents, "");
     //Strip all ifndef/ifdef statements
     //let temp2 = Regex::new(r"(?im)^\s*\#\s*(ifdef|ifndef|endif).*").unwrap().replace_all(&temp, "");
     //Strip ALL # preprocessor directives
@@ -172,12 +180,11 @@ fn strip_preprocessor_directives(contents: &str) -> String{
     temp2
 }
 
-
 fn build(file: String, target: Target) {
     create_file_and_parent(file, generate(target))
 }
 
-fn target_flatten(target: Target) -> Target{
+fn target_flatten(target: Target) -> Target {
     match target {
         Target::PrefixAll { prefix, struct_name, enum_name, enum_member } => Target::Other {
             structs: StructModification::Prefix { prefix, style: struct_name },
@@ -185,8 +192,8 @@ fn target_flatten(target: Target) -> Target{
                 name_prefix: prefix,
                 name_style: enum_name,
                 member_prefix: prefix,
-                member_style: enum_member
-            }
+                member_style: enum_member,
+            },
         },
         Target::Default | Target::Lua => Target::Other {
             structs: StructModification::Prefix { prefix: "Imageflow", style: Style::Snake },
@@ -194,8 +201,8 @@ fn target_flatten(target: Target) -> Target{
                 name_prefix: "Imageflow",
                 name_style: Style::Snake,
                 member_prefix: "Imageflow",
-                member_style: Style::Snake
-            }
+                member_style: Style::Snake,
+            },
         },
         Target::PInvoke => Target::Other {
             structs: StructModification::Erase,
@@ -203,8 +210,8 @@ fn target_flatten(target: Target) -> Target{
                 name_prefix: "",
                 name_style: Style::PascalCase,
                 member_prefix: "",
-                member_style: Style::PascalCase
-            }
+                member_style: Style::PascalCase,
+            },
         },
         Target::SignaturesOnly => Target::Other {
             structs: StructModification::Erase,
@@ -212,19 +219,21 @@ fn target_flatten(target: Target) -> Target{
                 name_prefix: "Imageflow",
                 name_style: Style::Snake,
                 member_prefix: "Imageflow",
-                member_style: Style::Snake
-            }
+                member_style: Style::Snake,
+            },
         },
-        t => t
+        t => t,
     }
 }
 fn generate(target: Target) -> String {
     let allow_comments = target != Target::SignaturesOnly;
 
-
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
-    let mut header = format!("\n#ifndef generated_imageflow_h\n#define generated_imageflow_h\n{}", get_version_consts(allow_comments));
+    let mut header = format!(
+        "\n#ifndef generated_imageflow_h\n#define generated_imageflow_h\n{}",
+        get_version_consts(allow_comments)
+    );
 
     let footer = "\n#endif // generated_imageflow_h\n".to_owned();
 
@@ -246,7 +255,6 @@ fn generate(target: Target) -> String {
     config.documentation_style = cbindgen::DocumentationStyle::C99;
     config.style = cbindgen::Style::Both;
     config.sort_by = cbindgen::SortKey::Name;
-
 
     if target == Target::Raw {
         let builder = cbindgen::Builder::new().with_config(config).with_crate(crate_dir);
@@ -270,8 +278,7 @@ fn generate(target: Target) -> String {
     }
 }
 
-
-fn generate_to_string(builder: Builder) -> String{
+fn generate_to_string(builder: Builder) -> String {
     let mut buf = Cursor::new(vec![0; 15]);
     match builder.generate() {
         Err(error) => {
@@ -290,8 +297,7 @@ fn generate_to_string(builder: Builder) -> String{
     buf_str
 }
 
-fn create_file_and_parent<P: AsRef<path::Path>>( file: P, text: String)  {
-
+fn create_file_and_parent<P: AsRef<path::Path>>(file: P, text: String) {
     let file = file.as_ref();
 
     if let Some(dir) = file.parent() {
@@ -305,7 +311,6 @@ fn create_file_and_parent<P: AsRef<path::Path>>( file: P, text: String)  {
     }
 }
 
-
 fn main() {
     //let base = "imageflow_"; //for debugging more easily
     let base = "../bindings/headers/imageflow_";
@@ -317,18 +322,24 @@ fn main() {
         (format!("{}raw.h", base), Target::Raw),
         (format!("{}short.h", base), Target::SignaturesOnly),
         (format!("{}pinvoke.h", base), Target::PInvoke),
-        (format!("{}SCREAMING_ENUMS.h", base), Target::PrefixAll{
-            prefix: "Imageflow",
-            struct_name: Style::Snake,
-            enum_name: Style::ScreamingSnake,
-            enum_member: Style::ScreamingSnake,
-        }),
-        (format!("{}PrefixedPascalCase.h", base), Target::PrefixAll{
-            prefix: "Imageflow",
-            struct_name: Style::PascalCase,
-            enum_name: Style::PascalCase,
-            enum_member: Style::PascalCase,
-        }),
+        (
+            format!("{}SCREAMING_ENUMS.h", base),
+            Target::PrefixAll {
+                prefix: "Imageflow",
+                struct_name: Style::Snake,
+                enum_name: Style::ScreamingSnake,
+                enum_member: Style::ScreamingSnake,
+            },
+        ),
+        (
+            format!("{}PrefixedPascalCase.h", base),
+            Target::PrefixAll {
+                prefix: "Imageflow",
+                struct_name: Style::PascalCase,
+                enum_name: Style::PascalCase,
+                enum_member: Style::PascalCase,
+            },
+        ),
     ];
 
     // Use rayon to parallelize the builds

@@ -1,8 +1,7 @@
 use crate::Graph;
 
+use super::definitions::{EdgeKind, FrameEstimate, Node, NodeResult, PixelFormat};
 use crate::internal_prelude::works_everywhere::*;
-use super::definitions::{FrameEstimate, Node, PixelFormat, EdgeKind, NodeResult};
-
 
 pub struct GraphRecordingInfo {
     pub debug_job_id: i32,
@@ -12,15 +11,15 @@ pub struct GraphRecordingInfo {
     pub maximum_graph_versions: i32,
 }
 
-
 pub struct GraphRecordingUpdate {
     pub next_graph_version: i32,
 }
 
-pub fn notify_graph_changed(c: &crate::Context,
-                            graph_ref: &mut Graph,
-                            r: &GraphRecordingInfo)
-                            -> Result<Option<GraphRecordingUpdate>> {
+pub fn notify_graph_changed(
+    c: &crate::Context,
+    graph_ref: &mut Graph,
+    r: &GraphRecordingInfo,
+) -> Result<Option<GraphRecordingUpdate>> {
     if !r.record_graph_versions || r.current_graph_version > r.maximum_graph_versions {
         return Ok(None);
         // println!("record_graph_versions=true, current_graph_version={}", current_graph_version);
@@ -43,8 +42,9 @@ pub fn notify_graph_changed(c: &crate::Context,
     if prev_graph_version >= 0 {
         let prev_filename =
             format!("job_{}_graph_version_{}.dot", r.debug_job_id, prev_graph_version);
-        if files_identical(&current_filename, &prev_filename)
-            .unwrap_or_else(|_| panic!("Comparison err'd for {} and {}", &current_filename, &prev_filename)) {
+        if files_identical(&current_filename, &prev_filename).unwrap_or_else(|_| {
+            panic!("Comparison err'd for {} and {}", &current_filename, &prev_filename)
+        }) {
             std::fs::remove_file(&current_filename).unwrap();
 
             // Next time we will overwrite the duplicate graph. The last two graphs may
@@ -60,8 +60,6 @@ pub fn notify_graph_changed(c: &crate::Context,
         Ok(Some(GraphRecordingUpdate { next_graph_version: r.current_graph_version + 1 }))
     }
 }
-
-
 
 pub fn render_dotfile_to_png(dotfile_path: &str) {
     let _ = std::process::Command::new("dot")
@@ -82,10 +80,7 @@ pub fn render_dotfile_to_png(dotfile_path: &str) {
 //    return true;
 // }
 
-
-
 static INDENT: &str = "    ";
-
 
 fn get_pixel_format_name(fmt: PixelFormat) -> &'static str {
     match fmt {
@@ -97,51 +92,52 @@ fn get_pixel_format_name(fmt: PixelFormat) -> &'static str {
     }
 }
 
-pub fn print_graph(c: &crate::Context,
-                   f: &mut dyn std::io::Write,
-                   g: &Graph,
-                   node_frame_filename_prefix: Option<&str>)
-                   -> Result<()> {
+pub fn print_graph(
+    c: &crate::Context,
+    f: &mut dyn std::io::Write,
+    g: &Graph,
+    node_frame_filename_prefix: Option<&str>,
+) -> Result<()> {
     writeln!(f, "digraph g {{\n").map_err(FlowError::from_visualizer)?;
     writeln!(f, "{}node [shape=box, fontsize=20, fontcolor=\"#5AFA0A\" fontname=\"sans-serif bold\"]\n  size=\"12,18\"\n", INDENT)
         .map_err(FlowError::from_visualizer)?;
     writeln!(f, "{}edge [fontsize=20, fontname=\"sans-serif\"]\n", INDENT)
         .map_err(FlowError::from_visualizer)?;
 
-
     // output all edges
     for (i, edge) in g.raw_edges().iter().enumerate() {
-        write!(f, "{}n{} -> n{}",
-               INDENT,
-               edge.source().index(),
-               edge.target().index())
+        write!(f, "{}n{} -> n{}", INDENT, edge.source().index(), edge.target().index())
             .map_err(FlowError::from_visualizer)?;
 
         let weight = g.node_weight(edge.source()).unwrap();
 
         let dimensions = match weight.result {
             NodeResult::Frame(bitmap_key) => {
-
-                let bitmaps = c.borrow_bitmaps()
-                    .map_err(|e| e.at(here!()))?;
-                let bitmap = bitmaps.try_borrow_mut(bitmap_key)
-                    .map_err(|e| e.at(here!()))?;
+                let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
+                let bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
                 let format_name = bitmap.info().calculate_pixel_format()?.debug_name();
                 format!("frame {}x{} {}", bitmap.w(), bitmap.h(), format_name)
             }
-            _ => {
-                match weight.frame_est {
-                    FrameEstimate::None => "?x?".to_owned(),
-                    FrameEstimate::Some(info) => format!("est {}x{} {}", info.w, info.h, get_pixel_format_name(info.fmt)),
-                    _ => "!x!".to_owned(),
+            _ => match weight.frame_est {
+                FrameEstimate::None => "?x?".to_owned(),
+                FrameEstimate::Some(info) => {
+                    format!("est {}x{} {}", info.w, info.h, get_pixel_format_name(info.fmt))
                 }
-            }
+                _ => "!x!".to_owned(),
+            },
         };
-        writeln!(f, " [label=\"e{}: {}{}\"]", i, dimensions, match *g.edge_weight(EdgeIndex::new(i)).unwrap() {
-            EdgeKind::Canvas => " canvas",
-            _ => ""
-        }).map_err(FlowError::from_visualizer)?;
+        writeln!(
+            f,
+            " [label=\"e{}: {}{}\"]",
+            i,
+            dimensions,
+            match *g.edge_weight(EdgeIndex::new(i)).unwrap() {
+                EdgeKind::Canvas => " canvas",
+                _ => "",
+            }
+        )
+        .map_err(FlowError::from_visualizer)?;
     }
 
     let mut total_ns: u64 = 0;
@@ -152,26 +148,27 @@ pub fn print_graph(c: &crate::Context,
         total_ns += weight.cost.wall_ns;
         let ms = weight.cost.wall_ns as f64 / 1000f64;
 
-        write!(f, "{}n{} [", INDENT, index.index())
-            .map_err(FlowError::from_visualizer)?;
+        write!(f, "{}n{} [", INDENT, index.index()).map_err(FlowError::from_visualizer)?;
 
         if let Some(prefix) = node_frame_filename_prefix {
             write!(f, "image=\"{}{}.png\", ", prefix, weight.stable_id)
                 .map_err(FlowError::from_visualizer)?;
         }
-        write!(f, "label=\"n{}: ", index.index())
-            .map_err(FlowError::from_visualizer)?;
-        weight.graphviz_node_label(f)
-            .map_err(FlowError::from_visualizer)?;
-        write!(f, "\n{:.5}ms\"]\n", ms)
-            .map_err(FlowError::from_visualizer)?;
+        write!(f, "label=\"n{}: ", index.index()).map_err(FlowError::from_visualizer)?;
+        weight.graphviz_node_label(f).map_err(FlowError::from_visualizer)?;
+        write!(f, "\n{:.5}ms\"]\n", ms).map_err(FlowError::from_visualizer)?;
     }
     let total_ms = (total_ns as f64) / 1000.0f64;
-    writeln!(f, "{}graphinfo [label=\"{} nodes\n{} edges\nExecution time: {:.3}ms\"]\n",
-             INDENT, g.node_count(), g.edge_count(), total_ms)
-        .map_err(FlowError::from_visualizer)?;
-    writeln!(f, "}}")
-        .map_err(FlowError::from_visualizer)?;
+    writeln!(
+        f,
+        "{}graphinfo [label=\"{} nodes\n{} edges\nExecution time: {:.3}ms\"]\n",
+        INDENT,
+        g.node_count(),
+        g.edge_count(),
+        total_ms
+    )
+    .map_err(FlowError::from_visualizer)?;
+    writeln!(f, "}}").map_err(FlowError::from_visualizer)?;
     Ok(())
 }
 
@@ -192,7 +189,6 @@ fn files_identical(filename_a: &str, filename_b: &str) -> std::io::Result<bool> 
 
     Ok(a_str == b_str)
 }
-
 
 fn job_delete_graphviz(job_id: i32) -> io::Result<()> {
     let safety_limit = 8000;

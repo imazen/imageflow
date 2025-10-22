@@ -1,14 +1,14 @@
-use bytemuck::Zeroable;
 use crate::graphics::prelude::*;
 use crate::graphics::weights::*;
+use bytemuck::Zeroable;
 use itertools::max;
 use multiversion::multiversion;
 use rgb::alt::BGRA8;
 #[cfg(feature = "nightly")]
-use std::simd::{Simd};
+use std::simd::Simd;
 
 #[cfg(feature = "nightly")]
-use  std::simd::prelude::SimdUint;
+use std::simd::prelude::SimdUint;
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
@@ -53,17 +53,16 @@ unsafe impl Zeroable for Bgra32 {}
 unsafe impl bytemuck::Pod for Bgra128 {}
 unsafe impl Zeroable for Bgra128 {}
 
-
 pub fn scale_and_render(
     mut input: BitmapWindowMut<u8>,
     mut canvas_without_crop: BitmapWindowMut<u8>,
     info: &ScaleAndRenderParams,
 ) -> Result<(), FlowError> {
-    if info.h + info.y > canvas_without_crop.h()
-        || info.w + info.x > canvas_without_crop.w()
-    {
-        return Err(nerror!(ErrorKind::InvalidArgument,
-                            "Destination rectangle for scale2d is out of bounds"));
+    if info.h + info.y > canvas_without_crop.h() || info.w + info.x > canvas_without_crop.w() {
+        return Err(nerror!(
+            ErrorKind::InvalidArgument,
+            "Destination rectangle for scale2d is out of bounds"
+        ));
     }
     let mut cropped_canvas;
     if info.x == 0
@@ -73,7 +72,8 @@ pub fn scale_and_render(
     {
         cropped_canvas = canvas_without_crop;
     } else {
-        cropped_canvas = canvas_without_crop.window(info.x, info.y, info.x + info.w, info.y + info.h)
+        cropped_canvas = canvas_without_crop
+            .window(info.x, info.y, info.x + info.w, info.y + info.h)
             .ok_or_else(|| nerror!(ErrorKind::InvalidArgument, "Crop window out of bounds"))?
     };
 
@@ -95,18 +95,18 @@ pub fn scale_and_render(
     let contrib_h = PixelRowWeights::create_for(&details, info.w, input.info().width())
         .map_err(|e| nerror!(ErrorKind::InvalidState, "Weights error: {:#?}", e))?;
 
-    render_safe(
-        &colorcontext,
-        &mut input,
-        &contrib_h,
-        &contrib_v,
-        &mut cropped_canvas,
-        info,
-    ).map_err(|e| e.at(here!()))
+    render_safe(&colorcontext, &mut input, &contrib_h, &contrib_v, &mut cropped_canvas, info)
+        .map_err(|e| e.at(here!()))
 }
 
-fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &PixelRowWeights, weights_y: &PixelRowWeights, canvas_window: &mut BitmapWindowMut<u8>, params: &ScaleAndRenderParams) -> Result<(), FlowError> {
-
+fn render_safe(
+    cc: &ColorContext,
+    from: &mut BitmapWindowMut<u8>,
+    weights_x: &PixelRowWeights,
+    weights_y: &PixelRowWeights,
+    canvas_window: &mut BitmapWindowMut<u8>,
+    params: &ScaleAndRenderParams,
+) -> Result<(), FlowError> {
     // for benchmarking
     // $env:RUSTFLAGS='-C target-cpu=native'; cargo bench --features c_rendering
 
@@ -117,7 +117,8 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
     };
 
     // Determine how many rows we need to buffer
-    let max_input_rows = weights_y.contrib_row()
+    let max_input_rows = weights_y
+        .contrib_row()
         .iter()
         .map(|r| r.right_pixel - r.left_pixel + 1)
         .max()
@@ -125,8 +126,14 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
 
     // Allocate reusable buffer of rows for multiplying by weights
     let mut mult_buf_bitmap = Bitmap::create_float(
-        from.w(), max_input_rows, PixelLayout::BGRA, true, from.info().alpha_meaningful(),
-        buffer_color_space).map_err(|e| e.at(here!()))?;
+        from.w(),
+        max_input_rows,
+        PixelLayout::BGRA,
+        true,
+        from.info().alpha_meaningful(),
+        buffer_color_space,
+    )
+    .map_err(|e| e.at(here!()))?;
     let mut mult_buf_window = mult_buf_bitmap.get_window_f32().unwrap();
 
     // Allocate coefficients and mappings to real pixel rows
@@ -135,20 +142,32 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
 
     // Allocate buffer for summing the multiplied rows
     let mut summation_buf = Bitmap::create_float(
-        from.w(), 1, PixelLayout::BGRA, true, from.info().alpha_meaningful(),
-        buffer_color_space).map_err(|e| e.at(here!()))?;
+        from.w(),
+        1,
+        PixelLayout::BGRA,
+        true,
+        from.info().alpha_meaningful(),
+        buffer_color_space,
+    )
+    .map_err(|e| e.at(here!()))?;
     let mut summation_buf_window = summation_buf.get_window_f32().unwrap();
 
     // Allocate target buffer for the horizontally scaled pixels
     let mut h_scaled_buf = Bitmap::create_float(
-        canvas_window.w(), 1, PixelLayout::BGRA, true, from.info().alpha_meaningful(),
-        buffer_color_space).map_err(|e| e.at(here!()))?;
+        canvas_window.w(),
+        1,
+        PixelLayout::BGRA,
+        true,
+        from.info().alpha_meaningful(),
+        buffer_color_space,
+    )
+    .map_err(|e| e.at(here!()))?;
     let mut h_scaled_buf_window = h_scaled_buf.get_window_f32().unwrap();
 
     for out_row_ix in 0..canvas_window.h() as usize {
         let contrib = &weights_y.contrib_row()[out_row_ix];
-        let contrib_weights = &weights_y.weights()
-            [contrib.left_weight as usize..=contrib.right_weight as usize];
+        let contrib_weights =
+            &weights_y.weights()[contrib.left_weight as usize..=contrib.right_weight as usize];
 
         // Clear output row
         summation_buf_window.slice_mut().fill(0f32);
@@ -160,15 +179,12 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
 
         for input_row_ix in contrib.left_pixel..=contrib.right_pixel {
             // Try to find row in buffer if already loaded
-            let already_loaded_index = mult_row_indexes
-                .iter()
-                .position(|&v| v == input_row_ix as i32);
+            let already_loaded_index =
+                mult_row_indexes.iter().position(|&v| v == input_row_ix as i32);
 
             // Not loaded? Look for a buffer row that we're no longer using
             let reusable_index = already_loaded_index
-                .or_else(|| mult_row_indexes
-                    .iter()
-                    .position(|&v| v < contrib.left_pixel as i32))
+                .or_else(|| mult_row_indexes.iter().position(|&v| v < contrib.left_pixel as i32))
                 .ok_or_else(|| nerror!(ErrorKind::InvalidState))?;
 
             if already_loaded_index.is_none() {
@@ -219,7 +235,9 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
         composite_linear_over_srgb(
             cc,
             &mut h_scaled_buf_window,
-            &mut canvas_window.row_window(out_row_ix as u32).unwrap()).map_err(|e| e.at(here!()))?;
+            &mut canvas_window.row_window(out_row_ix as u32).unwrap(),
+        )
+        .map_err(|e| e.at(here!()))?;
     }
     Ok(())
 }
@@ -235,7 +253,6 @@ fn get_pixel(b: &BitmapWindowMut<f32>, x: i32, y: i32) -> [f32; 4] {
         panic!("get_pixel called on non-4 channel bitmap")
     }
 
-
     let y_offset = (y) as usize * b.info().t_stride() as usize;
     let x_start = (x) as usize * b.t_per_pixel() + y_offset;
     let pixel = b.get_slice()[x_start..x_start + b.t_per_pixel()].as_ref();
@@ -246,7 +263,6 @@ fn get_brightness(pixel: &[f32; 4]) -> f32 {
     (pixel[0] + pixel[1] + pixel[2]) / 3.0 * pixel[3].max(0.0).min(1.0)
 }
 fn summarize_corners(b: &BitmapWindowMut<f32>) -> String {
-
     // check if entire window is zeros
     let mut all_zeros = true;
     for y in 0..b.h() {
@@ -285,12 +301,22 @@ pub fn scale_row_bgra_f32(
     let target_pixels = bytemuck::cast_slice_mut::<f32, Bgra128>(target);
 
     //check weights correspond
-    if weights.weights().len() as u32 != weights.contrib_row().iter().map(|r| r.right_weight - r.left_weight + 1).sum::<u32>() {
-        panic!("Mismatched weights and contrib_row lengths: weights.len={}, contrib_row.len={}", weights.weights().len(), weights.contrib_row().len());
+    if weights.weights().len() as u32
+        != weights.contrib_row().iter().map(|r| r.right_weight - r.left_weight + 1).sum::<u32>()
+    {
+        panic!(
+            "Mismatched weights and contrib_row lengths: weights.len={}, contrib_row.len={}",
+            weights.weights().len(),
+            weights.contrib_row().len()
+        );
     }
     //check target width and weights correspond
     if target_width != weights.contrib_row().len() {
-        panic!("Mismatched target width and contrib_row lengths: target_width={}, contrib_row.len={}", target_width, weights.contrib_row().len());
+        panic!(
+            "Mismatched target width and contrib_row lengths: target_width={}, contrib_row.len={}",
+            target_width,
+            weights.contrib_row().len()
+        );
     }
 
     for (dst_x, contrib) in weights.contrib_row().iter().enumerate() {
@@ -361,7 +387,11 @@ fn multiply_and_add_row_simple(mutate_row: &mut [f32], input_row: &[f32], coeffi
     }
 }
 
-fn bitmap_window_srgba32_to_f32x4(colorcontext: &ColorContext, from: &BitmapWindowMut<u8>, to: &mut BitmapWindowMut<f32>) {
+fn bitmap_window_srgba32_to_f32x4(
+    colorcontext: &ColorContext,
+    from: &BitmapWindowMut<u8>,
+    to: &mut BitmapWindowMut<f32>,
+) {
     //Ensure the widths and heights match, and that both source and dest are 4 channels
     let (w, h) = from.size_usize();
     if from.size() != to.size() || from.t_per_pixel() != 4 || to.t_per_pixel() != 4 {
@@ -374,11 +404,7 @@ fn bitmap_window_srgba32_to_f32x4(colorcontext: &ColorContext, from: &BitmapWind
 
         for x in 0..w {
             let pixel = &from_row[x * 4..(x + 1) * 4];
-            let alpha = if !from.info().alpha_meaningful() {
-                1.0
-            } else {
-                pixel[3] as f32 / 255.0
-            };
+            let alpha = if !from.info().alpha_meaningful() { 1.0 } else { pixel[3] as f32 / 255.0 };
             to_row[x * 4] = alpha * colorcontext.srgb_to_floatspace(pixel[0]);
             to_row[x * 4 + 1] = alpha * colorcontext.srgb_to_floatspace(pixel[1]);
             to_row[x * 4 + 2] = alpha * colorcontext.srgb_to_floatspace(pixel[2]);
@@ -403,7 +429,6 @@ fn bitmap_window_srgba32_to_f32x4(colorcontext: &ColorContext, from: &BitmapWind
     }
 }
 
-
 fn composite_linear_over_srgb(
     cc: &ColorContext,
     src: &mut BitmapWindowMut<f32>,
@@ -422,10 +447,13 @@ fn composite_linear_over_srgb(
         compose_linear_over_srgb(cc, src, canvas);
     } else {
         if src.info().alpha_meaningful() {
-            if let crate::graphics::bitmaps::BitmapCompositing::BlendWithMatte(color) = canvas.info().compose() {
-                let matte = color.to_bgra8().map(
-                    |bgra| [bgra.b, bgra.g, bgra.r, bgra.a]
-                ).unwrap_or([0, 0, 0, 0]);
+            if let crate::graphics::bitmaps::BitmapCompositing::BlendWithMatte(color) =
+                canvas.info().compose()
+            {
+                let matte = color
+                    .to_bgra8()
+                    .map(|bgra| [bgra.b, bgra.g, bgra.r, bgra.a])
+                    .unwrap_or([0, 0, 0, 0]);
                 blend_matte(cc, src, matte).map_err(|e| e.at(here!()))?;
             }
             if src.info().alpha_premultiplied() {
@@ -437,7 +465,11 @@ fn composite_linear_over_srgb(
     Ok(())
 }
 
-fn blend_matte(cc: &ColorContext, bitmap: &mut BitmapWindowMut<f32>, matte: [u8; 4]) -> Result<(), FlowError> {
+fn blend_matte(
+    cc: &ColorContext,
+    bitmap: &mut BitmapWindowMut<f32>,
+    matte: [u8; 4],
+) -> Result<(), FlowError> {
     let matte_a: f32 = matte[3] as f32 / 255.0f32;
     let b: f32 = cc.srgb_to_floatspace(matte[0]);
     let g: f32 = cc.srgb_to_floatspace(matte[1]);
@@ -460,16 +492,17 @@ fn blend_matte(cc: &ColorContext, bitmap: &mut BitmapWindowMut<f32>, matte: [u8;
     Ok(())
 }
 
-
 fn demultiply_alpha(bitmap: &mut BitmapWindowMut<f32>) -> Result<(), FlowError> {
     // verify channels == 4
-    if bitmap.t_per_pixel() != 4 || !bitmap.info().alpha_meaningful() || !bitmap.info().alpha_premultiplied() {
+    if bitmap.t_per_pixel() != 4
+        || !bitmap.info().alpha_meaningful()
+        || !bitmap.info().alpha_premultiplied()
+    {
         return Err(nerror!(ErrorKind::InvalidState));
     }
     let (w, h) = (bitmap.w() as usize, bitmap.h() as usize);
     for row in 0..h {
         let slice = bitmap.row_mut(row).unwrap();
-
 
         for col in 0..w {
             let alpha = slice[col * 4 + 3];
@@ -495,14 +528,15 @@ fn demultiply_alpha(bitmap: &mut BitmapWindowMut<f32>) -> Result<(), FlowError> 
 fn compose_linear_over_srgb(
     cc: &ColorContext,
     src: &BitmapWindowMut<f32>,
-    canvas: &mut BitmapWindowMut<u8>) {
-    let dest_alpha_coeff = if canvas.info().alpha_meaningful() { 1.0f32 / 255.0f32 } else { 0.0f32 };
+    canvas: &mut BitmapWindowMut<u8>,
+) {
+    let dest_alpha_coeff =
+        if canvas.info().alpha_meaningful() { 1.0f32 / 255.0f32 } else { 0.0f32 };
     let dest_alpha_offset = if canvas.info().alpha_meaningful() { 0.0f32 } else { 1.0f32 };
 
     for row in 0..src.h() as usize {
         let src_slice = src.row(row).unwrap();
         let canvas_slice = canvas.row_mut(row).unwrap();
-
 
         //
         for col in 0..src.w() as usize {
@@ -515,11 +549,24 @@ fn compose_linear_over_srgb(
             } else {
                 let dest_a = canvas_slice[col * 4 + 3];
 
-                let dest_coeff = (1.0f32 - src_a) * (dest_alpha_coeff * dest_a as i32 as f32 + dest_alpha_offset);
+                let dest_coeff = (1.0f32 - src_a)
+                    * (dest_alpha_coeff * dest_a as i32 as f32 + dest_alpha_offset);
                 let final_alpha = src_a + dest_coeff;
-                canvas_slice[col * 4] = cc.floatspace_to_srgb((src_slice[col * 4] + dest_coeff * cc.srgb_to_floatspace(canvas_slice[col * 4])) / final_alpha);
-                canvas_slice[col * 4 + 1] = cc.floatspace_to_srgb((src_slice[col * 4 + 1] + dest_coeff * cc.srgb_to_floatspace(canvas_slice[col * 4 + 1])) / final_alpha);
-                canvas_slice[col * 4 + 2] = cc.floatspace_to_srgb((src_slice[col * 4 + 2] + dest_coeff * cc.srgb_to_floatspace(canvas_slice[col * 4 + 2])) / final_alpha);
+                canvas_slice[col * 4] = cc.floatspace_to_srgb(
+                    (src_slice[col * 4]
+                        + dest_coeff * cc.srgb_to_floatspace(canvas_slice[col * 4]))
+                        / final_alpha,
+                );
+                canvas_slice[col * 4 + 1] = cc.floatspace_to_srgb(
+                    (src_slice[col * 4 + 1]
+                        + dest_coeff * cc.srgb_to_floatspace(canvas_slice[col * 4 + 1]))
+                        / final_alpha,
+                );
+                canvas_slice[col * 4 + 2] = cc.floatspace_to_srgb(
+                    (src_slice[col * 4 + 2]
+                        + dest_coeff * cc.srgb_to_floatspace(canvas_slice[col * 4 + 2]))
+                        / final_alpha,
+                );
                 canvas_slice[col * 4 + 3] = uchar_clamp_ff(final_alpha * 255_f32);
             }
         }
@@ -543,7 +590,6 @@ fn compose_linear_over_srgb(
         //         canvas_pixel.a = uchar_clamp_ff(final_alpha * 255.0);
         //     }
         // }
-
     }
 }
 
@@ -553,7 +599,10 @@ fn copy_linear_over_srgb(
     canvas: &mut BitmapWindowMut<u8>,
 ) -> Result<(), FlowError> {
     // w,h, channels must match
-    if from.w() != canvas.w() || from.h() != canvas.h() ||  from.t_per_pixel() != canvas.t_per_pixel() {
+    if from.w() != canvas.w()
+        || from.h() != canvas.h()
+        || from.t_per_pixel() != canvas.t_per_pixel()
+    {
         return Err(nerror!(ErrorKind::InvalidState));
     }
     let clear_alpha: bool = !from.info().alpha_meaningful() && canvas.info().alpha_meaningful();
@@ -591,4 +640,3 @@ fn copy_linear_over_srgb(
 
     Ok(())
 }
-

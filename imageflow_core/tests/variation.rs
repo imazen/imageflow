@@ -5,8 +5,10 @@ use imageflow_core::graphics::weights::*;
 static REVERSE_LUT_SIZE_SHORT: u32 = 256 * 16;
 
 // function to find integer near weight with common denominator. i8 bound check is very important.
-fn find_integral_weights(divisor: &mut u32, contribs: &PixelWeightsSimple) -> Result<[i8; 8], String>
-{
+fn find_integral_weights(
+    divisor: &mut u32,
+    contribs: &PixelWeightsSimple,
+) -> Result<[i8; 8], String> {
     let mut eight;
 
     let mut fail_reason = "".to_owned();
@@ -25,7 +27,10 @@ fn find_integral_weights(divisor: &mut u32, contribs: &PixelWeightsSimple) -> Re
                 if (f as i32 > i8::MAX as i32) || ((f as i32) < i8::MIN as i32) {
                     // Out of bounds.
                     failed = true;
-                    fail_reason.push_str(&format!("\nValue does not fit in i8: {}; scalar = {}", f, scalar));
+                    fail_reason.push_str(&format!(
+                        "\nValue does not fit in i8: {}; scalar = {}",
+                        f, scalar
+                    ));
                     break;
                 }
 
@@ -63,35 +68,35 @@ fn find_integral_weights(divisor: &mut u32, contribs: &PixelWeightsSimple) -> Re
                 //print!("{:?}",eight);
                 return Ok(eight);
             }
-            scalar = *divisor as f32 + (if scalar > *divisor as f32 { -(scalar - *divisor as f32 + 0.125) } else { -(scalar - *divisor as f32 - 0.125) });
+            scalar = *divisor as f32
+                + (if scalar > *divisor as f32 {
+                    -(scalar - *divisor as f32 + 0.125)
+                } else {
+                    -(scalar - *divisor as f32 - 0.125)
+                });
         }
     }
     return Err(format!("Failed to find integral weights: {}", fail_reason));
 }
 
-
-fn linear_to_srgb(clr: f32) -> f32
-{
-// Gamma correction
-// http://www.4p8.com/eric.brasseur/gamma.html#formulas
+fn linear_to_srgb(clr: f32) -> f32 {
+    // Gamma correction
+    // http://www.4p8.com/eric.brasseur/gamma.html#formulas
 
     if clr <= 0.0031308f32 {
         return 12.92f32 * clr * 255.0f32;
     }
 
-
-// a = 0.055; ret ((1+a) * s**(1/2.4) - a) * 255
+    // a = 0.055; ret ((1+a) * s**(1/2.4) - a) * 255
     return 1.055f32 * 255.0f32 * (f32::powf(clr, 0.41666666f32)) - 14.025f32;
 }
 
-fn srgb_to_linear(s: f32) -> f32
-{
+fn srgb_to_linear(s: f32) -> f32 {
     if s <= 0.04045f32 {
         return s / 12.92f32;
     }
     return f32::powf((s + 0.055f32) / (1f32 + 0.055f32), 2.4f32);
 }
-
 
 fn print_scale_header(scale_size: i32, linear: bool, end: &str) -> String {
     format!(
@@ -102,14 +107,24 @@ fn print_scale_header(scale_size: i32, linear: bool, end: &str) -> String {
 fn print_short_luts() -> String {
     let mut output = String::from("");
     let mut reverse_lut = vec![0; REVERSE_LUT_SIZE_SHORT as usize];
-    output.push_str(&format!("FLOW_ALIGN_16 static const uint8_t lut_linear_to_srgb[{}] = {{\n", REVERSE_LUT_SIZE_SHORT));
+    output.push_str(&format!(
+        "FLOW_ALIGN_16 static const uint8_t lut_linear_to_srgb[{}] = {{\n",
+        REVERSE_LUT_SIZE_SHORT
+    ));
     for a in 0..REVERSE_LUT_SIZE_SHORT / 16 {
         output.push_str("    ");
         for b in 0..16 {
             let index = (a * 16 + b) as usize;
-            let v
-                = f32::min(255f32, f32::max(0f32, 0.5f32 + linear_to_srgb((index as f32 + 0.1875f32)
-                / (REVERSE_LUT_SIZE_SHORT - 1) as f32)));
+            let v = f32::min(
+                255f32,
+                f32::max(
+                    0f32,
+                    0.5f32
+                        + linear_to_srgb(
+                            (index as f32 + 0.1875f32) / (REVERSE_LUT_SIZE_SHORT - 1) as f32,
+                        ),
+                ),
+            );
             reverse_lut[index] = v as u32;
             output.push_str(&format!("{}, ", v as u32));
         }
@@ -139,8 +154,7 @@ fn print_short_luts() -> String {
     output
 }
 
-fn get_max_window_size(matrix: &[i8; 64], rows: i32) -> i32
-{
+fn get_max_window_size(matrix: &[i8; 64], rows: i32) -> i32 {
     let mut max_window_size: i32 = 0;
     for i in 0usize..rows as usize {
         let mut first_sampled = 8;
@@ -165,8 +179,7 @@ fn get_max_window_size(matrix: &[i8; 64], rows: i32) -> i32
     max_window_size as i32
 }
 
-fn index_of_first_nonzero(arr: &[i8]) -> i32
-{
+fn index_of_first_nonzero(arr: &[i8]) -> i32 {
     for (i, &value) in arr.into_iter().enumerate() {
         if value != 0 {
             return i as i32;
@@ -175,8 +188,7 @@ fn index_of_first_nonzero(arr: &[i8]) -> i32
     return -1;
 }
 
-fn index_of_last_nonzero(arr: &[i8]) -> i32
-{
+fn index_of_last_nonzero(arr: &[i8]) -> i32 {
     for (i, &value) in arr.into_iter().rev().enumerate() {
         if value != 0 {
             return (arr.len() as i32 - i as i32 - 1) as i32;
@@ -185,16 +197,14 @@ fn index_of_last_nonzero(arr: &[i8]) -> i32
     return -1;
 }
 
-
-fn print_function(scale_size: i32, contribs: PixelRowWeightsSimple, linear: bool) -> String
-{
+fn print_function(scale_size: i32, contribs: PixelRowWeightsSimple, linear: bool) -> String {
     let mut output = String::from("");
     let mut matrix = [0; 64];
     let mut divisors = [0u32; 8];
 
-
     for (i, row) in contribs.contrib_row.iter().enumerate().take(scale_size as usize) {
-        for (j, &pixel) in find_integral_weights(&mut divisors[i], row).unwrap().iter().enumerate() {
+        for (j, &pixel) in find_integral_weights(&mut divisors[i], row).unwrap().iter().enumerate()
+        {
             matrix[i * 8 + j] = pixel;
         }
     }
@@ -205,14 +215,18 @@ fn print_function(scale_size: i32, contribs: PixelRowWeightsSimple, linear: bool
         output.push_str("    for (i = 0; i < 64; i++)\n");
         output.push_str("        linearized[i] = lut_srgb_to_linear[input[i]];\n\n");
     }
-    output.push_str(&format!("    FLOW_ALIGN_16_VAR(int32_t temp[{}]);\n", 8 * (max_window_size + 2)));
+    output.push_str(&format!(
+        "    FLOW_ALIGN_16_VAR(int32_t temp[{}]);\n",
+        8 * (max_window_size + 2)
+    ));
     let mut matrix_counts = [0u32; 8];
     for (index, col) in matrix.chunks(8usize).enumerate().take(scale_size as usize) {
         let left = index_of_first_nonzero(col);
         let right = index_of_last_nonzero(col);
         let mut col_inputs = 0;
-// Write down weights for 1 output pixel
-        output.push_str(&format!("    FLOW_ALIGN_16_VAR(int32_t weights_for_col_{}[]) = {{", index));
+        // Write down weights for 1 output pixel
+        output
+            .push_str(&format!("    FLOW_ALIGN_16_VAR(int32_t weights_for_col_{}[]) = {{", index));
         if left == -1 || right == -1 {
             continue;
         }
@@ -225,7 +239,7 @@ fn print_function(scale_size: i32, contribs: PixelRowWeightsSimple, linear: bool
         output.push_str("};\n");
     }
 
-// Scale vertically, then horizontally
+    // Scale vertically, then horizontally
     for (row, ele) in matrix.chunks(8usize).enumerate().take(scale_size as usize) {
         output.push_str(&format!("\n    // Begin work for output row {}\n", row));
 
@@ -236,18 +250,18 @@ fn print_function(scale_size: i32, contribs: PixelRowWeightsSimple, linear: bool
             continue;
         }
         let mut input_row_count = 0;
-// Multiply rows
+        // Multiply rows
         for input_row in input_starts_at as u32..=input_ends_at as u32 {
             let weight = ele[input_row as usize];
 
             let relative_row = input_row - (input_starts_at as u32);
-            output.push_str(&format!("    for (i = 0; i < 8; i++) temp[i + {}] = {} * {}[i + {}];\n", relative_row * 8,
-                                     weight, if linear {
-                    "linearized"
-                } else {
-                    "input"
-                }
-                                     , input_row * 8));
+            output.push_str(&format!(
+                "    for (i = 0; i < 8; i++) temp[i + {}] = {} * {}[i + {}];\n",
+                relative_row * 8,
+                weight,
+                if linear { "linearized" } else { "input" },
+                input_row * 8
+            ));
             input_row_count += 1;
         }
 
@@ -255,32 +269,38 @@ fn print_function(scale_size: i32, contribs: PixelRowWeightsSimple, linear: bool
 
         let temp_row_index_b = 8 * (max_window_size + 1);
 
-        output.push_str(&format!("    for (i = 0; i < 8; i++){{
+        output.push_str(&format!(
+            "    for (i = 0; i < 8; i++){{
         sum = 0;
         for (j = 0; j < {}; j++)
               sum += temp[j * 8 + i];
         temp[{} + i] = sum;
-    }}", input_row_count, temp_row_index_a));
+    }}",
+            input_row_count, temp_row_index_a
+        ));
 
-// Scale horizontally now
+        // Scale horizontally now
         for (col, ele) in matrix.chunks(8usize).enumerate().take(scale_size as usize) {
             output.push_str(&format!("\n    // Begin work for output pixel {},{}\n", col, row));
             let left = index_of_first_nonzero(ele);
             let col_inputs = matrix_counts[col];
-// Multiply weights
+            // Multiply weights
             output.push_str(&format!("    for (i = 0; i < {}; i++) temp[{} + i] = temp[{} + i] * weights_for_col_{}[i];\n",
                                      col_inputs, temp_row_index_b, temp_row_index_a + left, col));
 
-// Sum values
+            // Sum values
 
             let divisor_sum = divisors[row as usize] * divisors[col as usize]; // Add the rounding offset first
             output.push_str(&format!("    sum = {};\n", divisor_sum / 2));
-            output.push_str(&format!("    for (i = 0; i < {}; i++) sum += temp[{} + i];\n", col_inputs, temp_row_index_b));
+            output.push_str(&format!(
+                "    for (i = 0; i < {}; i++) sum += temp[{} + i];\n",
+                col_inputs, temp_row_index_b
+            ));
 
             //println!("{} {}",divisors[row as usize],divisors[col as usize]);
             let upper_bound = REVERSE_LUT_SIZE_SHORT as u64 * divisor_sum as u64;
 
-// Add and shift (divides with rounding), then perform lookup
+            // Add and shift (divides with rounding), then perform lookup
             output.push_str(&format!("    *(output_rows[{}] + output_col + {}) = sum < 0 ? (uint8_t)0 : (sum >= {} ? (uint8_t)255 : (uint8_t){}(sum >> {}){});\n",
                                      row, col, upper_bound, if linear {
                     "lut_linear_to_srgb["
@@ -295,18 +315,14 @@ fn print_function(scale_size: i32, contribs: PixelRowWeightsSimple, linear: bool
     output
 }
 
-
-fn print_header(scale_size: i32, linear: bool, end: &str) -> String
-{
+fn print_header(scale_size: i32, linear: bool, end: &str) -> String {
     format!(
         "void jpeg_idct_spatial{}_{}x{}(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col){}",
         if linear { "_srgb" } else { "" }, scale_size, scale_size, end)
 }
 
-
-fn print_all_idct_functions() -> String
-{
+fn print_all_idct_functions() -> String {
     let idct_function_begin = "    JSAMPLE input[64];
         JSAMPROW rows[8]
             = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
@@ -317,9 +333,7 @@ fn print_all_idct_functions() -> String
     for &linear in [false, true].iter() {
         for size in (1u32..8u32).rev() {
             output.push_str(&print_scale_header(size as i32, linear, "{\n"));
-            let mut contrib = PixelRowWeightsSimple {
-                contrib_row: vec![],
-            };
+            let mut contrib = PixelRowWeightsSimple { contrib_row: vec![] };
             assert_eq!(populate_weights(&mut contrib, size, 8, &details), Ok(()));
 
             output.push_str(&print_function(size as i32, contrib, linear));
@@ -328,11 +342,12 @@ fn print_all_idct_functions() -> String
             output.push_str("\n#ifndef FLOW_GCC_IDCT\n");
             output.push_str(&print_header(size as i32, linear, "{\n"));
             output.push_str(idct_function_begin);
-            output.push_str(&format!("    flow_scale_spatial{}_{}x{}(input, output_buf, output_col);\n", if linear {
-                "_srgb"
-            } else {
-                ""
-            }, size, size));
+            output.push_str(&format!(
+                "    flow_scale_spatial{}_{}x{}(input, output_buf, output_col);\n",
+                if linear { "_srgb" } else { "" },
+                size,
+                size
+            ));
             output.push_str("}\n");
             output.push_str("#endif\n\n");
         }
@@ -340,9 +355,7 @@ fn print_all_idct_functions() -> String
     output
 }
 
-
-fn print_c_intro() -> String
-{
+fn print_c_intro() -> String {
     "// This file is autogenerated by test_variations. Do not edit; regenerate\n
 #include <stdint.h>
 
@@ -374,7 +387,6 @@ fn print_c_intro() -> String
 #endif\n".to_owned()
 }
 
-
 #[test]
 fn test_generate_code_to_disk() {
     let mut output = print_c_intro();
@@ -401,12 +413,9 @@ fn test_generate_code_to_disk() {
 
 #[test]
 fn test_variation() {
-    let details
-        = InterpolationDetails::create(Filter::Robidoux);
+    let details = InterpolationDetails::create(Filter::Robidoux);
     for size in 1..8 {
-        let mut contrib = PixelRowWeightsSimple {
-            contrib_row: vec![],
-        };
+        let mut contrib = PixelRowWeightsSimple { contrib_row: vec![] };
         assert_eq!(populate_weights(&mut contrib, size, 8, &details), Ok(()));
 
         for pixel in contrib.contrib_row {
@@ -418,4 +427,3 @@ fn test_variation() {
         }
     }
 }
-

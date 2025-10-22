@@ -1,15 +1,15 @@
-pub mod whitespace;
-pub(crate) mod copy_rect;
+pub(crate) mod aligned_buffer;
 pub mod bitmaps;
-pub(crate) mod  aligned_buffer;
-pub(crate) mod math;
 pub mod color;
-pub mod weights;
-pub mod scaling;
-pub mod flip;
-pub mod transpose;
-pub(crate) mod histogram;
 pub(crate) mod color_matrix;
+pub(crate) mod copy_rect;
+pub mod flip;
+pub(crate) mod histogram;
+pub(crate) mod math;
+pub mod scaling;
+pub mod transpose;
+pub mod weights;
+pub mod whitespace;
 //pub(crate) mod convolve;
 pub(crate) mod blend;
 pub(crate) mod rounded_corners;
@@ -17,10 +17,10 @@ pub(crate) mod rounded_corners;
 //pub mod faces;
 
 #[doc(hidden)]
-mod prelude{
+mod prelude {
+    pub(crate) use crate::errors::ErrorKind;
     pub(crate) use crate::ffi::BitmapCompositingMode;
     pub(crate) use crate::FlowError;
-    pub(crate) use crate::errors::ErrorKind;
 
     #[cfg(target_arch = "x86")]
     pub(crate) use std::arch::x86::{
@@ -36,23 +36,24 @@ mod prelude{
     #[cfg(target_arch = "aarch64")]
     pub(crate) use std::arch::aarch64::*;
 
-    pub(crate) use crate::graphics::bitmaps::{BitmapWindowMut, PixelLayout, Bitmap, ColorSpace};
-    pub(crate) use crate::graphics::color::{WorkingFloatspace, ColorContext, flow_colorcontext_floatspace_to_srgb, uchar_clamp_ff};
-    pub(crate) use crate::graphics::weights::{PixelRowWeights, PixelWeightIndexes};
     pub(crate) use crate::graphics::aligned_buffer::AlignedBuffer;
+    pub(crate) use crate::graphics::bitmaps::{Bitmap, BitmapWindowMut, ColorSpace, PixelLayout};
+    pub(crate) use crate::graphics::color::{
+        flow_colorcontext_floatspace_to_srgb, uchar_clamp_ff, ColorContext, WorkingFloatspace,
+    };
+    pub(crate) use crate::graphics::weights::{PixelRowWeights, PixelWeightIndexes};
 
     pub(crate) use imageflow_types::PixelFormat;
 
-    pub(crate) fn flow_pixel_format_bytes_per_pixel(format: crate::ffi::PixelFormat) -> u32
-    {
+    pub(crate) fn flow_pixel_format_bytes_per_pixel(format: crate::ffi::PixelFormat) -> u32 {
         format.bytes() as u32
     }
-    pub(crate) fn flow_pixel_format_channels(format: crate::ffi::PixelFormat) -> u32{
-        match format{
+    pub(crate) fn flow_pixel_format_channels(format: crate::ffi::PixelFormat) -> u32 {
+        match format {
             PixelFormat::Bgra32 => 4,
             PixelFormat::Bgr32 => 3,
             PixelFormat::Bgr24 => 3,
-            PixelFormat::Gray8 => 1
+            PixelFormat::Gray8 => 1,
         }
     }
 }

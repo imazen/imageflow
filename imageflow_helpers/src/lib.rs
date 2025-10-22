@@ -1,10 +1,8 @@
-
 // `error_chain!` can recurse deeply
 #![recursion_limit = "1024"]
 
 //hexadecimal colors aren't numbers
 //#![cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
-
 
 //
 //use std::heap::{Alloc, System, Layout, AllocErr};
@@ -24,7 +22,6 @@
 #[cfg(not(feature = "mimalloc"))]
 use std::alloc::System;
 #[cfg(not(feature = "mimalloc"))]
-
 #[global_allocator]
 static GLOBAL: System = System;
 
@@ -43,10 +40,10 @@ extern crate lazy_static;
 
 extern crate rand;
 
-extern crate regex_lite;
 extern crate blake2_rfc;
-extern crate twox_hash;
 extern crate chrono;
+extern crate regex_lite;
+extern crate twox_hash;
 //extern crate serde;
 //extern crate serde_json;
 extern crate backtrace;
@@ -54,33 +51,32 @@ extern crate base64;
 extern crate sha2;
 extern crate unicase;
 
-
+extern crate smallvec;
 extern crate time;
 extern crate uuid;
-extern crate smallvec;
-
 
 extern crate digest;
-pub mod identifier_styles;
-pub mod preludes;
-pub mod filesystem;
-pub mod hashing;
-pub mod process_testing;
-pub mod process_capture;
 pub mod colors;
 pub mod debug;
+pub mod filesystem;
+pub mod hashing;
+pub mod identifier_styles;
+pub mod preludes;
+pub mod process_capture;
+pub mod process_testing;
 pub mod util;
 
-pub mod timeywimey{
-    pub fn time_bucket(seconds_per_bucket: u64, bucket_count: u64) -> u64{
-        ::std::time::SystemTime::now().duration_since(::std::time::UNIX_EPOCH).unwrap().as_secs() / seconds_per_bucket % bucket_count
+pub mod timeywimey {
+    pub fn time_bucket(seconds_per_bucket: u64, bucket_count: u64) -> u64 {
+        ::std::time::SystemTime::now().duration_since(::std::time::UNIX_EPOCH).unwrap().as_secs()
+            / seconds_per_bucket
+            % bucket_count
     }
 
-    pub fn precise_time_ns() -> u64{
+    pub fn precise_time_ns() -> u64 {
         use std::time::{SystemTime, UNIX_EPOCH};
         //TODO: consider if u64 is too small
-        SystemTime::now().duration_since(UNIX_EPOCH)
-                .expect("Time went backwards").as_nanos() as u64
+        SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_nanos() as u64
     }
     pub use chrono::prelude::Utc;
 }
@@ -88,15 +84,10 @@ pub mod timeywimey{
 #[cfg(test)]
 mod tests {
     #[test]
-    fn it_works() {
-    }
+    fn it_works() {}
 }
-
-
-
 
 #[test]
-fn test_file_macro_for_this_build(){
+fn test_file_macro_for_this_build() {
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
 }
-

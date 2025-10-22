@@ -1,31 +1,23 @@
 extern crate imageflow_c_components;
 
 #[test]
-fn test_spatial_scaling(){
-
+fn test_spatial_scaling() {
     let mut input: [u8; 64] = [0; 64];
-    for x in 0..64{
-        input[x] = if x % 2 == 0 {
-            0
-        }else{
-            255
-        };
+    for x in 0..64 {
+        input[x] = if x % 2 == 0 { 0 } else { 255 };
     }
 
-    let mut output: [u8; 1] = [0;1];
-    let mut output_rows: [*mut u8;1] = [&mut output[0]];
+    let mut output: [u8; 1] = [0; 1];
+    let mut output_rows: [*mut u8; 1] = [&mut output[0]];
     let output_col = 0;
 
-    unsafe {
-        flow_scale_spatial_srgb_1x1(&mut input[0], &mut output_rows[0], output_col)
-    }
+    unsafe { flow_scale_spatial_srgb_1x1(&mut input[0], &mut output_rows[0], output_col) }
 
     assert_eq!(output[0], 188);
-
 }
-extern crate mozjpeg_sys;
-extern crate libz_sys;
 extern crate libpng_sys;
+extern crate libz_sys;
+extern crate mozjpeg_sys;
 
 extern crate libc;
 
@@ -33,11 +25,8 @@ extern crate libc;
 
 // Define FFI types for the scaling functions
 #[allow(non_camel_case_types)]
-type blockscale_fn = unsafe extern "C" fn(
-    input: *mut u8,
-    output_rows: *mut *mut u8,
-    output_col: u32,
-);
+type blockscale_fn =
+    unsafe extern "C" fn(input: *mut u8, output_rows: *mut *mut u8, output_col: u32);
 
 // Declare external C functions
 extern "C" {

@@ -1,6 +1,6 @@
 use crate::internal_prelude::works_everywhere::*;
-use ::std::option::Option;
 use ::std::cmp;
+use ::std::option::Option;
 use ::std::option::Option::*;
 use num::Integer;
 
@@ -30,39 +30,132 @@ struct ScanRegion {
 /// Finding energy in these tiny strips means we can report home quickly that there is nothing to trim.
 const SCAN_QUICK_REGIONS: [ScanRegion; 12] = [
     // left half, middle, ->
-    ScanRegion { edge: ScanEdge::Left, x_1_percent: 0f32, x_2_percent: 0.5f32, y_1_percent: 0.5f32, y_2_percent: 0.5f32 },
+    ScanRegion {
+        edge: ScanEdge::Left,
+        x_1_percent: 0f32,
+        x_2_percent: 0.5f32,
+        y_1_percent: 0.5f32,
+        y_2_percent: 0.5f32,
+    },
     // right half, middle, <-
-    ScanRegion { edge: ScanEdge::Right, x_1_percent: 0.5f32, x_2_percent: 1f32, y_1_percent: 0.5f32, y_2_percent: 0.5f32 },
-
+    ScanRegion {
+        edge: ScanEdge::Right,
+        x_1_percent: 0.5f32,
+        x_2_percent: 1f32,
+        y_1_percent: 0.5f32,
+        y_2_percent: 0.5f32,
+    },
     // left half, bottom third ->
-    ScanRegion { edge: ScanEdge::Left, x_1_percent: 0f32, x_2_percent: 0.5f32, y_1_percent: 0.677f32, y_2_percent: 0.677f32 },
+    ScanRegion {
+        edge: ScanEdge::Left,
+        x_1_percent: 0f32,
+        x_2_percent: 0.5f32,
+        y_1_percent: 0.677f32,
+        y_2_percent: 0.677f32,
+    },
     // right half, bottom third -<
-    ScanRegion { edge: ScanEdge::Right, x_1_percent: 0.5f32, x_2_percent: 1f32, y_1_percent: 0.677f32, y_2_percent: 0.677f32 },
+    ScanRegion {
+        edge: ScanEdge::Right,
+        x_1_percent: 0.5f32,
+        x_2_percent: 1f32,
+        y_1_percent: 0.677f32,
+        y_2_percent: 0.677f32,
+    },
     // left half, top third ->
-    ScanRegion { edge: ScanEdge::Left, x_1_percent: 0f32, x_2_percent: 0.5f32, y_1_percent: 0.333f32, y_2_percent: 0.333f32 },
+    ScanRegion {
+        edge: ScanEdge::Left,
+        x_1_percent: 0f32,
+        x_2_percent: 0.5f32,
+        y_1_percent: 0.333f32,
+        y_2_percent: 0.333f32,
+    },
     // right half, top third -<
-    ScanRegion { edge: ScanEdge::Right, x_1_percent: 0.5f32, x_2_percent: 1f32, y_1_percent: 0.333f32, y_2_percent: 0.333f32 },
-
+    ScanRegion {
+        edge: ScanEdge::Right,
+        x_1_percent: 0.5f32,
+        x_2_percent: 1f32,
+        y_1_percent: 0.333f32,
+        y_2_percent: 0.333f32,
+    },
     // top half, center \/
-    ScanRegion { edge: ScanEdge::Top, x_1_percent: 0.5f32, x_2_percent: 0.5f32, y_1_percent: 0f32, y_2_percent: 0.5f32 },
+    ScanRegion {
+        edge: ScanEdge::Top,
+        x_1_percent: 0.5f32,
+        x_2_percent: 0.5f32,
+        y_1_percent: 0f32,
+        y_2_percent: 0.5f32,
+    },
     // top half, right third
-    ScanRegion { edge: ScanEdge::Top, x_1_percent: 0.677f32, x_2_percent: 0.677f32, y_1_percent: 0f32, y_2_percent: 0.5f32 },
+    ScanRegion {
+        edge: ScanEdge::Top,
+        x_1_percent: 0.677f32,
+        x_2_percent: 0.677f32,
+        y_1_percent: 0f32,
+        y_2_percent: 0.5f32,
+    },
     // top half, left third.
-    ScanRegion { edge: ScanEdge::Top, x_1_percent: 0.333f32, x_2_percent: 0.333f32, y_1_percent: 0f32, y_2_percent: 0.5f32 },
-
+    ScanRegion {
+        edge: ScanEdge::Top,
+        x_1_percent: 0.333f32,
+        x_2_percent: 0.333f32,
+        y_1_percent: 0f32,
+        y_2_percent: 0.5f32,
+    },
     // bottom half, center \/
-    ScanRegion { edge: ScanEdge::Bottom, x_1_percent: 0.5f32, x_2_percent: 0.5f32, y_1_percent: 0.5f32, y_2_percent: 1f32 },
+    ScanRegion {
+        edge: ScanEdge::Bottom,
+        x_1_percent: 0.5f32,
+        x_2_percent: 0.5f32,
+        y_1_percent: 0.5f32,
+        y_2_percent: 1f32,
+    },
     // bottom half, right third
-    ScanRegion { edge: ScanEdge::Bottom, x_1_percent: 0.677f32, x_2_percent: 0.677f32, y_1_percent: 0.5f32, y_2_percent: 1f32 },
+    ScanRegion {
+        edge: ScanEdge::Bottom,
+        x_1_percent: 0.677f32,
+        x_2_percent: 0.677f32,
+        y_1_percent: 0.5f32,
+        y_2_percent: 1f32,
+    },
     // bottom half, left third.
-    ScanRegion { edge: ScanEdge::Bottom, x_1_percent: 0.333f32, x_2_percent: 0.333f32, y_1_percent: 0.5f32, y_2_percent: 1f32 },
+    ScanRegion {
+        edge: ScanEdge::Bottom,
+        x_1_percent: 0.333f32,
+        x_2_percent: 0.333f32,
+        y_1_percent: 0.5f32,
+        y_2_percent: 1f32,
+    },
 ];
 
 const SCAN_EVERYTHING_INWARD: [ScanRegion; 4] = [
-    ScanRegion { edge: ScanEdge::Top, x_1_percent: 0f32, x_2_percent: 1f32, y_1_percent: 0f32, y_2_percent: 1f32 },
-    ScanRegion { edge: ScanEdge::Right, x_1_percent: 0f32, x_2_percent: 1f32, y_1_percent: 0f32, y_2_percent: 1f32 },
-    ScanRegion { edge: ScanEdge::Bottom, x_1_percent: 0f32, x_2_percent: 1f32, y_1_percent: 0f32, y_2_percent: 1f32 },
-    ScanRegion { edge: ScanEdge::Left, x_1_percent: 0f32, x_2_percent: 1f32, y_1_percent: 0f32, y_2_percent: 1f32 },
+    ScanRegion {
+        edge: ScanEdge::Top,
+        x_1_percent: 0f32,
+        x_2_percent: 1f32,
+        y_1_percent: 0f32,
+        y_2_percent: 1f32,
+    },
+    ScanRegion {
+        edge: ScanEdge::Right,
+        x_1_percent: 0f32,
+        x_2_percent: 1f32,
+        y_1_percent: 0f32,
+        y_2_percent: 1f32,
+    },
+    ScanRegion {
+        edge: ScanEdge::Bottom,
+        x_1_percent: 0f32,
+        x_2_percent: 1f32,
+        y_1_percent: 0f32,
+        y_2_percent: 1f32,
+    },
+    ScanRegion {
+        edge: ScanEdge::Left,
+        x_1_percent: 0f32,
+        x_2_percent: 1f32,
+        y_1_percent: 0f32,
+        y_2_percent: 1f32,
+    },
 ];
 const SCAN_FULL: ScanRegion = ScanRegion {
     edge: ScanEdge::NonDirectional,
@@ -94,12 +187,7 @@ impl Rect {
         let y2 = self.y.checked_add(self.h);
         if let Some(x2) = self.x.checked_add(self.w) {
             if let Some(y2) = self.y.checked_add(self.h) {
-                return Some(RectCorners {
-                    x1: self.x,
-                    y1: self.y,
-                    x2,
-                    y2,
-                });
+                return Some(RectCorners { x1: self.x, y1: self.y, x2, y2 });
             }
         }
         None
@@ -118,16 +206,9 @@ struct Buffer {
 
 impl Default for Buffer {
     fn default() -> Buffer {
-        Buffer {
-            pixels: [0u8; 2048],
-            x: 0,
-            y: 0,
-            w: 0,
-            h: 0,
-        }
+        Buffer { pixels: [0u8; 2048], x: 0, y: 0, w: 0, h: 0 }
     }
 }
-
 
 struct WhitespaceSearch {
     w: u32,
@@ -141,10 +222,22 @@ struct WhitespaceSearch {
 
 impl WhitespaceSearch {
     fn get_search_rect(&self, region: &ScanRegion) -> Option<RectCorners> {
-        let mut x1 = std::cmp::max(0u32, cmp::min(self.w, (region.x_1_percent * (self.w - 1) as f32).floor() as u32));
-        let mut x2 = std::cmp::max(0u32, cmp::min(self.w, (region.x_2_percent * (self.w - 1) as f32).floor() as u32));
-        let mut y1 = std::cmp::max(0u32, cmp::min(self.h, (region.y_1_percent * (self.h - 1) as f32).floor() as u32));
-        let mut y2 = std::cmp::max(0u32, cmp::min(self.h, (region.y_2_percent * (self.h - 1) as f32).floor() as u32));
+        let mut x1 = std::cmp::max(
+            0u32,
+            cmp::min(self.w, (region.x_1_percent * (self.w - 1) as f32).floor() as u32),
+        );
+        let mut x2 = std::cmp::max(
+            0u32,
+            cmp::min(self.w, (region.x_2_percent * (self.w - 1) as f32).floor() as u32),
+        );
+        let mut y1 = std::cmp::max(
+            0u32,
+            cmp::min(self.h, (region.y_1_percent * (self.h - 1) as f32).floor() as u32),
+        );
+        let mut y2 = std::cmp::max(
+            0u32,
+            cmp::min(self.h, (region.y_2_percent * (self.h - 1) as f32).floor() as u32),
+        );
 
         // Snap the boundary depending on which side we're searching
         match region.edge {
@@ -174,8 +267,10 @@ impl WhitespaceSearch {
         }
 
         // Let's make sure that we're searching at least 7 pixels in the perpendicular direction
-        let min_region_width = if region.edge == ScanEdge::Right || region.edge == ScanEdge::Left { 3 } else { 7 };
-        let min_region_height = if region.edge == ScanEdge::Top || region.edge == ScanEdge::Bottom { 3 } else { 7 };
+        let min_region_width =
+            if region.edge == ScanEdge::Right || region.edge == ScanEdge::Left { 3 } else { 7 };
+        let min_region_height =
+            if region.edge == ScanEdge::Top || region.edge == ScanEdge::Bottom { 3 } else { 7 };
 
         while y2 - y1 < min_region_height && (y1 > 0 || y2 < self.h) {
             y1 = if y1 > 0 { y1 - 1 } else { 0 };
@@ -186,12 +281,7 @@ impl WhitespaceSearch {
             x2 = cmp::min(self.w, x2 + 1);
         }
 
-        Some(RectCorners {
-            x1,
-            y1,
-            x2,
-            y2,
-        })
+        Some(RectCorners { x1, y1, x2, y2 })
     }
 }
 
@@ -220,14 +310,15 @@ pub fn detect_content(b: &BitmapWindowMut<u8>, threshold: u32) -> Option<RectCor
     }
     // We should now have a good idea of where boundaries lie. However... if it seems that more than 25% is whitespace,
     // we should do a different type of scan.
-    let area_to_scan_separately: i64 = search.min_x as i64 * search.h as i64 + search.min_y as i64 * search.w as i64 + (search.w as i64 - search.max_x as i64) * search.h as i64
+    let area_to_scan_separately: i64 = search.min_x as i64 * search.h as i64
+        + search.min_y as i64 * search.w as i64
+        + (search.w as i64 - search.max_x as i64) * search.h as i64
         + (search.h as i64 - search.max_y as i64) * search.w as i64;
 
     if area_to_scan_separately > (search.h as i64 * search.w as i64) {
         // Just scan it all at once, non-directionally
         check_region(&mut search, &mut buf, b, &SCAN_FULL)
     } else {
-
         // Finish by scanning everything that is left. Should be a smaller set.
         // Corners will overlap, and be scanned twice, if they are whitespace.
         for region in SCAN_EVERYTHING_INWARD.iter() {
@@ -239,16 +330,16 @@ pub fn detect_content(b: &BitmapWindowMut<u8>, threshold: u32) -> Option<RectCor
     if search.min_x == b.w() && search.max_x == 0 && search.min_y == b.h() && search.max_y == 0 {
         Some(RectCorners { x1: 0, y1: 0, x2: search.w, y2: search.h })
     } else {
-        Some(RectCorners {
-            x1: search.min_x,
-            x2: search.max_x,
-            y1: search.min_y,
-            y2: search.max_y,
-        })
+        Some(RectCorners { x1: search.min_x, x2: search.max_x, y1: search.min_y, y2: search.max_y })
     }
 }
 
-fn check_region(search: &mut WhitespaceSearch, buf: &mut Buffer, b: &BitmapWindowMut<u8>, region: &ScanRegion) {
+fn check_region(
+    search: &mut WhitespaceSearch,
+    buf: &mut Buffer,
+    b: &BitmapWindowMut<u8>,
+    region: &ScanRegion,
+) {
     if let Some(RectCorners { x1, y1, x2, y2 }) = search.get_search_rect(region) {
         let w = x2 - x1;
         let h = y2 - y1;
@@ -258,11 +349,14 @@ fn check_region(search: &mut WhitespaceSearch, buf: &mut Buffer, b: &BitmapWindo
 
         let buf_size = buf.pixels.len() as u32;
         // If we are doing a full scan, make them wide along the X axis. Otherwise, make them square.
-        let window_width = cmp::min(w, if region.edge == ScanEdge::NonDirectional {
-            buf_size / 7u32
-        } else {
-            (buf_size as f32).sqrt().ceil() as u32
-        });
+        let window_width = cmp::min(
+            w,
+            if region.edge == ScanEdge::NonDirectional {
+                buf_size / 7u32
+            } else {
+                (buf_size as f32).sqrt().ceil() as u32
+            },
+        );
         let window_height = cmp::min(h, buf_size / window_width);
 
         let vertical_windows = (h as f32 / (window_height - 2) as f32).ceil() as u32;
@@ -271,7 +365,6 @@ fn check_region(search: &mut WhitespaceSearch, buf: &mut Buffer, b: &BitmapWindo
         for window_row in 0..vertical_windows {
             for window_column in 0..horizontal_windows {
                 let mut buf = Buffer::default();
-
 
                 // Set up default overlapping windows. These may be shrunk or shifted later
                 buf.x = x1 + ((window_width - 2) * window_column);
@@ -332,13 +425,21 @@ fn check_region(search: &mut WhitespaceSearch, buf: &mut Buffer, b: &BitmapWindo
 ///
 /// Computes a fast/approximated grayscale subset of the given bitmap
 fn fill_grayscale_buffer_from_bitmap(buf: &mut Buffer, b: &BitmapWindowMut<u8>) {
-    approximate_grayscale(&mut buf.pixels, buf.w as usize,buf.x, buf.y, buf.w, buf.h, b)
+    approximate_grayscale(&mut buf.pixels, buf.w as usize, buf.x, buf.y, buf.w, buf.h, b)
 }
-pub fn approximate_grayscale(grayscale: &mut [u8], grayscale_stride: usize, x: u32, y: u32, w: u32, h: u32, source_bitmap: &BitmapWindowMut<u8>) {
+pub fn approximate_grayscale(
+    grayscale: &mut [u8],
+    grayscale_stride: usize,
+    x: u32,
+    y: u32,
+    w: u32,
+    h: u32,
+    source_bitmap: &BitmapWindowMut<u8>,
+) {
     /* Red: 0.299;
-Green: 0.587;
-Blue: 0.114;
-*/
+    Green: 0.587;
+    Blue: 0.114;
+    */
     let b = source_bitmap;
 
     if grayscale_stride < w as usize {
@@ -351,7 +452,8 @@ Blue: 0.114;
     let remnant: usize = stride - (bytes_per_pixel * w as usize);
     let gray_remnant: usize = grayscale_stride - w as usize;
 
-    let bitmap_bytes_accessed = stride * (y + h - 1) as usize + (bytes_per_pixel * (x + w) as usize);
+    let bitmap_bytes_accessed =
+        stride * (y + h - 1) as usize + (bytes_per_pixel * (x + w) as usize);
     if bitmap_bytes_accessed > stride * b.h() as usize {
         panic!("Out of bounds bitmap access prevented");
     }
@@ -366,7 +468,10 @@ Blue: 0.114;
             for y in 0..h {
                 for x in 0..w {
                     let bgra = &input_bitmap[input_index..input_index + 4];
-                    let gray = ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) * bgra[3] as u32).div_ceil(524288) as u16;
+                    let gray =
+                        ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32)
+                            * bgra[3] as u32)
+                            .div_ceil(524288) as u16;
                     grayscale[buf_ix] = if gray > 255 { 255 } else { gray as u8 };
                     input_index += 4;
                     buf_ix += 1;
@@ -380,7 +485,9 @@ Blue: 0.114;
             for y in 0..h {
                 for x in 0..w {
                     let bgra = &input_bitmap[input_index..input_index + 3];
-                    grayscale[buf_ix] = ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) / 2048) as u8;
+                    grayscale[buf_ix] =
+                        ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32)
+                            / 2048) as u8;
                     input_index += 3;
                     buf_ix += 1;
                 }
@@ -393,7 +500,9 @@ Blue: 0.114;
             for y in 0..h {
                 for x in 0..w {
                     let bgra = &input_bitmap[input_index..input_index + 4];
-                    grayscale[buf_ix] = ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) / 2048) as u8;
+                    grayscale[buf_ix] =
+                        ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32)
+                            / 2048) as u8;
                     input_index += 4;
                     buf_ix += 1;
                 }
@@ -439,9 +548,19 @@ fn sobel_scharr_detect(buf: &Buffer, search: &mut WhitespaceSearch) {
             let a33 = buf.pixels[buf_ix + w + 1];
 
             // We have not implemented any aliasing operations. A checkerboard of pixels will produce zeroes.
-            let gx: i32 = 3 * a11 as i32 + 10 * a21 as i32 + 3 * a31 as i32 + -3 * a13 as i32 + -10 * a23 as i32 + -3 * a33 as i32;
+            let gx: i32 = 3 * a11 as i32
+                + 10 * a21 as i32
+                + 3 * a31 as i32
+                + -3 * a13 as i32
+                + -10 * a23 as i32
+                + -3 * a33 as i32;
 
-            let gy: i32 = 3 * a11 as i32 + 10 * a12 as i32 + 3 * a13 as i32 + -3 * a31 as i32 + -10 * a32 as i32 + -3 * a33 as i32;
+            let gy: i32 = 3 * a11 as i32
+                + 10 * a12 as i32
+                + 3 * a13 as i32
+                + -3 * a31 as i32
+                + -10 * a32 as i32
+                + -3 * a33 as i32;
 
             let scharr_value: i32 = gx.abs() + gy.abs();
 
@@ -517,4 +636,3 @@ fn sobel_scharr_detect(buf: &Buffer, search: &mut WhitespaceSearch) {
         buf_ix += 2;
     }
 }
-

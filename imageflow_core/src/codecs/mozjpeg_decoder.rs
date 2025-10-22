@@ -1,49 +1,44 @@
-use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
-use crate::{Context, Result, JsonResponse};
 use crate::ffi::{wrap_jpeg_get_custom_state, WrapJpegSourceManager};
+use crate::for_other_imageflow_crates::preludes::external_without_std::*;
+use crate::{Context, JsonResponse, Result};
 
-use imageflow_types::collections::AddRemoveSet;
-use crate::io::IoProxy;
-use uuid::Uuid;
-use imageflow_types::{IoDirection, PixelLayout};
 use super::*;
-use std::any::Any;
-use std::rc::Rc;
+use crate::io::IoProxy;
 use crate::io::IoProxyProxy;
 use crate::io::IoProxyRef;
+use imageflow_types::collections::AddRemoveSet;
+use imageflow_types::{IoDirection, PixelLayout};
 use rgb::alt::BGRA8;
+use std::any::Any;
+use std::rc::Rc;
+use uuid::Uuid;
 extern crate mozjpeg_sys;
-use ::mozjpeg_sys::*;
-use imageflow_helpers::preludes::from_std::ptr::{null, slice_from_raw_parts, null_mut};
-use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
 use crate::graphics::bitmaps::{Bitmap, BitmapCompositing, BitmapKey, ColorSpace};
+use ::mozjpeg_sys::*;
+use imageflow_helpers::preludes::from_std::ptr::{null, null_mut, slice_from_raw_parts};
+use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
 use mozjpeg_sys::c_void;
 
 static CMYK_PROFILE: &[u8] = include_bytes!("cmyk.icc");
 
-
-pub struct MozJpegDecoder{
-    decoder: Box<MzDec>
+pub struct MozJpegDecoder {
+    decoder: Box<MzDec>,
 }
 
 impl MozJpegDecoder {
     pub fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<MozJpegDecoder> {
-        Ok(MozJpegDecoder{
-            decoder: MzDec::new(c, io)?
-        })
+        Ok(MozJpegDecoder { decoder: MzDec::new(c, io)? })
     }
 }
-
 
 impl Decoder for MozJpegDecoder {
     fn initialize(&mut self, c: &Context) -> Result<()> {
         Ok(())
     }
 
-
     fn get_unscaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
-        let (w,h) = self.decoder.get_original_size()?;
+        let (w, h) = self.decoder.get_original_size()?;
 
         Ok(s::ImageInfo {
             frame_decodes_into: s::PixelFormat::Bgr32,
@@ -52,12 +47,12 @@ impl Decoder for MozJpegDecoder {
             preferred_mime_type: "image/jpeg".to_owned(),
             preferred_extension: "jpg".to_owned(),
             lossless: false,
-            multiple_frames: false
+            multiple_frames: false,
         })
     }
 
     fn get_scaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
-        let (w,h) = self.decoder.get_final_size()?;
+        let (w, h) = self.decoder.get_final_size()?;
 
         Ok(s::ImageInfo {
             frame_decodes_into: s::PixelFormat::Bgr32,
@@ -66,7 +61,7 @@ impl Decoder for MozJpegDecoder {
             preferred_mime_type: "image/jpeg".to_owned(),
             preferred_extension: "jpg".to_owned(),
             lossless: false,
-            multiple_frames: false
+            multiple_frames: false,
         })
     }
 
@@ -83,12 +78,14 @@ impl Decoder for MozJpegDecoder {
                     or_if_taller_than: hints.height,
                     downscaled_min_height: hints.height,
                     scale_luma_spatially: hints.scale_luma_spatially.unwrap_or(false),
-                    gamma_correct_for_srgb_during_spatial_luma_scaling: hints.gamma_correct_for_srgb_during_spatial_luma_scaling.unwrap_or(false)
+                    gamma_correct_for_srgb_during_spatial_luma_scaling: hints
+                        .gamma_correct_for_srgb_during_spatial_luma_scaling
+                        .unwrap_or(false),
                 };
                 self.decoder.set_downscale_hints(h);
                 Ok(())
-            },
-            s::DecoderCommand::WebPDecoderHints(hints) =>{
+            }
+            s::DecoderCommand::WebPDecoderHints(hints) => {
                 Ok(()) // We can safely ignore webp hints
             }
             s::DecoderCommand::DiscardColorProfile => {
@@ -103,28 +100,25 @@ impl Decoder for MozJpegDecoder {
     }
 
     fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
+        let (w, h) = self.decoder.get_final_size()?;
 
-        let (w,h) = self.decoder.get_final_size()?;
-
-        let mut bitmaps = c.borrow_bitmaps_mut()
-            .map_err(|e| e.at(here!()))?;
+        let mut bitmaps = c.borrow_bitmaps_mut().map_err(|e| e.at(here!()))?;
 
         let bitmap_key = bitmaps
-            .create_bitmap_u8(w,
-                              h,
-                              PixelLayout::BGRA,
-                              false,
-                              false,
-                              ColorSpace::StandardRGB,
-                              BitmapCompositing::ReplaceSelf)
+            .create_bitmap_u8(
+                w,
+                h,
+                PixelLayout::BGRA,
+                false,
+                false,
+                ColorSpace::StandardRGB,
+                BitmapCompositing::ReplaceSelf,
+            )
             .map_err(|e| e.at(here!()))?;
 
-        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
-            .map_err(|e| e.at(here!()))?;
-
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
         self.decoder.read_frame(&mut bitmap)?;
-
 
         Ok(bitmap_key)
     }
@@ -136,15 +130,14 @@ impl Decoder for MozJpegDecoder {
     }
 }
 
-
 #[repr(C)]
-struct SourceManager{
+struct SourceManager {
     manager: ffi::WrapJpegSourceManager,
     bytes_have_been_read: bool,
-    buffer: Vec<u8>
+    buffer: Vec<u8>,
 }
 
-struct MzDec{
+struct MzDec {
     error_state: Vec<u8>,
     codec_info: jpeg_decompress_struct,
     codec_info_disposed: bool,
@@ -161,58 +154,61 @@ struct MzDec{
     pub ignore_color_profile: bool,
     pub ignore_color_profile_errors: bool,
     color_profile: Option<Vec<u8>>,
-    gamma: f64
-
+    gamma: f64,
 }
-impl Drop for MzDec{
+impl Drop for MzDec {
     fn drop(&mut self) {
         self.dispose_codec();
     }
 }
 
-
-impl MzDec{
-
+impl MzDec {
     #[no_mangle]
-    extern "C" fn jpeg_error_handler(custom_state: *mut c_void,
-                                     codec_info: *mut mozjpeg_sys::jpeg_common_struct,
-                                     error_mgr: *mut mozjpeg_sys::jpeg_error_mgr,
-                                     error_code: i32,
-                                     message_buffer: *const u8,
-                                     message_buffer_length: i32) -> bool{
-        let decoder = unsafe{ &mut *(custom_state as *mut MzDec) };
+    extern "C" fn jpeg_error_handler(
+        custom_state: *mut c_void,
+        codec_info: *mut mozjpeg_sys::jpeg_common_struct,
+        error_mgr: *mut mozjpeg_sys::jpeg_error_mgr,
+        error_code: i32,
+        message_buffer: *const u8,
+        message_buffer_length: i32,
+    ) -> bool {
+        let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
 
         if custom_state.is_null() || decoder.codec_info_disposed {
             return false;
         }
 
         if decoder.error.is_none() {
-            if !message_buffer.is_null(){
+            if !message_buffer.is_null() {
                 let bytes = unsafe {
                     std::slice::from_raw_parts(message_buffer, message_buffer_length as usize)
                 };
-                if let Some(null_index) = bytes.iter().position(|x| *x == 0){
+                if let Some(null_index) = bytes.iter().position(|x| *x == 0) {
                     let cstr = CStr::from_bytes_with_nul(&bytes[0..=null_index]).unwrap();
                     let message = cstr.to_str().expect("MozJpeg error message was not UTF-8");
-                    decoder.error = Some(nerror!(ErrorKind::JpegDecodingError, "MozJPEG error {}: {}", error_code, message));
-                }else {
+                    decoder.error = Some(nerror!(
+                        ErrorKind::JpegDecodingError,
+                        "MozJPEG error {}: {}",
+                        error_code,
+                        message
+                    ));
+                } else {
                     panic!("MozJpeg error message was not null terminated");
                 }
-
-            }else {
-                decoder.error = Some(nerror!(ErrorKind::JpegDecodingError, "MozJPEG error {}", error_code));
+            } else {
+                decoder.error =
+                    Some(nerror!(ErrorKind::JpegDecodingError, "MozJPEG error {}", error_code));
             }
         }
 
-        false//false -> Fail, true -> ignore
+        false //false -> Fail, true -> ignore
     }
 
-    fn new(context: &Context, io: IoProxy) -> Result<Box<MzDec>>{
-
+    fn new(context: &Context, io: IoProxy) -> Result<Box<MzDec>> {
         //Allocate space for the error state structure.
-        let error_state_size = unsafe{ ffi::wrap_jpeg_error_state_bytes() };
+        let error_state_size = unsafe { ffi::wrap_jpeg_error_state_bytes() };
         let mut error_state: Vec<u8> = Vec::with_capacity(error_state_size);
-        for ix in 0..error_state_size{
+        for ix in 0..error_state_size {
             error_state.push(0u8);
         }
 
@@ -232,7 +228,7 @@ impl MzDec{
                 downscaled_min_width: 0,
                 downscaled_min_height: 0,
                 scale_luma_spatially: false,
-                gamma_correct_for_srgb_during_spatial_luma_scaling: false
+                gamma_correct_for_srgb_during_spatial_luma_scaling: false,
             },
             w: 0,
             h: 0,
@@ -240,7 +236,7 @@ impl MzDec{
             ignore_color_profile: false,
             ignore_color_profile_errors: false,
             color_profile: None,
-            gamma: 0.45455
+            gamma: 0.45455,
         });
 
         unsafe {
@@ -248,10 +244,10 @@ impl MzDec{
                 &mut decoder.codec_info,
                 decoder.error_state.as_mut_ptr() as *mut c_void,
                 decoder.as_mut() as *mut MzDec as *mut c_void,
-                MzDec::jpeg_error_handler
+                MzDec::jpeg_error_handler,
             );
 
-            if !ffi::wrap_jpeg_create_decompress(&mut decoder.codec_info){
+            if !ffi::wrap_jpeg_create_decompress(&mut decoder.codec_info) {
                 return Err(decoder.error.clone().expect("error missing").at(here!()));
             }
         }
@@ -262,52 +258,49 @@ impl MzDec{
     fn dispose_codec(&mut self) {
         if !self.codec_info_disposed {
             self.codec_info_disposed = true;
-            unsafe {
-                jpeg_destroy_decompress(&mut self.codec_info)
-            }
-
+            unsafe { jpeg_destroy_decompress(&mut self.codec_info) }
         }
     }
 
-
-    fn get_final_size(&mut self) -> Result<(u32,u32)>{
+    fn get_final_size(&mut self) -> Result<(u32, u32)> {
         self.read_header()?;
         self.apply_downscaling();
         Ok((self.w, self.h))
     }
-    fn get_original_size(&mut self) -> Result<(u32,u32)>{
+    fn get_original_size(&mut self) -> Result<(u32, u32)> {
         self.read_header()?;
         Ok((self.original_width, self.original_height))
     }
 
-    fn get_exif_rotation_flag(&mut self) -> Result<Option<i32>>{
+    fn get_exif_rotation_flag(&mut self) -> Result<Option<i32>> {
         self.read_header()?;
         Ok(self.exif_rotation_flag)
     }
 
     fn read_frame(&mut self, canvas: &mut Bitmap) -> Result<()> {
-        if self.codec_info_disposed{
-            return Err(nerror!(ErrorKind::InvalidOperation, "MozJpeg decoder disposed before call to read_frame"))
+        if self.codec_info_disposed {
+            return Err(nerror!(
+                ErrorKind::InvalidOperation,
+                "MozJpeg decoder disposed before call to read_frame"
+            ));
         }
 
         self.read_header()?;
         self.apply_downscaling();
 
-        if self.w !=  canvas.w() || self.h != canvas.h() {
+        if self.w != canvas.w() || self.h != canvas.h() {
             return Err(nerror!(ErrorKind::InvalidArgument, "Canvas not sized for decoded jpeg"));
         }
 
         let jpeg_color_space = self.codec_info.jpeg_color_space;
 
-        let is_cmyk = jpeg_color_space == mozjpeg_sys::JCS_CMYK ||
-            jpeg_color_space == mozjpeg_sys::JCS_YCCK;
+        let is_cmyk =
+            jpeg_color_space == mozjpeg_sys::JCS_CMYK || jpeg_color_space == mozjpeg_sys::JCS_YCCK;
 
         let is_grayscale = jpeg_color_space == mozjpeg_sys::JCS_GRAYSCALE;
 
-
         if !is_cmyk {
             self.codec_info.out_color_space = mozjpeg_sys::JCS_EXT_BGRA; //Why not BGRX? Maybe because it doesn't clear the alpha values
-
         }
 
         unsafe {
@@ -322,9 +315,13 @@ impl MzDec{
 
         let row_pointers = window.create_row_pointers()?;
 
-        if row_pointers.h != self.codec_info.output_height as usize{
-            return Err(nerror!(ErrorKind::InvalidOperation, "get_row_pointers() length ({}) does not match image height ({})",
-            row_pointers.h, self.codec_info.output_height));
+        if row_pointers.h != self.codec_info.output_height as usize {
+            return Err(nerror!(
+                ErrorKind::InvalidOperation,
+                "get_row_pointers() length ({}) does not match image height ({})",
+                row_pointers.h,
+                self.codec_info.output_height
+            ));
         }
 
         let mut scanlines_read = 0;
@@ -334,22 +331,22 @@ impl MzDec{
                 let index = self.codec_info.output_scanline as usize;
                 let next_lines = row_pointers.rows[index..].as_ptr();
 
-
-                if !ffi::wrap_jpeg_read_scan_lines(&mut self.codec_info,
-                                                   next_lines,
-                                                    self.h,
-                                                    &mut scanlines_read) {
+                if !ffi::wrap_jpeg_read_scan_lines(
+                    &mut self.codec_info,
+                    next_lines,
+                    self.h,
+                    &mut scanlines_read,
+                ) {
                     return Err(self.error.clone().expect("error missing").at(here!()));
                 }
             }
-
         }
 
         if scanlines_read < 1 {
-            self.error = Some(nerror!(ErrorKind::JpegDecodingError, "Zero scanlines read from jpeg"));
+            self.error =
+                Some(nerror!(ErrorKind::JpegDecodingError, "Zero scanlines read from jpeg"));
             return Err(self.error.clone().expect("error missing").at(here!()));
         }
-
 
         // Read metadata again, ICC profile/exif flag (yes we look twice)
         self.interpret_metadata();
@@ -362,22 +359,26 @@ impl MzDec{
 
         let mut color_info = self.get_decoder_color_info();
 
-        if is_cmyk && color_info.source != ColorProfileSource::ICCP{
+        if is_cmyk && color_info.source != ColorProfileSource::ICCP {
             color_info.source = ColorProfileSource::ICCP;
             color_info.profile_buffer = &CMYK_PROFILE[0];
             color_info.buffer_length = CMYK_PROFILE.len();
         }
 
-        if !self.ignore_color_profile || is_cmyk{
+        if !self.ignore_color_profile || is_cmyk {
+            let input_pixel_format =
+                if is_cmyk { PixelFormat::CMYK_8_REV } else { PixelFormat::BGRA_8 };
 
-            let input_pixel_format = if is_cmyk { PixelFormat::CMYK_8_REV } else { PixelFormat::BGRA_8 };
-
-            let result = ColorTransformCache::transform_to_srgb(&mut window, &color_info, input_pixel_format, PixelFormat::BGRA_8)
-                .map_err(|e| e.at(here!()));
-            if result.is_err() && !self.ignore_color_profile_errors{
+            let result = ColorTransformCache::transform_to_srgb(
+                &mut window,
+                &color_info,
+                input_pixel_format,
+                PixelFormat::BGRA_8,
+            )
+            .map_err(|e| e.at(here!()));
+            if result.is_err() && !self.ignore_color_profile_errors {
                 return result;
             }
-
         }
 
         self.dispose_codec();
@@ -385,10 +386,13 @@ impl MzDec{
         Ok(())
     }
 
-
     #[no_mangle]
-    extern "C" fn source_fill_buffer(codec_info: &mut mozjpeg_sys::jpeg_decompress_struct, custom_state: *mut c_void, suspend_io: &mut bool) -> bool{
-        let decoder = unsafe{ &mut *(custom_state as *mut MzDec) };
+    extern "C" fn source_fill_buffer(
+        codec_info: &mut mozjpeg_sys::jpeg_decompress_struct,
+        custom_state: *mut c_void,
+        suspend_io: &mut bool,
+    ) -> bool {
+        let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
 
         if custom_state.is_null() || decoder.codec_info_disposed {
             return false;
@@ -399,9 +403,8 @@ impl MzDec{
 
         let source_manager = decoder.source_manager.as_deref_mut().unwrap();
 
-
         let buffer = source_manager.buffer.as_mut();
-        match decoder.io.read(buffer){
+        match decoder.io.read(buffer) {
             Ok(size) => {
                 if size == 0 {
                     if source_manager.bytes_have_been_read {
@@ -411,94 +414,102 @@ impl MzDec{
                         source_manager.manager.shared_mgr.next_input_byte = buffer.as_mut_ptr();
                         source_manager.manager.shared_mgr.bytes_in_buffer = 2;
                         true
-                    }else{
-                        decoder.error = Some(nerror!(ErrorKind::ImageDecodingError, "Empty source file"));
+                    } else {
+                        decoder.error =
+                            Some(nerror!(ErrorKind::ImageDecodingError, "Empty source file"));
                         false
                     }
-                }else{
+                } else {
                     source_manager.manager.shared_mgr.next_input_byte = buffer.as_mut_ptr();
                     source_manager.manager.shared_mgr.bytes_in_buffer = size;
                     source_manager.bytes_have_been_read = true;
                     true
                 }
-            },
+            }
             Err(err) => {
                 decoder.error = Some(FlowError::from_decoder(err));
                 false
             }
         }
-
     }
 
     #[no_mangle]
-    extern "C" fn source_skip_bytes(codec_info: &mut mozjpeg_sys::jpeg_decompress_struct, custom_state: *mut c_void, mut byte_count: c_long) -> bool{
+    extern "C" fn source_skip_bytes(
+        codec_info: &mut mozjpeg_sys::jpeg_decompress_struct,
+        custom_state: *mut c_void,
+        mut byte_count: c_long,
+    ) -> bool {
         if byte_count > 0 {
-            let decoder = unsafe{ &mut *(custom_state as *mut MzDec) };
+            let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
             let source_manager = decoder.source_manager.as_deref_mut().unwrap();
 
             while byte_count > source_manager.manager.shared_mgr.bytes_in_buffer as c_long {
                 byte_count -= source_manager.manager.shared_mgr.bytes_in_buffer as c_long;
                 let mut suspend = false;
-                if !MzDec::source_fill_buffer(codec_info, custom_state, &mut suspend){
+                if !MzDec::source_fill_buffer(codec_info, custom_state, &mut suspend) {
                     decoder.error = decoder.error.clone().map(|e| e.at(here!()));
                     return false;
                 }
             }
 
-            source_manager.manager.shared_mgr.next_input_byte =
-               unsafe {
-                   source_manager.manager.shared_mgr.next_input_byte.offset(byte_count as isize)
-               };
+            source_manager.manager.shared_mgr.next_input_byte = unsafe {
+                source_manager.manager.shared_mgr.next_input_byte.offset(byte_count as isize)
+            };
             source_manager.manager.shared_mgr.bytes_in_buffer -= byte_count as usize;
         }
         true
     }
 
-    fn setup_source_manager(&mut self){
+    fn setup_source_manager(&mut self) {
         if self.source_manager.is_none() {
-            let mut mgr = Box::new(
-                SourceManager {
-                    manager: WrapJpegSourceManager {
-                        shared_mgr: unsafe { mem::zeroed()  },
-                        init_source_fn: None,
-                        term_source_fn: None,
-                        fill_input_buffer_fn: Some(MzDec::source_fill_buffer),
-                        skip_input_data_fn: Some(MzDec::source_skip_bytes),
-                        custom_state: self as *mut MzDec as *mut c_void
-                    },
-                    bytes_have_been_read: false,
-                    buffer: vec![0; 4096]
-                }
-            );
+            let mut mgr = Box::new(SourceManager {
+                manager: WrapJpegSourceManager {
+                    shared_mgr: unsafe { mem::zeroed() },
+                    init_source_fn: None,
+                    term_source_fn: None,
+                    fill_input_buffer_fn: Some(MzDec::source_fill_buffer),
+                    skip_input_data_fn: Some(MzDec::source_skip_bytes),
+                    custom_state: self as *mut MzDec as *mut c_void,
+                },
+                bytes_have_been_read: false,
+                buffer: vec![0; 4096],
+            });
             unsafe {
                 ffi::wrap_jpeg_setup_source_manager(&mut mgr.manager);
             }
             self.source_manager = Some(mgr);
-            self.codec_info.src = &mut self.source_manager.as_deref_mut().unwrap().manager.shared_mgr;
+            self.codec_info.src =
+                &mut self.source_manager.as_deref_mut().unwrap().manager.shared_mgr;
         }
     }
 
-
-    fn read_header(&mut self) -> Result<()>{
-        if self.error.is_some(){
+    fn read_header(&mut self) -> Result<()> {
+        if self.error.is_some() {
             return Err(self.error.clone().unwrap());
         }
-        if self.header_read{
+        if self.header_read {
             return Ok(());
         }
-        if self.codec_info_disposed{
-            return Err(nerror!(ErrorKind::InvalidOperation, "MozJpeg decoder disposed before call to read_header"))
+        if self.codec_info_disposed {
+            return Err(nerror!(
+                ErrorKind::InvalidOperation,
+                "MozJpeg decoder disposed before call to read_header"
+            ));
         }
         self.setup_source_manager();
 
-        if unsafe{ !ffi::wrap_jpeg_save_markers(&mut self.codec_info, ffi::JpegMarker::ICC as i32, 0xffff) } {
+        if unsafe {
+            !ffi::wrap_jpeg_save_markers(&mut self.codec_info, ffi::JpegMarker::ICC as i32, 0xffff)
+        } {
             return Err(self.error.clone().expect("error missing").at(here!()));
         }
-        if unsafe{ !ffi::wrap_jpeg_save_markers(&mut self.codec_info, ffi::JpegMarker::EXIF as i32, 0xffff) } {
+        if unsafe {
+            !ffi::wrap_jpeg_save_markers(&mut self.codec_info, ffi::JpegMarker::EXIF as i32, 0xffff)
+        } {
             return Err(self.error.clone().expect("error missing").at(here!()));
         }
 
-        if unsafe{ !ffi::wrap_jpeg_read_header(&mut self.codec_info) } {
+        if unsafe { !ffi::wrap_jpeg_read_header(&mut self.codec_info) } {
             return Err(self.error.clone().expect("error missing").at(here!()));
         }
 
@@ -511,14 +522,15 @@ impl MzDec{
 
         self.header_read = true;
         Ok(())
-
     }
 
-    fn set_downscale_hints(&mut self, hints: ffi::DecoderDownscaleHints){
+    fn set_downscale_hints(&mut self, hints: ffi::DecoderDownscaleHints) {
         unsafe {
-            ffi::wrap_jpeg_set_downscale_type(&mut self.codec_info,
-                                              hints.scale_luma_spatially,
-                                              hints.gamma_correct_for_srgb_during_spatial_luma_scaling)
+            ffi::wrap_jpeg_set_downscale_type(
+                &mut self.codec_info,
+                hints.scale_luma_spatially,
+                hints.gamma_correct_for_srgb_during_spatial_luma_scaling,
+            )
         }
         self.hints = hints;
     }
@@ -528,54 +540,56 @@ impl MzDec{
         if self.codec_info_disposed {
             return;
         }
-        unsafe {
-            ffi::wrap_jpeg_set_idct_method_selector(&mut self.codec_info)
-        }
+        unsafe { ffi::wrap_jpeg_set_idct_method_selector(&mut self.codec_info) }
 
-
-        if self.hints.downscaled_min_width > 0 && self.hints.downscaled_min_height > 0
+        if self.hints.downscaled_min_width > 0
+            && self.hints.downscaled_min_height > 0
             && (self.original_width > self.hints.downscale_if_wider_than as u32
-                || self.original_height > self.hints.or_if_taller_than as u32) {
-                for i in 1..8 {
-                    if i == 7 {
-                        continue; // Because 7/8ths is slower than 8/8
-                    }
+                || self.original_height > self.hints.or_if_taller_than as u32)
+        {
+            for i in 1..8 {
+                if i == 7 {
+                    continue; // Because 7/8ths is slower than 8/8
+                }
 
-                    let new_w = (self.original_width * i).div_ceil(8);
-                    let new_h = (self.original_height * i).div_ceil(8);
-                    if new_w >= self.hints.downscaled_min_width as u32 && new_h >= self.hints.downscaled_min_height as u32 {
-                        self.codec_info.scale_denom = 8;
-                        self.codec_info.scale_num = i;
-                        self.w = new_w;
-                        self.h = new_h;
-                        return;
-                    }
+                let new_w = (self.original_width * i).div_ceil(8);
+                let new_h = (self.original_height * i).div_ceil(8);
+                if new_w >= self.hints.downscaled_min_width as u32
+                    && new_h >= self.hints.downscaled_min_height as u32
+                {
+                    self.codec_info.scale_denom = 8;
+                    self.codec_info.scale_num = i;
+                    self.w = new_w;
+                    self.h = new_h;
+                    return;
                 }
             }
+        }
     }
 
-    fn interpret_metadata(&mut self){
+    fn interpret_metadata(&mut self) {
         if self.color_profile.is_none() {
             self.color_profile =
                 crate::codecs::mozjpeg_decoder_helpers::read_icc_profile(&self.codec_info);
         }
-        if self.exif_rotation_flag.is_none(){
-            self.exif_rotation_flag = crate::codecs::mozjpeg_decoder_helpers::get_exif_orientation(&self.codec_info);
+        if self.exif_rotation_flag.is_none() {
+            self.exif_rotation_flag =
+                crate::codecs::mozjpeg_decoder_helpers::get_exif_orientation(&self.codec_info);
         }
     }
 
-    fn get_decoder_color_info(&mut self) -> ffi::DecoderColorInfo{
-        let mut info = ffi::DecoderColorInfo{
+    fn get_decoder_color_info(&mut self) -> ffi::DecoderColorInfo {
+        let mut info = ffi::DecoderColorInfo {
             source: ColorProfileSource::Null,
             profile_buffer: null_mut(),
             buffer_length: 0,
             white_point: Default::default(),
-            primaries: ::lcms2::CIExyYTRIPLE{
+            primaries: ::lcms2::CIExyYTRIPLE {
                 Red: Default::default(),
                 Green: Default::default(),
-                Blue: Default::default()
+                Blue: Default::default(),
             },
-            gamma: self.gamma
+            gamma: self.gamma,
         };
 
         if let Some(profile) = self.color_profile.as_deref_mut() {

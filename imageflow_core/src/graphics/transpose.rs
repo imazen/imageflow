@@ -5,10 +5,10 @@ use crate::graphics::prelude::*;
 use multiversion::multiversion;
 
 #[cfg(feature = "nightly")]
-use std::simd::{Simd};
+use std::simd::Simd;
 
 #[cfg(feature = "nightly")]
-use  std::simd::prelude::SimdUint;
+use std::simd::prelude::SimdUint;
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
@@ -141,7 +141,12 @@ unsafe fn transpose_4x4_neon(src: *const u32, dst: *mut u32, src_stride: usize, 
 
 #[target_feature(enable = "neon")]
 #[cfg(target_arch = "aarch64")]
-pub unsafe fn transpose_8x8_neon(src: *const u32, dst: *mut u32, src_stride: usize, dst_stride: usize) {
+pub unsafe fn transpose_8x8_neon(
+    src: *const u32,
+    dst: *mut u32,
+    src_stride: usize,
+    dst_stride: usize,
+) {
     // Transpose top-left 4x4 quadrant
     transpose_4x4_neon(src, dst, src_stride, dst_stride);
 
@@ -152,7 +157,12 @@ pub unsafe fn transpose_8x8_neon(src: *const u32, dst: *mut u32, src_stride: usi
     transpose_4x4_neon(src.add(src_stride * 4), dst.add(4), src_stride, dst_stride);
 
     // Transpose bottom-right 4x4 quadrant
-    transpose_4x4_neon(src.add(src_stride * 4).add(4), dst.add(dst_stride * 4).add(4), src_stride, dst_stride);
+    transpose_4x4_neon(
+        src.add(src_stride * 4).add(4),
+        dst.add(dst_stride * 4).add(4),
+        src_stride,
+        dst_stride,
+    );
 }
 #[inline]
 unsafe fn transpose4x4_generic(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
@@ -239,22 +249,36 @@ pub fn transpose_u32_slices(
     height: usize,
 ) -> Result<(), FlowError> {
     if to_stride < height {
-        return Err(nerror!(ErrorKind::InvalidArgument,
-            "to_stride({}) < height({})", to_stride, height));
+        return Err(nerror!(
+            ErrorKind::InvalidArgument,
+            "to_stride({}) < height({})",
+            to_stride,
+            height
+        ));
     }
     // Ensure we don't go out of bounds
-    if from_stride * (height -1) + width > from.len() {
+    if from_stride * (height - 1) + width > from.len() {
         return Err(nerror!(ErrorKind::InvalidArgument,
             "Slice bounds exceeded: from_stride({}) * (height ({}) - 1) + width ({}) > from.len({})", from_stride, height, width, from.len()));
     }
     if from_stride < width {
-        return Err(nerror!(ErrorKind::InvalidArgument,
-            "from_stride({}) < width({})", from_stride, width));
+        return Err(nerror!(
+            ErrorKind::InvalidArgument,
+            "from_stride({}) < width({})",
+            from_stride,
+            width
+        ));
     }
 
     if to_stride * (width - 1) + height > to.len() {
-        return Err(nerror!(ErrorKind::InvalidArgument,
-            "Slice bounds exceeded: to_stride({}) * (width ({}) - 1) + height ({}) > to.len({})", to_stride, width, height, to.len()));
+        return Err(nerror!(
+            ErrorKind::InvalidArgument,
+            "Slice bounds exceeded: to_stride({}) * (width ({}) - 1) + height ({}) > to.len({})",
+            to_stride,
+            width,
+            height,
+            to.len()
+        ));
     }
 
     let block_size = 128;
@@ -262,7 +286,15 @@ pub fn transpose_u32_slices(
     let cropped_w = (width / block_size) * block_size;
 
     // Transpose the main part of the image
-    transpose_multiple_of_block_size_rectangle(from, to, from_stride, to_stride, cropped_w, cropped_h, block_size);
+    transpose_multiple_of_block_size_rectangle(
+        from,
+        to,
+        from_stride,
+        to_stride,
+        cropped_w,
+        cropped_h,
+        block_size,
+    );
 
     // Handle the remaining edges
     transpose_edges(from, to, cropped_h, cropped_w, from_stride, to_stride, width, height);
@@ -270,9 +302,8 @@ pub fn transpose_u32_slices(
     Ok(())
 }
 
-
 // transpose main cropped part of the image
-#[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
+#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 fn transpose_multiple_of_block_size_rectangle(
     src: &[u32],
     dst: &mut [u32],
@@ -280,7 +311,7 @@ fn transpose_multiple_of_block_size_rectangle(
     dst_stride: usize,
     width: usize,
     height: usize,
-    block_size: usize
+    block_size: usize,
 ) {
     #[cfg(target_arch = "x86_64")]
     let use8x8simd = is_x86_feature_detected!("avx2");
@@ -296,7 +327,6 @@ fn transpose_multiple_of_block_size_rectangle(
 
     #[cfg(not(target_arch = "x86_64"))]
     let use4x4simd = false;
-
 
     for y_block in (0..height).step_by(block_size) {
         for x_block in (0..width).step_by(block_size) {
@@ -331,7 +361,6 @@ fn transpose_multiple_of_block_size_rectangle(
                 unsafe {
                     for y in (y_block..max_y).step_by(4) {
                         for x in (x_block..max_x).step_by(4) {
-
                             transpose4x4_sse2(
                                 src.as_ptr().add(y * src_stride + x),
                                 dst.as_mut_ptr().add(x * dst_stride + y),
@@ -341,41 +370,25 @@ fn transpose_multiple_of_block_size_rectangle(
                         }
                     }
                 }
-            }else {
+            } else {
                 #[cfg(feature = "nightly")]
                 {
                     transpose_in_blocks_of_8x8_simd(
-                        src,
-                        dst,
-                        src_stride,
-                        dst_stride,
-                        x_block,
-                        y_block,
-                        max_x,
-                        max_y,
+                        src, dst, src_stride, dst_stride, x_block, y_block, max_x, max_y,
                     );
                 }
                 #[cfg(not(feature = "nightly"))]
                 {
                     transpose_in_blocks_of_8x8_scalar(
-                        src,
-                        dst,
-                        src_stride,
-                        dst_stride,
-                        x_block,
-                        y_block,
-                        max_x,
-                        max_y,
+                        src, dst, src_stride, dst_stride, x_block, y_block, max_x, max_y,
                     );
                 }
             }
-
         }
     }
 }
 
-
-#[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
+#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 #[cfg(feature = "nightly")]
 fn transpose_in_blocks_of_8x8_simd(
     src: &[u32],
@@ -442,7 +455,7 @@ fn transpose_8x8_simd(input: [Simd<u32, 8>; 8]) -> [Simd<u32, 8>; 8] {
 }
 
 #[cfg(not(feature = "nightly"))]
-#[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
+#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 fn transpose_in_blocks_of_8x8_scalar(
     src: &[u32],
     dst: &mut [u32],
@@ -471,7 +484,7 @@ fn transpose_in_blocks_of_8x8_scalar(
     }
 }
 
-#[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
+#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 fn transpose_in_blocks_of_4x4(
     src: &[u32],
     dst: &mut [u32],
@@ -484,14 +497,14 @@ fn transpose_in_blocks_of_4x4(
 ) {
     unsafe {
         for y in (y1..y2).step_by(4) {
-            let src_row = y*src_stride;
+            let src_row = y * src_stride;
             for x in (x1..x2).step_by(4) {
                 let block_x = src_row + x;
-                let block_y = x*dst_stride + y;
+                let block_y = x * dst_stride + y;
                 for i in 0..4 {
                     for j in 0..4 {
                         *dst.get_unchecked_mut(block_y + j * dst_stride + i) =
-                        *src.get_unchecked(block_x + i * src_stride + j);
+                            *src.get_unchecked(block_x + i * src_stride + j);
                     }
                 }
             }
@@ -501,12 +514,7 @@ fn transpose_in_blocks_of_4x4(
 
 // #[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
 #[inline(always)]
-fn transpose_4x4(
-    src: &[u32],
-    dst: &mut [u32],
-    src_stride: usize,
-    dst_stride: usize,
-) {
+fn transpose_4x4(src: &[u32], dst: &mut [u32], src_stride: usize, dst_stride: usize) {
     unsafe {
         for i in 0..4 {
             for j in 0..4 {
@@ -516,15 +524,9 @@ fn transpose_4x4(
     }
 }
 
-
 // #[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
 #[inline(always)]
-fn transpose_8x8(
-    src: &[u32],
-    dst: &mut [u32],
-    src_stride: usize,
-    dst_stride: usize,
-) {
+fn transpose_8x8(src: &[u32], dst: &mut [u32], src_stride: usize, dst_stride: usize) {
     unsafe {
         for i in 0..8 {
             for j in 0..8 {
@@ -533,8 +535,6 @@ fn transpose_8x8(
         }
     }
 }
-
-
 
 #[inline(always)]
 fn transpose_edges(
@@ -567,9 +567,12 @@ fn transpose_edges(
 // Function for BitmapWindowMut
 pub fn bitmap_window_transpose(
     from: &mut BitmapWindowMut<u8>,
-    to: &mut BitmapWindowMut<u8>
+    to: &mut BitmapWindowMut<u8>,
 ) -> Result<(), FlowError> {
-    if from.w() != to.h() || from.h() != to.w() || from.info().pixel_layout() != to.info().pixel_layout() {
+    if from.w() != to.h()
+        || from.h() != to.w()
+        || from.info().pixel_layout() != to.info().pixel_layout()
+    {
         return Err(nerror!(ErrorKind::InvalidArgument, "For transposition, canvas and input formats must be the same and dimensions must be swapped"));
     }
 
@@ -578,10 +581,16 @@ pub fn bitmap_window_transpose(
     }
 
     let from_slice = unsafe {
-        std::slice::from_raw_parts(from.slice_mut().as_ptr() as *const u32, from.slice_mut().len() / 4)
+        std::slice::from_raw_parts(
+            from.slice_mut().as_ptr() as *const u32,
+            from.slice_mut().len() / 4,
+        )
     };
     let to_slice = unsafe {
-        std::slice::from_raw_parts_mut(to.slice_mut().as_mut_ptr() as *mut u32, to.slice_mut().len() / 4)
+        std::slice::from_raw_parts_mut(
+            to.slice_mut().as_mut_ptr() as *mut u32,
+            to.slice_mut().len() / 4,
+        )
     };
 
     let from_stride = from.info().t_stride() as usize / 4;
@@ -589,7 +598,8 @@ pub fn bitmap_window_transpose(
     let width = from.w() as usize;
     let height = from.h() as usize;
 
-    transpose_u32_slices(from_slice, to_slice, from_stride, to_stride, width, height).map_err(|e| e.at(here!()))
+    transpose_u32_slices(from_slice, to_slice, from_stride, to_stride, width, height)
+        .map_err(|e| e.at(here!()))
 }
 
 #[cfg(test)]
@@ -657,14 +667,14 @@ mod tests {
     fn test_transpose_large_square_matrix() {
         let size = 256;
         let mut rng = rand::rng();
-        let from: Vec<u32> = (0..size*size).map(|_| rng.random()).collect();
-        let mut to = vec![0; size*size];
+        let from: Vec<u32> = (0..size * size).map(|_| rng.random()).collect();
+        let mut to = vec![0; size * size];
 
         transpose_u32_slices(&from, &mut to, size, size, size, size).unwrap();
 
         for i in 0..size {
             for j in 0..size {
-                assert_eq!(from[i*size + j], to[j*size + i]);
+                assert_eq!(from[i * size + j], to[j * size + i]);
             }
         }
     }
@@ -674,14 +684,14 @@ mod tests {
         let width = 256;
         let height = 128;
         let mut rng = rand::rng();
-        let from: Vec<u32> = (0..width*height).map(|_| rng.random()).collect();
-        let mut to = vec![0; width*height];
+        let from: Vec<u32> = (0..width * height).map(|_| rng.random()).collect();
+        let mut to = vec![0; width * height];
 
         transpose_u32_slices(&from, &mut to, width, height, width, height).unwrap();
 
         for i in 0..height {
             for j in 0..width {
-                assert_eq!(from[i*width + j], to[j*height + i]);
+                assert_eq!(from[i * width + j], to[j * height + i]);
             }
         }
     }
@@ -693,14 +703,14 @@ mod tests {
         let src_stride = 132;
         let dst_stride = 104;
         let mut rng = rand::rng();
-        let from: Vec<u32> = (0..src_stride*height).map(|_| rng.random()).collect();
-        let mut to = vec![0; dst_stride*width];
+        let from: Vec<u32> = (0..src_stride * height).map(|_| rng.random()).collect();
+        let mut to = vec![0; dst_stride * width];
 
         transpose_u32_slices(&from, &mut to, src_stride, dst_stride, width, height).unwrap();
 
         for i in 0..height {
             for j in 0..width {
-                assert_eq!(from[i*src_stride + j], to[j*dst_stride + i]);
+                assert_eq!(from[i * src_stride + j], to[j * dst_stride + i]);
             }
         }
     }
@@ -711,14 +721,14 @@ mod tests {
 
         for (width, height) in sizes {
             let mut rng = rand::rng();
-            let from: Vec<u32> = (0..width*height).map(|_| rng.random()).collect();
-            let mut to = vec![0; width*height];
+            let from: Vec<u32> = (0..width * height).map(|_| rng.random()).collect();
+            let mut to = vec![0; width * height];
 
             transpose_u32_slices(&from, &mut to, width, height, width, height).unwrap();
 
             for i in 0..height {
                 for j in 0..width {
-                    assert_eq!(from[i*width + j], to[j*height + i]);
+                    assert_eq!(from[i * width + j], to[j * height + i]);
                 }
             }
         }
@@ -767,14 +777,9 @@ mod tests {
     fn test_transpose_8x8_neon() {
         // Create input matrix with obvious values
         let input: [u32; 64] = [
-            0,  1,  2,  3,  4,  5,  6,  7,
-            10, 11, 12, 13, 14, 15, 16, 17,
-            20, 21, 22, 23, 24, 25, 26, 27,
-            30, 31, 32, 33, 34, 35, 36, 37,
-            40, 41, 42, 43, 44, 45, 46, 47,
-            50, 51, 52, 53, 54, 55, 56, 57,
-            60, 61, 62, 63, 64, 65, 66, 67,
-            70, 71, 72, 73, 74, 75, 76, 77
+            0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 25, 26, 27,
+            30, 31, 32, 33, 34, 35, 36, 37, 40, 41, 42, 43, 44, 45, 46, 47, 50, 51, 52, 53, 54, 55,
+            56, 57, 60, 61, 62, 63, 64, 65, 66, 67, 70, 71, 72, 73, 74, 75, 76, 77,
         ];
 
         let mut output = [0u32; 64];
@@ -785,14 +790,9 @@ mod tests {
 
         // Expected transposed matrix
         let expected: [u32; 64] = [
-            0, 10, 20, 30, 40, 50, 60, 70,
-            1, 11, 21, 31, 41, 51, 61, 71,
-            2, 12, 22, 32, 42, 52, 62, 72,
-            3, 13, 23, 33, 43, 53, 63, 73,
-            4, 14, 24, 34, 44, 54, 64, 74,
-            5, 15, 25, 35, 45, 55, 65, 75,
-            6, 16, 26, 36, 46, 56, 66, 76,
-            7, 17, 27, 37, 47, 57, 67, 77
+            0, 10, 20, 30, 40, 50, 60, 70, 1, 11, 21, 31, 41, 51, 61, 71, 2, 12, 22, 32, 42, 52,
+            62, 72, 3, 13, 23, 33, 43, 53, 63, 73, 4, 14, 24, 34, 44, 54, 64, 74, 5, 15, 25, 35,
+            45, 55, 65, 75, 6, 16, 26, 36, 46, 56, 66, 76, 7, 17, 27, 37, 47, 57, 67, 77,
         ];
 
         assert_eq!(output, expected, "Transposed matrix does not match expected output");
@@ -808,14 +808,9 @@ mod tests {
 
         // Create input matrix with obvious values
         let input: [u32; 64] = [
-            0,  1,  2,  3,  4,  5,  6,  7,
-            10, 11, 12, 13, 14, 15, 16, 17,
-            20, 21, 22, 23, 24, 25, 26, 27,
-            30, 31, 32, 33, 34, 35, 36, 37,
-            40, 41, 42, 43, 44, 45, 46, 47,
-            50, 51, 52, 53, 54, 55, 56, 57,
-            60, 61, 62, 63, 64, 65, 66, 67,
-            70, 71, 72, 73, 74, 75, 76, 77
+            0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 25, 26, 27,
+            30, 31, 32, 33, 34, 35, 36, 37, 40, 41, 42, 43, 44, 45, 46, 47, 50, 51, 52, 53, 54, 55,
+            56, 57, 60, 61, 62, 63, 64, 65, 66, 67, 70, 71, 72, 73, 74, 75, 76, 77,
         ];
 
         let mut output = [0u32; 64];
@@ -826,14 +821,9 @@ mod tests {
 
         // Expected transposed matrix
         let expected: [u32; 64] = [
-            0, 10, 20, 30, 40, 50, 60, 70,
-            1, 11, 21, 31, 41, 51, 61, 71,
-            2, 12, 22, 32, 42, 52, 62, 72,
-            3, 13, 23, 33, 43, 53, 63, 73,
-            4, 14, 24, 34, 44, 54, 64, 74,
-            5, 15, 25, 35, 45, 55, 65, 75,
-            6, 16, 26, 36, 46, 56, 66, 76,
-            7, 17, 27, 37, 47, 57, 67, 77
+            0, 10, 20, 30, 40, 50, 60, 70, 1, 11, 21, 31, 41, 51, 61, 71, 2, 12, 22, 32, 42, 52,
+            62, 72, 3, 13, 23, 33, 43, 53, 63, 73, 4, 14, 24, 34, 44, 54, 64, 74, 5, 15, 25, 35,
+            45, 55, 65, 75, 6, 16, 26, 36, 46, 56, 66, 76, 7, 17, 27, 37, 47, 57, 67, 77,
         ];
 
         assert_eq!(output, expected, "Transposed matrix does not match expected output");

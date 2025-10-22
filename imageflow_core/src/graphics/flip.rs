@@ -10,13 +10,11 @@ use imageflow_types::{PixelFormat, PixelLayout};
 pub fn flow_bitmap_bgra_flip_vertical_safe(b: &mut Bitmap) -> Result<(), FlowError> {
     // Step 2a: Determine image size and retrieve a safe window into the bitmap
     let (width, height) = b.size();
-    let mut top = b
-        .get_window_u8()
-        .ok_or_else(|| nerror!(ErrorKind::InvalidArgument, "No valid window"))?;
+    let mut top =
+        b.get_window_u8().ok_or_else(|| nerror!(ErrorKind::InvalidArgument, "No valid window"))?;
     let mut bottom_half = top.split_off((height / 2) as u32).unwrap();
 
-    for (mut top_row, mut bottom_row) in top.scanlines()
-                        .zip(bottom_half.scanlines_reverse()) {
+    for (mut top_row, mut bottom_row) in top.scanlines().zip(bottom_half.scanlines_reverse()) {
         top_row.row_mut().swap_with_slice(bottom_row.row_mut());
     }
     Ok(())
@@ -30,9 +28,8 @@ pub fn flow_bitmap_bgra_flip_horizontal_safe(b: &mut Bitmap) -> Result<(), FlowE
     let pixel_format = b.info().calculate_pixel_format().map_err(|e| e.at(here!()))?;
     let bytes_per_pixel = pixel_format.bytes();
 
-    let mut window = b
-        .get_window_u8()
-        .ok_or_else(|| nerror!(ErrorKind::InvalidArgument, "No valid window"))?;
+    let mut window =
+        b.get_window_u8().ok_or_else(|| nerror!(ErrorKind::InvalidArgument, "No valid window"))?;
 
     // Reverse the pixel in each row
     for mut scanline in window.scanlines_bgra().unwrap() {

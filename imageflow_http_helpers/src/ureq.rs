@@ -1,16 +1,14 @@
-
+use crate::{FetchConfig, FetchError, FetchResult, FetchedResponse, HttpFetcher};
 use std;
-use ureq;
 use std::io::Read;
 use std::str;
-use crate::{HttpFetcher, FetchError, FetchResult, FetchedResponse, FetchConfig};
+use ureq;
 
 impl From<ureq::Error> for FetchError {
     fn from(e: ureq::Error) -> FetchError {
         FetchError::ToolError(format!("ureq error: {:?}", e))
     }
 }
-
 
 pub struct UreqFetcher;
 
@@ -25,11 +23,10 @@ impl HttpFetcher for UreqFetcher {
         let conf = config.unwrap_or_default();
 
         let read_error_body = conf.read_error_body.unwrap_or(false);
-        let ureq_config = ureq::config::Config::builder().http_status_as_error(read_error_body).build();
-
+        let ureq_config =
+            ureq::config::Config::builder().http_status_as_error(read_error_body).build();
 
         let agent = ureq_config.new_agent();
-
 
         match agent.get(url).call() {
             Ok(response) => {
@@ -60,29 +57,19 @@ impl HttpFetcher for UreqFetcher {
                     return Err(FetchError::ContentLengthMismatch);
                 }
 
-                if read_error_body && !success{
+                if read_error_body && !success {
                     return Err(FetchError::UpstreamResponseErrorWithResponse {
                         status: status.as_u16(),
-                        response: FetchedResponse {
-                            code: status.as_u16(),
-                            content_type,
-                            bytes,
-                        },
+                        response: FetchedResponse { code: status.as_u16(), content_type, bytes },
                     });
                 }
 
-                Ok(FetchedResponse {
-                    code: status.as_u16(),
-                    content_type,
-                    bytes,
-                })
+                Ok(FetchedResponse { code: status.as_u16(), content_type, bytes })
             }
             Err(e) => match e {
-                ureq::Error::StatusCode(code) => {
-                    Err(FetchError::UpstreamResponseError(code))
-                }
+                ureq::Error::StatusCode(code) => Err(FetchError::UpstreamResponseError(code)),
                 e => Err(e.into()),
-            }
+            },
         }
     }
 
@@ -92,7 +79,7 @@ impl HttpFetcher for UreqFetcher {
         match agent.get(url).call() {
             Ok(response) => Ok(response.status().as_u16()),
             Err(ureq::Error::StatusCode(code)) => Ok(code),
-            Err(e) => Err(e.into())
+            Err(e) => Err(e.into()),
         }
     }
 }

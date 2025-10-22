@@ -1,13 +1,15 @@
 pub(crate) mod endpoints;
-use crate::internal_prelude::works_everywhere::*;
 use crate::context::Context;
+use crate::internal_prelude::works_everywhere::*;
 
-pub(crate) fn invoke_with_json_error(context: &mut Context, endpoint: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
+pub(crate) fn invoke_with_json_error(
+    context: &mut Context,
+    endpoint: &str,
+    json: &[u8],
+) -> (JsonResponse, Result<()>) {
     match endpoints::invoke(context, endpoint, json) {
         Ok(response) => (response, Ok(())),
-        Err(e) => {
-            (JsonResponse::from_flow_error(&e), Err(e))
-        }
+        Err(e) => (JsonResponse::from_flow_error(&e), Err(e)),
     }
 }
 
@@ -16,24 +18,24 @@ pub fn invoke(context: &mut Context, endpoint: &str, json: &[u8]) -> Result<Json
 }
 
 pub fn try_invoke_static(endpoint: &str, json: &[u8]) -> Result<Option<JsonResponse>> {
-    endpoints::try_invoke_static( endpoint, json).map_err(|e| e.at(here!()))
+    endpoints::try_invoke_static(endpoint, json).map_err(|e| e.at(here!()))
 }
 
-
-pub(crate)fn parse_json<'a, D>(json: &[u8]) -> Result<D>
-where D: serde::de::DeserializeOwned, D: 'a
+pub(crate) fn parse_json<'a, D>(json: &[u8]) -> Result<D>
+where
+    D: serde::de::DeserializeOwned,
+    D: 'a,
 {
     match serde_json::from_slice(json) {
         Ok(d) => Ok(d),
-        Err(e) => Err(FlowError::from_serde(e, json, std::any::type_name::<D>()).at(here!()))
+        Err(e) => Err(FlowError::from_serde(e, json, std::any::type_name::<D>()).at(here!())),
     }
 }
 
-
+#[cfg(feature = "schema-export")]
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "schema-export")]
 use utoipa::ToSchema;
-#[cfg(feature = "schema-export")]
-use serde::{Serialize, Deserialize};
 
 // Generic wrapper for successful JSON responses (matches Response001 structure)
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -54,10 +56,9 @@ pub struct JsonResponse {
 }
 
 impl JsonResponse {
-    pub fn from_flow_error(err: &FlowError) -> JsonResponse{
+    pub fn from_flow_error(err: &FlowError) -> JsonResponse {
         let message = format!("{}", err);
-        JsonResponse::fail_with_message(i64::from(err.category().http_status_code()),
-                                        &message)
+        JsonResponse::fail_with_message(i64::from(err.category().http_status_code()), &message)
     }
 
     pub fn from_response001(r: s::Response001) -> JsonResponse {
@@ -67,37 +68,29 @@ impl JsonResponse {
         }
     }
     pub fn success_with_payload(r: s::ResponsePayload) -> JsonResponse {
-        let r = s::Response001 {
-            success: true,
-            code: 200,
-            message: Some("OK".to_owned()),
-            data: r,
-        };
+        let r =
+            s::Response001 { success: true, code: 200, message: Some("OK".to_owned()), data: r };
         JsonResponse {
             status_code: r.code,
             response_json: Cow::Owned(serde_json::to_vec_pretty(&r).unwrap()),
         }
     }
-    pub fn ok<T>(r: T) -> JsonResponse  where T: serde::Serialize {
-        let r = JsonAnswer {
-            success: true,
-            code: 200,
-            message: Some("OK".to_owned()),
-            data: r,
-        };
+    pub fn ok<T>(r: T) -> JsonResponse
+    where
+        T: serde::Serialize,
+    {
+        let r = JsonAnswer { success: true, code: 200, message: Some("OK".to_owned()), data: r };
         JsonResponse {
             status_code: r.code,
             response_json: Cow::Owned(serde_json::to_vec_pretty(&r).unwrap()),
         }
     }
-    pub fn from_result(r: Result<s::ResponsePayload>) -> JsonResponse{
+    pub fn from_result(r: Result<s::ResponsePayload>) -> JsonResponse {
         match r {
             Ok(payload) => {
                 JsonResponse::success_with_payload(payload) //How about failures with payloads!?
             }
-            Err(error) => {
-                JsonResponse::from_flow_error(&error)
-            }
+            Err(error) => JsonResponse::from_flow_error(&error),
         }
     }
 
@@ -106,15 +99,16 @@ impl JsonResponse {
     }
     pub fn assert_ok(&self) {
         if !self.status_2xx() {
-            if let Ok(s) = std::str::from_utf8(self.response_json.as_ref()){
-                if let Ok(s::Response001{ message, ..}) = serde_json::from_slice(self.response_json.as_ref()) {
+            if let Ok(s) = std::str::from_utf8(self.response_json.as_ref()) {
+                if let Ok(s::Response001 { message, .. }) =
+                    serde_json::from_slice(self.response_json.as_ref())
+                {
                     if let Some(message) = message {
                         panic!("Json Status {}\n{}\n{}", self.status_code, &s, message);
                     }
                 }
                 panic!("Json Status {}\n{}", self.status_code, &s);
-
-            }else{
+            } else {
                 panic!("Json Status {} - payload invalid utf8", self.status_code);
             }
         }
@@ -140,10 +134,12 @@ impl JsonResponse {
     pub fn method_not_understood() -> JsonResponse {
         JsonResponse {
             status_code: 404,
-            response_json: Cow::Borrowed(br#"{
+            response_json: Cow::Borrowed(
+                br#"{
                                         "success": "false",
                                         "code": 404,
-                                        "message": "Endpoint name not understood"}"#),
+                                        "message": "Endpoint name not understood"}"#,
+            ),
         }
     }
 

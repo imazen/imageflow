@@ -15,12 +15,12 @@
 
 // The srcset string is a comma-delimited list of commands. Each command is a hyphen-delimited list of values. The first value is the command name, and the rest are arguments.
 
-use std::str::FromStr;
+use super::parsing::{FitMode, Instructions, OutputFormat, ParseWarning, ScaleMode};
 use imageflow_types::BoolKeep;
 use imageflow_types::QualityProfile;
-use super::parsing::{FitMode, ScaleMode, OutputFormat, ParseWarning, Instructions};
+use std::str::FromStr;
 
-fn srcset_syntax_message_for(format: OutputFormat) -> &'static str{
+fn srcset_syntax_message_for(format: OutputFormat) -> &'static str {
     match format {
         OutputFormat::Webp => "srcset=webp-[quality|lossless|keep|s[number]|q[number]]",
         OutputFormat::Jxl => "srcset=jxl-[quality|lossless|keep|d[number]|e[number]|q[number]]",
@@ -32,7 +32,14 @@ fn srcset_syntax_message_for(format: OutputFormat) -> &'static str{
         _ => "srcset=[format]-[quality|lossless|keep|s[number]|q[number]|d[number]]",
     }
 }
-fn parse_format_tuning(format: OutputFormat, lossless: Option<BoolKeep>, srcset: &str, iter: &mut std::str::Split<'_, &str>, i: &mut Instructions, warnings: &mut Vec<ParseWarning>) {
+fn parse_format_tuning(
+    format: OutputFormat,
+    lossless: Option<BoolKeep>,
+    srcset: &str,
+    iter: &mut std::str::Split<'_, &str>,
+    i: &mut Instructions,
+    warnings: &mut Vec<ParseWarning>,
+) {
     // if any is 'l' or 'lossless', set lossless
     // if any is a regular number or q[number], set quality
     // if any is 'keep', set keep lossless
@@ -52,54 +59,73 @@ fn parse_format_tuning(format: OutputFormat, lossless: Option<BoolKeep>, srcset:
             i.jpeg_progressive = Some(true);
         } else if arg == "baseline" && format == OutputFormat::Jpeg {
             i.jpeg_progressive = Some(false);
-        } else if arg.starts_with("d") || arg.starts_with("s") || arg.starts_with("mq") || arg.starts_with("q") || arg.starts_with("e") {
-            let substr = if arg.starts_with("mq") {
-                &arg[2..]
-            } else {
-                &arg[1..]
-            };
+        } else if arg.starts_with("d")
+            || arg.starts_with("s")
+            || arg.starts_with("mq")
+            || arg.starts_with("q")
+            || arg.starts_with("e")
+        {
+            let substr = if arg.starts_with("mq") { &arg[2..] } else { &arg[1..] };
             if let Ok(s) = substr.parse::<f32>() {
                 match arg.get(0..1).unwrap() {
                     "d" => {
                         if format == OutputFormat::Jxl {
                             i.jxl_distance = Some(s);
                         } else {
-                            warnings.push(ParseWarning::ValueInvalid((srcset_syntax_message_for(format), arg.to_string())));
+                            warnings.push(ParseWarning::ValueInvalid((
+                                srcset_syntax_message_for(format),
+                                arg.to_string(),
+                            )));
                         }
-                    },
+                    }
                     "e" => {
                         if format == OutputFormat::Jxl {
-                            i.jxl_effort = Some(f32::min(255.0,f32::max(0.0, s)) as u8);
+                            i.jxl_effort = Some(f32::min(255.0, f32::max(0.0, s)) as u8);
                         } else {
-                            warnings.push(ParseWarning::ValueInvalid((srcset_syntax_message_for(format), arg.to_string())));
+                            warnings.push(ParseWarning::ValueInvalid((
+                                srcset_syntax_message_for(format),
+                                arg.to_string(),
+                            )));
                         }
-                    },
+                    }
                     "m" => {
                         if format == OutputFormat::Png {
-                            i.png_min_quality = Some(f32::min(100.0,f32::max(0.0, s)) as u8);
+                            i.png_min_quality = Some(f32::min(100.0, f32::max(0.0, s)) as u8);
                         } else {
-                            warnings.push(ParseWarning::ValueInvalid((srcset_syntax_message_for(format), arg.to_string())));
+                            warnings.push(ParseWarning::ValueInvalid((
+                                srcset_syntax_message_for(format),
+                                arg.to_string(),
+                            )));
                         }
-                    },
+                    }
                     "s" => {
                         if format == OutputFormat::Avif {
-                            i.avif_speed = Some(f32::min(255.0,f32::max(0.0, s)) as u8);
+                            i.avif_speed = Some(f32::min(255.0, f32::max(0.0, s)) as u8);
                         } else {
-                            warnings.push(ParseWarning::ValueInvalid((srcset_syntax_message_for(format), arg.to_string())));
+                            warnings.push(ParseWarning::ValueInvalid((
+                                srcset_syntax_message_for(format),
+                                arg.to_string(),
+                            )));
                         }
-                    },
+                    }
                     "q" => {
                         quality = Some(s);
-                    },
+                    }
                     _ => unreachable!(),
                 }
             } else {
-                warnings.push(ParseWarning::ValueInvalid((srcset_syntax_message_for(format), arg.to_string())));
+                warnings.push(ParseWarning::ValueInvalid((
+                    srcset_syntax_message_for(format),
+                    arg.to_string(),
+                )));
             }
         } else if let Ok(v) = arg.parse::<f32>() {
             quality = Some(v);
         } else {
-            warnings.push(ParseWarning::ValueInvalid((srcset_syntax_message_for(format), arg.to_string())));
+            warnings.push(ParseWarning::ValueInvalid((
+                srcset_syntax_message_for(format),
+                arg.to_string(),
+            )));
         }
     }
     // Set the global lossless regardless of where lossless/lossy appears in the syntax, if format=auto
@@ -120,7 +146,7 @@ fn parse_format_tuning(format: OutputFormat, lossless: Option<BoolKeep>, srcset:
                 i.webp_lossless = Some(lossless);
             }
             max_count = 2; //lossless|keep,quality
-        },
+        }
         OutputFormat::Jxl => {
             i.format = Some(OutputFormat::Jxl);
             if let Some(quality) = quality {
@@ -130,21 +156,21 @@ fn parse_format_tuning(format: OutputFormat, lossless: Option<BoolKeep>, srcset:
                 i.jxl_lossless = Some(lossless);
             }
             max_count = 4; //lossless|keep,quality,distance,effort
-        },
+        }
         OutputFormat::Avif => {
             i.format = Some(OutputFormat::Avif);
             if let Some(quality) = quality {
                 i.avif_quality = Some(quality);
             }
             max_count = 2; //quality,speed
-        },
+        }
         OutputFormat::Jpeg => {
             i.format = Some(OutputFormat::Jpeg);
             if let Some(quality) = quality {
                 i.jpeg_quality = Some(quality as i32);
             }
             max_count = 2; //quality,progressive|baseline
-        },
+        }
         OutputFormat::Png => {
             i.format = Some(OutputFormat::Png);
             if let Some(quality) = quality {
@@ -154,23 +180,25 @@ fn parse_format_tuning(format: OutputFormat, lossless: Option<BoolKeep>, srcset:
                 i.png_lossless = Some(lossless);
             }
             max_count = 3; //quality,lossless,min_quality
-        },
+        }
         OutputFormat::Auto => {
             i.format = Some(OutputFormat::Auto);
             max_count = 1; //lossless
-        },
+        }
         other => {
             i.format = Some(other);
             max_count = 0;
         }
     }
     if count > max_count {
-        warnings.push(ParseWarning::ValueInvalid((srcset_syntax_message_for(format), format!("too many arguments:{}",  srcset))));
+        warnings.push(ParseWarning::ValueInvalid((
+            srcset_syntax_message_for(format),
+            format!("too many arguments:{}", srcset),
+        )));
     }
 }
 
-pub fn apply_srcset_string (i: &mut Instructions, srcset: &str, warnings: &mut Vec<ParseWarning>) {
-
+pub fn apply_srcset_string(i: &mut Instructions, srcset: &str, warnings: &mut Vec<ParseWarning>) {
     if srcset.is_empty() {
         return;
     }
@@ -183,7 +211,6 @@ pub fn apply_srcset_string (i: &mut Instructions, srcset: &str, warnings: &mut V
         // split command into arguments by hyphen delimiter and iterate
         let mut args = command.split("-");
         if let Some(command_name) = args.next() {
-
             // if the command is webp, jpeg, gif, png, jxl, avif, send the rest of the args to parse_format_tuning
             // if the command is crop, and additional parameters are specified, there must be 4 and they must parse as floats or log a warning
             // if the command is a float followed by 'x', set i.zoom
@@ -201,59 +228,76 @@ pub fn apply_srcset_string (i: &mut Instructions, srcset: &str, warnings: &mut V
                 Err(_) if command_name.eq_ignore_ascii_case("lossy") => {
                     i.lossless = Some(BoolKeep::False);
                     Some(OutputFormat::Auto)
-                },
+                }
                 Err(_) if command_name.eq_ignore_ascii_case("lossless") => {
                     i.lossless = Some(BoolKeep::True);
                     Some(OutputFormat::Auto)
-                },
-                Err(_) => None
+                }
+                Err(_) => None,
             };
 
             match command_name {
                 _ if format.is_some() => {
-                    parse_format_tuning(format.unwrap(), i.lossless, srcset, &mut args, i, warnings);
+                    parse_format_tuning(
+                        format.unwrap(),
+                        i.lossless,
+                        srcset,
+                        &mut args,
+                        i,
+                        warnings,
+                    );
                     formats_specified += 1;
-                },
+                }
 
-                "qp" =>{
+                "qp" => {
                     const QP_SYNTAX: &str = "qp-[lowest|low|medium|good|high|highest|lossless|number] or qp-dpr-[number]";
                     // dpr/dppx indicates the 3rd is a number, might have trailing x
                     // otherwise, try
-                    if let Some(arg1) = args.next(){
-                        if arg1 == "dpr" || arg1 == "dppx"{
+                    if let Some(arg1) = args.next() {
+                        if arg1 == "dpr" || arg1 == "dppx" {
                             // dpr/dppx indicates the 3rd is a number, might have trailing x
-                            if let Some(arg2) = args.next(){
+                            if let Some(arg2) = args.next() {
                                 let number_text = if arg2.ends_with('x') {
-                                    &arg2[..arg2.len()-1]
-                                }else{
+                                    &arg2[..arg2.len() - 1]
+                                } else {
                                     arg2
                                 };
                                 if let Ok(v) = number_text.parse::<f32>() {
-                                    i.qp_dpr = Some(f32::max(0.0,v));
-                                }else{
+                                    i.qp_dpr = Some(f32::max(0.0, v));
+                                } else {
                                     warnings.push(ParseWarning::ValueInvalid((QP_SYNTAX, format!("qp-dpr- must be followed by a valid number, got {} instead", number_text))));
                                 }
-                            }else{
-                                warnings.push(ParseWarning::ValueInvalid((QP_SYNTAX, format!("qp-dpr- must be followed by a number: {}", srcset))));
+                            } else {
+                                warnings.push(ParseWarning::ValueInvalid((
+                                    QP_SYNTAX,
+                                    format!("qp-dpr- must be followed by a number: {}", srcset),
+                                )));
                             }
-                        } else if let Some(profile) = QualityProfile::from_str(arg1){
+                        } else if let Some(profile) = QualityProfile::from_str(arg1) {
                             i.qp = Some(profile);
-                        }else{
-                            warnings.push(ParseWarning::ValueInvalid((QP_SYNTAX, format!("qp not followed by a profile name or dpr: {}",srcset))));
+                        } else {
+                            warnings.push(ParseWarning::ValueInvalid((
+                                QP_SYNTAX,
+                                format!("qp not followed by a profile name or dpr: {}", srcset),
+                            )));
                         }
-                    }else{
-                        warnings.push(ParseWarning::ValueInvalid((QP_SYNTAX, format!("qp not followed by a profile name or dpr: {}",srcset))));
+                    } else {
+                        warnings.push(ParseWarning::ValueInvalid((
+                            QP_SYNTAX,
+                            format!("qp not followed by a profile name or dpr: {}", srcset),
+                        )));
                     }
-
-
                 }
                 "crop" => {
                     let crop_x1 = args.next();
                     let crop_y1 = args.next();
                     let crop_x2 = args.next();
                     let crop_y2 = args.next();
-                    if crop_x1.is_some() && crop_y1.is_some() && crop_x2.is_some() && crop_y2.is_some() {
-
+                    if crop_x1.is_some()
+                        && crop_y1.is_some()
+                        && crop_x2.is_some()
+                        && crop_y2.is_some()
+                    {
                         i.mode = Some(FitMode::Max);
                         if let Ok(crop_x1) = crop_x1.unwrap().parse::<f64>() {
                             if let Ok(crop_y1) = crop_y1.unwrap().parse::<f64>() {
@@ -262,25 +306,38 @@ pub fn apply_srcset_string (i: &mut Instructions, srcset: &str, warnings: &mut V
                                         i.crop = Some([crop_x1, crop_y1, crop_x2, crop_y2]);
                                         i.cropxunits = Some(100.0);
                                         i.cropyunits = Some(100.0);
-                                        i.mode= Some(FitMode::Max);
-                                    }else{
-                                        warnings.push(ParseWarning::ValueInvalid(("srcset=crop-x1,y1,x2,[y2]", crop_y2.unwrap().to_owned())));
+                                        i.mode = Some(FitMode::Max);
+                                    } else {
+                                        warnings.push(ParseWarning::ValueInvalid((
+                                            "srcset=crop-x1,y1,x2,[y2]",
+                                            crop_y2.unwrap().to_owned(),
+                                        )));
                                     }
-
-                                }else{
-                                    warnings.push(ParseWarning::ValueInvalid(("srcset=crop-x1,y1,[x2],y2", crop_x2.unwrap().to_string())));
+                                } else {
+                                    warnings.push(ParseWarning::ValueInvalid((
+                                        "srcset=crop-x1,y1,[x2],y2",
+                                        crop_x2.unwrap().to_string(),
+                                    )));
                                 }
-                            }else{
-                                warnings.push(ParseWarning::ValueInvalid(("srcset=crop-x1,[y1],x2,y2", crop_y1.unwrap().to_string())));
+                            } else {
+                                warnings.push(ParseWarning::ValueInvalid((
+                                    "srcset=crop-x1,[y1],x2,y2",
+                                    crop_y1.unwrap().to_string(),
+                                )));
                             }
-                        }else{
-                            warnings.push(ParseWarning::ValueInvalid(("srcset=crop-[x1],y1,x2,y2", crop_x1.unwrap().to_string())));
+                        } else {
+                            warnings.push(ParseWarning::ValueInvalid((
+                                "srcset=crop-[x1],y1,x2,y2",
+                                crop_x1.unwrap().to_string(),
+                            )));
                         }
-                    }else{
-                        warnings.push(ParseWarning::ValueInvalid(("srcset=crop-x1,y1,x2,y2", "crop requires 4 parameters".to_string())));
+                    } else {
+                        warnings.push(ParseWarning::ValueInvalid((
+                            "srcset=crop-x1,y1,x2,y2",
+                            "crop requires 4 parameters".to_string(),
+                        )));
                     }
-
-                },
+                }
                 "fit" => {
                     if let Some(fit) = args.next() {
                         // can be 'pad', 'crop', 'max', 'distort'
@@ -289,62 +346,80 @@ pub fn apply_srcset_string (i: &mut Instructions, srcset: &str, warnings: &mut V
                             "pad" => {
                                 i.mode = Some(FitMode::Pad);
                                 modes_specified += 1;
-                            },
+                            }
                             "crop" | "cover" => {
                                 i.mode = Some(FitMode::Crop); // CSS cover up-scales, we don't
                                 modes_specified += 1;
-                            },
+                            }
                             "max" | "scale" | "contain" => {
                                 i.mode = Some(FitMode::Max); // CSS contain up-scales, we don't
                                 modes_specified += 1;
-                            },
+                            }
                             "distort" | "fill" => {
                                 i.mode = Some(FitMode::Stretch);
                                 modes_specified += 1;
-                            },
+                            }
                             _ => {
-                                warnings.push(ParseWarning::ValueInvalid(("srcset=fit-[pad|crop|max|distort]", srcset.to_string())));
+                                warnings.push(ParseWarning::ValueInvalid((
+                                    "srcset=fit-[pad|crop|max|distort]",
+                                    srcset.to_string(),
+                                )));
                             }
                         }
-                    }else{
-                        warnings.push(ParseWarning::ValueInvalid(("srcset=fit-[pad|crop|max|distort]", "missing fit mode".to_string())));
+                    } else {
+                        warnings.push(ParseWarning::ValueInvalid((
+                            "srcset=fit-[pad|crop|max|distort]",
+                            "missing fit mode".to_string(),
+                        )));
                     }
-                },
+                }
                 "upscale" => {
                     i.scale = Some(ScaleMode::Both);
-                },
+                }
                 "sharp" | "sharpen" => {
                     // parse sharpen
                     if let Some(sharpen) = args.next() {
                         //TODO: support sharpen=auto, that scales with qp-dpr/dpr/dppx
                         if let Ok(sharpen) = sharpen.parse::<f32>() {
                             i.f_sharpen = Some(sharpen);
-                        }else{
-                            warnings.push(ParseWarning::ValueInvalid(("srcset=sharpen-", sharpen.to_string())));
+                        } else {
+                            warnings.push(ParseWarning::ValueInvalid((
+                                "srcset=sharpen-",
+                                sharpen.to_string(),
+                            )));
                         }
-                    }else{
-                        warnings.push(ParseWarning::ValueInvalid(("srcset=sharpen-[0-100]", "missing sharpen value".to_string())));
+                    } else {
+                        warnings.push(ParseWarning::ValueInvalid((
+                            "srcset=sharpen-[0-100]",
+                            "missing sharpen value".to_string(),
+                        )));
                     }
                 }
                 other => {
                     // if it ends in w, h, or x, it's a size
                     // parse it
                     if other.ends_with('h') || other.ends_with('x') || other.ends_with('w') {
-                        let float_value = other[..other.len()-1].parse::<f32>();
+                        let float_value = other[..other.len() - 1].parse::<f32>();
                         if let Ok(float_value) = float_value {
                             if other.ends_with('h') {
                                 i.h = Some(float_value.round() as i32);
-                            }else if other.ends_with('x') {
+                            } else if other.ends_with('x') {
                                 i.zoom = Some(float_value);
-                            }else if other.ends_with('w') {
+                            } else if other.ends_with('w') {
                                 i.w = Some(float_value.round() as i32);
                             }
-                        }else{
-                            warnings.push(ParseWarning::ValueInvalid(("srcset=[value][w|h|x]", other.to_string())));
+                        } else {
+                            warnings.push(ParseWarning::ValueInvalid((
+                                "srcset=[value][w|h|x]",
+                                other.to_string(),
+                            )));
                         }
-                    }else{
+                    } else {
                         // collect
-                        warnings.push(ParseWarning::ValueInvalid(("srcset=command,command,[unrecognized]", format!("unrecognized command: {} from srcset={}", other, srcset))));
+                        warnings.push(ParseWarning::ValueInvalid((
+                            "srcset=command,command,[unrecognized]",
+                            format!("unrecognized command: {} from srcset={}", other, srcset),
+                        )));
                     }
                 }
             }
@@ -352,10 +427,16 @@ pub fn apply_srcset_string (i: &mut Instructions, srcset: &str, warnings: &mut V
     }
 
     if modes_specified > 1 {
-        warnings.push(ParseWarning::ValueInvalid(("srcset", format!("multiple modes specified: {}", srcset))));
+        warnings.push(ParseWarning::ValueInvalid((
+            "srcset",
+            format!("multiple modes specified: {}", srcset),
+        )));
     }
     if formats_specified > 1 {
-        warnings.push(ParseWarning::ValueInvalid(("srcset", format!("multiple formats specified: {}", srcset))));
+        warnings.push(ParseWarning::ValueInvalid((
+            "srcset",
+            format!("multiple formats specified: {}", srcset),
+        )));
     }
-        // ok
+    // ok
 }
