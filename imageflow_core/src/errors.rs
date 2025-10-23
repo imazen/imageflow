@@ -1,4 +1,5 @@
 use crate::context::Context;
+use crate::json::JsonResponse;
 use crate::ffi;
 use crate::flow::definitions::FrameEstimate;
 use imageflow_riapi::sizing::LayoutError;
@@ -786,6 +787,16 @@ impl OutwardErrorBuffer {
         } else {
             false
         }
+    }
+
+    pub fn get_json_response_for_error(&self) -> Option<JsonResponse> {
+        if let Some(error) = self.last_error.as_ref() {
+            return Some(JsonResponse::from_flow_error(error));
+        }
+        if let Some(error) = self.last_panic.as_ref() {
+            return Some(JsonResponse::from_panic(error));
+        }
+        None
     }
 
     /// We need a zero-allocation write in case this is OOM

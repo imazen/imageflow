@@ -118,7 +118,7 @@ impl Decoder for MozJpegDecoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
-        self.decoder.read_frame(&mut bitmap)?;
+        self.decoder.read_frame(c, &mut bitmap)?;
 
         Ok(bitmap_key)
     }
@@ -277,7 +277,7 @@ impl MzDec {
         Ok(self.exif_rotation_flag)
     }
 
-    fn read_frame(&mut self, canvas: &mut Bitmap) -> Result<()> {
+    fn read_frame(&mut self, context: &Context, canvas: &mut Bitmap) -> Result<()> {
         if self.codec_info_disposed {
             return Err(nerror!(
                 ErrorKind::InvalidOperation,
@@ -330,6 +330,8 @@ impl MzDec {
             unsafe {
                 let index = self.codec_info.output_scanline as usize;
                 let next_lines = row_pointers.rows[index..].as_ptr();
+
+                return_if_cancelled!(context);
 
                 if !ffi::wrap_jpeg_read_scan_lines(
                     &mut self.codec_info,

@@ -13,6 +13,7 @@ pub(crate) fn invoke_with_json_error(
     }
 }
 
+
 pub fn invoke(context: &mut Context, endpoint: &str, json: &[u8]) -> Result<JsonResponse> {
     endpoints::invoke(context, endpoint, json)
 }
@@ -59,6 +60,11 @@ impl JsonResponse {
     pub fn from_flow_error(err: &FlowError) -> JsonResponse {
         let message = format!("{}", err);
         JsonResponse::fail_with_message(i64::from(err.category().http_status_code()), &message)
+    }
+
+    pub fn from_panic(err: &Box<dyn std::any::Any>) -> JsonResponse {
+        let message = format!("{:#?}", err);
+        JsonResponse::fail_with_message(500, &message)
     }
 
     pub fn from_response001(r: s::Response001) -> JsonResponse {
