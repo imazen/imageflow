@@ -67,7 +67,7 @@ bool imageflow_context_add_input_buffer(struct imageflow_context *context,
 // The  buffer will be freed with the context.
 //
 //
-// Returns null if allocation failed; check the context for error details.
+// Returns false if allocation failed or context is damaged; check the context for error details.
 bool imageflow_context_add_output_buffer(struct imageflow_context *context, int32_t io_id);
 
 // Begins the process of destroying the context, yet leaves error information intact
@@ -91,7 +91,7 @@ bool imageflow_context_begin_terminate(struct imageflow_context *context);
 //
 // Returns a null pointer if allocation fails or the provided interface version is incompatible
 struct imageflow_context *imageflow_context_create(uint32_t imageflow_abi_ver_major,
-                                  uint32_t imageflow_abi_ver_minor);
+                                            uint32_t imageflow_abi_ver_minor);
 
 // Destroys the imageflow context and frees the context object.
 // Only use this with contexts created using `imageflow_context_create`
@@ -165,6 +165,7 @@ bool imageflow_context_error_write_to_buffer(struct imageflow_context *context,
 //
 // Provides access to the underlying buffer for the given io id
 //
+// Returns false and sets the error if the io id is invalid, the result buffer pointers are null, or the context is damaged.
 bool imageflow_context_get_output_buffer_by_id(struct imageflow_context *context,
                                                int32_t io_id,
                                                const uint8_t **result_buffer,

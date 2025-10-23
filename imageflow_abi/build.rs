@@ -101,6 +101,13 @@ enum StructModification {
     //You can specify no prefix..
     Prefix { prefix: &'static str, style: Style },
 }
+fn rename_structs(s: String, pairs: &[(&str, &str)], style: Style) -> String {
+    let mut temp = s;
+    for (old_name, new_name) in pairs {
+        temp = rename_word_excluding_enum_members(temp, old_name, new_name, style);
+    }
+    temp
+}
 
 fn filter_structs(s: String, names: &[&str], how: StructModification) -> String {
     let mut temp = s;
@@ -154,7 +161,8 @@ fn filter_enums<'a, 'b>(s: String, names: &'a [&'a str], how: EnumModification) 
 }
 
 static ENUM_NAMES: [&str; 4] = ["IoMode", "Direction", "Lifetime", "CleanupWith"];
-static STRUCT_NAMES: [&str; 4] = ["Job", "JobIo", "Context", "JsonResponse"];
+static STRUCT_NAMES: [&str; 5] = ["Job", "JobIo", "Context", "ThreadSafeContext", "JsonResponse"];
+static RENAME_STRUCTS: [(&str, &str); 1] = [("ThreadSafeContext", "Context")];
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum Target {
@@ -267,7 +275,13 @@ fn generate(target: Target) -> String {
 
         let builder = cbindgen::Builder::new().with_config(config).with_crate(crate_dir);
         let s = generate_to_string(builder);
-        let temp = filter_enums(filter_structs(s, &STRUCT_NAMES, structs), &ENUM_NAMES, enums);
+        // let rename_style = match structs{
+        //     StructModification::Prefix { style , ..} => style,
+        //     _ => Style::Snake
+        // };
+        let renamed = rename_structs(s, &RENAME_STRUCTS, Style::Unchanged);
+        let temp =
+            filter_enums(filter_structs(renamed, &STRUCT_NAMES, structs), &ENUM_NAMES, enums);
         if no_preprocessor_directives {
             strip_preprocessor_directives(&temp)
         } else {

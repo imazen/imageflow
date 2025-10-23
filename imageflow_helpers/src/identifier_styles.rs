@@ -17,6 +17,7 @@ pub enum Style {
     PascalSnake,
     CamelSnake,
     CamelCase,
+    Unchanged,
 }
 
 pub fn transform(s: &str, transform: Transform) -> String {
@@ -46,6 +47,9 @@ pub fn transform(s: &str, transform: Transform) -> String {
 /// If the input has any underscores, they must all be in the right places - we'll ignore case
 ///
 pub fn style_id(s: &str, style: Style) -> String {
+    if style == Style::Unchanged {
+        return s.to_owned();
+    }
     let mut temp = s.to_owned();
     //Normalize to underscores (unless there are already some)
     if !temp.contains('_') {

@@ -54,6 +54,7 @@ pub mod json;
 
 pub use crate::codecs::NamedDecoders;
 pub use crate::context::Context;
+pub use crate::context::ThreadSafeContext;
 pub use crate::ffi::IoDirection;
 pub use crate::flow::definitions::Graph;
 pub use crate::io::IoProxy;

@@ -13,7 +13,6 @@ pub(crate) fn invoke_with_json_error(
     }
 }
 
-
 pub fn invoke(context: &mut Context, endpoint: &str, json: &[u8]) -> Result<JsonResponse> {
     endpoints::invoke(context, endpoint, json)
 }

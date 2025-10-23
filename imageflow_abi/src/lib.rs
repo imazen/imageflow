@@ -5,10 +5,7 @@
 //!
 //! If you're writing bindings, you're in the right place. Don't use `imageflow_core::ffi`
 //!
-//! Don't call functions against the same job context from multiple threads. You can create contexts
-//! from as many threads as you like, but you are responsible for synchronizing API calls
-//! on a per-context basis if you want to use one context from multiple threads. No use
-//! case for multithreaded Context access has been presented, so it is out of scope for API design.
+//! As of ABI 3.1, calls are thread-safe.
 //!
 //! Don't worry about the performance of creating/destroying contexts.
 //! A context weighs less than 2kb: (384 + 1400) as of 2017-8-29.
@@ -64,7 +61,7 @@
 //! your platform.
 //!
 //! * `libc::c_void` (or anything *mut or *const): Platform-sized pointer. 32 or 64 bits.
-//! * The above includes *mut Context an *mut `JsonResponse`
+//! * The above includes *mut ThreadSafeContext an *mut `JsonResponse`
 //! * `libc::size_t` (or usize): Unsigned integer, platform-sized. 32 or 64 bits.
 //!
 //!
@@ -122,13 +119,14 @@ extern crate libc;
 extern crate smallvec;
 
 pub use crate::c::ffi::ImageflowJsonResponse as JsonResponse;
-pub use crate::c::{Context, ErrorCategory};
+pub use crate::c::{Context, ErrorCategory, FlowError, ThreadSafeContext};
 //use c::IoDirection;
 use crate::c::ErrorKind;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 #[cfg(test)]
 use std::str;
+use std::sync::RwLockWriteGuard;
 
 //
 // What is possible with the IO object
@@ -198,21 +196,55 @@ macro_rules! context {
 }
 
 macro_rules! handle_result {
-    ($context:ident, $result:expr, $failure_value:expr) => {{
+    ($outward_error:ident, $result:expr, $failure_value:expr) => {{
         match $result {
             Ok(Ok(v)) => v,
             Err(p) => {
-                $context.outward_error_mut().try_set_panic_error(p);
+                $outward_error.try_set_panic_error(p);
                 $failure_value
             }
             Ok(Err(error)) => {
-                $context.outward_error_mut().try_set_error(error);
+                $outward_error.try_set_error(error);
                 $failure_value
             }
         }
     }};
 }
 
+macro_rules! lock_context_mut_and_error_or_return {
+    ($ctx:ident,$failure_value:expr) => {{
+        match $ctx.context_mut_and_error_or_poisoned() {
+            (outward_error, Ok(guard)) => (outward_error, guard),
+            (mut outward_error, Err(_)) => {
+                fn f() {}
+                let name = parent_function_name(f);
+                outward_error.try_set_error(nerror!(
+                    ErrorKind::FailedBorrow,
+                    "Context previously panicked: {} cannot be called",
+                    name
+                ));
+                return $failure_value;
+            }
+        }
+    }};
+}
+macro_rules! lock_context_mut_or_return {
+    ($ctx:ident,$failure_value:expr) => {{
+        match $ctx.context_mut_and_error_or_poisoned() {
+            (outward_error, Ok(guard)) => guard,
+            (mut outward_error, Err(_)) => {
+                fn f() {}
+                let name = parent_function_name(f);
+                outward_error.try_set_error(nerror!(
+                    ErrorKind::FailedBorrow,
+                    "Context previously panicked: {} cannot be called",
+                    name
+                ));
+                return $failure_value;
+            }
+        }
+    }};
+}
 include!("abi_version.rs");
 
 ///
@@ -258,9 +290,9 @@ pub extern "C" fn imageflow_abi_version_minor() -> u32 {
 pub extern "C" fn imageflow_context_create(
     imageflow_abi_ver_major: u32,
     imageflow_abi_ver_minor: u32,
-) -> *mut Context {
+) -> *mut ThreadSafeContext {
     if imageflow_abi_compatible(imageflow_abi_ver_major, imageflow_abi_ver_minor) {
-        Context::create_cant_panic().map(Box::into_raw).unwrap_or(std::ptr::null_mut())
+        ThreadSafeContext::create_cant_panic().map(Box::into_raw).unwrap_or(std::ptr::null_mut())
     } else {
         ptr::null_mut()
     }
@@ -272,17 +304,20 @@ pub extern "C" fn imageflow_context_create(
 ///
 /// Returns true if no errors occurred. Returns false if there were tear-down issues.
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_begin_terminate(context: *mut Context) -> bool {
-    let c: &mut Context = context!(context);
+pub unsafe extern "C" fn imageflow_context_begin_terminate(
+    context: *mut ThreadSafeContext,
+) -> bool {
+    let c = context!(context);
     c.abi_begin_terminate()
 }
 
 /// Destroys the imageflow context and frees the context object.
 /// Only use this with contexts created using `imageflow_context_create`
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_destroy(context: *mut Context) {
+pub unsafe extern "C" fn imageflow_context_destroy(context: *mut ThreadSafeContext) {
     if !context.is_null() {
         unsafe {
+            // Let it drop, the drop iml will sync locks.
             let _ = Box::from_raw(context);
         }
     }
@@ -305,23 +340,27 @@ pub unsafe fn exercise_create_destroy() {
 /// Returns true if the context is in an error state. You must immediately deal with the error,
 /// as subsequent API calls will fail or cause undefined behavior until the error state is cleared
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_has_error(context: *mut Context) -> bool {
-    context!(context).outward_error_mut().has_error()
+pub unsafe extern "C" fn imageflow_context_has_error(context: *mut ThreadSafeContext) -> bool {
+    context!(context).outward_error().has_error()
 }
 
 /// Returns true if the context is "ok" or in an error state that is recoverable.
 /// You must immediately deal with the error,
 /// as subsequent API calls will fail or cause undefined behavior until the error state is cleared
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_error_recoverable(context: *mut Context) -> bool {
-    context!(context).outward_error_mut().recoverable()
+pub unsafe extern "C" fn imageflow_context_error_recoverable(
+    context: *mut ThreadSafeContext,
+) -> bool {
+    context!(context).outward_error().recoverable()
 }
 
 /// Returns true if the context is "ok" or in an error state that is recoverable.
 /// You must immediately deal with the error,
 /// as subsequent API calls will fail or cause undefined behavior until the error state is cleared
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_error_try_clear(context: *mut Context) -> bool {
+pub unsafe extern "C" fn imageflow_context_error_try_clear(
+    context: *mut ThreadSafeContext,
+) -> bool {
     context!(context).outward_error_mut().try_clear()
 }
 
@@ -331,8 +370,8 @@ pub unsafe extern "C" fn imageflow_context_error_try_clear(context: *mut Context
 /// `imageflow_context_error_as_exit_code` and `imageflow_context_error_as_http_status` are suggested in the meantime.
 /// Unstable, do not use.
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> i32 {
-    context!(context).outward_error_mut().category().to_outward_error_code()
+pub unsafe extern "C" fn imageflow_context_error_code(context: *mut ThreadSafeContext) -> i32 {
+    context!(context).outward_error().category().to_outward_error_code()
 }
 
 /// Converts the error (or lack thereof) into an unix process exit code
@@ -352,8 +391,10 @@ pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> 
 /// * 401 - Imageflow server authorization required
 ///
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_error_as_exit_code(context: *mut Context) -> i32 {
-    context!(context).outward_error_mut().category().process_exit_code()
+pub unsafe extern "C" fn imageflow_context_error_as_exit_code(
+    context: *mut ThreadSafeContext,
+) -> i32 {
+    context!(context).outward_error().category().process_exit_code()
 }
 
 /// Converts the error (or lack thereof) into an equivalent http status code
@@ -371,8 +412,10 @@ pub unsafe extern "C" fn imageflow_context_error_as_exit_code(context: *mut Cont
 /// * 503 - Out Of Memory condition (malloc/calloc/realloc failed).
 /// * 504 - Upstream timeout
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_error_as_http_code(context: *mut Context) -> i32 {
-    context!(context).outward_error_mut().category().http_status_code()
+pub unsafe extern "C" fn imageflow_context_error_as_http_code(
+    context: *mut ThreadSafeContext,
+) -> i32 {
+    context!(context).outward_error().category().http_status_code()
 }
 
 /// Prints the error messages (and optional stack frames) to the given buffer in UTF-8 form; writes a null
@@ -386,7 +429,7 @@ pub unsafe extern "C" fn imageflow_context_error_as_http_code(context: *mut Cont
 /// Please be accurate with the buffer length, or a buffer overflow will occur.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(
-    context: *mut Context,
+    context: *mut ThreadSafeContext,
     buffer: *mut libc::c_char,
     buffer_length: libc::size_t,
     bytes_written: *mut libc::size_t,
@@ -403,7 +446,7 @@ pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(
         }
 
         let result = unsafe {
-            c.outward_error_mut().get_buffer_writer().write_and_write_errors_to_cstring(
+            c.outward_error().get_buffer_writer().write_and_write_errors_to_cstring(
                 buffer as *mut u8,
                 buffer_length,
                 Some("\n[truncated]\n"),
@@ -426,7 +469,9 @@ pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(
 ///
 /// THIS PRINTS DIRECTLY TO STDERR! Do not use in any kind of service! Command-line usage only!
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut Context) -> bool {
+pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(
+    context: *mut ThreadSafeContext,
+) -> bool {
     let e = context!(context).outward_error();
     if e.has_error() {
         eprintln!("{}", e);
@@ -447,7 +492,7 @@ pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_json_response_read(
-    context: *mut Context,
+    context: *mut ThreadSafeContext,
     response_in: *const JsonResponse,
     status_as_http_code_out: *mut i64,
     buffer_utf8_no_nulls_out: *mut *const u8,
@@ -455,6 +500,9 @@ pub unsafe extern "C" fn imageflow_json_response_read(
 ) -> bool {
     let c = context!(context); // Must be readable in error state
 
+    // JsonResponse is stored in the context, so we need to lock it. It won't be locked for the duration of the client's use
+    // So essentially this is not thread safe in the end.
+    //
     if response_in.is_null() {
         c.outward_error_mut().try_set_error(nerror!(
             ErrorKind::NullArgument,
@@ -490,9 +538,10 @@ pub unsafe extern "C" fn imageflow_json_response_read(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_json_response_destroy(
-    context: *mut Context,
+    context: *mut ThreadSafeContext,
     response: *mut JsonResponse,
 ) -> bool {
+    let context = context!(context);
     imageflow_context_memory_free(context, response as *mut libc::c_void, ptr::null(), 0)
 }
 
@@ -501,8 +550,8 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(
 /// No operations can be attempted after the context is cancelled, as it will be in an errored state.
 ///
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_request_cancellation(context: *mut Context) {
-    let c: &mut Context = context!(context);
+pub unsafe extern "C" fn imageflow_context_request_cancellation(context: *mut ThreadSafeContext) {
+    let c: &mut ThreadSafeContext = context!(context);
     c.request_cancellation();
 }
 
@@ -530,14 +579,14 @@ pub unsafe extern "C" fn imageflow_context_request_cancellation(context: *mut Co
 /// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_send_json(
-    context: *mut Context,
+    context: *mut ThreadSafeContext,
     method: *const libc::c_char,
     json_buffer: *const u8,
     json_buffer_size: libc::size_t,
 ) -> *const JsonResponse {
-    let c: &mut Context = context!(context);
-    if c.outward_error_mut().has_error() {
-        let json_error = c.outward_error_mut().get_json_response_for_error();
+    let mut c = context!(context);
+    if c.outward_error().has_error() {
+        let json_error = c.outward_error().get_json_response_for_error();
         if let Some(json_error) = json_error {
             return create_abi_json_response(c, &json_error.response_json, json_error.status_code);
         }
@@ -558,32 +607,45 @@ pub unsafe extern "C" fn imageflow_context_send_json(
         return ptr::null();
     }
 
-    let panic_result = catch_unwind(AssertUnwindSafe(|| {
-        let method_str = if let Ok(str) = unsafe { ::std::ffi::CStr::from_ptr(method) }.to_str() {
-            str
-        } else {
-            return (
-                ptr::null(),
-                Err(nerror!(ErrorKind::InvalidArgument, "The argument 'method' is invalid UTF-8.")),
-            );
-        };
+    let panic_result = {
+        let mut inner_context_guard = lock_context_mut_or_return!(c, ptr::null());
+        catch_unwind(AssertUnwindSafe(|| {
+            let method_str = if let Ok(str) = unsafe { ::std::ffi::CStr::from_ptr(method) }.to_str()
+            {
+                str
+            } else {
+                return (
+                    None,
+                    Err(nerror!(
+                        ErrorKind::InvalidArgument,
+                        "The argument 'method' is invalid UTF-8."
+                    )),
+                );
+            };
 
-        let json_bytes = unsafe { std::slice::from_raw_parts(json_buffer, json_buffer_size) };
+            let json_bytes = unsafe { std::slice::from_raw_parts(json_buffer, json_buffer_size) };
 
-        // Segfault early
-        let _ = (json_bytes.first(), json_bytes.last());
+            // Segfault early
+            let _ = (json_bytes.first(), json_bytes.last());
 
-        let (json, result) = c.message(method_str, json_bytes);
-
-        // An unfortunate copy occurs here
-        (create_abi_json_response(c, &json.response_json, json.status_code), result)
-    }));
+            let (json, call_result) = inner_context_guard.message(method_str, json_bytes);
+            (Some(json), call_result)
+        }))
+    };
 
     match panic_result {
-        Ok((json, Ok(_))) => json,
+        Ok((json, Ok(_))) => {
+            let json = json.unwrap();
+            // An unfortunate copy occurs here
+            create_abi_json_response(c, &json.response_json, json.status_code)
+        }
         Ok((json, Err(e))) => {
             c.outward_error_mut().try_set_error(e);
-            json
+            if let Some(json) = json {
+                create_abi_json_response(c, &json.response_json, json.status_code)
+            } else {
+                ptr::null_mut()
+            }
         }
         Err(p) => {
             c.outward_error_mut().try_set_panic_error(p);
@@ -592,10 +654,8 @@ pub unsafe extern "C" fn imageflow_context_send_json(
     }
 }
 
-
-
 pub fn create_abi_json_response(
-    c: &mut Context,
+    mut c: &mut ThreadSafeContext,
     json_bytes: &[u8],
     status_code: i64,
 ) -> *const JsonResponse {
@@ -643,7 +703,7 @@ pub fn create_abi_json_response(
 ///// As always, `mode` is not enforced except for the file open flags.
 /////
 //#[no_mangle]
-//pub extern "C" fn imageflow_context_add_file(context: *mut Context, io_id: i32, direction: Direction,
+//pub extern "C" fn imageflow_context_add_file(context: *mut ThreadSafeContext, io_id: i32, direction: Direction,
 //                                                      mode: IoMode,
 //                                                      filename: *const libc::c_char)
 //                                                      -> bool {
@@ -682,14 +742,14 @@ pub fn create_abi_json_response(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_add_input_buffer(
-    context: *mut Context,
+    context: *mut ThreadSafeContext,
     io_id: i32,
     buffer: *const u8,
     buffer_byte_count: libc::size_t,
     lifetime: Lifetime,
 ) -> bool {
-    let c: &mut Context = context!(context);
-    if c.outward_error_mut().has_error() {
+    let c = context!(context);
+    if c.outward_error().has_error() {
         return false;
     }
 
@@ -702,24 +762,41 @@ pub unsafe extern "C" fn imageflow_context_add_input_buffer(
         c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `buffer_byte_count` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
         return false;
     }
-    if c.io_id_present(io_id) {
-        c.outward_error_mut().try_set_error(nerror!(
-            ErrorKind::DuplicateIoId,
-            "The io_id provided is already in use."
-        ));
-        return false;
-    }
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        let bytes = unsafe { std::slice::from_raw_parts(buffer, buffer_byte_count) };
+    let (mut outward_error, mut inner_context_guard) =
+        lock_context_mut_and_error_or_return!(c, false);
 
-        if lifetime == Lifetime::OutlivesFunctionCall {
-            c.add_copied_input_buffer(io_id, bytes).map_err(|e| e.at(here!()))?;
-        } else {
-            c.add_input_buffer(io_id, bytes).map_err(|e| e.at(here!()))?;
+    let result = {
+        if inner_context_guard.io_id_present(io_id) {
+            outward_error.try_set_error(nerror!(
+                ErrorKind::DuplicateIoId,
+                "The io_id provided is already in use."
+            ));
+            return false;
         }
-        Ok(true)
-    }));
-    handle_result!(c, result, false)
+        catch_unwind(AssertUnwindSafe(|| {
+            let bytes = unsafe { std::slice::from_raw_parts(buffer, buffer_byte_count) };
+
+            if lifetime == Lifetime::OutlivesFunctionCall {
+                inner_context_guard
+                    .add_copied_input_buffer(io_id, bytes)
+                    .map_err(|e| e.at(here!()))?;
+            } else {
+                inner_context_guard.add_input_buffer(io_id, bytes).map_err(|e| e.at(here!()))?;
+            }
+            Ok(true)
+        }))
+    };
+    match result {
+        Ok(Ok(v)) => v,
+        Err(p) => {
+            outward_error.try_set_panic_error(p);
+            false
+        }
+        Ok(Err(error)) => {
+            outward_error.try_set_error(error);
+            false
+        }
+    }
 }
 
 ///
@@ -727,34 +804,37 @@ pub unsafe extern "C" fn imageflow_context_add_input_buffer(
 /// The  buffer will be freed with the context.
 ///
 ///
-/// Returns null if allocation failed; check the context for error details.
+/// Returns false if allocation failed or context is damaged; check the context for error details.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_add_output_buffer(
-    context: *mut Context,
+    context: *mut ThreadSafeContext,
     io_id: i32,
 ) -> bool {
     let c = context!(context);
-    if c.outward_error_mut().has_error() {
+    if c.outward_error().has_error() {
         return false;
     }
+    let (mut outward_error, mut inner_context_guard) =
+        lock_context_mut_and_error_or_return!(c, false);
     let result = catch_unwind(AssertUnwindSafe(|| {
-        c.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
+        inner_context_guard.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
         Ok(true)
     }));
-    handle_result!(c, result, false)
+    handle_result!(outward_error, result, false)
 }
 
 ///
 /// Provides access to the underlying buffer for the given io id
 ///
+/// Returns false and sets the error if the io id is invalid, the result buffer pointers are null, or the context is damaged.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
-    context: *mut Context,
+    context: *mut ThreadSafeContext,
     io_id: i32,
     result_buffer: *mut *const u8,
     result_buffer_length: *mut libc::size_t,
 ) -> bool {
-    let c: &mut Context = context!(context);
+    let c = context!(context);
     if result_buffer.is_null() {
         c.outward_error_mut().try_set_error(nerror!(
             ErrorKind::NullArgument,
@@ -770,8 +850,9 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
         ));
         return false;
     }
+    let (mut outward_error, inner_context_guard) = lock_context_mut_and_error_or_return!(c, false);
     let result = catch_unwind(AssertUnwindSafe(|| {
-        let s = c.get_output_buffer_slice(io_id).map_err(|e| e.at(here!()))?;
+        let s = inner_context_guard.get_output_buffer_slice(io_id).map_err(|e| e.at(here!()))?;
 
         if s.len().leading_zeros() == 0 {
             Err(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error retrieving output buffer; length overflow prevented (most significant bit set)."))
@@ -783,7 +864,7 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
             Ok(true)
         }
     }));
-    handle_result!(c, result, false)
+    handle_result!(outward_error, result, false)
 }
 
 ///
@@ -796,7 +877,7 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_memory_allocate(
-    context: *mut Context,
+    context: *mut ThreadSafeContext,
     bytes: libc::size_t,
     filename: *const libc::c_char,
     line: i32,
@@ -830,7 +911,7 @@ pub unsafe extern "C" fn imageflow_context_memory_allocate(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_memory_free(
-    context: *mut Context,
+    context: *mut ThreadSafeContext,
     pointer: *mut libc::c_void,
     _filename: *const libc::c_char,
     _line: i32,
@@ -976,7 +1057,6 @@ fn test_job_with_buffers() {
     }
 }
 
-
 #[test]
 fn test_job_with_cancellation() {
     unsafe {
@@ -1010,13 +1090,11 @@ fn test_job_with_cancellation() {
 
         assert!(!response.is_null());
 
-
         assert!(imageflow_context_error_code(c) == 21);
 
         imageflow_context_destroy(c);
     }
 }
-
 
 #[test]
 fn test_job_with_bad_json() {
@@ -1101,8 +1179,6 @@ fn test_get_version_info() {
         imageflow_context_destroy(c);
     }
 }
-
-
 
 #[test]
 fn test_file_macro_for_this_build() {

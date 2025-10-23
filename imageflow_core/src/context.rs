@@ -10,6 +10,7 @@ use std::any::Any;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::*;
 
 use crate::allocation_container::AllocationContainer;
 use crate::codecs::CodecInstanceContainer;
@@ -21,8 +22,6 @@ use itertools::Itertools;
 
 /// Something of a god object (which is necessary for a reasonable FFI interface).
 pub struct Context {
-    /// Buffer for errors presented to users of an FFI interface
-    outward_error: OutwardErrorBuffer,
     pub debug_job_id: i32,
     pub next_stable_node_id: i32,
     pub next_graph_version: i32,
@@ -70,56 +69,27 @@ impl CancellationToken {
 //TODO: isn't this supposed to increment with each new context in process?
 static mut JOB_ID: i32 = 0;
 
-impl Context {
-    pub fn create() -> Result<Box<Context>> {
-        Context::create_cant_panic()
-    }
-
-    pub fn create_can_panic() -> Result<Box<Context>> {
-        Ok(Box::new(Context {
-            outward_error: OutwardErrorBuffer::new(),
-            debug_job_id: unsafe { JOB_ID },
-            next_graph_version: 0,
-            next_stable_node_id: 0,
-            max_calc_flatten_execute_passes: 40,
-            graph_recording: s::Build001GraphRecording::off(),
-            codecs: AddRemoveSet::with_capacity(4),
-            io_id_list: RefCell::new(Vec::with_capacity(2)),
+// We need this for ABI callers to ensure safety
+pub struct ThreadSafeContext {
+    context: std::sync::RwLock<Context>,
+    /// Buffer for errors presented to users of an FFI interface; locked separately from the context
+    outward_error: std::sync::RwLock<OutwardErrorBuffer>,
+    /// Need to be able to cancel when other tasks are running
+    cancellation_token: CancellationToken,
+    allocations: std::sync::Mutex<AllocationContainer>,
+}
+impl ThreadSafeContext {
+    pub fn create_can_panic() -> Result<Box<ThreadSafeContext>> {
+        Ok(Box::new(ThreadSafeContext {
+            context: std::sync::RwLock::new(Context::create_can_panic_unboxed()?),
+            outward_error: std::sync::RwLock::new(OutwardErrorBuffer::new()),
+            allocations: std::sync::Mutex::new(AllocationContainer::new()),
             cancellation_token: CancellationToken::new(),
-            enabled_codecs: EnabledCodecs::default(),
-            bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
-            security: imageflow_types::ExecutionSecurity {
-                max_decode_size: None,
-                max_frame_size: Some(imageflow_types::FrameSizeLimit {
-                    w: 10000,
-                    h: 10000,
-                    megapixels: 100f32,
-                }),
-                max_encode_size: None,
-            },
-            allocations: RefCell::new(AllocationContainer::new()),
         }))
     }
-
-    pub fn create_cant_panic() -> Result<Box<Context>> {
-        std::panic::catch_unwind(|| {
-            // Upgrade backtraces
-            // Disable backtraces for debugging across the FFI boundary
-            //imageflow_helpers::debug::upgrade_panic_hook_once_if_backtraces_wanted();
-
-            Context::create_can_panic()
-        })
-        .unwrap_or_else(|_| Err(err_oom!())) //err_oom because it doesn't allocate anything.
-    }
-
-    /// Used by abi; should not panic
-    pub fn abi_begin_terminate(&mut self) -> bool {
-        self.codecs.mut_clear();
-        true
-    }
-    pub fn destroy(mut self) -> Result<()> {
-        self.abi_begin_terminate();
-        Ok(())
+    pub fn create_cant_panic() -> Result<Box<ThreadSafeContext>> {
+        std::panic::catch_unwind(|| ThreadSafeContext::create_can_panic())
+            .unwrap_or_else(|_| Err(err_oom!())) //err_oom because it doesn't allocate anything.
     }
 
     pub fn request_cancellation(&mut self) {
@@ -128,35 +98,40 @@ impl Context {
             .try_set_error(nerror!(ErrorKind::OperationCancelled, "Cancellation was requested"));
     }
 
-    #[inline]
-    pub fn cancellation_requested(&self) -> bool {
-        self.cancellation_token.cancellation_requested()
+    pub fn outward_error(&self) -> RwLockReadGuard<'_, OutwardErrorBuffer> {
+        self.outward_error
+            .read()
+            .expect("OutwardErrorBuffer.write failed: lock poisoned from a panic")
+    }
+    pub fn outward_error_mut(&mut self) -> RwLockWriteGuard<'_, OutwardErrorBuffer> {
+        self.outward_error
+            .write()
+            .expect("OutwardErrorBuffer.write failed: lock poisoned from a panic")
     }
 
-    pub fn outward_error(&self) -> &OutwardErrorBuffer {
-        &self.outward_error
+    pub fn context_mut_or_poisoned(&mut self) -> LockResult<RwLockWriteGuard<'_, Context>> {
+        self.context.write()
     }
-    pub fn outward_error_mut(&mut self) -> &mut OutwardErrorBuffer {
-        &mut self.outward_error
+    pub fn context_mut_and_error_or_poisoned(
+        &mut self,
+    ) -> (RwLockWriteGuard<'_, OutwardErrorBuffer>, LockResult<RwLockWriteGuard<'_, Context>>) {
+        let error = self
+            .outward_error
+            .write()
+            .expect("OutwardErrorBuffer.write failed: lock poisoned from a panic");
+        let context = self.context.write();
+        (error, context)
     }
-
-    pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
-        crate::json::invoke_with_json_error(self, method, json)
+    pub fn context_or_poisoned(&mut self) -> LockResult<RwLockWriteGuard<'_, Context>> {
+        self.context.write()
     }
-
-    pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<'_, BitmapsContainer>> {
-        return_if_cancelled!(self);
-        self.bitmaps.try_borrow_mut().map_err(|e| {
-            nerror!(ErrorKind::FailedBorrow, "Failed to mutably borrow bitmaps collection: {:?}", e)
-        })
+    /// Used by abi; should not panic
+    pub fn abi_begin_terminate(&mut self) -> bool {
+        if let Ok(mut result) = self.context_mut_or_poisoned() {
+            let _ = result.destroy_without_drop();
+        }
+        true
     }
-    pub fn borrow_bitmaps(&self) -> Result<Ref<'_, BitmapsContainer>> {
-        return_if_cancelled!(self);
-        self.bitmaps.try_borrow().map_err(|e| {
-            nerror!(ErrorKind::FailedBorrow, "Failed to borrow bitmaps collection: {:?}", e)
-        })
-    }
-
     /// mem_calloc should not panic
     pub unsafe fn mem_calloc(
         &self,
@@ -165,7 +140,7 @@ impl Context {
         filename: *const libc::c_char,
         line: i32,
     ) -> Result<*mut u8> {
-        let mut allocations = self.allocations.try_borrow_mut().map_err(|e| {
+        let mut allocations = self.allocations.lock().map_err(|e| {
             let filename_str = if filename.is_null() {
                 "[no filename provided]"
             } else {
@@ -175,7 +150,7 @@ impl Context {
 
             nerror!(
                 ErrorKind::FailedBorrow,
-                "Failed to mutably borrow allocations collection: {:?}\n{}:{}",
+                "Cannot allocate due to a previous allocation failure on this Context - make a new Context and drop this one: {:?}\n{}:{}",
                 e,
                 filename_str,
                 line
@@ -205,7 +180,140 @@ impl Context {
 
     /// mem_calloc should not panic
     pub unsafe fn mem_free(&self, ptr: *const u8) -> bool {
-        self.allocations.try_borrow_mut().map(|mut list| list.free(ptr)).unwrap_or(false)
+        self.allocations.lock().map(|mut list| list.free(ptr)).unwrap_or(false)
+    }
+}
+
+// impl drop for ThreadSafeContext and try to lock on allocations, context, and error to avoid bad references
+// We don't care about panics, that should be handled.
+impl Drop for ThreadSafeContext {
+    fn drop(&mut self) {
+        drop(self.allocations.lock());
+        drop(self.context.write());
+        drop(self.outward_error.write());
+    }
+}
+
+impl Context {
+    pub fn create() -> Result<Box<Context>> {
+        Context::create_cant_panic()
+    }
+
+    pub fn create_can_panic() -> Result<Box<Context>> {
+        Ok(Box::new(Context {
+            debug_job_id: unsafe { JOB_ID },
+            next_graph_version: 0,
+            next_stable_node_id: 0,
+            max_calc_flatten_execute_passes: 40,
+            graph_recording: s::Build001GraphRecording::off(),
+            codecs: AddRemoveSet::with_capacity(4),
+            io_id_list: RefCell::new(Vec::with_capacity(2)),
+            cancellation_token: CancellationToken::new(),
+            enabled_codecs: EnabledCodecs::default(),
+            bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
+            security: imageflow_types::ExecutionSecurity {
+                max_decode_size: None,
+                max_frame_size: Some(imageflow_types::FrameSizeLimit {
+                    w: 10000,
+                    h: 10000,
+                    megapixels: 100f32,
+                }),
+                max_encode_size: None,
+            },
+            allocations: RefCell::new(AllocationContainer::new()),
+        }))
+    }
+    pub(crate) fn create_can_panic_unboxed() -> Result<Context> {
+        Ok(Context {
+            debug_job_id: unsafe { JOB_ID },
+            next_graph_version: 0,
+            next_stable_node_id: 0,
+            max_calc_flatten_execute_passes: 40,
+            graph_recording: s::Build001GraphRecording::off(),
+            codecs: AddRemoveSet::with_capacity(4),
+            io_id_list: RefCell::new(Vec::with_capacity(2)),
+            cancellation_token: CancellationToken::new(),
+            enabled_codecs: EnabledCodecs::default(),
+            bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
+            security: imageflow_types::ExecutionSecurity {
+                max_decode_size: None,
+                max_frame_size: Some(imageflow_types::FrameSizeLimit {
+                    w: 10000,
+                    h: 10000,
+                    megapixels: 100f32,
+                }),
+                max_encode_size: None,
+            },
+            allocations: RefCell::new(AllocationContainer::new()),
+        })
+    }
+    fn create_with_cancellation_token_and_can_panic(
+        cancellation_token: CancellationToken,
+    ) -> Result<Box<Context>> {
+        Ok(Box::new(Context {
+            debug_job_id: unsafe { JOB_ID },
+            next_graph_version: 0,
+            next_stable_node_id: 0,
+            max_calc_flatten_execute_passes: 40,
+            graph_recording: s::Build001GraphRecording::off(),
+            codecs: AddRemoveSet::with_capacity(4),
+            io_id_list: RefCell::new(Vec::with_capacity(2)),
+            cancellation_token,
+            enabled_codecs: EnabledCodecs::default(),
+            bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
+            security: imageflow_types::ExecutionSecurity {
+                max_decode_size: None,
+                max_frame_size: Some(imageflow_types::FrameSizeLimit {
+                    w: 10000,
+                    h: 10000,
+                    megapixels: 100f32,
+                }),
+                max_encode_size: None,
+            },
+            allocations: RefCell::new(AllocationContainer::new()),
+        }))
+    }
+
+    pub fn create_cant_panic() -> Result<Box<Context>> {
+        std::panic::catch_unwind(|| {
+            // Upgrade backtraces
+            // Disable backtraces for debugging across the FFI boundary
+            //imageflow_helpers::debug::upgrade_panic_hook_once_if_backtraces_wanted();
+
+            Context::create_can_panic()
+        })
+        .unwrap_or_else(|_| Err(err_oom!())) //err_oom because it doesn't allocate anything.
+    }
+    pub fn destroy_without_drop(&mut self) -> Result<()> {
+        self.codecs.mut_clear();
+        Ok(())
+    }
+
+    pub fn destroy(mut self) -> Result<()> {
+        self.codecs.mut_clear();
+        Ok(())
+    }
+
+    #[inline]
+    pub fn cancellation_requested(&self) -> bool {
+        self.cancellation_token.cancellation_requested()
+    }
+
+    pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
+        crate::json::invoke_with_json_error(self, method, json)
+    }
+
+    pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<'_, BitmapsContainer>> {
+        return_if_cancelled!(self);
+        self.bitmaps.try_borrow_mut().map_err(|e| {
+            nerror!(ErrorKind::FailedBorrow, "Failed to mutably borrow bitmaps collection: {:?}", e)
+        })
+    }
+    pub fn borrow_bitmaps(&self) -> Result<Ref<'_, BitmapsContainer>> {
+        return_if_cancelled!(self);
+        self.bitmaps.try_borrow().map_err(|e| {
+            nerror!(ErrorKind::FailedBorrow, "Failed to borrow bitmaps collection: {:?}", e)
+        })
     }
 
     pub fn io_id_present(&self, io_id: i32) -> bool {

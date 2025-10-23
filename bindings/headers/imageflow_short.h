@@ -29,7 +29,7 @@ bool imageflow_context_add_output_buffer(void *context, int32_t io_id);
 bool imageflow_context_begin_terminate(void *context);
 
 void *imageflow_context_create(uint32_t imageflow_abi_ver_major,
-                                  uint32_t imageflow_abi_ver_minor);
+                                            uint32_t imageflow_abi_ver_minor);
 
 void imageflow_context_destroy(void *context);
 
