@@ -116,7 +116,17 @@ pub fn main_with_exit_code() -> i32 {
             .arg(Arg::new("response").long("response").num_args(1).value_hint(ValueHint::FilePath).value_parser(clap::value_parser!(PathBuf)).help("Write the JSON job result to file instead of stdout"))
             .arg(Arg::new("bundle-to").long("bundle-to").num_args(1).value_hint(ValueHint::DirPath).value_parser(clap::value_parser!(PathBuf)).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
             .arg(Arg::new("debug-package").long("debug-package").num_args(1).value_hint(ValueHint::FilePath).value_parser(clap::value_parser!(PathBuf)).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
-
+            .arg(
+                Arg::new("exit-if-larger-than").long("exit-if-larger-than")
+                    // Since the s::Build01 requires valid UTF8, it's better to reject it early.
+                    //.value_parser(clap::value_parser!(PathBuf))
+                    .action(clap::ArgAction::Append)
+                    .value_hint(ValueHint::Other)
+                    .num_args(1..)
+                    .required(false)
+                    .value_names(["10000w", "10mp", "disabled", "10000px"])
+                    .help("Override the default limit of 100mp/10000w/10000h/10000px. Specify 'none' to disable the limit, or set the megapixels (100mp), width (10000w), height (10000h), or any dimension (10000px).")
+            )
         )
         .subcommand(Command::new("v1/querystring").aliases(["v0.1/ir4","v1/ir4"])
             .about("Run an command querystring")
@@ -148,6 +158,17 @@ pub fn main_with_exit_code() -> i32 {
                .help("w=200&h=200&mode=crop&format=png&rotate=90&flip=v - querystring style command"))
             .arg(Arg::new("bundle-to").long("bundle-to").num_args(1).value_hint(ValueHint::DirPath).value_parser(clap::value_parser!(PathBuf)).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
             .arg(Arg::new("debug-package").long("debug-package").num_args(1).value_hint(ValueHint::DirPath).value_parser(clap::value_parser!(PathBuf)).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
+            .arg(
+                Arg::new("exit-if-larger-than").long("exit-if-larger-than")
+                    // Since the s::Build01 requires valid UTF8, it's better to reject it early.
+                    //.value_parser(clap::value_parser!(PathBuf))
+                    .action(clap::ArgAction::Append)
+                    .value_hint(ValueHint::Other)
+                    .num_args(1..)
+                    .required(false)
+                    .value_names(["10000w", "10mp", "disabled", "10000px"])
+                    .help("Override the default limit of 100mp/10000w/10000h/10000px. Specify 'none' to disable the limit, or set the megapixels (100mp), width (10000w), height (10000h), or any dimension (10000px).")
+            )
 
         );
     let matches = app.get_matches();
@@ -200,6 +221,7 @@ pub fn main_with_exit_code() -> i32 {
             source,
             m.get_many::<String>("in").map(|v| v.cloned().collect()),
             m.get_many::<String>("out").map(|v| v.cloned().collect()),
+            m.get_many::<String>("exit-if-larger-than").map(|v| v.cloned().collect()),
         )
         .build_maybe();
         if let Some(dir_str) = m.get_one::<PathBuf>("debug-package") {

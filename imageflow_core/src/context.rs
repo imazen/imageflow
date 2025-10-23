@@ -233,15 +233,7 @@ impl Context {
             bitmaps: RefCell::new(
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
-            security: imageflow_types::ExecutionSecurity {
-                max_decode_size: None,
-                max_frame_size: Some(imageflow_types::FrameSizeLimit {
-                    w: 10000,
-                    h: 10000,
-                    megapixels: 100f32,
-                }),
-                max_encode_size: None,
-            },
+            security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
         }))
     }
@@ -262,15 +254,7 @@ impl Context {
             bitmaps: RefCell::new(
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
-            security: imageflow_types::ExecutionSecurity {
-                max_decode_size: None,
-                max_frame_size: Some(imageflow_types::FrameSizeLimit {
-                    w: 10000,
-                    h: 10000,
-                    megapixels: 100f32,
-                }),
-                max_encode_size: None,
-            },
+            security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
         })
     }
@@ -290,15 +274,7 @@ impl Context {
             bitmaps: RefCell::new(
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
-            security: imageflow_types::ExecutionSecurity {
-                max_decode_size: None,
-                max_frame_size: Some(imageflow_types::FrameSizeLimit {
-                    w: 10000,
-                    h: 10000,
-                    megapixels: 100f32,
-                }),
-                max_encode_size: None,
-            },
+            security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
         }))
     }

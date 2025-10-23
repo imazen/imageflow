@@ -1117,7 +1117,7 @@ pub enum CompositingMode {
     Overwrite,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct FrameSizeLimit {
@@ -1133,6 +1133,19 @@ pub struct ExecutionSecurity {
     pub max_decode_size: Option<FrameSizeLimit>,
     pub max_frame_size: Option<FrameSizeLimit>,
     pub max_encode_size: Option<FrameSizeLimit>,
+}
+
+impl ExecutionSecurity {
+    pub fn sane_defaults() -> Self {
+        ExecutionSecurity {
+            max_decode_size: None,
+            max_frame_size: Some(FrameSizeLimit { w: 10000, h: 10000, megapixels: 100f32 }),
+            max_encode_size: None,
+        }
+    }
+    pub fn unspecified() -> Self {
+        ExecutionSecurity { max_decode_size: None, max_frame_size: None, max_encode_size: None }
+    }
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
@@ -1441,6 +1454,12 @@ pub struct Build001Config {
     // pub process_all_gif_frames: Option<bool>,
     pub graph_recording: Option<Build001GraphRecording>,
     pub security: Option<ExecutionSecurity>,
+}
+
+impl Default for Build001Config {
+    fn default() -> Self {
+        Build001Config { graph_recording: None, security: None }
+    }
 }
 
 /// Represents a complete build job, combining IO objects with a framewise operation graph.

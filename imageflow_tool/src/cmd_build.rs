@@ -267,22 +267,114 @@ impl CmdBuild {
             ..before
         })
     }
+    fn inject_security(
+        before: s::Build001,
+        limit_args: Option<Vec<String>>,
+    ) -> Result<s::Build001> {
+        if limit_args.is_none() {
+            return Ok(before);
+        }
+        let lowercase_args =
+            limit_args.unwrap().into_iter().map(|s| s.to_lowercase()).collect::<Vec<String>>();
+        let args_string = lowercase_args.join(" ");
+        let security;
+        let unlimited_frame_size =
+            s::FrameSizeLimit { w: i32::MAX as u32, h: i32::MAX as u32, megapixels: f32::MAX };
+        if lowercase_args.contains(&"disabled".to_string()) {
+            security = Some(s::ExecutionSecurity {
+                max_decode_size: Some(unlimited_frame_size),
+                max_frame_size: Some(unlimited_frame_size),
+                max_encode_size: Some(unlimited_frame_size),
+            })
+        } else {
+            let mut max_frame_size = unlimited_frame_size;
+            let mut found_arg = false;
+            for arg in lowercase_args {
+                // parse [number](px|w|h|mp) and match to ExecutionSecury members
+                // parse all non-numeric chars from end and match on them.
+                if arg.ends_with("px") {
+                    let number = arg.split_at(arg.len() - 2).0.parse::<u32>().map_err(|_| {
+                        CmdError::BadArguments(format!(
+                            "Invalid number in argument to --exit-if-larger-than: {} ({})",
+                            arg,
+                            arg.split_at(arg.len() - 2).0
+                        ))
+                    })?;
+                    max_frame_size = s::FrameSizeLimit { w: number, h: number, ..max_frame_size };
+                } else if arg.ends_with("w") {
+                    let number = arg.split_at(arg.len() - 1).0.parse::<u32>().map_err(|_| {
+                        CmdError::BadArguments(format!(
+                            "Invalid number in argument to --exit-if-larger-than: {}",
+                            arg
+                        ))
+                    })?;
+                    max_frame_size = s::FrameSizeLimit { w: number, ..max_frame_size };
+                } else if arg.ends_with("h") {
+                    let number = arg.split_at(arg.len() - 1).0.parse::<u32>().map_err(|_| {
+                        CmdError::BadArguments(format!(
+                            "Invalid number in argument to --exit-if-larger-than: {}",
+                            arg
+                        ))
+                    })?;
+                    max_frame_size = s::FrameSizeLimit { h: number, ..max_frame_size };
+                } else if arg.ends_with("mp") {
+                    let number = arg.split_at(arg.len() - 1).0.parse::<f32>().map_err(|_| {
+                        CmdError::BadArguments(format!(
+                            "Invalid number in argument to --exit-if-larger-than: {}",
+                            arg
+                        ))
+                    })?;
+                    max_frame_size = s::FrameSizeLimit { megapixels: number, ..max_frame_size };
+                } else {
+                    let number = arg.parse::<u32>().map_err(|_| {
+                        CmdError::BadArguments(format!(
+                            "Invalid number as argument to --exit-if-larger-than: {}",
+                            arg
+                        ))
+                    })?;
+                    max_frame_size = s::FrameSizeLimit { w: number, h: number, ..max_frame_size };
+                }
+                found_arg = true;
+            }
+            if !found_arg {
+                return Err(CmdError::BadArguments(format!(
+                    "Invalid arguments to --exit-if-larger-than: {}",
+                    args_string
+                )));
+            }
+            security = Some(s::ExecutionSecurity {
+                max_frame_size: Some(max_frame_size),
+                ..s::ExecutionSecurity::sane_defaults()
+            });
+        }
 
+        let builder_config = s::Build001Config {
+            security,
+            ..before.builder_config.clone().unwrap_or(s::Build001Config::default())
+        };
+        Ok(s::Build001 { builder_config: Some(builder_config), ..before })
+    }
     fn parse_maybe(
         source: JobSource,
         in_args: Option<Vec<String>>,
         out_args: Option<Vec<String>>,
+        limit_args: Option<Vec<String>>,
     ) -> Result<s::Build001> {
         let original = CmdBuild::load_job(source)?;
         let a = CmdBuild::inject(original, in_args, s::IoDirection::In)?;
-        CmdBuild::inject(a, out_args, s::IoDirection::Out)
+        let b = CmdBuild::inject_security(a, limit_args)?;
+        CmdBuild::inject(b, out_args, s::IoDirection::Out)
     }
     pub fn parse(
         source: JobSource,
         in_args: Option<Vec<String>>,
         out_args: Option<Vec<String>>,
+        limit_args: Option<Vec<String>>,
     ) -> CmdBuild {
-        CmdBuild { job: CmdBuild::parse_maybe(source, in_args, out_args), response: None }
+        CmdBuild {
+            job: CmdBuild::parse_maybe(source, in_args, out_args, limit_args),
+            response: None,
+        }
     }
 
     fn transform_build(b: s::Build001, directory: &Path) -> Result<(Vec<String>, s::Build001)> {

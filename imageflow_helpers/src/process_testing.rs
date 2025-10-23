@@ -121,6 +121,13 @@ impl ProcOutput {
         }
         self
     }
+    pub fn expect_status_code_detail(&self, code: Option<i32>, detail: &str) -> &ProcOutput {
+        if code != self.status_code() {
+            self.dump();
+            assert_eq!(code, self.status_code(), "{}", detail);
+        }
+        self
+    }
     pub fn expect_stderr_contains(&self, substring: &str) -> &ProcOutput {
         if !self.stderr_str().contains(substring) {
             panic!(
