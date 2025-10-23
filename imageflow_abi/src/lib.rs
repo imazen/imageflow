@@ -258,7 +258,6 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 #[cfg(test)]
 use std::str;
-use std::sync::RwLockWriteGuard;
 
 //
 // What is possible with the IO object
@@ -363,7 +362,7 @@ macro_rules! lock_context_mut_and_error_or_return {
 macro_rules! lock_context_mut_or_return {
     ($ctx:ident,$failure_value:expr) => {{
         match $ctx.context_mut_and_error_or_poisoned() {
-            (outward_error, Ok(guard)) => guard,
+            (_, Ok(guard)) => guard,
             (mut outward_error, Err(_)) => {
                 fn f() {}
                 let name = parent_function_name(f);
@@ -503,16 +502,16 @@ pub unsafe extern "C" fn imageflow_context_destroy(context: *mut ThreadSafeConte
 
 #[test]
 fn test_create_destroy() {
-    unsafe {
-        exercise_create_destroy();
-    }
+    exercise_create_destroy();
 }
 
-pub unsafe fn exercise_create_destroy() {
-    let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
-    assert!(!c.is_null());
-    assert!(imageflow_context_begin_terminate(c));
-    imageflow_context_destroy(c);
+pub fn exercise_create_destroy() {
+    unsafe {
+        let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
+        assert!(!c.is_null());
+        assert!(imageflow_context_begin_terminate(c));
+        imageflow_context_destroy(c);
+    }
 }
 
 /// Returns true if the context is in an error state.
@@ -1021,7 +1020,7 @@ pub unsafe extern "C" fn imageflow_context_send_json(
 }
 
 pub fn create_abi_json_response(
-    mut c: &mut ThreadSafeContext,
+    c: &mut ThreadSafeContext,
     json_bytes: &[u8],
     status_code: i64,
 ) -> *const JsonResponse {
@@ -1042,7 +1041,7 @@ pub fn create_abi_json_response(
             Ok(v) => v,
         };
 
-        let pointer_to_final_buffer = pointer.add(sizeof_struct) as *mut u8;
+        let pointer_to_final_buffer = pointer.add(sizeof_struct);
         let imageflow_response = &mut (*(pointer as *mut JsonResponse));
         imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
         imageflow_response.buffer_size = json_bytes.len();
@@ -1443,10 +1442,10 @@ fn test_allocate_free() {
         let bytes = 100;
         let ptr = imageflow_context_memory_allocate(c, bytes, static_char!(file!()), line!() as i32)
             as *mut u8;
-        assert!(ptr != ptr::null_mut());
+        assert!(!ptr.is_null());
 
-        for x in 0..bytes {
-            assert_eq!(*ptr.offset(x as isize), 0);
+        for x in 0..bytes as isize {
+            assert_eq!(*ptr.offset(x), 0);
         }
         assert!(imageflow_context_memory_free(
             c,
