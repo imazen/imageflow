@@ -248,7 +248,6 @@ impl<'a, T> Iterator for IterMutAddRemoveSet<'a, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::std::cell::*;
 
     #[derive(Clone, PartialEq, Debug)]
     struct Container {

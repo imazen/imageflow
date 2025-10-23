@@ -8,8 +8,8 @@ use crate::{ErrorKind, FlowError, JsonResponse, Result};
 use imageflow_types::collections::AddRemoveSet;
 use std::any::Any;
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use crate::allocation_container::AllocationContainer;
 use crate::codecs::CodecInstanceContainer;
@@ -63,9 +63,7 @@ impl CancellationToken {
     }
 
     pub fn new() -> CancellationToken {
-        CancellationToken {
-            flag: Arc::new(AtomicBool::new(false)),
-        }
+        CancellationToken { flag: Arc::new(AtomicBool::new(false)) }
     }
 }
 

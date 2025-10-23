@@ -242,7 +242,7 @@ impl CategorizedError for ErrorKind {
             | ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,
             ErrorKind::FetchError | ErrorKind::DecodingIoError | ErrorKind::EncodingIoError => {
                 ErrorCategory::IoError
-            },
+            }
             ErrorKind::OperationCancelled => ErrorCategory::OperationCancelled,
             ErrorKind::Category(c) => c,
         }
@@ -666,7 +666,6 @@ impl ErrorCategory {
         self.to_i32()
     }
 
-
     pub fn process_exit_code(&self) -> i32 {
         match *self {
             ErrorCategory::ArgumentInvalid
@@ -688,7 +687,7 @@ impl ErrorCategory {
             ErrorCategory::LicenseError => 402,
             ErrorCategory::AuthorizationRequired => 401,
             ErrorCategory::Ok => 0,
-            ErrorCategory::OperationCancelled => 130
+            ErrorCategory::OperationCancelled => 130,
         }
     }
     pub fn http_status_code(&self) -> i32 {

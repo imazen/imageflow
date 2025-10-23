@@ -1,7 +1,7 @@
+use imageflow_core;
 use imageflow_core::graphics::bitmaps::BitmapWindowMut;
 use imageflow_types::PixelLayout;
 use std::{self, panic};
-use imageflow_core;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BitmapDiffStats {
@@ -23,11 +23,14 @@ impl std::ops::Add for BitmapDiffStats {
         Self {
             pixels: self.pixels + other.pixels,
             pixels_differing: self.pixels_differing + other.pixels_differing,
-            pixels_differing_by_more_than_1: self.pixels_differing_by_more_than_1 + other.pixels_differing_by_more_than_1,
+            pixels_differing_by_more_than_1: self.pixels_differing_by_more_than_1
+                + other.pixels_differing_by_more_than_1,
             values: self.values + other.values,
             values_differing: self.values_differing + other.values_differing,
-            values_differing_by_more_than_1: self.values_differing_by_more_than_1 + other.values_differing_by_more_than_1,
-            raw_unmultiplied_difference: self.raw_unmultiplied_difference + other.raw_unmultiplied_difference,
+            values_differing_by_more_than_1: self.values_differing_by_more_than_1
+                + other.values_differing_by_more_than_1,
+            raw_unmultiplied_difference: self.raw_unmultiplied_difference
+                + other.raw_unmultiplied_difference,
             values_abs_delta_sum: self.values_abs_delta_sum + other.values_abs_delta_sum,
         }
     }
@@ -52,7 +55,7 @@ impl BitmapDiffStats {
         stats.pixels = a.len() as i64;
         stats.values = stats.pixels * 4;
 
-        let one = 1_f32/255.0;
+        let one = 1_f32 / 255.0;
 
         for (a_pixel, b_pixel) in a.chunks_exact(4).zip(b.chunks_exact(4)) {
             let a_alpha = a_pixel[3] as f32 / 255.0;
@@ -99,9 +102,10 @@ impl BitmapDiffStats {
         stats
     }
 
-
-
-    pub fn diff_bitmap_windows(a: &mut BitmapWindowMut<u8>, b: &mut BitmapWindowMut<u8>) -> BitmapDiffStats {
+    pub fn diff_bitmap_windows(
+        a: &mut BitmapWindowMut<u8>,
+        b: &mut BitmapWindowMut<u8>,
+    ) -> BitmapDiffStats {
         if a.w() != b.w() || a.h() != b.h() || a.info().pixel_layout() != b.info().pixel_layout() {
             panic!("Bitmap dimensions differ. a:\n{:#?}\nb:\n{:#?}", a, b);
         }
@@ -109,19 +113,23 @@ impl BitmapDiffStats {
             panic!("Bitmap layout is not BGRA");
         }
 
-        a.scanlines().into_iter().zip(b.scanlines().into_iter()).map(|(a_scanline, b_scanline)| {
-
-            if a_scanline.row() == b_scanline.row() {
-                BitmapDiffStats::no_changes(a_scanline.row().len() as i64 / 4)
-            } else {
-                Self::diff_bytes(a_scanline.row(), b_scanline.row())
-            }
-        }).fold(BitmapDiffStats::no_changes(0), |a,b| a+ b)
+        a.scanlines()
+            .into_iter()
+            .zip(b.scanlines().into_iter())
+            .map(|(a_scanline, b_scanline)| {
+                if a_scanline.row() == b_scanline.row() {
+                    BitmapDiffStats::no_changes(a_scanline.row().len() as i64 / 4)
+                } else {
+                    Self::diff_bytes(a_scanline.row(), b_scanline.row())
+                }
+            })
+            .fold(BitmapDiffStats::no_changes(0), |a, b| a + b)
     }
 
-    pub fn legacy_report(&self) -> String{
+    pub fn legacy_report(&self) -> String {
         let premult_degree = self.values_abs_delta_sum as f64 / (self.values_differing * 4) as f64;
-        let abs_degree = self.raw_unmultiplied_difference as f64 / (self.pixels_differing * 4) as f64;
+        let abs_degree =
+            self.raw_unmultiplied_difference as f64 / (self.pixels_differing * 4) as f64;
 
         let pixels_that_differ_percent = self.pixels_differing as f64 * 100f64 / self.pixels as f64;
 
