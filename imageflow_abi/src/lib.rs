@@ -10,6 +10,28 @@
 //! Don't worry about the performance of creating/destroying contexts.
 //! A context weighs less than 2kb: (384 + 1400) as of 2017-8-29.
 //!
+//! # Thread Safety
+//!
+//! **All ABI functions are thread-safe as of ABI version 3.1.**
+//!
+//! A single `imageflow_context` may be safely accessed from multiple threads concurrently.
+//! Internal locks ensure that operations are serialized and data races cannot occur.
+//!
+//! ## Concurrency Behavior
+//!
+//! * **Serialization:** Multiple threads calling functions on the same context will serialize
+//!   (block) due to internal write locks. This is intentional and prevents data corruption.
+//! * **Error State:** Error state is protected by locks. The first error/panic is preserved;
+//!   subsequent errors on the same context are ignored (fail-fast on first error principle).
+//! * **Lock Ordering:** Internal locks are always acquired in a consistent order to prevent deadlocks.
+//! * **Performance:** For best performance with multiple threads, use separate contexts per thread.
+//!
+//! ## Important: Not Reentrant
+//!
+//! Do NOT call imageflow functions from within a callback or signal handler that might be triggered
+//! during an imageflow operation on the same context. This could lead to deadlock as the context
+//! locks are not reentrant.
+//!
 //! # Memory Lifetimes
 //!
 //! In order to prevent dangling pointers, we must be correct about memory lifetimes.
@@ -100,10 +122,120 @@
 //! This "fail fast" behavior offers the best opportunity for a useful stacktrace, and it's not a
 //! recoverable error.
 //!
-//! If you try to continue using an errored `imageflow_context`, the process will terminate.
-//! Some errors can be recovered from, but you *must* do that before trying to use the context again.
+//! If you try to continue using an errored `imageflow_context`, some operations may fail.
+//! Check `imageflow_context_has_error()` before proceeding with additional operations.
+//! Some errors can be recovered from using `imageflow_context_error_try_clear()`, but you *must*
+//! check if the error is recoverable first using `imageflow_context_error_recoverable()`.
 //!
 //! For all APIS: You'll likely segfault the process if you provide a `context` pointer that is dangling or invalid.
+//!
+//! # Safety Guarantees for Binding Authors
+//!
+//! ## Panic Safety
+//!
+//! **All panics are caught at the FFI boundary.** Internal Rust panics will never unwind across
+//! the FFI boundary into your code. Instead:
+//!
+//! * Panics are caught using `catch_unwind`
+//! * Panic information is stored in the context's error state
+//! * The function returns a failure value (false, null, or error code)
+//! * You can retrieve panic details via `imageflow_context_error_write_to_buffer`
+//!
+//! ## Lock Poisoning
+//!
+//! In the rare case where a panic occurs while holding internal locks:
+//!
+//! * The context enters a "degraded" state
+//! * Subsequent operations will fail with `ErrorKind::FailedBorrow`
+//! * The context remains memory-safe and can be destroyed normally
+//! * **This should not happen in practice** - all panics are caught before they can poison locks
+//!
+//! ## Memory Safety Rules for Bindings
+//!
+//! To maintain memory safety, your bindings MUST enforce these rules:
+//!
+//! ### 1. Context Lifetime
+//!
+//! * A context pointer becomes invalid after `imageflow_context_destroy` is called
+//! * **Never** use a context pointer after destroying it (use-after-free)
+//! * **Never** destroy a context twice (double-free)
+//! * Tip: Set the pointer to NULL after destroy to catch bugs early
+//!
+//! ### 2. Buffer Lifetimes (Critical!)
+//!
+//! When you pass a buffer to imageflow with `Lifetime::OutlivesContext`:
+//!
+//! * The buffer MUST remain valid and unmodified until context destruction
+//! * **Never** free, move, or reallocate the buffer while the context exists
+//! * In garbage-collected languages, pin the buffer to prevent GC movement
+//! * Violation causes undefined behavior (use-after-free, data corruption)
+//!
+//! Use `Lifetime::OutlivesFunctionCall` if you cannot guarantee buffer lifetime - imageflow will
+//! copy the data (at a performance cost).
+//!
+//! ### 3. Returned Pointers
+//!
+//! Pointers returned by imageflow (JsonResponse, output buffers, etc.):
+//!
+//! * Are valid until the context is destroyed OR until explicitly freed
+//! * Become invalid if the context is destroyed
+//! * **Must not** be freed by your allocator (use imageflow functions to free)
+//! * Are read-only unless documented otherwise
+//!
+//! ### 4. Thread Safety Requirements
+//!
+//! * You MAY call imageflow functions from multiple threads on the same context
+//! * You MUST NOT call imageflow from within callbacks/signals during an operation
+//! * You MUST NOT destroy a context while another thread is using it
+//!
+//! ### 5. Error Handling Requirements
+//!
+//! * ALWAYS check for errors after operations that can fail
+//! * Do NOT ignore errors - they indicate the context may be in an invalid state
+//! * Handle errors before attempting more operations (or they may fail)
+//! * You MAY retry operations after clearing recoverable errors
+//!
+//! ## Undefined Behavior
+//!
+//! The following will cause undefined behavior (crashes, corruption, security vulnerabilities):
+//!
+//! * Passing a null context pointer (process will abort with diagnostic)
+//! * Passing a dangling pointer (freed, moved, or never valid)
+//! * Use-after-free (using context/buffers after destroying them)
+//! * Buffer lifetime violations (freeing buffers while context uses them)
+//! * Concurrent destroy (destroying context while another thread uses it)
+//! * Invalid buffer pointers or sizes (will attempt early detection but not guaranteed)
+//! * Calling imageflow recursively from the same thread (deadlock)
+//!
+//! ## Safe Patterns
+//!
+//! ```c
+//! // Example safe usage pattern in C
+//! imageflow_context* ctx = imageflow_context_create(3, 1);
+//! if (!ctx) {
+//!     // Handle allocation failure
+//!     return NULL;
+//! }
+//!
+//! // Perform operations
+//! bool success = imageflow_context_add_output_buffer(ctx, 1);
+//! if (!success || imageflow_context_has_error(ctx)) {
+//!     // Handle error
+//!     char buffer[1024];
+//!     size_t bytes_written;
+//!     imageflow_context_error_write_to_buffer(ctx, buffer, sizeof(buffer), &bytes_written);
+//!     fprintf(stderr, "Error: %s\n", buffer);
+//!
+//!     imageflow_context_destroy(ctx);
+//!     return NULL;
+//! }
+//!
+//! // ... more operations ...
+//!
+//! // Always destroy context
+//! imageflow_context_destroy(ctx);
+//! ctx = NULL;  // Good practice to prevent use-after-free
+//! ```
 //!
 #![crate_type = "cdylib"]
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
@@ -283,9 +415,20 @@ pub extern "C" fn imageflow_abi_version_minor() -> u32 {
 /// * context-managed memory allocations
 /// * performance profiling information
 ///
-/// **Contexts are not thread-safe!** Once you create a context, *you* are responsible for ensuring that it is never involved in two overlapping API calls.
+/// **As of ABI 3.1, contexts ARE thread-safe!** A single context may be accessed from multiple
+/// threads concurrently. Operations will serialize internally to prevent data races.
+/// For best performance with multiple threads, use separate contexts per thread.
 ///
-/// Returns a null pointer if allocation fails or the provided interface version is incompatible
+/// Returns a null pointer if allocation fails or the provided interface version is incompatible.
+///
+/// # Panics
+///
+/// Cannot panic - all panics during creation are caught and result in returning null.
+///
+/// # Thread Safety
+///
+/// This function is safe to call from multiple threads simultaneously. Each call creates an
+/// independent context.
 #[no_mangle]
 pub extern "C" fn imageflow_context_create(
     imageflow_abi_ver_major: u32,
@@ -303,6 +446,18 @@ pub extern "C" fn imageflow_context_create(
 /// debugged with `imageflow_context_error_write_to_buffer`.
 ///
 /// Returns true if no errors occurred. Returns false if there were tear-down issues.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer returned from `imageflow_context_create`
+/// * `context` must not have been previously destroyed
+/// * No other threads may be accessing this context during or after this call
+/// * After calling this function, only error-retrieval functions and `imageflow_context_destroy`
+///   may be called on this context
+///
+/// # Panics
+///
+/// Cannot panic - designed to be panic-safe for cleanup paths.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_begin_terminate(
     context: *mut ThreadSafeContext,
@@ -313,6 +468,29 @@ pub unsafe extern "C" fn imageflow_context_begin_terminate(
 
 /// Destroys the imageflow context and frees the context object.
 /// Only use this with contexts created using `imageflow_context_create`
+///
+/// All memory associated with the context is freed, including:
+/// * The context itself
+/// * All buffers created by imageflow for this context
+/// * All JsonResponse objects not explicitly freed
+/// * All internal allocations
+///
+/// # Safety
+///
+/// * `context` must be either NULL (no-op) or a valid pointer from `imageflow_context_create`
+/// * `context` must not have been previously destroyed (double-free)
+/// * No other threads may be accessing this context during or after this call
+/// * After this call, the pointer is invalid - do not use it (use-after-free)
+/// * All pointers to data owned by this context become invalid (output buffers, JsonResponse, etc.)
+///
+/// # Panics
+///
+/// Cannot panic - destruction is panic-safe and will attempt cleanup even in degraded states.
+///
+/// # Thread Safety
+///
+/// This function is NOT safe to call while other threads are using the context.
+/// Ensure all threads have finished using the context before destroying it.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_destroy(context: *mut ThreadSafeContext) {
     if !context.is_null() {
@@ -337,16 +515,39 @@ pub unsafe fn exercise_create_destroy() {
     imageflow_context_destroy(c);
 }
 
-/// Returns true if the context is in an error state. You must immediately deal with the error,
-/// as subsequent API calls will fail or cause undefined behavior until the error state is cleared
+/// Returns true if the context is in an error state.
+///
+/// When true, you should retrieve error details and handle the error before attempting more operations.
+/// Some operations will fail or return incorrect results if the context is in an error state.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `context` must not have been destroyed
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (acquires read lock).
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_has_error(context: *mut ThreadSafeContext) -> bool {
     context!(context).outward_error().has_error()
 }
 
 /// Returns true if the context is "ok" or in an error state that is recoverable.
-/// You must immediately deal with the error,
-/// as subsequent API calls will fail or cause undefined behavior until the error state is cleared
+///
+/// A recoverable error is one that can be cleared with `imageflow_context_error_try_clear()`.
+/// Panics and some critical errors are NOT recoverable.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `context` must not have been destroyed
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (acquires read lock).
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_recoverable(
     context: *mut ThreadSafeContext,
@@ -354,9 +555,22 @@ pub unsafe extern "C" fn imageflow_context_error_recoverable(
     context!(context).outward_error().recoverable()
 }
 
-/// Returns true if the context is "ok" or in an error state that is recoverable.
-/// You must immediately deal with the error,
-/// as subsequent API calls will fail or cause undefined behavior until the error state is cleared
+/// Attempts to clear a recoverable error from the context.
+///
+/// Returns true if the error was cleared (or if there was no error).
+/// Returns false if the error is not recoverable (panic, critical error).
+///
+/// You MUST check `imageflow_context_error_recoverable()` before calling this.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `context` must not have been destroyed
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (acquires write lock).
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_try_clear(
     context: *mut ThreadSafeContext,
@@ -369,6 +583,12 @@ pub unsafe extern "C" fn imageflow_context_error_try_clear(
 /// These will be stabilized after 1.0, once error categories have passed rigorous real-world testing
 /// `imageflow_context_error_as_exit_code` and `imageflow_context_error_as_http_status` are suggested in the meantime.
 /// Unstable, do not use.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `context` must not have been destroyed
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_code(context: *mut ThreadSafeContext) -> i32 {
     context!(context).outward_error().category().to_outward_error_code()
@@ -389,7 +609,11 @@ pub unsafe extern "C" fn imageflow_context_error_code(context: *mut ThreadSafeCo
 /// * 77 - Action forbidden under imageflow security policy
 /// * 402 - License error
 /// * 401 - Imageflow server authorization required
+/// # Safety
 ///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `context` must not have been destroyed
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_as_exit_code(
     context: *mut ThreadSafeContext,
@@ -411,6 +635,11 @@ pub unsafe extern "C" fn imageflow_context_error_as_exit_code(
 /// * 502 - Upstream server error
 /// * 503 - Out Of Memory condition (malloc/calloc/realloc failed).
 /// * 504 - Upstream timeout
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `context` must not have been destroyed
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_as_http_code(
     context: *mut ThreadSafeContext,
@@ -418,15 +647,42 @@ pub unsafe extern "C" fn imageflow_context_error_as_http_code(
     context!(context).outward_error().category().http_status_code()
 }
 
-/// Prints the error messages (and optional stack frames) to the given buffer in UTF-8 form; writes a null
-/// character to terminate the string, and *ALSO* provides the number of bytes written (excluding the null terminator)
+/// Writes error messages (and stack frames) to the provided buffer in UTF-8 format.
 ///
-/// Returns false if the buffer was too small (or null) and the output was truncated.
-/// Returns true if all data was written OR if there was a bug in error serialization (that gets written, too).
+/// The output is null-terminated. The number of bytes written (excluding null terminator)
+/// is written to `bytes_written` if it's not NULL.
 ///
-/// If the data is truncated, "\n[truncated]\n" is written to the buffer
+/// ## Return Value
 ///
-/// Please be accurate with the buffer length, or a buffer overflow will occur.
+/// * Returns **true** if all error data was written successfully
+/// * Returns **false** if the buffer was too small and output was truncated
+/// * Returns **false** if buffer is NULL
+///
+/// When truncated, the buffer will contain "\n[truncated]\n" at the end (before the null terminator).
+///
+/// ## Usage
+///
+/// ```c
+/// char error_buffer[1024];
+/// size_t bytes_written;
+/// if (!imageflow_context_error_write_to_buffer(ctx, error_buffer, sizeof(error_buffer), &bytes_written)) {
+///     // Buffer was too small, error message truncated
+/// }
+/// printf("Error: %s\n", error_buffer);
+/// ```
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `buffer` must be either NULL or a valid pointer to at least `buffer_length` writable bytes
+/// * `buffer_length` must accurately reflect the buffer size - incorrect size causes buffer overflow
+/// * `buffer_length` must not have the most significant bit set (max 2^31 or 2^63)
+/// * `bytes_written`, if not NULL, must be a valid pointer to write a size_t
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (acquires read lock on error state).
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(
     context: *mut ThreadSafeContext,
@@ -465,9 +721,30 @@ pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(
 }
 
 /// Prints the error to stderr and exits the process if an error has been raised on the context.
-/// If no error is present, the function returns false.
 ///
-/// THIS PRINTS DIRECTLY TO STDERR! Do not use in any kind of service! Command-line usage only!
+/// **WARNING: THIS FUNCTION CALLS exit() AND TERMINATES THE PROCESS!**
+///
+/// If an error is present:
+/// * Prints error details to stderr
+/// * Calls `exit()` with an appropriate exit code (see `imageflow_context_error_as_exit_code`)
+/// * **DOES NOT RETURN**
+///
+/// If no error is present:
+/// * Returns false
+/// * Does not exit
+///
+/// **DO NOT USE IN SERVICES, LIBRARIES, OR LONG-RUNNING PROCESSES!**
+/// This is only appropriate for command-line utilities where process termination is acceptable.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+///
+/// # Thread Safety
+///
+/// If called while other threads are running, those threads will be terminated without cleanup.
+/// Only use this in single-threaded command-line programs.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(
     context: *mut ThreadSafeContext,
@@ -481,15 +758,32 @@ pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(
     }
 }
 
+/// Reads fields from a JsonResponse and writes them to the provided output parameters.
 ///
-/// Writes fields from the given `imageflow_json_response` to the locations referenced.
-/// The buffer pointer sent out will be a UTF-8 byte array of the given length (not null-terminated). It will
-/// also become invalid if the `JsonResponse` associated is freed, or if the context is destroyed.
+/// The buffer pointer will be a UTF-8 byte array (NOT null-terminated).
 ///
-/// See `imageflow_context_error_as_http_code` for just the http status code equivalent.
+/// **Important:** The buffer pointer is only valid until:
+/// * The JsonResponse is freed with `imageflow_json_response_destroy`, OR
+/// * The context is destroyed
 ///
-/// Most errors are not recoverable; you must destroy the context and retry.
+/// Any of the output parameters may be NULL if you don't need that field.
 ///
+/// Returns false if `response_in` is NULL.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `response_in` must be either NULL or a valid pointer from `imageflow_context_send_json`
+/// * `status_as_http_code_out`, if not NULL, must be a valid pointer to write an i64
+/// * `buffer_utf8_no_nulls_out`, if not NULL, must be a valid pointer to write a *const u8
+/// * `buffer_size_out`, if not NULL, must be a valid pointer to write a size_t
+/// * The returned buffer pointer is only valid until response/context destruction
+///
+/// # Thread Safety
+///
+/// The response object is not protected by locks. Do not read a response while another thread
+/// might be freeing it or destroying the context.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_json_response_read(
     context: *mut ThreadSafeContext,
@@ -524,18 +818,31 @@ pub unsafe extern "C" fn imageflow_json_response_read(
     true
 }
 
-/// Frees memory associated with the given object (and owned objects) after
-/// running any owned or attached destructors. Returns false if something went wrong during tear-down.
+/// Frees a JsonResponse object early.
 ///
-/// Returns true if the object to destroy is a null pointer, or if tear-down was successful.
+/// This is optional - JsonResponse objects are automatically freed when the context is destroyed.
+/// Use this to reduce memory usage if you're done with a response before destroying the context.
 ///
-/// Behavior is undefined if the pointer is dangling or not a valid memory reference.
-/// Although certain implementations catch
-/// some kinds of invalid pointers, a segfault is likely in future revisions).
+/// Returns true if successful or if `response` is NULL.
+/// Returns false if the pointer was not found in the allocation list.
 ///
-/// Behavior is undefined if the context provided does not match the context with which the
-/// object was created.
+/// # Safety
 ///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `context` must be the same context that created the response
+/// * `response` must be either NULL or a valid pointer from `imageflow_context_send_json` on this context
+/// * `response` must not have been previously freed (double-free)
+/// * After this call, `response` and its buffer are invalid - do not use them (use-after-free)
+///
+/// # Panics
+///
+/// Cannot panic - safe to use in cleanup paths.
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context, but ensure no other thread is reading
+/// this specific response object.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_json_response_destroy(
     context: *mut ThreadSafeContext,
@@ -545,38 +852,97 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(
     imageflow_context_memory_free(context, response as *mut libc::c_void, ptr::null(), 0)
 }
 
-/// Tries to set a cancellation flag on the context, which may or may not cause any running jobs to be cancelled.
-/// Cancellation will trigger OperationCancelled, error 21 (499 HTTP, 130 exit code)
-/// No operations can be attempted after the context is cancelled, as it will be in an errored state.
+/// Requests cancellation of any running or future operations on this context.
 ///
+/// This sets an atomic cancellation flag that operations check periodically.
+/// When an operation detects the cancellation flag, it will abort and return an error.
+///
+/// **Important:** Cancellation is not guaranteed to be immediate. Some operations may complete
+/// before detecting the flag. Once cancellation is requested, the context enters an error state.
+///
+/// Error details: `ErrorKind::OperationCancelled`, error code 21, HTTP 499, exit code 130
+///
+/// No further operations can be attempted after cancellation - the context is in an errored state.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+///
+/// # Panics
+///
+/// Cannot panic.
+///
+/// # Thread Safety
+///
+/// **This is the only function specifically designed to be called from another thread while an
+/// operation is running.** Use this to implement timeouts or user cancellation.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_request_cancellation(context: *mut ThreadSafeContext) {
     let c: &mut ThreadSafeContext = context!(context);
     c.request_cancellation();
 }
 
+/// Sends a JSON message to the imageflow context using the specified endpoint method.
 ///
-/// Sends a JSON message to the `imageflow_context` using endpoint `method`.
+/// This is the primary API for invoking imageflow operations.
 ///
 /// ## Endpoints
 ///
-/// * 'v1/build`
+/// * `v1/build` - Build and execute an image processing job
+/// * `v1/execute` - Execute a pre-configured operation graph
+/// * `v1/get_version_info` - Get version and build information
 ///
-/// For endpoints supported by the latest nightly build, see
+/// For the latest endpoints, see:
 /// `https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt`
 ///
-/// ## Notes
+/// ## Parameters
 ///
-/// * `method` and `json_buffer` are only borrowed for the duration of the function call. You are
-///    responsible for their cleanup (if necessary - static strings are handy for things like
-///    `method`).
-/// * `method` should be a UTF-8 null-terminated string.
-///   `json_buffer` should be a UTF-8 encoded buffer (not null terminated) of length `json_buffer_size`.
+/// * `method` - UTF-8 null-terminated string specifying the endpoint (e.g., "v1/build")
+/// * `json_buffer` - UTF-8 encoded JSON (NOT null-terminated)
+/// * `json_buffer_size` - Length of json_buffer in bytes
 ///
-/// You should call `imageflow_context_has_error()` to see if this succeeded.
+/// ## Return Value
 ///
-/// A `JsonResponse` is returned for success and most error conditions.
-/// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
+/// Returns a pointer to a `JsonResponse` on success or error. The response contains:
+/// * HTTP-style status code (200 for success, 4xx/5xx for errors)
+/// * UTF-8 JSON response buffer
+///
+/// Returns NULL only if:
+/// * A panic occurred and could not be converted to a JSON error
+/// * Invalid arguments were provided
+///
+/// **Always check `imageflow_context_has_error()` after calling this function.**
+///
+/// The returned JsonResponse is owned by the context and remains valid until:
+/// * You call `imageflow_json_response_destroy()`, OR
+/// * You destroy the context
+///
+/// ## Memory Lifetime
+///
+/// * `method` and `json_buffer` are only borrowed during this function call
+/// * You remain responsible for freeing them if dynamically allocated
+/// * Static strings are ideal for `method`
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `method` must be a valid null-terminated UTF-8 string
+/// * `method` must not be NULL
+/// * `json_buffer` must be a valid pointer to at least `json_buffer_size` readable bytes
+/// * `json_buffer` must not be NULL
+/// * `json_buffer_size` must not have the most significant bit set (max 2^31 or 2^63)
+/// * `json_buffer` and `method` must remain valid for the duration of this call
+///
+/// # Panics
+///
+/// Internal panics are caught and converted to error responses. Check the response status code.
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (acquires write lock).
+/// Operations will serialize - only one operation executes at a time per context.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_send_json(
     context: *mut ThreadSafeContext,
@@ -734,12 +1100,37 @@ pub fn create_abi_json_response(
 //    handle_result!(c, result, false)
 //}
 
-///
 /// Adds an input buffer to the job context.
-/// You are ALWAYS responsible for freeing the memory provided (at the time specified by Lifetime).
-/// If you specify `OutlivesFunctionCall`, then the buffer will be copied.
 ///
+/// The buffer lifetime semantics depend on the `lifetime` parameter:
 ///
+/// * `Lifetime::OutlivesFunctionCall` - Imageflow copies the buffer immediately.
+///   You may free the buffer as soon as this function returns.
+///
+/// * `Lifetime::OutlivesContext` - Imageflow borrows the buffer (zero-copy).
+///   **CRITICAL:** The buffer MUST remain valid and unmodified until the context is destroyed.
+///   Do NOT free, move, or modify the buffer while the context exists.
+///   In GC languages, pin the buffer to prevent garbage collection or movement.
+///
+/// Returns false if the operation fails. Check error state with `imageflow_context_has_error()`.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `buffer` must be a valid pointer to at least `buffer_byte_count` readable bytes
+/// * `buffer` must not be NULL
+/// * If `lifetime` is `OutlivesContext`, buffer must remain valid until context destruction
+/// * `io_id` must be unique (not previously used for this context)
+/// * `buffer_byte_count` must not have the most significant bit set (max 2^31 or 2^63)
+///
+/// # Panics
+///
+/// Internal panics are caught and converted to errors. Returns false on panic.
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (acquires write lock).
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_add_input_buffer(
     context: *mut ThreadSafeContext,
@@ -799,12 +1190,28 @@ pub unsafe extern "C" fn imageflow_context_add_input_buffer(
     }
 }
 
-///
 /// Adds an output buffer to the job context.
-/// The  buffer will be freed with the context.
 ///
+/// Imageflow will allocate and manage a growable output buffer internally.
+/// After processing, retrieve the buffer contents with `imageflow_context_get_output_buffer_by_id()`.
 ///
-/// Returns false if allocation failed or context is damaged; check the context for error details.
+/// The output buffer is freed automatically when the context is destroyed.
+///
+/// Returns false if allocation failed or the context is in an error state.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `io_id` must be unique (not previously used for this context)
+///
+/// # Panics
+///
+/// Internal panics are caught and converted to errors. Returns false on panic.
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (acquires write lock).
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_add_output_buffer(
     context: *mut ThreadSafeContext,
@@ -823,10 +1230,36 @@ pub unsafe extern "C" fn imageflow_context_add_output_buffer(
     handle_result!(outward_error, result, false)
 }
 
+/// Provides access to the underlying buffer for the given output io_id.
 ///
-/// Provides access to the underlying buffer for the given io id
+/// This function writes the buffer pointer and length to the provided output parameters.
+/// The buffer pointer remains valid until the context is destroyed.
 ///
-/// Returns false and sets the error if the io id is invalid, the result buffer pointers are null, or the context is damaged.
+/// **Important:** The returned buffer is read-only and owned by the context.
+/// Do NOT modify or free the buffer.
+///
+/// Returns false and sets an error if:
+/// * The io_id is invalid or not an output buffer
+/// * The result pointers are null
+/// * The context is in an error state
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `result_buffer` must be a valid pointer to write a `*const u8` to (not NULL)
+/// * `result_buffer_length` must be a valid pointer to write a `size_t` to (not NULL)
+/// * The returned buffer pointer is only valid until context destruction
+/// * The returned buffer must NOT be modified or freed by the caller
+///
+/// # Panics
+///
+/// Internal panics are caught and converted to errors. Returns false on panic.
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (acquires write lock).
+/// Note: The buffer pointer becomes shared - ensure no thread is writing to outputs while reading.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
     context: *mut ThreadSafeContext,
@@ -867,14 +1300,33 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
     handle_result!(outward_error, result, false)
 }
 
+/// Allocates zeroed memory that will be freed automatically with the context.
 ///
-/// Allocates zeroed memory that will be freed with the context.
+/// The allocated memory is zeroed and aligned to 16 bytes.
+/// The memory will be automatically freed when the context is destroyed.
 ///
-/// * filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
-/// * If provided, `filename` should be an null-terminated UTF-8 or ASCII string which will outlive the context.
+/// You may free the memory early using `imageflow_context_memory_free()`.
 ///
-/// Returns null(0) on failure.
+/// * `filename`/`line` are optional debug parameters. Pass NULL/-1 to skip.
+/// * If provided, `filename` should be a null-terminated UTF-8 string with static lifetime.
 ///
+/// Returns NULL on allocation failure or if the context is in an error state.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `bytes` must not have the most significant bit set (max 2^31 or 2^63)
+/// * `filename`, if not NULL, must be a valid null-terminated string with static lifetime
+/// * The returned pointer is valid until freed or until context destruction
+///
+/// # Panics
+///
+/// Cannot panic - allocation failures result in returning NULL with error set.
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (uses separate allocation lock).
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_memory_allocate(
     context: *mut ThreadSafeContext,
@@ -901,14 +1353,31 @@ pub unsafe extern "C" fn imageflow_context_memory_allocate(
     pointer as *mut libc::c_void
 }
 
-///
 /// Frees memory allocated with `imageflow_context_memory_allocate` early.
 ///
-/// * filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
-/// * If provided, `filename` should be an null-terminated UTF-8 or ASCII string which will outlive the context.
+/// This is optional - all context-allocated memory is automatically freed when the context is destroyed.
+/// Use this to reduce memory usage during long-running operations.
 ///
-/// Returns false on failure. Returns true on success, or if `pointer` is null.
+/// * `filename`/`line` are reserved for future debugging. Pass NULL/-1.
 ///
+/// Returns true on success or if `pointer` is NULL.
+/// Returns false if the pointer was not found in the allocation list.
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `pointer` must be either NULL or a pointer returned from `imageflow_context_memory_allocate` on this context
+/// * `pointer` must not have been previously freed (double-free)
+/// * After this call, `pointer` is invalid - do not use it (use-after-free)
+///
+/// # Panics
+///
+/// Cannot panic - safe to use in cleanup paths even if context is in error state.
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (uses separate allocation lock).
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_memory_free(
     context: *mut ThreadSafeContext,
