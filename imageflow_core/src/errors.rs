@@ -99,6 +99,39 @@ macro_rules! unimpl {
     };
 }
 
+/// Creates a FlowError of  ::ErrorKind::OperationCancelled with an optional message string
+#[macro_export]
+macro_rules! cancelled {
+    () => {
+        $crate::FlowError {
+            kind: $crate::ErrorKind::OperationCancelled,
+            message: String::new(),
+            at: ::smallvec::SmallVec::new(),
+            node: None,
+        }
+        .at(here!())
+    };
+    ($fmt:expr) => {
+        $crate::FlowError {
+            kind: $crate::ErrorKind::OperationCancelled,
+            message: format!(concat!("{:?}: ", $fmt), $crate::ErrorKind::OperationCancelled),
+            at: ::smallvec::SmallVec::new(),
+            node: None,
+        }
+        .at(here!())
+    };
+}
+
+/// Creates a FlowError of  ::ErrorKind::OperationCancelled with an optional message string
+#[macro_export]
+macro_rules! return_if_cancelled {
+    ($context:expr) => {{
+        if $context.cancellation_requested() {
+            return Err(cancelled!());
+        }
+    }};
+}
+
 /// Create an AllocationFailed FlowError with the current stack location.
 #[macro_export]
 macro_rules! err_oom {

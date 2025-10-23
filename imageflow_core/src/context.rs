@@ -7,6 +7,9 @@ use crate::io::IoProxy;
 use crate::{ErrorKind, FlowError, JsonResponse, Result};
 use imageflow_types::collections::AddRemoveSet;
 use std::any::Any;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
 use crate::allocation_container::AllocationContainer;
 use crate::codecs::CodecInstanceContainer;
@@ -25,6 +28,7 @@ pub struct Context {
     pub next_graph_version: i32,
     pub max_calc_flatten_execute_passes: i32,
     pub graph_recording: s::Build001GraphRecording,
+    cancellation_token: CancellationToken,
 
     /// Codecs, which in turn connect to I/O instances.
     pub codecs: AddRemoveSet<CodecInstanceContainer>, // This loans out exclusive mutable references to items, bounding the ownership lifetime to Context
@@ -38,6 +42,31 @@ pub struct Context {
     pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>,
 
     pub allocations: RefCell<AllocationContainer>,
+}
+
+// This token is the shared state.
+#[derive(Clone, Default)]
+struct CancellationToken {
+    flag: Arc<AtomicBool>,
+}
+
+impl CancellationToken {
+    // The blocking task will call this.
+    //
+    #[inline]
+    pub fn cancellation_requested(&self) -> bool {
+        self.flag.load(Ordering::Relaxed)
+    }
+
+    fn cancel_internal(&self) {
+        self.flag.store(true, Ordering::Relaxed);
+    }
+
+    pub fn new() -> CancellationToken {
+        CancellationToken {
+            flag: Arc::new(AtomicBool::new(false)),
+        }
+    }
 }
 
 //TODO: isn't this supposed to increment with each new context in process?
@@ -58,6 +87,7 @@ impl Context {
             graph_recording: s::Build001GraphRecording::off(),
             codecs: AddRemoveSet::with_capacity(4),
             io_id_list: RefCell::new(Vec::with_capacity(2)),
+            cancellation_token: CancellationToken::new(),
             enabled_codecs: EnabledCodecs::default(),
             bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
             security: imageflow_types::ExecutionSecurity {
@@ -92,6 +122,17 @@ impl Context {
     pub fn destroy(mut self) -> Result<()> {
         self.abi_begin_terminate();
         Ok(())
+    }
+
+    pub fn request_cancellation(&mut self) {
+        self.cancellation_token.cancel_internal();
+        self.outward_error_mut()
+            .try_set_error(nerror!(ErrorKind::OperationCancelled, "Cancellation was requested"));
+    }
+
+    #[inline]
+    pub fn cancellation_requested(&self) -> bool {
+        self.cancellation_token.cancellation_requested()
     }
 
     pub fn outward_error(&self) -> &OutwardErrorBuffer {

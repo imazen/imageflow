@@ -199,6 +199,12 @@ bool imageflow_context_memory_free(struct imageflow_context *context,
 // THIS PRINTS DIRECTLY TO STDERR! Do not use in any kind of service! Command-line usage only!
 bool imageflow_context_print_and_exit_if_error(struct imageflow_context *context);
 
+// Tries to set a cancellation flag on the context, which may or may not cause any running jobs to be cancelled.
+// Cancellation will trigger OperationCancelled, error 21 (499 HTTP, 130 exit code)
+// No operations can be attempted after the context is cancelled, as it will be in an errored state.
+//
+void imageflow_context_request_cancellation(struct imageflow_context *context);
+
 //
 // Sends a JSON message to the `imageflow_context` using endpoint `method`.
 //

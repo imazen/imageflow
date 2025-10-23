@@ -518,6 +518,16 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(
     imageflow_context_memory_free(context, response as *mut libc::c_void, ptr::null(), 0)
 }
 
+/// Tries to set a cancellation flag on the context, which may or may not cause any running jobs to be cancelled.
+/// Cancellation will trigger OperationCancelled, error 21 (499 HTTP, 130 exit code)
+/// No operations can be attempted after the context is cancelled, as it will be in an errored state.
+///
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_context_request_cancellation(context: *mut Context) {
+    let c: &mut Context = context!(context);
+    c.request_cancellation();
+}
+
 ///
 /// Sends a JSON message to the `imageflow_context` using endpoint `method`.
 ///

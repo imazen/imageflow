@@ -67,6 +67,8 @@ bool imageflow_context_memory_free(void *context,
 
 bool imageflow_context_print_and_exit_if_error(void *context);
 
+void imageflow_context_request_cancellation(void *context);
+
 const void *imageflow_context_send_json(void *context,
                                                 const char *method,
                                                 const uint8_t *json_buffer,
