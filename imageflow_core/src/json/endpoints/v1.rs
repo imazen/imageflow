@@ -26,13 +26,17 @@ extern crate include_dir;
 use utoipa::{Modify, OpenApi, ToSchema};
 
 pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonResponse> {
+    invoke_with_cancellation::<fn() -> bool>(context, method, json, None)
+}
+
+pub fn invoke_with_cancellation<F>(context: &mut Context, method: &str, json: &[u8], poll_cancellation: Option<F>) -> Result<JsonResponse> where F: Fn() -> bool + Send + Sync + 'static{
     if let Some(response) = try_invoke_static(method, json)? {
         return Ok(response);
     }
     match method {
         "v1/build" | "v0.1/build" => {
             let input = parse_json::<s::Build001>(json)?;
-            let output = build(context, input)?;
+            let output = build_with_cancellation(context, input, poll_cancellation)?;
             Ok(JsonResponse::ok(output))
         }
         "v1/get_image_info" | "v0.1/get_image_info" => {
@@ -52,7 +56,7 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
         }
         "v1/execute" | "v0.1/execute" => {
             let input = parse_json::<s::Execute001>(json)?;
-            let output = execute(context, input)?;
+            let output = execute_with_cancellation(context, input, poll_cancellation)?;
             Ok(JsonResponse::ok(output))
         }
         _ => Err(nerror!(ErrorKind::InvalidMessageEndpoint)),
@@ -264,7 +268,15 @@ pub struct GetJsonSchemasV1Response {
     )
 ))]
 pub(super) fn build(context: &mut Context, parsed: Build001) -> Result<BuildV1Response> {
-    let job_result = context.build_inner(parsed).map_err(|e| e.at(here!()))?;
+    let job_result = context.build_inner_with_cancellation::<fn() -> bool>(parsed, None).map_err(|e| e.at(here!()))?;
+    Ok(BuildV1Response { job_result })
+}
+
+pub(super) fn build_with_cancellation<F>(context: &mut Context, parsed: Build001, poll_cancellation: Option<F>) -> Result<BuildV1Response>
+where
+    F: Fn() -> bool + Send + Sync + 'static,
+{
+    let job_result = context.build_inner_with_cancellation(parsed, poll_cancellation).map_err(|e| e.at(here!()))?;
     Ok(BuildV1Response { job_result })
 }
 
@@ -332,6 +344,14 @@ pub(super) fn tell_decoder(
 ))]
 pub(super) fn execute(context: &mut Context, parsed: Execute001) -> Result<ExecuteV1Response> {
     let job_result = context.execute_inner(parsed).map_err(|e| e.at(here!()))?;
+    Ok(ExecuteV1Response { job_result })
+}
+
+pub(super) fn execute_with_cancellation<F>(context: &mut Context, parsed: Execute001, poll_cancellation: Option<F>) -> Result<ExecuteV1Response>
+where
+    F: Fn() -> bool + Send + Sync + 'static
+{
+    let job_result = context.execute_inner_with_cancellation(parsed, poll_cancellation).map_err(|e| e.at(here!()))?;
     Ok(ExecuteV1Response { job_result })
 }
 

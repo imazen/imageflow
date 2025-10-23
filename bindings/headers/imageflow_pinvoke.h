@@ -6,7 +6,7 @@
 #define IMAGEFLOW_ABI_VER_MAJOR 3
 
 // Incremented for non-breaking additions
-#define IMAGEFLOW_ABI_VER_MINOR 0
+#define IMAGEFLOW_ABI_VER_MINOR 1
 
 
 typedef signed byte int8_t;
@@ -232,6 +232,38 @@ const void *imageflow_context_send_json(void *context,
                                                 const char *method,
                                                 const uint8_t *json_buffer,
                                                 size_t json_buffer_size);
+
+//
+// Sends a JSON message to the `imageflow_context` using endpoint `method`.
+//
+// ## Endpoints
+//
+// * 'v1/build`
+//
+// For endpoints supported by the latest nightly build, see
+// `https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt`
+//
+// ## Notes
+//
+// * `method` and `json_buffer` are only borrowed for the duration of the function call. You are
+//    responsible for their cleanup (if necessary - static strings are handy for things like
+//    `method`).
+// * `method` should be a UTF-8 null-terminated string.
+//   `json_buffer` should be a UTF-8 encoded buffer (not null terminated) of length `json_buffer_size`.
+// * `cancel_callback` should be a function pointer that takes a `*mut libc::c_void` and returns a `u8`.
+//   The function should return `1` if the operation should be canceled, and `0` otherwise.
+// * `callback_data` is passed to `cancel_callback` when it is called.
+//
+// You should call `imageflow_context_has_error()` to see if this succeeded.
+//
+// A `void` is returned for success and most error conditions.
+// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
+const void *imageflow_context_send_json_with_cancellation(void *context,
+                                                                  const char *method,
+                                                                  const uint8_t *json_buffer,
+                                                                  size_t json_buffer_size,
+                                                                  uint8_t (*check_cancellation_callback)(void*),
+                                                                  void *callback_data);
 
 // Frees memory associated with the given object (and owned objects) after
 // running any owned or attached destructors. Returns false if something went wrong during tear-down.

@@ -102,7 +102,10 @@ impl Context {
     }
 
     pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
-        crate::json::invoke_with_json_error(self, method, json)
+        crate::json::invoke_with_json_error_and_cancellation::<fn() -> bool>(self, method, json, None)
+    }
+    pub fn message_with_cancellation<F>(&mut self, method: &str, json: &[u8], poll_cancellation: Option<F>) -> (JsonResponse, Result<()>)  where F: Fn() -> bool + Send + Sync + 'static {
+        crate::json::invoke_with_json_error_and_cancellation(self, method, json, poll_cancellation)
     }
 
     pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<'_, BitmapsContainer>> {
@@ -339,12 +342,12 @@ impl Context {
     }
 
     pub fn build_1(&mut self, parsed: s::Build001) -> Result<s::ResponsePayload> {
-        let job_result = self.build_inner(parsed).map_err(|e| e.at(here!()))?;
+        let job_result = self.build_inner_with_cancellation::<fn() -> bool>(parsed, None).map_err(|e| e.at(here!()))?;
         Ok(s::ResponsePayload::BuildResult(job_result))
     }
 
     /// For executing a complete job
-    pub(crate) fn build_inner(&mut self, parsed: s::Build001) -> Result<s::JobResult> {
+    pub(crate) fn build_inner_with_cancellation<F>(&mut self, parsed: s::Build001, poll_cancellation: Option<F>) -> Result<s::JobResult> where F: Fn() -> bool + Send + Sync + 'static{
         let g = crate::parsing::GraphTranslator::new()
             .translate_framewise(parsed.framewise)
             .map_err(|e| e.at(here!()))?;
@@ -400,6 +403,11 @@ impl Context {
         Ok(s::ResponsePayload::JobResult(job_result))
     }
     pub(crate) fn execute_inner(&mut self, what: s::Execute001) -> Result<s::JobResult> {
+        self.execute_inner_with_cancellation::<fn() -> bool>(what, None)
+    }
+    pub(crate) fn execute_inner_with_cancellation<F>(&mut self, what: s::Execute001, cancellation: Option<F>) -> Result<s::JobResult>
+        where F: Fn() -> bool + Send + Sync + 'static
+    {
         let g = crate::parsing::GraphTranslator::new()
             .translate_framewise(what.framewise)
             .map_err(|e| e.at(here!()))?;
@@ -443,6 +451,19 @@ impl Context {
             .to_owned(),
         })
     }
+}
+
+
+/// cbindgen:ignore
+#[derive(Debug, Clone, Copy)]
+struct CancelCallbackData{ data: *mut libc::c_void }
+/// cbindgen:ignore
+unsafe impl  Send for CancelCallbackData {
+
+}
+/// cbindgen:ignore
+unsafe impl Sync for CancelCallbackData {
+
 }
 
 #[cfg(test)]

@@ -12,7 +12,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonResponse> {
+pub fn <T>(context: &mut Context, method: &str, json: &[u8], poll_cancellation: Option<trait Fn() -> bool>) -> Result<JsonResponse> {
     let redirect = match method {
         "v0.1/build" => "v1/build",
         "v0.1/get_image_info" => "v1/get_image_info",
@@ -23,7 +23,7 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
         "brew_coffee" => "v1/brew_coffee",
         _ => method,
     };
-    v1::invoke(context, redirect, json)
+    v1::invoke(context, redirect, json, poll_cancellation)
 }
 pub fn try_invoke_static(method: &str, json: &[u8]) -> Result<Option<JsonResponse>> {
     let redirect = match method {

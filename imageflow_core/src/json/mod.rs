@@ -2,12 +2,13 @@ pub(crate) mod endpoints;
 use crate::context::Context;
 use crate::internal_prelude::works_everywhere::*;
 
-pub(crate) fn invoke_with_json_error(
+pub(crate) fn invoke_with_json_error_and_cancellation<F>(
     context: &mut Context,
     endpoint: &str,
     json: &[u8],
-) -> (JsonResponse, Result<()>) {
-    match endpoints::invoke(context, endpoint, json) {
+    poll_cancellation: Option<F>
+) -> (JsonResponse, Result<()>)  where F: Fn() -> bool + Send + Sync + 'static {
+    match endpoints::invoke_with_cancellation(context, endpoint, json, poll_cancellation) {
         Ok(response) => (response, Ok(())),
         Err(e) => (JsonResponse::from_flow_error(&e), Err(e)),
     }

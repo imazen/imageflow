@@ -72,6 +72,13 @@ const void *imageflow_context_send_json(void *context,
                                                 const uint8_t *json_buffer,
                                                 size_t json_buffer_size);
 
+const void *imageflow_context_send_json_with_cancellation(void *context,
+                                                                  const char *method,
+                                                                  const uint8_t *json_buffer,
+                                                                  size_t json_buffer_size,
+                                                                  uint8_t (*check_cancellation_callback)(void*),
+                                                                  void *callback_data);
+
 bool imageflow_json_response_destroy(void *context, void *response);
 
 bool imageflow_json_response_read(void *context,

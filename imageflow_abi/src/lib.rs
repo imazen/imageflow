@@ -125,6 +125,9 @@ pub use crate::c::ffi::ImageflowJsonResponse as JsonResponse;
 pub use crate::c::{Context, ErrorCategory};
 //use c::IoDirection;
 use crate::c::ErrorKind;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 #[cfg(test)]
@@ -597,6 +600,120 @@ pub unsafe extern "C" fn imageflow_context_send_json(
     }
 }
 
+///
+/// Sends a JSON message to the `imageflow_context` using endpoint `method`.
+///
+/// ## Endpoints
+///
+/// * 'v1/build`
+///
+/// For endpoints supported by the latest nightly build, see
+/// `https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt`
+///
+/// ## Notes
+///
+/// * `method` and `json_buffer` are only borrowed for the duration of the function call. You are
+///    responsible for their cleanup (if necessary - static strings are handy for things like
+///    `method`).
+/// * `method` should be a UTF-8 null-terminated string.
+///   `json_buffer` should be a UTF-8 encoded buffer (not null terminated) of length `json_buffer_size`.
+/// * `cancel_callback` should be a function pointer that takes a `*mut libc::c_void` and returns a `u8`.
+///   The function should return `1` if the operation should be canceled, and `0` otherwise.
+/// * `callback_data` is passed to `cancel_callback` when it is called.
+///
+/// You should call `imageflow_context_has_error()` to see if this succeeded.
+///
+/// A `JsonResponse` is returned for success and most error conditions.
+/// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_context_send_json_with_cancellation(
+    context: *mut Context,
+    method: *const libc::c_char,
+    json_buffer: *const u8,
+    json_buffer_size: libc::size_t,
+    check_cancellation_callback:  Option<unsafe extern "C" fn(*mut libc::c_void) -> u8>,
+    callback_data: *mut libc::c_void,
+) -> *const JsonResponse {
+    let c: &mut Context = context_ready!(context);
+    if method.is_null() {
+        c.outward_error_mut()
+            .try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'method' is null."));
+        return ptr::null();
+    }
+    if json_buffer.is_null() {
+        c.outward_error_mut()
+            .try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'json_buffer' is null."));
+        return ptr::null();
+    }
+    if json_buffer_size.leading_zeros() == 0 {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `json_buffer_size` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
+        return ptr::null();
+    }
+
+    let is_running = if check_cancellation_callback.is_some() {
+        Some(Arc::new(AtomicBool::new(true)))
+    } else {
+        None
+    };
+
+    let panic_result = catch_unwind(AssertUnwindSafe(|| {
+        let method_str = if let Ok(str) = unsafe { ::std::ffi::CStr::from_ptr(method) }.to_str() {
+            str
+        } else {
+            return (
+                ptr::null(),
+                Err(nerror!(ErrorKind::InvalidArgument, "The argument 'method' is invalid UTF-8.")),
+            );
+        };
+
+        let json_bytes = unsafe { std::slice::from_raw_parts(json_buffer, json_buffer_size) };
+
+        // Segfault early
+        let _ = (json_bytes.first(), json_bytes.last());
+
+
+
+
+        let cancellation_callback = if let Some(is_running) = is_running.clone() {
+            let sharable_callback_data = CancelCallbackData{ data: callback_data };
+            check_cancellation_callback.map(|callback| {
+                let closure: Box<dyn Fn() -> bool + Send + Sync + 'static> = Box::new(move || {
+                    if is_running.load(Ordering::Acquire) {
+                        callback(sharable_callback_data.data) != 0
+                    } else {
+                        true // We've already exited, so behave as if cancelled.
+                    }
+                });
+                closure
+            })
+        } else {
+            None
+        };
+
+
+        let (json, result) = c.message_with_cancellation(method_str, json_bytes, cancellation_callback.as_deref());
+
+        // An unfortunate copy occurs here
+        (create_abi_json_response(c, &json.response_json, json.status_code), result)
+    }));
+
+    if let Some(is_running) = is_running {
+        is_running.store(false, Ordering::Release);
+    }
+
+    match panic_result {
+        Ok((json, Ok(_))) => json,
+        Ok((json, Err(e))) => {
+            c.outward_error_mut().try_set_error(e);
+            json
+        }
+        Err(p) => {
+            c.outward_error_mut().try_set_panic_error(p);
+            ptr::null_mut()
+        }
+    }
+}
+
 pub fn create_abi_json_response(
     c: &mut Context,
     json_bytes: &[u8],
@@ -964,6 +1081,67 @@ fn test_job_with_buffers() {
 
         let expected_response_status = 200;
         assert_eq!(json_status_code, expected_response_status);
+
+        imageflow_context_destroy(c);
+    }
+}
+
+#[test]
+fn test_job_with_cancellation() {
+    unsafe {
+        unsafe extern "C" fn always_cancel(_: *mut libc::c_void) -> u8 {
+            1
+        }
+
+        let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
+        assert!(!c.is_null());
+
+        use base64::Engine;
+
+        let input_bytes = base64::engine::general_purpose::STANDARD.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=").unwrap();
+
+        let res = imageflow_context_add_input_buffer(
+            c,
+            0,
+            input_bytes.as_ptr(),
+            input_bytes.len(),
+            Lifetime::OutlivesContext,
+        );
+        imageflow_context_print_and_exit_if_error(c);
+        assert!(res);
+
+        let res = imageflow_context_add_output_buffer(c, 1);
+        imageflow_context_print_and_exit_if_error(c);
+        assert!(res);
+
+        let method_in = static_char!("v1/execute");
+        let json_in = r#"{"framewise":{"steps":[{"decode":{"io_id":0}},{"flip_h":null},{"rotate_90":null},{"resample_2d":{"w":30,"h":20,"hints":{"sharpen_percent":null}}},{"constrain":{ "mode" :"within", "w": 5,"h": 5}},{"encode":{"io_id":1,"preset":{"gif":null}}}]}}"#;
+
+        let response = imageflow_context_send_json_with_cancellation(
+            c,
+            method_in,
+            json_in.as_ptr(),
+            json_in.len(),
+            Some(always_cancel),
+            ptr::null_mut(),
+        );
+
+        assert!(!response.is_null());
+
+        let mut json_out_ptr: *const u8 = ptr::null_mut();
+        let mut json_out_size: usize = 0;
+        let mut json_status_code: i64 = 0;
+
+        assert!(imageflow_json_response_read(
+            c,
+            response,
+            &mut json_status_code,
+            &mut json_out_ptr,
+            &mut json_out_size
+        ));
+        assert!(imageflow_context_has_error(c));
+        let error_code = imageflow_context_error_code(c);
+        assert_eq!(error_code, 21);
 
         imageflow_context_destroy(c);
     }
