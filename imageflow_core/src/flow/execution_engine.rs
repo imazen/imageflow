@@ -238,6 +238,7 @@ impl<'a> Engine<'a> {
 
     fn notify_graph_changed(&mut self) -> Result<()> {
         self.assign_stable_ids()?;
+        return_if_cancelled!(&self.c);
 
         let info = GraphRecordingInfo {
             debug_job_id: self.c.debug_job_id,
@@ -348,6 +349,7 @@ impl<'a> Engine<'a> {
         if recurse_limit < 0 {
             panic!("Hit node estimation recursion limit");
         }
+        return_if_cancelled!(self.c);
 
         // If we're already done, no need
         if let FrameEstimate::Some(info) = self.g.node_weight(node_id).unwrap().frame_est {
@@ -496,6 +498,7 @@ impl<'a> Engine<'a> {
             match next {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
+                    return_if_cancelled!(self.c);
                     let more_frames = {
                         let now = precise_time_ns();
                         let mut ctx = self.op_ctx_mut();

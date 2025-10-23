@@ -147,11 +147,13 @@ impl Context {
     }
 
     pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<'_, BitmapsContainer>> {
+        return_if_cancelled!(self);
         self.bitmaps.try_borrow_mut().map_err(|e| {
             nerror!(ErrorKind::FailedBorrow, "Failed to mutably borrow bitmaps collection: {:?}", e)
         })
     }
     pub fn borrow_bitmaps(&self) -> Result<Ref<'_, BitmapsContainer>> {
+        return_if_cancelled!(self);
         self.bitmaps.try_borrow().map_err(|e| {
             nerror!(ErrorKind::FailedBorrow, "Failed to borrow bitmaps collection: {:?}", e)
         })

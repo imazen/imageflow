@@ -96,6 +96,7 @@ impl NamedDecoders {
     }
 
     pub fn create(&self, c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>> {
+        return_if_cancelled!(c);
         match self {
             NamedDecoders::MozJpegRsDecoder => {
                 Ok(Box::new(mozjpeg_decoder::MozJpegDecoder::create(c, io, io_id)?))

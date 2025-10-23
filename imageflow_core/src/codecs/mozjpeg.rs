@@ -86,6 +86,7 @@ impl Encoder for MozjpegEncoder {
         bitmap_key: BitmapKey,
         _decoder_io_ids: &[i32],
     ) -> Result<EncodeResult> {
+        return_if_cancelled!(c);
         let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
@@ -165,10 +166,16 @@ impl Encoder for MozjpegEncoder {
                 .write_scanlines(window.get_slice())
                 .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
         } else {
+            let mut pixels_since_check = 0;
             for line in window.scanlines() {
                 compressor
                     .write_scanlines(line.row())
                     .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
+                pixels_since_check += line.row().len();
+                if pixels_since_check >= 100_000 {
+                    pixels_since_check = 0;
+                    return_if_cancelled!(c);
+                }
             }
         }
         compressor
