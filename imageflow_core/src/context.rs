@@ -21,6 +21,7 @@ use imageflow_types::ImageInfo;
 use itertools::Itertools;
 
 /// Something of a god object (which is necessary for a reasonable FFI interface).
+/// 1025 bytes including 5 heap allocations as of Oct 2025. If on the stack, 312 bytes are taken up
 pub struct Context {
     pub debug_job_id: i32,
     pub next_stable_node_id: i32,
@@ -88,7 +89,7 @@ impl ThreadSafeContext {
         }))
     }
     pub fn create_cant_panic() -> Result<Box<ThreadSafeContext>> {
-        std::panic::catch_unwind(|| ThreadSafeContext::create_can_panic())
+        std::panic::catch_unwind(ThreadSafeContext::create_can_panic)
             .unwrap_or_else(|_| Err(err_oom!())) //err_oom because it doesn't allocate anything.
     }
 
@@ -131,6 +132,25 @@ impl ThreadSafeContext {
             let _ = result.destroy_without_drop();
         }
         true
+    }
+
+    /// Calculates the total size and count of all heap allocations in a new ThreadSafeContext
+    /// Returns (total_bytes, num_allocations)
+    ///
+    /// This includes:
+    /// - Initial heap allocations for collections (codecs, io_id_list, bitmaps, allocations)
+    /// - Arc allocations for shared state
+    ///
+    /// Note: RwLock and Mutex store their contents inline, not on the heap
+    pub(crate) fn calculate_heap_allocations() -> (usize, usize) {
+        // Get Context's heap allocations (this is shared via RwLock but stored inline in ThreadSafeContext)
+        let (context_bytes, context_allocs) = Context::calculate_heap_allocations();
+
+        (
+            context_bytes + std::mem::size_of::<ThreadSafeContext>()
+                - std::mem::size_of::<Context>(),
+            context_allocs,
+        )
     }
     /// mem_calloc should not panic
     pub unsafe fn mem_calloc(
@@ -206,11 +226,13 @@ impl Context {
             next_stable_node_id: 0,
             max_calc_flatten_execute_passes: 40,
             graph_recording: s::Build001GraphRecording::off(),
-            codecs: AddRemoveSet::with_capacity(4),
-            io_id_list: RefCell::new(Vec::with_capacity(2)),
+            codecs: AddRemoveSet::with_capacity(Self::default_codecs_capacity()),
+            io_id_list: RefCell::new(Vec::with_capacity(Self::default_codecs_capacity())),
             cancellation_token: CancellationToken::new(),
             enabled_codecs: EnabledCodecs::default(),
-            bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
+            bitmaps: RefCell::new(
+                crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
+            ),
             security: imageflow_types::ExecutionSecurity {
                 max_decode_size: None,
                 max_frame_size: Some(imageflow_types::FrameSizeLimit {
@@ -223,6 +245,9 @@ impl Context {
             allocations: RefCell::new(AllocationContainer::new()),
         }))
     }
+    fn default_codecs_capacity() -> usize {
+        2
+    }
     pub(crate) fn create_can_panic_unboxed() -> Result<Context> {
         Ok(Context {
             debug_job_id: unsafe { JOB_ID },
@@ -230,11 +255,13 @@ impl Context {
             next_stable_node_id: 0,
             max_calc_flatten_execute_passes: 40,
             graph_recording: s::Build001GraphRecording::off(),
-            codecs: AddRemoveSet::with_capacity(4),
-            io_id_list: RefCell::new(Vec::with_capacity(2)),
+            codecs: AddRemoveSet::with_capacity(Self::default_codecs_capacity()),
+            io_id_list: RefCell::new(Vec::with_capacity(Self::default_codecs_capacity())),
             cancellation_token: CancellationToken::new(),
             enabled_codecs: EnabledCodecs::default(),
-            bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
+            bitmaps: RefCell::new(
+                crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
+            ),
             security: imageflow_types::ExecutionSecurity {
                 max_decode_size: None,
                 max_frame_size: Some(imageflow_types::FrameSizeLimit {
@@ -256,11 +283,13 @@ impl Context {
             next_stable_node_id: 0,
             max_calc_flatten_execute_passes: 40,
             graph_recording: s::Build001GraphRecording::off(),
-            codecs: AddRemoveSet::with_capacity(4),
-            io_id_list: RefCell::new(Vec::with_capacity(2)),
+            codecs: AddRemoveSet::with_capacity(Self::default_codecs_capacity()),
+            io_id_list: RefCell::new(Vec::with_capacity(Self::default_codecs_capacity())),
             cancellation_token,
             enabled_codecs: EnabledCodecs::default(),
-            bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
+            bitmaps: RefCell::new(
+                crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
+            ),
             security: imageflow_types::ExecutionSecurity {
                 max_decode_size: None,
                 max_frame_size: Some(imageflow_types::FrameSizeLimit {
@@ -592,6 +621,55 @@ impl Context {
             .to_owned(),
         })
     }
+
+    /// Calculates the total size and count of all stack andheap allocations in a new Context
+    /// Returns (total_bytes, num_allocations)
+    ///
+    /// This includes:
+    /// - Initial capacity allocations for collections (codecs, io_id_list, bitmaps, allocations)
+    /// - Arc allocation for shared state (cancellation_token)
+    ///
+    /// Note: RefCell stores its contents inline, not on the heap
+    pub(crate) fn calculate_heap_allocations() -> (usize, usize) {
+        let mut total_bytes = 0;
+        let mut num_allocations = 0;
+
+        total_bytes += std::mem::size_of::<Context>();
+        // AddRemoveSet<CodecInstanceContainer> with capacity 4
+        // This is typically backed by a Vec, so 1 allocation for the buffer
+        if std::mem::size_of::<CodecInstanceContainer>() * Self::default_codecs_capacity() > 0 {
+            total_bytes +=
+                std::mem::size_of::<CodecInstanceContainer>() * Self::default_codecs_capacity();
+            num_allocations += 1;
+        }
+
+        // Vec<i32> with capacity 2 (inside RefCell, but RefCell is inline)
+        if std::mem::size_of::<i32>() * Self::default_codecs_capacity() > 0 {
+            total_bytes += std::mem::size_of::<i32>() * Self::default_codecs_capacity();
+            num_allocations += 1;
+        }
+
+        // DenseSlotMap in BitmapsContainer with capacity 16
+        // DenseSlotMap typically uses 2 Vec allocations (one for slots, one for keys)
+        let slot_size = std::mem::size_of::<RefCell<crate::graphics::bitmaps::Bitmap>>();
+        let key_size = std::mem::size_of::<crate::graphics::bitmaps::BitmapKey>();
+        if slot_size * crate::graphics::bitmaps::BitmapsContainer::default_capacity() > 0 {
+            total_bytes +=
+                slot_size * crate::graphics::bitmaps::BitmapsContainer::default_capacity();
+            num_allocations += 1;
+        }
+        if key_size * crate::graphics::bitmaps::BitmapsContainer::default_capacity() > 0 {
+            total_bytes +=
+                key_size * crate::graphics::bitmaps::BitmapsContainer::default_capacity();
+            num_allocations += 1;
+        }
+
+        // Arc<AtomicBool> for cancellation_token - 1 heap allocation
+        total_bytes += std::mem::size_of::<AtomicBool>();
+        num_allocations += 1;
+
+        (total_bytes, num_allocations)
+    }
 }
 
 #[cfg(test)]
@@ -615,6 +693,43 @@ impl Drop for Context {
 
 #[test]
 fn test_context_size() {
-    println!("std::mem::sizeof(Context) = {}", std::mem::size_of::<Context>());
-    assert!(std::mem::size_of::<Context>() < 500);
+    eprintln!("std::mem::sizeof(Context) = {}", std::mem::size_of::<Context>());
+    assert!(std::mem::size_of::<Context>() < 320);
+}
+
+#[test]
+fn test_thread_safe_context_size() {
+    println!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
+    eprintln!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
+    assert!(std::mem::size_of::<ThreadSafeContext>() <= 488);
+}
+
+#[test]
+fn test_calculate_context_heap_size() {
+    let (context_bytes, context_allocs) = Context::calculate_heap_allocations();
+    let (thread_safe_bytes, thread_safe_allocs) = ThreadSafeContext::calculate_heap_allocations();
+
+    eprintln!(
+        "Context::calculate_heap_allocations() = ({} bytes, {} allocations)",
+        context_bytes, context_allocs
+    );
+    eprintln!(
+        "ThreadSafeContext::calculate_heap_allocations() = ({} bytes, {} allocations)",
+        thread_safe_bytes, thread_safe_allocs
+    );
+
+    // ThreadSafeContext and Context share the same heap allocations (Context is inside RwLock)
+    assert!(thread_safe_bytes > context_bytes);
+    assert!(thread_safe_allocs >= context_allocs);
+
+    // Sanity check: should have some allocations
+    assert!(context_allocs > 0);
+    assert!(context_bytes > 0);
+
+    // Fail if this grows so we can notice it
+    assert!(context_allocs <= 6);
+    assert!(context_bytes <= 930);
+
+    assert!(context_allocs <= 6);
+    assert!(thread_safe_bytes <= 1097);
 }

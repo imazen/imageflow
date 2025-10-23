@@ -8,7 +8,7 @@
 //! As of ABI 3.1, calls are thread-safe.
 //!
 //! Don't worry about the performance of creating/destroying contexts.
-//! A context weighs less than 2kb: (384 + 1400) as of 2017-8-29.
+//! A context weighs only 1100 bytes (6 allocations) as of Oct 2025.
 //!
 //! # Thread Safety
 //!
@@ -949,7 +949,7 @@ pub unsafe extern "C" fn imageflow_context_send_json(
     json_buffer: *const u8,
     json_buffer_size: libc::size_t,
 ) -> *const JsonResponse {
-    let mut c = context!(context);
+    let c = context!(context);
     if c.outward_error().has_error() {
         let json_error = c.outward_error().get_json_response_for_error();
         if let Some(json_error) = json_error {

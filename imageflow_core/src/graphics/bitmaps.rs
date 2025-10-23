@@ -22,6 +22,12 @@ pub struct BitmapsContainer {
     map: ::slotmap::DenseSlotMap<BitmapKey, RefCell<Bitmap>>,
 }
 
+// impl Drop for BitmapsContainer {
+//     fn drop(&mut self) {
+//         eprintln!("Dropping BitmapsContainer with {} bitmaps", self.map.len());
+//     }
+// }
+
 impl BitmapsContainer {
     pub fn with_capacity(capacity: usize) -> BitmapsContainer {
         BitmapsContainer {
@@ -29,6 +35,12 @@ impl BitmapsContainer {
                 capacity,
             ),
         }
+    }
+    pub fn with_default_capacity() -> BitmapsContainer {
+        Self::with_capacity(Self::default_capacity())
+    }
+    pub fn default_capacity() -> usize {
+        3
     }
     pub fn get(&self, key: BitmapKey) -> Option<&RefCell<Bitmap>> {
         self.map.get(key)
