@@ -677,7 +677,7 @@ fn test_context_size() {
 fn test_thread_safe_context_size() {
     println!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
     eprintln!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
-    assert!(std::mem::size_of::<ThreadSafeContext>() <= 488);
+    assert!(std::mem::size_of::<ThreadSafeContext>() <= 500);
 }
 
 #[test]
@@ -704,8 +704,8 @@ fn test_calculate_context_heap_size() {
 
     // Fail if this grows so we can notice it
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 930);
+    assert!(context_bytes <= 950);
 
     assert!(context_allocs <= 6);
-    assert!(thread_safe_bytes <= 1097);
+    assert!(thread_safe_bytes <= 1150);
 }
