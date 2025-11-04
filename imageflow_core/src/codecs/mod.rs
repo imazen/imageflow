@@ -19,6 +19,7 @@ mod pngquant;
 pub use lode::write_png;
 
 mod auto;
+mod avif_encoder;
 mod color_transform_cache;
 mod image_png_decoder;
 mod jpeg_decoder;
@@ -126,6 +127,7 @@ pub enum NamedEncoders {
     LodePngEncoder,
     WebPEncoder,
     LibPngRsEncoder,
+    AvifEncoder,
 }
 pub struct EnabledCodecs {
     pub decoders: ::smallvec::SmallVec<[NamedDecoders; 4]>,
@@ -148,6 +150,7 @@ impl Default for EnabledCodecs {
                 NamedEncoders::LodePngEncoder,
                 NamedEncoders::WebPEncoder,
                 NamedEncoders::LibPngRsEncoder,
+                NamedEncoders::AvifEncoder,
             ]),
         }
     }

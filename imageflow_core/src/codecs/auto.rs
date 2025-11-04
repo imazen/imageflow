@@ -191,9 +191,8 @@ fn create_encoder_auto(
         OutputImageFormat::Jxl => {
             unimplemented!()
         }
-        OutputImageFormat::Avif => {
-            unimplemented!()
-        }
+        OutputImageFormat::Avif => create_avif_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+            .map_err(|e| e.at(here!()))?,
     })
     //libpng depth is 32 if alpha, 24 otherwise, zlib=9 if png_max_deflate=true, otherwise none
     //pngquant quality is 100 if png_quality is none
@@ -481,6 +480,50 @@ fn create_webp_auto(
     ))
 }
 
+fn create_avif_auto(
+    ctx: &Context,
+    io: IoProxy,
+    bitmap_key: BitmapKey,
+    decoder_io_ids: &[i32],
+    details: AutoEncoderDetails,
+) -> Result<Box<dyn Encoder>> {
+    let profile_hints = details
+        .quality_profile
+        .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
+
+    let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.avif);
+    let matte = details.matte;
+
+    // Get quality from profile hints or manual hints
+    let quality = profile_hints
+        .map(|hints| hints.avif)
+        .or_else(|| manual_and_default_hints.and_then(|hints| hints.quality))
+        .unwrap_or(80.0)
+        .clamp(0.0, 100.0);
+
+    // Get speed from profile hints or manual hints
+    let speed = profile_hints
+        .map(|hints| hints.avif_s)
+        .or_else(|| manual_and_default_hints.and_then(|hints| hints.speed))
+        .unwrap_or(6)
+        .clamp(0, 10);
+
+    // Get alpha quality if specified
+    let alpha_quality = manual_and_default_hints.and_then(|hints| hints.alpha_quality);
+
+    Ok(Box::new(
+        crate::codecs::avif_encoder::AvifEncoder::create(
+            ctx,
+            io,
+            Some(quality),
+            Some(speed),
+            alpha_quality,
+            matte,
+        )
+        .map_err(|e| e.at(here!()))?,
+    ))
+}
+
 fn create_png_auto(
     ctx: &Context,
     io: IoProxy,
@@ -700,7 +743,7 @@ struct FeaturesImplemented {
     jpegli: bool,
 }
 const FEATURES_IMPLEMENTED: FeaturesImplemented =
-    FeaturesImplemented { jxl: false, avif: false, webp_animation: false, jpegli: false };
+    FeaturesImplemented { jxl: false, avif: true, webp_animation: false, jpegli: false };
 
 fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat> {
     let allowed = details.allow;

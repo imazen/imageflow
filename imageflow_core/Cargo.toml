@@ -75,7 +75,7 @@ evalchroma = "1"
 # Used for schema generation if feature enabled
 utoipa = { version = "5.3.1", features = [], optional = true }
 
-#ravif = { version = "0.11.12", features = [] }
+ravif = { version = "0.12", default-features = false }
 #jxl-oxide = { version = "0.11.4", features = ["lcms2"] }
 #jpegxl-rs = { version = "0.11", features = ["vendored"] }
 

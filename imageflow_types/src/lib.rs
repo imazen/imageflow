@@ -338,7 +338,7 @@ pub struct EncoderHints {
     pub webp: Option<WebpEncoderHints>,
     pub jpeg: Option<JpegEncoderHints>,
     pub png: Option<PngEncoderHints>,
-    //pub avif: Option<AvifEncoderHints>,
+    pub avif: Option<AvifEncoderHints>,
     pub gif: Option<GifEncoderHints>,
 }
 
@@ -351,12 +351,15 @@ pub struct EncoderHints {
 //     pub distance: Option<f32>,
 // }
 
-// #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
-// #[serde(rename_all = "lowercase")]
-// pub struct AvifEncoderHints{
-//     pub quality: Option<f32>,
-//     pub speed: Option<u8>,
-// }
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "lowercase")]
+pub struct AvifEncoderHints {
+    pub quality: Option<f32>,
+    pub speed: Option<u8>,
+    pub alpha_quality: Option<f32>,
+}
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]

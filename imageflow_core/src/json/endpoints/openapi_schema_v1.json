@@ -567,6 +567,33 @@
           }
         }
       },
+      "AvifEncoderHints": {
+        "type": "object",
+        "properties": {
+          "alpha_quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "speed": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "BoolKeep": {
         "type": "string",
         "enum": [
@@ -1082,6 +1109,16 @@
       "EncoderHints": {
         "type": "object",
         "properties": {
+          "avif": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AvifEncoderHints"
+              }
+            ]
+          },
           "gif": {
             "oneOf": [
               {

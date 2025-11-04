@@ -90,6 +90,7 @@ fn read_encoder_hints(i: &Instructions) -> s::EncoderHints {
             lossless: i.webp_lossless,
             quality: i.webp_quality.or(i.quality.map(|v| v as f32)),
         }),
+        avif: None, // AVIF hints will be added when RIAPI supports avif-specific parameters
         gif: Some(s::GifEncoderHints {}),
     }
 }
