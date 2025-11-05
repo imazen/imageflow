@@ -265,9 +265,13 @@ fn approximate_quality_profile(qp: Option<QualityProfile>) -> f32 {
 }
 
 fn interpolate_value(ratio: f32, a: f32, b: f32) -> f32 {
-    // panic if b1-a1 is <= 0, or cursor is not between a1 and b1, or b2-a2 is <= 0
-    if b - a <= 0.0 {
-        panic!("Invalid interpolation values");
+    // If values are equal, no interpolation needed
+    if (b - a).abs() < 0.0001 {
+        return a;
+    }
+    // panic if b < a (values not monotonic)
+    if b - a < 0.0 {
+        panic!("Invalid interpolation values: {} < {}", b, a);
     }
     a + ratio * (b - a)
 }
