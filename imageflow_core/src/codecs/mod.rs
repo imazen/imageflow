@@ -164,6 +164,9 @@ impl EnabledCodecs {
     pub fn disable_decoder(&mut self, decoder: NamedDecoders) {
         self.decoders.retain(|item| item != &decoder);
     }
+    pub fn disable_encoder(&mut self, encoder: NamedEncoders) {
+        self.encoders.retain(|item| item != &encoder);
+    }
     pub fn create_decoder_for_magic_bytes(
         &self,
         bytes: &[u8],
