@@ -123,6 +123,9 @@ impl<'a> Engine<'a> {
             if self.graph_fully_executed() {
                 break;
             }
+            if self.c.cancellation_requested() {
+                return Err(cancelled!("Cancelled within execute loop"));
+            }
 
             if passes >= self.c.max_calc_flatten_execute_passes {
                 {
@@ -235,8 +238,11 @@ impl<'a> Engine<'a> {
     }
 
     fn notify_graph_changed(&mut self) -> Result<()> {
+
+        if self.c.cancellation_requested() {
+            return Err(cancelled!("Cancelled within notify_graph_changed"));
+        }
         self.assign_stable_ids()?;
-        return_if_cancelled!(&self.c);
 
         let info = GraphRecordingInfo {
             debug_job_id: self.c.debug_job_id,
@@ -345,7 +351,8 @@ impl<'a> Engine<'a> {
         recurse_limit: i32,
     ) -> Result<FrameEstimate> {
         if recurse_limit < 0 {
-            panic!("Hit node estimation recursion limit");
+            // Previously a panic
+            return Err(nerror!(ErrorKind::InternalError, "Hit node estimation recursion limit"));
         }
         return_if_cancelled!(self.c);
 
@@ -493,10 +500,11 @@ impl<'a> Engine<'a> {
                     ));
                 }
             }
+            return_if_cancelled!(self.c);
             match next {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
-                    return_if_cancelled!(self.c);
+
                     let more_frames = {
                         let now = precise_time_ns();
                         let mut ctx = self.op_ctx_mut();
