@@ -463,7 +463,23 @@ fn test_json_format_auto_with_avif_and_webp() {
         "Auto format with both allow.avif and allow.webp should prefer AVIF"
     );
 }
+#[test]
+fn test_json_format_auto_with_default_allow() {
+    use imageflow_types as s;
 
+    let format = test_format_selection_json(s::EncoderPreset::Auto {
+        quality_profile: s::QualityProfile::High,
+        quality_profile_dpr: None,
+        lossless: None,
+        matte: None,
+        allow: None,
+    }).unwrap() ;
+
+    assert_eq!(
+        format, "jpeg",
+        "Auto format with no allow defined should select JPEG"
+    );
+}
 // ========== RIAPI Tests ==========
 
 #[test]
@@ -476,6 +492,15 @@ fn test_riapi_format_avif_with_accept() {
     );
 }
 
+#[test]
+fn test_riapi_format_avif_with_accept_false() {
+    let format = test_format_selection_riapi("format=avif&accept.avif=0").unwrap();
+
+    assert_eq!(
+        format, "avif",
+        "RIAPI format=avif with accept.avif=0 should produce AVIF"
+    );
+}
 #[test]
 fn test_riapi_format_avif_without_accept() {
     let format = test_format_selection_riapi("format=avif").unwrap();
