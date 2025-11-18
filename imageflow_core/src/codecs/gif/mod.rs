@@ -287,6 +287,14 @@ impl GifEncoder {
             frame_ix: 0,
         })
     }
+
+    fn finish(&mut self) -> Result<()> {
+        let encoder = self.encoder.take().ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?;
+        let flushed_writer = encoder.into_inner()
+                    .map_err(|e| FlowError::from(e).at(here!()))?;
+        drop(flushed_writer);
+        Ok(())
+    }
 }
 
 impl Encoder for GifEncoder {
@@ -369,10 +377,9 @@ impl Encoder for GifEncoder {
             .ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?
             .write_frame(&f)
             .map_err(|e| FlowError::from(e).at(here!()))?;
-        let encoder = self.encoder.take().ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?;
-        let flushed_writer = encoder.into_inner()
-                    .map_err(|e| FlowError::from(e).at(here!()))?;
-        drop(flushed_writer);
+
+
+
 
         self.frame_ix += 1;
         Ok(s::EncodeResult {
@@ -387,6 +394,8 @@ impl Encoder for GifEncoder {
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Ref(self.io_ref.borrow()))
     }
+
+
 }
 
 fn remove_padding(width: u16, pixels: &[u8], stride: usize) -> Vec<u8> {
