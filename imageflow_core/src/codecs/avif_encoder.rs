@@ -60,12 +60,21 @@ impl Encoder for AvifEncoder {
 
         // 2. Apply matte if needed (blend alpha with background color)
         if let Some(matte) = &self.matte {
+            let was_alpha_meaningful = bitmap.info().alpha_meaningful();
             bitmap
                 .get_window_bgra32()
                 .unwrap()
                 .apply_matte(matte.clone())
                 .map_err(|e| e.at(here!()))?;
-            bitmap.set_alpha_meaningful(false);
+            bitmap.set_alpha_meaningful(!matte.is_opaque() && was_alpha_meaningful);
+        } 
+        // Ensure alpha is normalized if not meaningful
+        if !bitmap.info().alpha_meaningful() {
+            bitmap
+                .get_window_u8()
+                .unwrap()
+                .normalize_unused_alpha()
+                .map_err(|e| e.at(here!()))?;
         }
 
         // 3. Get window for pixel access
@@ -111,7 +120,8 @@ impl Encoder for AvifEncoder {
         let mut encoder = ravif::Encoder::new();
         encoder = encoder
             .with_quality(self.quality.unwrap_or(80.0))
-            .with_speed(self.speed.unwrap_or(6));
+            .with_speed(self.speed.unwrap_or(6))
+            .with_alpha_color_mode(ravif::AlphaColorMode::UnassociatedClean);
 
         // Apply separate alpha quality if specified
         if let Some(alpha_q) = self.alpha_quality {
