@@ -4,21 +4,29 @@ use imageflow_types::{self as s, *};
 
 pub fn read_allowed_formats(i: &Instructions) -> AllowedFormats {
     // It wasn't a single format, so we need to figure out the options
-    let webp = i.accept_webp.unwrap_or(false);
-    let jxl = i.accept_jxl.unwrap_or(false);
-    let avif = i.accept_avif.unwrap_or(false);
+    // Don't default to false - if not specified, leave as None to inherit from web_safe
+    let webp = i.accept_webp;
+    let jxl = i.accept_jxl;
+    let avif = i.accept_avif;
     let custom_color_profiles = i.accept_color_profiles.unwrap_or(false);
 
-    let allowed_formats = AllowedFormats {
-        webp: Some(webp),
-        jxl: Some(jxl),
-        avif: Some(avif),
-        ..AllowedFormats::web_safe().set_color_profiles(custom_color_profiles)
-    };
-    if !allowed_formats.any_formats_enabled() {
+    let mut base = AllowedFormats::web_safe().set_color_profiles(custom_color_profiles);
+
+    // Override with explicit user settings (None means use base default)
+    if let Some(v) = webp {
+        base.webp = Some(v);
+    }
+    if let Some(v) = jxl {
+        base.jxl = Some(v);
+    }
+    if let Some(v) = avif {
+        base.avif = Some(v);
+    }
+
+    if !base.any_formats_enabled() {
         panic!("No formats enabled");
     }
-    allowed_formats
+    base
 }
 
 pub(crate) fn calculate_encoder_preset(i: &Instructions) -> s::EncoderPreset {
@@ -70,7 +78,7 @@ fn read_encoder_hints(i: &Instructions) -> s::EncoderHints {
             } else if i.jpeg_turbo == Some(true) {
                 Some(JpegEncoderStyle::LibjpegTurbo)
             } else {
-                Some(JpegEncoderStyle::Default)
+                None
             },
             //TODO: Subsampling is ignored. deprecate it or implement it
         }),
@@ -83,7 +91,7 @@ fn read_encoder_hints(i: &Instructions) -> s::EncoderHints {
             mimic: if i.png_libpng == Some(true) {
                 Some(PngEncoderStyle::Libpng)
             } else {
-                Some(PngEncoderStyle::Default)
+                None
             },
         }),
         webp: Some(s::WebpEncoderHints {
