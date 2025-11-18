@@ -502,7 +502,7 @@ fn test_riapi_format_auto_without_accept_avif() {
 
     assert_eq!(
         format, "jpeg",
-        "RIAPI format=auto without accept.avif should fall back to JPEG"
+        "RIAPI format=auto on opaque created canvas image without accept.avif should fall back to JPEG"
     );
 }
 
@@ -638,13 +638,13 @@ fn test_json_auto_from_png_source() {
     ).unwrap()  ;
 
     assert_eq!(
-        format, "avif",
-        "Auto format from PNG without alpha with allow.avif should select AVIF"
+        format, "png",
+        "Auto format from PNG without alpha with allow.avif should select PNG to preserve likely losslessness"
     );
 }
 
 #[test]
-fn test_json_auto_from_gif_source() {
+fn test_json_auto_from_animated_gif_source() {
     use imageflow_types as s;
 
     let format = test_format_selection_json_with_source(
@@ -659,13 +659,13 @@ fn test_json_auto_from_gif_source() {
                 ..s::AllowedFormats::web_safe()
             }),
         },
-        Some(&generate_tiny_gif().unwrap()),
+        Some(&TINY_ANIMATED_GIF),
     ).unwrap()  ;
 
     // GIF source should preserve as GIF (animation capability)
     assert_eq!(
         format, "gif",
-        "Auto format from GIF source should preserve as GIF for animation capability"
+        "Auto format from GIF source should preserve as GIF for animation capability" // (until we implement webp animation)
     );
 }
 
@@ -701,10 +701,24 @@ fn test_riapi_auto_from_gif_source() {
     ).unwrap()  ;
 
     assert_eq!(
-        format, "gif",
-        "RIAPI auto from GIF source should preserve as GIF"
+        format, "avif",
+        "RIAPI auto from single-frame GIF source should switch to avif"
     );
 }
+
+#[test]
+fn test_riapi_keep_from_gif_source() {
+    let format = test_format_selection_riapi_with_source(
+        "format=keep&accept.avif=1&accept.webp=1",
+        Some(&generate_tiny_gif().unwrap()),
+    ).unwrap()  ;
+
+    assert_eq!(
+        format, "gif",
+        "RIAPI format=keep from GIF source should preserve as GIF"
+    );
+}
+
 
 // Test CreateCanvas with different alpha characteristics
 
@@ -726,8 +740,8 @@ fn test_json_auto_from_canvas_opaque() {
 
     // Documents current behavior with CreateCanvas
     assert_eq!(
-        format, "png",
-        "Current behavior: Auto from CreateCanvas defaults to PNG (no source format to reference)"
+        format, "avif",
+        "Current behavior: Auto from CreateCanvas defaults to avif (no source format to reference)"
     );
 }
 
@@ -738,7 +752,29 @@ fn test_riapi_auto_from_canvas() {
 
     // Documents current behavior
     assert_eq!(
-        format, "png",
-        "Current behavior: RIAPI auto from CreateCanvas defaults to PNG"
+        format, "avif",
+        "Current behavior: RIAPI auto from CreateCanvas defaults to avif (no source format to reference)"
     );
 }
+
+
+static TINY_ANIMATED_GIF: [u8; TINY_ANIMATED_GIF_LEN] = [
+  0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0xf0, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x21, 0xf9, 0x04, 0x04, 0x00,
+  0x00, 0x00, 0x00, 0x21, 0xff, 0x0b, 0x4e, 0x45, 0x54, 0x53, 0x43, 0x41,
+  0x50, 0x45, 0x32, 0x2e, 0x30, 0x03, 0x01, 0x00, 0x00, 0x00, 0x21, 0xff,
+  0x0b, 0x49, 0x6d, 0x61, 0x67, 0x65, 0x4d, 0x61, 0x67, 0x69, 0x63, 0x6b,
+  0x0e, 0x67, 0x61, 0x6d, 0x6d, 0x61, 0x3d, 0x30, 0x2e, 0x34, 0x35, 0x34,
+  0x35, 0x34, 0x35, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01,
+  0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x21, 0xf9, 0x04, 0x04, 0x00,
+  0x00, 0x00, 0x00, 0x21, 0xff, 0x0b, 0x49, 0x6d, 0x61, 0x67, 0x65, 0x4d,
+  0x61, 0x67, 0x69, 0x63, 0x6b, 0x0e, 0x67, 0x61, 0x6d, 0x6d, 0x61, 0x3d,
+  0x30, 0x2e, 0x34, 0x35, 0x34, 0x35, 0x34, 0x35, 0x00, 0x2c, 0x00, 0x00,
+  0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x80, 0xff, 0xff, 0xff, 0x00, 0x00,
+  0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x21, 0xf9, 0x04, 0x04, 0x00, 0x00,
+  0x00, 0x00, 0x21, 0xff, 0x0b, 0x49, 0x6d, 0x61, 0x67, 0x65, 0x4d, 0x61,
+  0x67, 0x69, 0x63, 0x6b, 0x0e, 0x67, 0x61, 0x6d, 0x6d, 0x61, 0x3d, 0x30,
+  0x2e, 0x34, 0x35, 0x34, 0x35, 0x34, 0x35, 0x00, 0x2c, 0x00, 0x00, 0x00,
+  0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b
+];
+pub const TINY_ANIMATED_GIF_LEN: usize = 204;
