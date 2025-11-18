@@ -249,7 +249,7 @@ where
 }
 pub struct GifEncoder {
     io_id: i32,
-    encoder: ::gif::Encoder<IoProxyProxy>,
+    encoder: Option<::gif::Encoder<IoProxyProxy>>,
     io_ref: Rc<RefCell<IoProxy>>,
     frame_ix: i32,
 }
@@ -277,13 +277,13 @@ impl GifEncoder {
             io_id,
             io_ref: io_ref.clone(),
             // Global color table??
-            encoder: ::gif::Encoder::new(
+            encoder: Some(::gif::Encoder::new(
                 IoProxyProxy(io_ref),
                 bitmap.w() as u16,
                 bitmap.h() as u16,
                 &[],
             )
-            .map_err(|e| FlowError::from(e).at(here!()))?,
+            .map_err(|e| FlowError::from(e).at(here!()))?),
             frame_ix: 0,
         })
     }
@@ -349,6 +349,8 @@ impl Encoder for GifEncoder {
             if let Some(r) = repeat {
                 //                    eprintln!("Writing repeat");
                 self.encoder
+                    .as_mut()
+                    .ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?
                     .write_extension(::gif::ExtensionData::Repetitions(r))
                     .map_err(|e| FlowError::from(e).at(here!()))?;
             } else {
@@ -362,7 +364,15 @@ impl Encoder for GifEncoder {
         // rect
         // transparency??
 
-        self.encoder.write_frame(&f).map_err(|e| FlowError::from(e).at(here!()))?;
+        self.encoder
+            .as_mut()
+            .ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?
+            .write_frame(&f)
+            .map_err(|e| FlowError::from(e).at(here!()))?;
+        let encoder = self.encoder.take().ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?;
+        let flushed_writer = encoder.into_inner()
+                    .map_err(|e| FlowError::from(e).at(here!()))?;
+        drop(flushed_writer);
 
         self.frame_ix += 1;
         Ok(s::EncodeResult {

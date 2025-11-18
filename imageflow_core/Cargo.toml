@@ -34,7 +34,7 @@ imgref = "1.4.1"
 slotmap = "1"
 base64 = "0.22"
 hex = "0.4"
-gif = "0.13.1"
+gif = "0.14"
 png = "0.17.16"
 rgb = { version = "0.8.91", features = ["bytemuck"] }
 imagequant = "4"
