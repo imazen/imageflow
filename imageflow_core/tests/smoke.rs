@@ -11,19 +11,14 @@ extern crate serde_json;
 pub mod common;
 use crate::common::*;
 
-use imageflow_core::Context;
-use imageflow_riapi::ir4::parsing::OutputFormat;
-use imageflow_types::{
-    BoolKeep, Color, ColorSrgb, CommandStringKind, EncoderPreset, Execute001, Framewise, Node,
-    OutputImageFormat, PixelFormat,
-};
+use imageflow_core::{Context,Result, here};
+use imageflow_types::*;
 
 // ========== Test Image Constants ==========
 
 // Helper to generate tiny test images on demand using imageflow's own encoder
 // This ensures valid image data without hardcoding bytes
-fn generate_tiny_jpeg() -> Vec<u8> {
-    use imageflow_types as s;
+fn generate_tiny_jpeg() -> Result<Vec<u8>> {
     let mut context = Context::create().unwrap();
 
     IoTestTranslator {}
@@ -55,11 +50,11 @@ fn generate_tiny_jpeg() -> Vec<u8> {
         ]),
     };
 
-    context.execute_1(execute).unwrap();
-    context.get_output_buffer_slice(1).unwrap().to_vec()
+    context.execute_1(execute).map_err(|e| e.at(here!()))?;
+    context.get_output_buffer_slice(1).map_err(|e| e.at(here!())).map(|slice| slice.to_vec())
 }
 
-fn generate_tiny_png(with_alpha: bool) -> Vec<u8> {
+fn generate_tiny_png(with_alpha: bool) -> Result<Vec<u8>> {
     let mut context = Context::create().unwrap();
 
     IoTestTranslator {}
@@ -97,11 +92,11 @@ fn generate_tiny_png(with_alpha: bool) -> Vec<u8> {
         ]),
     };
 
-    context.execute_1(execute).unwrap();
-    context.get_output_buffer_slice(1).unwrap().to_vec()
+    context.execute_1(execute).map_err(|e| e.at(here!()))?;
+    context.get_output_buffer_slice(1).map_err(|e| e.at(here!())).map(|slice| slice.to_vec())
 }
 
-fn generate_tiny_gif() -> Vec<u8> {
+fn generate_tiny_gif() -> Result<Vec<u8>> {
     let mut context = Context::create().unwrap();
 
     IoTestTranslator {}
@@ -133,8 +128,8 @@ fn generate_tiny_gif() -> Vec<u8> {
         ]),
     };
 
-    context.execute_1(execute).unwrap();
-    context.get_output_buffer_slice(1).unwrap().to_vec()
+    context.execute_1(execute).map_err(|e| e.at(here!()))?;
+    context.get_output_buffer_slice(1).map_err(|e| e.at(here!())).map(|slice| slice.to_vec())
 }
 
 // ========== Helper Functions ==========
@@ -179,7 +174,7 @@ fn check_magic_bytes(bytes: &[u8]) -> &'static str {
 pub fn test_format_selection_riapi_with_source(
     command: &str,
     source_bytes: Option<&[u8]>,
-) -> String {
+) -> Result<String> {
     use imageflow_core::Context;
     use imageflow_types as s;
 
@@ -226,15 +221,15 @@ pub fn test_format_selection_riapi_with_source(
         framewise: s::Framewise::Steps(steps),
     };
 
-    context.execute_1(build).unwrap();
+    context.execute_1(build).map_err(|e| e.at(here!()))?;
 
-    let bytes = context.get_output_buffer_slice(1).unwrap();
-    check_magic_bytes(bytes).to_owned()
+    let bytes = context.get_output_buffer_slice(1).map_err(|e| e.at(here!()))?;
+    Ok(check_magic_bytes(bytes).to_owned())
 }
 
 /// Test RIAPI format selection with a command string (no source image)
-pub fn test_format_selection_riapi(command: &str) -> String {
-    test_format_selection_riapi_with_source(command, None)
+pub fn test_format_selection_riapi(command: &str) -> Result<String> {
+    test_format_selection_riapi_with_source(command, None).map_err(|e| e.at(here!()))
 }
 
 /// Test JSON API format selection with an EncoderPreset
@@ -243,7 +238,7 @@ pub fn test_format_selection_riapi(command: &str) -> String {
 pub fn test_format_selection_json_with_source(
     preset: EncoderPreset,
     source_bytes: Option<&[u8]>,
-) -> String {
+) -> Result<String> {
     use imageflow_core::Context;
     use imageflow_types as s;
 
@@ -290,15 +285,15 @@ pub fn test_format_selection_json_with_source(
         framewise: s::Framewise::Steps(steps),
     };
 
-    context.execute_1(build).unwrap();
+    context.execute_1(build).map_err(|e| e.at(here!()))?;
 
-    let bytes = context.get_output_buffer_slice(1).unwrap();
-    check_magic_bytes(bytes).to_owned()
+    let bytes = context.get_output_buffer_slice(1).map_err(|e| e.at(here!()))?;
+    Ok(check_magic_bytes(bytes).to_owned())
 }
 
 /// Test JSON API format selection with an EncoderPreset (no source image)
-pub fn test_format_selection_json(preset: EncoderPreset) -> String {
-    test_format_selection_json_with_source(preset, None)
+pub fn test_format_selection_json(preset: EncoderPreset) -> Result<String> {
+    test_format_selection_json_with_source(preset, None).map_err(|e|e.at(here!()))
 }
 
 // ========== JSON API Tests ==========
@@ -318,7 +313,7 @@ fn test_json_format_explicit_avif_with_allow() {
             ..s::AllowedFormats::none()
         }),
         encoder_hints: None,
-    });
+    }).unwrap();
 
     assert_eq!(
         format, "avif",
@@ -341,7 +336,7 @@ fn test_json_format_explicit_avif_without_allow() {
             ..s::AllowedFormats::web_safe()
         }),
         encoder_hints: None,
-    });
+    }).unwrap();
 
     // DOCUMENTS CURRENT BEHAVIOR: explicit format bypasses allow check
     assert_eq!(
@@ -363,7 +358,7 @@ fn test_json_format_auto_with_avif_allowed() {
             avif: Some(true),
             ..s::AllowedFormats::web_safe()
         }),
-    });
+    }).unwrap();
 
     assert_eq!(
         format, "avif",
@@ -381,7 +376,7 @@ fn test_json_format_auto_without_avif_allowed() {
         lossless: None,
         matte: None,
         allow: Some(s::AllowedFormats::web_safe()), // No AVIF
-    });
+    }).unwrap();
 
     assert_eq!(
         format, "jpeg",
@@ -401,7 +396,7 @@ fn test_json_format_explicit_png() {
         matte: None,
         allow: None,
         encoder_hints: None,
-    });
+    }).unwrap();
 
     assert_eq!(format, "png", "Explicit format=png should produce PNG");
 }
@@ -421,7 +416,7 @@ fn test_json_format_explicit_webp() {
             ..s::AllowedFormats::none()
         }),
         encoder_hints: None,
-    });
+    }).unwrap();
 
     assert_eq!(format, "webp", "Explicit format=webp should produce WebP");
 }
@@ -439,7 +434,7 @@ fn test_json_format_auto_with_webp_only() {
             webp: Some(true),
             ..s::AllowedFormats::web_safe()
         }),
-    });
+    }).unwrap();
 
     assert_eq!(
         format, "webp",
@@ -461,7 +456,7 @@ fn test_json_format_auto_with_avif_and_webp() {
             webp: Some(true),
             ..s::AllowedFormats::web_safe()
         }),
-    });
+    }).unwrap() ;
 
     assert_eq!(
         format, "avif",
@@ -473,7 +468,7 @@ fn test_json_format_auto_with_avif_and_webp() {
 
 #[test]
 fn test_riapi_format_avif_with_accept() {
-    let format = test_format_selection_riapi("format=avif&accept.avif=1");
+    let format = test_format_selection_riapi("format=avif&accept.avif=1").unwrap();
 
     assert_eq!(
         format, "avif",
@@ -483,7 +478,7 @@ fn test_riapi_format_avif_with_accept() {
 
 #[test]
 fn test_riapi_format_avif_without_accept() {
-    let format = test_format_selection_riapi("format=avif");
+    let format = test_format_selection_riapi("format=avif").unwrap();
 
     assert_eq!(
         format, "avif",
@@ -493,7 +488,7 @@ fn test_riapi_format_avif_without_accept() {
 
 #[test]
 fn test_riapi_format_auto_with_accept_avif() {
-    let format = test_format_selection_riapi("format=auto&accept.avif=1");
+    let format = test_format_selection_riapi("format=auto&accept.avif=1").unwrap();
 
     assert_eq!(
         format, "avif",
@@ -503,7 +498,7 @@ fn test_riapi_format_auto_with_accept_avif() {
 
 #[test]
 fn test_riapi_format_auto_without_accept_avif() {
-    let format = test_format_selection_riapi("format=auto");
+    let format = test_format_selection_riapi("format=auto").unwrap();
 
     assert_eq!(
         format, "jpeg",
@@ -513,7 +508,7 @@ fn test_riapi_format_auto_without_accept_avif() {
 
 #[test]
 fn test_riapi_format_auto_with_webp_only() {
-    let format = test_format_selection_riapi("format=auto&accept.webp=1");
+    let format = test_format_selection_riapi("format=auto&accept.webp=1").unwrap();
 
     assert_eq!(
         format, "webp",
@@ -523,7 +518,7 @@ fn test_riapi_format_auto_with_webp_only() {
 
 #[test]
 fn test_riapi_format_auto_with_avif_and_webp() {
-    let format = test_format_selection_riapi("format=auto&accept.avif=1&accept.webp=1");
+    let format = test_format_selection_riapi("format=auto&accept.avif=1&accept.webp=1").unwrap();
 
     assert_eq!(
         format, "avif",
@@ -533,28 +528,28 @@ fn test_riapi_format_auto_with_avif_and_webp() {
 
 #[test]
 fn test_riapi_format_png_explicit() {
-    let format = test_format_selection_riapi("format=png");
+    let format = test_format_selection_riapi("format=png").unwrap() ;
 
     assert_eq!(format, "png", "RIAPI format=png should produce PNG");
 }
 
 #[test]
 fn test_riapi_format_jpeg_explicit() {
-    let format = test_format_selection_riapi("format=jpg");
+    let format = test_format_selection_riapi("format=jpg").unwrap() ;
 
     assert_eq!(format, "jpeg", "RIAPI format=jpg should produce JPEG");
 }
 
 #[test]
 fn test_riapi_format_webp_explicit() {
-    let format = test_format_selection_riapi("format=webp");
+    let format = test_format_selection_riapi("format=webp").unwrap();
 
     assert_eq!(format, "webp", "RIAPI format=webp should produce WebP");
 }
 
 #[test]
 fn test_riapi_format_webp_with_quality() {
-    let format = test_format_selection_riapi("format=webp&webp.quality=75");
+    let format = test_format_selection_riapi("format=webp&webp.quality=75").unwrap();
 
     assert_eq!(
         format, "webp",
@@ -564,12 +559,12 @@ fn test_riapi_format_webp_with_quality() {
 
 #[test]
 fn test_riapi_format_avif_with_quality_and_speed() {
-    let format = test_format_selection_riapi("format=avif&avif.quality=80&avif.speed=6");
+    let format = test_format_selection_riapi("format=avif&avif.quality=80&avif.speed=6").unwrap();
 
     assert_eq!(
         format, "avif",
         "RIAPI format=avif with quality and speed parameters should produce AVIF"
-    );
+    )           ;
 }
 
 // ========== Source Format Tests (format=auto behavior) ==========
@@ -589,8 +584,8 @@ fn test_json_auto_from_jpeg_source() {
                 ..s::AllowedFormats::web_safe()
             }),
         },
-        Some(&generate_tiny_jpeg()),
-    );
+        Some(&generate_tiny_jpeg().unwrap()),
+    ).unwrap()  ;
 
     assert_eq!(
         format, "avif",
@@ -614,8 +609,8 @@ fn test_json_auto_from_png_alpha_source() {
                 ..s::AllowedFormats::web_safe()
             }),
         },
-        Some(&generate_tiny_png(true)),
-    );
+        Some(&generate_tiny_png(true).unwrap()),
+    ).unwrap()  ;
 
     // PNG with alpha should prefer WebP for lossless alpha over AVIF
     assert_eq!(
@@ -639,8 +634,8 @@ fn test_json_auto_from_png_source() {
                 ..s::AllowedFormats::web_safe()
             }),
         },
-        Some(&generate_tiny_png(false)),
-    );
+        Some(&generate_tiny_png(false).unwrap()),
+    ).unwrap()  ;
 
     assert_eq!(
         format, "avif",
@@ -664,8 +659,8 @@ fn test_json_auto_from_gif_source() {
                 ..s::AllowedFormats::web_safe()
             }),
         },
-        Some(&generate_tiny_gif()),
-    );
+        Some(&generate_tiny_gif().unwrap()),
+    ).unwrap()  ;
 
     // GIF source should preserve as GIF (animation capability)
     assert_eq!(
@@ -677,7 +672,7 @@ fn test_json_auto_from_gif_source() {
 #[test]
 fn test_riapi_auto_from_jpeg_source() {
     let format =
-        test_format_selection_riapi_with_source("format=auto&accept.avif=1", Some(&generate_tiny_jpeg()));
+        test_format_selection_riapi_with_source("format=auto&accept.avif=1", Some(&generate_tiny_jpeg().unwrap())).unwrap()  ;
 
     assert_eq!(
         format, "avif",
@@ -689,8 +684,8 @@ fn test_riapi_auto_from_jpeg_source() {
 fn test_riapi_auto_from_png_alpha_source() {
     let format = test_format_selection_riapi_with_source(
         "format=auto&accept.avif=1&accept.webp=1",
-        Some(&generate_tiny_png(true)),
-    );
+        Some(&generate_tiny_png(true).unwrap()),
+    ).unwrap()  ;
 
     assert_eq!(
         format, "webp",
@@ -702,8 +697,8 @@ fn test_riapi_auto_from_png_alpha_source() {
 fn test_riapi_auto_from_gif_source() {
     let format = test_format_selection_riapi_with_source(
         "format=auto&accept.avif=1&accept.webp=1",
-        Some(&generate_tiny_gif()),
-    );
+        Some(&generate_tiny_gif().unwrap()),
+    ).unwrap()  ;
 
     assert_eq!(
         format, "gif",
@@ -727,7 +722,7 @@ fn test_json_auto_from_canvas_opaque() {
             avif: Some(true),
             ..s::AllowedFormats::web_safe()
         }),
-    });
+    }).unwrap();
 
     // Documents current behavior with CreateCanvas
     assert_eq!(
@@ -739,7 +734,7 @@ fn test_json_auto_from_canvas_opaque() {
 #[test]
 fn test_riapi_auto_from_canvas() {
     // RIAPI CreateCanvas via format=auto without source
-    let format = test_format_selection_riapi("format=auto&accept.avif=1");
+    let format = test_format_selection_riapi("format=auto&accept.avif=1").unwrap();
 
     // Documents current behavior
     assert_eq!(
