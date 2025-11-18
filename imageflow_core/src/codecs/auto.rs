@@ -159,20 +159,8 @@ fn create_encoder_auto(
     decoder_io_ids: &[i32],
     details: AutoEncoderDetails,
 ) -> Result<Box<dyn Encoder>> {
-    let mut final_format = match details.format {
-        None => format_auto_select(&details).ok_or(nerror!(
-            ErrorKind::InvalidArgument,
-            "No formats enabled; try 'allow': {{ 'web_safe':true}}"
-        ))?,
-        Some(other) => other,
-    };
-    // Fallbacks if jxl or avif are not implemented/enabled
-    if final_format == OutputImageFormat::Jxl && !FEATURES_IMPLEMENTED.jxl {
-        final_format = format_auto_select(&details).unwrap_or(OutputImageFormat::Jpeg);
-    }
-    if final_format == OutputImageFormat::Avif && !FEATURES_IMPLEMENTED.avif {
-        final_format = format_auto_select(&details).unwrap_or(OutputImageFormat::Jpeg);
-    }
+    let final_format =format_select_with_specified(details.format, &details)
+    .map_err(|e| e.at(here!()))?;
 
     Ok(match final_format {
         OutputImageFormat::Keep => unreachable!(),
@@ -706,13 +694,13 @@ fn build_auto_encoder_details(
         other => other,
     };
 
-    let mut needs_lossless = match (source_image_info.map(|i| i.lossless), lossless) {
-        (Some(true), Some(BoolKeep::Keep)) => Some(true),
-        (Some(false), Some(BoolKeep::Keep)) => Some(false),
+    let mut needs_lossless = match (source_image_info.as_ref().map(|i| i.lossless), lossless) {
+        (Some(v), None) => Some(v),
+        (Some(v), Some(BoolKeep::Keep)) => Some(v),
         (None, Some(BoolKeep::Keep)) => Some(needs_alpha), //No decoder, no source, default to match alpha
         (_, Some(BoolKeep::True)) => Some(true),
         (_, Some(BoolKeep::False)) => Some(false),
-        (_, None) => None,
+        (None, None) => None,
     };
     if quality_profile == Some(s::QualityProfile::Lossless) {
         needs_lossless = Some(true);
@@ -744,10 +732,38 @@ struct FeaturesImplemented {
     jxl: bool,
     avif: bool,
     webp_animation: bool,
+    avif_lossless: bool,
+    avif_animation: bool,
     jpegli: bool,
 }
 const FEATURES_IMPLEMENTED: FeaturesImplemented =
-    FeaturesImplemented { jxl: false, avif: true, webp_animation: false, jpegli: false };
+    FeaturesImplemented { jxl: false, avif: true, webp_animation: false, avif_lossless: false, avif_animation: false, jpegli: false };
+
+fn format_select_with_specified(specified_format: Option<OutputImageFormat>, details: &AutoEncoderDetails) -> Result<OutputImageFormat> {
+    //eprintln!("format_select_with_specified: {:#?}, details: {:#?}", specified_format, details);
+    let mut final_format = match specified_format {
+        Some(other) => other,
+        None => format_auto_select(&details).ok_or(nerror!(
+            ErrorKind::InvalidArgument,
+            "No formats enabled; try 'allow': {{ 'web_safe':true}}"
+        ))?,
+    };
+    // Fallbacks if jxl or avif are not implemented/enabled
+    if final_format == OutputImageFormat::Jxl && !FEATURES_IMPLEMENTED.jxl {
+        final_format = format_auto_select(&details).ok_or(nerror!(
+            ErrorKind::InvalidArgument,
+            "No formats enabled; try 'allow': {{ 'web_safe':true}}"
+        ))?;
+    }
+    if final_format == OutputImageFormat::Avif && !FEATURES_IMPLEMENTED.avif {
+        final_format = format_auto_select(&details).ok_or(nerror!(
+            ErrorKind::InvalidArgument,
+            "No formats enabled; try 'allow': {{ 'web_safe':true}}"
+        ))?;
+    }
+    //eprintln!("final_format: {:#?}", final_format);
+    Ok(final_format)
+}
 
 fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat> {
     let allowed = details.allow;
@@ -766,8 +782,11 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
     // Third, preserve alpha channel if present and meaningful.
     // Fourth, respect lossless setting
 
-    // For animation, WebP if available, otherwise GIF
+    // For animation,Avif if available, otherwise WebP if available, otherwise GIF. A this time, we don't implement avif or webp animation
     if needs_animation {
+        if FEATURES_IMPLEMENTED.avif_animation && allowed.avif == Some(true) {
+            return Some(OutputImageFormat::Avif);
+        }
         if FEATURES_IMPLEMENTED.webp_animation && allowed.webp == Some(true) {
             return Some(OutputImageFormat::Webp);
         }
@@ -786,23 +805,42 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
     // lossless (manga) jxl-e9 (too slow) > jxl-e5 (ok) | webp-m4 (too slow) > optipng-o2 (way too slow)
     // > optipng-o1 (too slow) > png (ok) > avif-s5 (too slow) -> avif-s8 (ok)
 
-    // JXL is always the best if available
+    // JXL is always the best if available, regardless of lossless 
     if FEATURES_IMPLEMENTED.jxl && allowed.jxl == Some(true) {
         return Some(OutputImageFormat::Jxl);
     }
 
-    // Lossless path and alpha path are the same.
-    if wants_lossless == Some(true) || wants_alpha {
-        // JXL is better - webp lossless is slow but so much smaller than avif/png
+    // Lossless path: PNG and WebP are faster and often smaller than AVIF for lossless
+    // We are assuming all lossless formats support alpha
+    if wants_lossless == Some(true) {
+        // webp lossless is slow but so much smaller than avif/png
         if allowed.webp == Some(true) {
             return Some(OutputImageFormat::Webp);
         }
-        // PNG is better than avif
+        // PNG is actually better than avif for lossless
         if allowed.png == Some(true) {
             return Some(OutputImageFormat::Png);
         }
+        // our AVIF encoder doesn't support lossless yet
+        if FEATURES_IMPLEMENTED.avif_lossless && allowed.avif == Some(true) {
+            return Some(OutputImageFormat::Avif);
+        }
+        // If png is disabled, we might end up with avif or jpeg or something..
+    }
+
+    // For lossy images with alpha, prefer AVIF over WebP over PNG (better compression)
+    if wants_alpha {
+        // AVIF handles lossy alpha very well
         if FEATURES_IMPLEMENTED.avif && allowed.avif == Some(true) {
             return Some(OutputImageFormat::Avif);
+        }
+        // WebP is second best for lossy alpha
+        if allowed.webp == Some(true) {
+            return Some(OutputImageFormat::Webp);
+        }
+        // PNG works but doesn't compress as well as AVIF/WebP
+        if allowed.png == Some(true) {
+            return Some(OutputImageFormat::Png);
         }
     }
 
@@ -822,10 +860,11 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
         return Some(OutputImageFormat::Avif);
     }
     // Use jpegli if available, it's way faster than webp and comparable or better on size/quality.
+    // We already handled alpha/lossless/animation above. 
     if can_jpegli {
         return Some(OutputImageFormat::Jpeg);
     }
-    // At high quality ~90+, mozjpeg falls behind webp. (not sure if our custom chrome does)
+    // At high quality ~90+, mozjpeg falls behind webp. (not sure if our custom chroma does)
     // Also assuming if we can't do progressive jpeg, webp pulls ahead
     let approx_quality = approximate_quality_profile(quality_profile);
     if approx_quality > 90.0 || allowed.jpeg_progressive != Some(true) {
@@ -839,6 +878,10 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
     if allowed.jpeg == Some(true) {
         // The next option depends on the quality profile. Webp pulls ahead between q73 and q93.
         return Some(OutputImageFormat::Jpeg);
+    }
+    // WebP, if jpeg is disabled.
+    if allowed.webp == Some(true) {
+        return Some(OutputImageFormat::Webp);
     }
     // Avif
     if FEATURES_IMPLEMENTED.avif && allowed.avif == Some(true) {
