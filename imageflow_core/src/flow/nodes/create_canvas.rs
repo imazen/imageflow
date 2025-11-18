@@ -77,6 +77,7 @@ impl NodeDef for CreateCanvasNodeDef {
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         match self.get(&ctx.weight(ix).params) {
             Ok((w, h, format, color)) => {
+                let is_opaque = color.is_opaque();
                 let compose = match color {
                     imageflow_types::Color::Transparent => BitmapCompositing::ReplaceSelf,
                     other => BitmapCompositing::BlendWithMatte(other),
@@ -91,7 +92,7 @@ impl NodeDef for CreateCanvasNodeDef {
                         h as u32,
                         format.pixel_layout(),
                         false,
-                        format == PixelFormat::Bgra32,
+                        format == PixelFormat::Bgra32 && !is_opaque,
                         ColorSpace::StandardRGB,
                         compose,
                     )
