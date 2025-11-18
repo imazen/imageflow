@@ -75,6 +75,11 @@ impl Encoder for LibPngEncoder {
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Borrow(&self.io))
     }
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy> {
+        // LibPNG encoder writes all data during write_frame, no additional cleanup needed
+        Ok(self.io)
+    }
 }
 
 impl LibPngEncoder {

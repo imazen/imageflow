@@ -84,6 +84,11 @@ impl Encoder for LodepngEncoder {
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Borrow(&self.io))
     }
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy> {
+        // LodePNG encoder writes all data during write_frame, no additional cleanup needed
+        Ok(self.io)
+    }
 }
 
 pub fn write_png<T: AsRef<std::path::Path>>(

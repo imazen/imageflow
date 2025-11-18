@@ -338,7 +338,11 @@ impl Context {
     }
 
     pub fn get_output_buffer_slice(&self, io_id: i32) -> Result<&[u8]> {
-        let codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        // First, finalize the encoder to ensure all data is flushed and the encoder is dropped
+        let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        codec.finalize_if_encoder().map_err(|e| e.at(here!()))?;
+
+        // Now get the finalized IO buffer
         let result = if let Some(io) = codec.get_encode_io().map_err(|e| e.at(here!()))? {
             io.map(|io| io.get_output_buffer_bytes(self).map_err(|e| e.at(here!())))
         } else {

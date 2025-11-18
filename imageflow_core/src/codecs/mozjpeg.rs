@@ -195,4 +195,9 @@ impl Encoder for MozjpegEncoder {
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Borrow(&self.io))
     }
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy> {
+        // MozJPEG encoder calls finish() during write_frame, so no additional cleanup needed
+        Ok(self.io)
+    }
 }
