@@ -7,6 +7,9 @@ extern crate serde_json;
 extern crate smallvec;
 
 pub mod common;
+
+use std::io::Write;
+
 use crate::common::*;
 
 use imageflow_core::graphics::bitmaps::{BitmapCompositing, ColorSpace};
@@ -2658,4 +2661,53 @@ fn test_idct_spatial_no_gamma() {
 fn zz_verify_all_checksum_files_uploaded() {
     let ctx = ChecksumCtx::visuals();
     ctx.verify_all_active_images_uploaded();
+}
+
+
+#[test]
+fn test_avif_encode_opaque() {
+    let steps = vec![Node::Decode { io_id: 0, commands: None }, 
+    // resize to 100x100 for speed
+    Node::Constrain (Constraint{mode: ConstraintMode::Within, w: Some(100), h: Some(100), hints: None, gravity: None, canvas_color: None}),
+    Node::Encode { io_id: 1, preset: EncoderPreset::Format { format: OutputImageFormat::Avif, 
+        quality_profile: None, quality_profile_dpr: None, matte: None, allow: None, encoder_hints: None
+        , lossless: None } }];
+
+    let mut io_list = Vec::new();
+    io_list.push(IoTestEnum::Url(
+        "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg"
+            .to_owned(),
+    ));
+    io_list.push(IoTestEnum::OutputBuffer);
+    let mut context = Context::create().unwrap();
+    let _ = build_steps(&mut context, &steps, io_list, None, DEBUG_GRAPH).unwrap();
+    // write result to file if env var WRITE_AVIF_TEST_FILES is set
+    if std::env::var("WRITE_AVIF_TEST_FILES").is_ok() {
+        let mut file = std::fs::File::create("avif_encode_opaque.avif").unwrap();
+        file.write_all(&context.get_output_buffer_slice(1).unwrap().to_vec()).unwrap();
+    }
+}
+
+#[test]
+fn test_avif_encode_transparent() {
+    let steps = vec![Node::Decode { io_id: 0, commands: None }, 
+    // resize to 100x100 for speed
+    Node::Constrain (Constraint{mode: ConstraintMode::Within, w: Some(100), h: Some(100), hints: None, gravity: None, canvas_color: None}),
+    Node::Encode { io_id: 1, preset: EncoderPreset::Format { format: OutputImageFormat::Avif, 
+        quality_profile: None, quality_profile_dpr: None, matte: None, allow: None, encoder_hints: None
+        , lossless: None } }];
+
+    let mut io_list = Vec::new();
+    io_list.push(IoTestEnum::Url(
+        "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/shirt_transparent.png"
+            .to_owned(),
+    ));
+    io_list.push(IoTestEnum::OutputBuffer);
+    let mut context = Context::create().unwrap();
+    let _ = build_steps(&mut context, &steps, io_list, None, DEBUG_GRAPH).unwrap();
+    // write result to file if env var WRITE_AVIF_TEST_FILES is set
+    if std::env::var("WRITE_AVIF_TEST_FILES").is_ok() {
+        let mut file = std::fs::File::create("avif_encode_transparent.avif").unwrap();
+        file.write(&context.get_output_buffer_slice(1).unwrap().to_vec()).unwrap();
+    }
 }
