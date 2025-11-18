@@ -128,10 +128,8 @@ impl<'a> Engine<'a> {
                 {
                     self.notify_graph_complete()?;
                 }
-                eprintln!("{:#?}", self.g);
-                panic!("Maximum graph passes exceeded");
-                //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
-                //            return false;
+                return Err(nerror!(ErrorKind::InternalError, "Maximum graph passes exceeded ({}>{}). Graph:\n{:#?}",
+                 passes, self.c.max_calc_flatten_execute_passes, self.g)); 
             }
             self.request_decoder_commands()?;
 
