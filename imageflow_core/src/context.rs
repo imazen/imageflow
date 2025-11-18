@@ -7,7 +7,9 @@ use crate::io::IoProxy;
 use crate::{ErrorKind, FlowError, JsonResponse, Result};
 use imageflow_types::collections::AddRemoveSet;
 use std::any::Any;
-use std::sync::atomic::AtomicBool;
+#[cfg(debug_assertions)]
+use std::sync::atomic::AtomicI64;
+use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::*;
@@ -45,15 +47,29 @@ pub struct Context {
 }
 
 // This token is the shared state.
-#[derive(Clone, Default)]
+#[derive(Default)]
 struct CancellationToken {
     flag: Arc<AtomicBool>,
+    #[cfg(debug_assertions)]
+    poll_countdown: Arc<AtomicI64>,
 }
 
 impl CancellationToken {
     // The blocking task will call this.
-    //
+    #[cfg(debug_assertions)]
     #[inline]
+    pub fn cancellation_requested(&self) -> bool {
+        if self.flag.load(Ordering::Relaxed) {
+            return true;
+        }
+        if self.poll_countdown.load(Ordering::Relaxed) == i64::MAX {
+            return false; // No need to mutate, it's not been set
+        }
+        self.poll_countdown.fetch_sub(1, Ordering::Relaxed) < 1
+    }
+
+    #[inline]
+    #[cfg(not(debug_assertions))]
     pub fn cancellation_requested(&self) -> bool {
         self.flag.load(Ordering::Relaxed)
     }
@@ -62,8 +78,35 @@ impl CancellationToken {
         self.flag.store(true, Ordering::Relaxed);
     }
 
+
+    #[cfg(not(debug_assertions))]
     pub fn new() -> CancellationToken {
         CancellationToken { flag: Arc::new(AtomicBool::new(false)) }
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn new() -> CancellationToken {
+        CancellationToken { flag: Arc::new(AtomicBool::new(false)), poll_countdown: Arc::new(AtomicI64::new(i64::MAX)) }
+    }
+    #[cfg(debug_assertions)]
+    pub fn request_cancellation_after_n_polls(&self, cancel_after_polls: i64) {
+        self.poll_countdown.store(cancel_after_polls, Ordering::SeqCst);
+        // eprintln!("Requesting cancellation after {} polls", cancel_after_polls);
+        // eprintln!("Poll count remaining: {}", self.poll_countdown.load(Ordering::SeqCst));
+    }
+   #[cfg(debug_assertions)]
+    pub fn request_cancellation_after_n_polls_remaining(&self) -> i64 {
+        self.poll_countdown.load( Ordering::SeqCst)
+    }
+}
+
+impl Clone for CancellationToken {
+    fn clone(&self) -> Self {
+        Self {
+            flag: self.flag.clone(),
+            #[cfg(debug_assertions)]
+            poll_countdown: self.poll_countdown.clone(),
+        }
     }
 }
 
@@ -81,11 +124,12 @@ pub struct ThreadSafeContext {
 }
 impl ThreadSafeContext {
     pub fn create_can_panic() -> Result<Box<ThreadSafeContext>> {
+        let cancellation_token = CancellationToken::new();
         Ok(Box::new(ThreadSafeContext {
-            context: std::sync::RwLock::new(Context::create_can_panic_unboxed()?),
+            context: std::sync::RwLock::new(Context::create_can_panic_unboxed(cancellation_token.clone())?),
             outward_error: std::sync::RwLock::new(OutwardErrorBuffer::new()),
             allocations: std::sync::Mutex::new(AllocationContainer::new()),
-            cancellation_token: CancellationToken::new(),
+            cancellation_token,
         }))
     }
     pub fn create_cant_panic() -> Result<Box<ThreadSafeContext>> {
@@ -98,6 +142,15 @@ impl ThreadSafeContext {
         self.outward_error_mut()
             .try_set_error(nerror!(ErrorKind::OperationCancelled, "Cancellation was requested"));
     }
+    #[cfg(debug_assertions)]
+    pub fn request_cancellation_after_n_polls(&self, cancel_after_polls: i64) {
+        self.cancellation_token.request_cancellation_after_n_polls(cancel_after_polls);
+    }
+   #[cfg(debug_assertions)]
+    pub fn request_cancellation_after_n_polls_remaining(&self) -> i64 {
+        self.cancellation_token.request_cancellation_after_n_polls_remaining()
+    }
+
 
     pub fn outward_error(&self) -> RwLockReadGuard<'_, OutwardErrorBuffer> {
         self.outward_error
@@ -240,7 +293,9 @@ impl Context {
     fn default_codecs_capacity() -> usize {
         2
     }
-    pub(crate) fn create_can_panic_unboxed() -> Result<Context> {
+    fn create_can_panic_unboxed(
+        cancellation_token: CancellationToken,
+    ) -> Result<Context> {
         Ok(Context {
             debug_job_id: unsafe { JOB_ID },
             next_graph_version: 0,
@@ -249,7 +304,7 @@ impl Context {
             graph_recording: s::Build001GraphRecording::off(),
             codecs: AddRemoveSet::with_capacity(Self::default_codecs_capacity()),
             io_id_list: RefCell::new(Vec::with_capacity(Self::default_codecs_capacity())),
-            cancellation_token: CancellationToken::new(),
+            cancellation_token,
             enabled_codecs: EnabledCodecs::default(),
             bitmaps: RefCell::new(
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
@@ -674,14 +729,14 @@ impl Drop for Context {
 #[test]
 fn test_context_size() {
     eprintln!("std::mem::sizeof(Context) = {}", std::mem::size_of::<Context>());
-    assert!(std::mem::size_of::<Context>() < 320);
+    assert!(std::mem::size_of::<Context>() < 340);
 }
 
 #[test]
 fn test_thread_safe_context_size() {
     println!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
     eprintln!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
-    assert!(std::mem::size_of::<ThreadSafeContext>() <= 500);
+    assert!(std::mem::size_of::<ThreadSafeContext>() <= 520);
 }
 
 #[test]
