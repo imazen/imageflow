@@ -642,11 +642,12 @@ impl From<bool> for BoolKeep {
     }
 }
 impl BoolKeep {
-    pub fn resolve(self, default: bool) -> bool {
-        match self {
-            BoolKeep::Keep => default,
-            BoolKeep::True => true,
-            BoolKeep::False => false,
+    pub fn and_resolve(value: Option<BoolKeep>, keep_value: Option<bool>) -> Option<bool> {
+        match value {
+            Some(BoolKeep::Keep) => keep_value,
+            Some(BoolKeep::True) => Some(true),
+            Some(BoolKeep::False) => Some(false),
+            None => None,
         }
     }
 }
@@ -877,6 +878,17 @@ fn assert_eq_hex(a: u32, b: u32) {
     }
     assert_eq!(a, b);
 }
+
+#[test]
+fn test_is_opaque() {
+    assert!(!Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).is_opaque());
+    assert!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).is_opaque());
+    assert!(Color::Srgb(ColorSrgb::Hex("FFAAEEFF".to_owned())).is_opaque());
+    assert!(!Color::Srgb(ColorSrgb::Hex("FFAAEECC".to_owned())).is_opaque());
+    assert!(!Color::Srgb(ColorSrgb::Hex("FFAAEECC".to_owned())).is_opaque());
+}
+
+
 #[test]
 fn test_color() {
     assert_eq_hex(
