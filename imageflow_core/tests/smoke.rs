@@ -438,7 +438,7 @@ fn test_json_format_auto_with_avif_allowed() {
 }
 
 #[test]
-fn test_json_format_auto_without_avif_allowed() {
+fn test_json_format_auto_for_bgr32_without_avif_allowed() {
     use imageflow_types as s;
 
     let format = preset_format_selection(s::EncoderPreset::Auto {
@@ -447,7 +447,7 @@ fn test_json_format_auto_without_avif_allowed() {
         lossless: None,
         matte: None,
         allow: Some(s::AllowedFormats::web_safe()), // No AVIF
-    }, SourceImageType::CanvasBgra32).unwrap();
+    }, SourceImageType::CanvasBgr32).unwrap();
 
     assert_eq!(
         format, "jpeg",
@@ -535,7 +535,7 @@ fn test_json_format_auto_with_avif_and_webp() {
     );
 }
 #[test]
-fn test_json_format_auto_with_default_allow() {
+fn test_json_format_auto_for_bgr32_with_default_allow() {
     use imageflow_types as s;
 
     let format = preset_format_selection(s::EncoderPreset::Auto {
@@ -544,7 +544,7 @@ fn test_json_format_auto_with_default_allow() {
         lossless: None,
         matte: None,
         allow: None,
-    }, SourceImageType::CanvasBgra32).unwrap() ;
+    }, SourceImageType::CanvasBgr32).unwrap() ;
 
     assert_eq!(
         format, "jpeg",
@@ -593,12 +593,21 @@ fn test_riapi_format_auto_with_accept_avif() {
 }
 
 #[test]
-fn test_riapi_format_auto_without_accept_avif() {
+fn test_riapi_format_auto_for_alpha_canvas_without_accept_avif_or_webp() {
     let format = riapi_format_selection("format=auto", SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
+        format, "png",
+        "RIAPI format=auto on opaque created canvas image without accept.avif or accept.webp should select PNG"
+    );
+}
+#[test]
+fn test_riapi_format_auto_for_bgr32_without_accept_avif_or_webp() {
+    let format = riapi_format_selection("format=auto", SourceImageType::CanvasBgr32).unwrap();
+
+    assert_eq!(
         format, "jpeg",
-        "RIAPI format=auto on opaque created canvas image without accept.avif should fall back to JPEG"
+        "RIAPI format=auto on opaque created canvas image without accept.avif or accept.webp should select JPEG"
     );
 }
 
