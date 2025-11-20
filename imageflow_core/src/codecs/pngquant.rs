@@ -41,9 +41,10 @@ impl PngquantEncoder {
         if let Some(speed) = speed {
             liq.set_speed(speed.clamp(1, 10).into()).unwrap();
         }
-        let min = minimum_quality.unwrap_or(0).clamp(0, 100);
-        let max = quality.unwrap_or(100).clamp(0, 100);
-        liq.set_quality(min, max).unwrap();
+        let target_quality = quality.unwrap_or(100).clamp(0, 100);
+        let min: u8 = minimum_quality.unwrap_or(0).clamp(0, target_quality);
+
+        liq.set_quality(min, target_quality).unwrap();
 
         Ok(PngquantEncoder { liq, io, maximum_deflate, matte })
     }
