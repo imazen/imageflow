@@ -799,6 +799,12 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
 
     // For animation,Avif if available, otherwise WebP if available, otherwise GIF. A this time, we don't implement avif or webp animation
     if details.has_animation {
+        if details.lossless_setting == Some(true) {
+            // WebP has lossless animation
+            if FEATURES_IMPLEMENTED.webp_animation && allowed.webp == Some(true) {
+                return Some(OutputImageFormat::Webp);
+            }
+        }
         if FEATURES_IMPLEMENTED.avif_animation && allowed.avif == Some(true) {
             return Some(OutputImageFormat::Avif);
         }
