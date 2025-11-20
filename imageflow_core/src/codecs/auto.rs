@@ -27,6 +27,7 @@ pub(crate) fn create_encoder(
     decoder_io_ids: &[i32],
 ) -> Result<Box<dyn Encoder>> {
     let codec = match *preset {
+        // Can only be triggered in RIAPI with format=auto, or qp=something when format is not specified.
         s::EncoderPreset::Auto {
             quality_profile,
             quality_profile_dpr,
@@ -52,6 +53,7 @@ pub(crate) fn create_encoder(
             create_encoder_auto(c, io, bitmap_key, decoder_io_ids, details)
                 .map_err(|e| e.at(here!()))?
         }
+        // Unless qp is specified or format=auto, RIAPI always uses this with format=keep or format=value
         s::EncoderPreset::Format {
             format,
             quality_profile,
@@ -208,6 +210,11 @@ struct QualityProfileHints {
     png: u8,
     png_max: u8,
     png_s: u8,
+}
+impl QualityProfileHints {
+    fn is_lossless(&self) -> bool {
+        self.profile == Some(QualityProfile::Lossless)
+    }
 }
 const ABSOLUTE_LOWEST_HINTS: QualityProfileHints = QualityProfileHints {
     profile: Some(QualityProfile::Percent(0.0)),
@@ -527,7 +534,9 @@ fn create_png_auto(
         .quality_profile
         .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
     let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.png);
-    let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
+    let manual_target_quality = manual_and_default_hints.and_then(|hints| hints.quality);
+    let manual_min_quality = manual_and_default_hints
+                    .and_then(|hints| hints.min_quality);
     let matte = details.matte;
     let png_style =
         manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(PngEncoderStyle::Default);
@@ -570,7 +579,7 @@ fn create_png_auto(
     } else {
         match png_style {
             PngEncoderStyle::Libpng => {
-                let depth = if !details.needs_alpha {
+                let depth = if !details.has_alpha {
                     s::PngBitDepth::Png24
                 } else {
                     s::PngBitDepth::Png32
@@ -588,7 +597,7 @@ fn create_png_auto(
                 ))
             }
             PngEncoderStyle::Pngquant | PngEncoderStyle::Default if !lossless => {
-                let manual_quality = manual_quality.map(|s| s.clamp(0.0, 100.0) as u8);
+                let manual_target_quality = manual_target_quality.map(|s| s.clamp(0.0, 100.0) as u8);
                 let manual_min_quality = manual_and_default_hints
                     .and_then(|hints| hints.min_quality)
                     .map(|s| s.clamp(0.0, 100.0) as u8);
@@ -600,7 +609,7 @@ fn create_png_auto(
                         ctx,
                         io,
                         manual_quantization_speed,
-                        manual_quality,
+                        manual_target_quality,
                         manual_min_quality,
                         max_deflate,
                         matte,
@@ -635,19 +644,23 @@ fn create_png_auto(
 }
 #[derive(Debug, Clone)]
 struct AutoEncoderDetails {
+    format_auto_mode: bool,
     format: Option<OutputImageFormat>,
+    source_image_format: Option<OutputImageFormat>,
     quality_profile: Option<s::QualityProfile>,
     quality_profile_dpr: Option<f32>,
     matte: Option<s::Color>,
     allow: AllowedFormats,
     encoder_hints: Option<s::EncoderHints>,
-    needs_animation: bool,
-    needs_alpha: bool,
-    needs_lossless: Option<bool>,
+    has_animation: bool,
+    has_alpha: bool,
+    source_lossless_capable: Option<bool>,
+    lossless_setting: Option<bool>,
     final_pixel_count: u64,
     source_image_info: Option<ImageInfo>,
 }
 
+// Helps select an encoder when format=null caused by (qp present and format absent, or format=auto)
 fn build_auto_encoder_details(
     ctx: &Context,
     preset: &s::EncoderPreset,
@@ -657,7 +670,7 @@ fn build_auto_encoder_details(
     quality_profile: Option<s::QualityProfile>,
     quality_profile_dpr: Option<f32>,
     matte: Option<s::Color>,
-    lossless: Option<BoolKeep>,
+    lossless_setting: Option<BoolKeep>,
     allow: Option<AllowedFormats>,
     encoder_hints: Option<s::EncoderHints>,
 ) -> Result<AutoEncoderDetails> {
@@ -667,6 +680,8 @@ fn build_auto_encoder_details(
 
     let source_image_info: Option<ImageInfo> = if !decoder_io_ids.is_empty() {
         Some(
+            // This logic may not be correct with watermarks if they are added before the decoder
+            // But in Imageflow.Net, we make sure the main image is decoder 0 
             ctx.get_unscaled_unrotated_image_info(*decoder_io_ids.first().unwrap())
                 .map_err(|e| e.at(here!()))?,
         )
@@ -678,19 +693,19 @@ fn build_auto_encoder_details(
     let bitmaps = ctx.borrow_bitmaps().map_err(|e| e.at(here!()))?;
     let final_bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
-    let needs_alpha = final_bitmap.info().alpha_meaningful() && !matte_is_opaque;
+    let has_alpha = final_bitmap.info().alpha_meaningful() && !matte_is_opaque;
     let final_pixel_count =
         final_bitmap.info().width() as u64 * final_bitmap.info().height() as u64;
 
-    let source_mime_format = source_image_info
+    let source_image_format = source_image_info
         .as_ref()
         .and_then(|i| OutputImageFormat::from_str(&i.preferred_mime_type));
 
-    let needs_animation = source_image_info.as_ref().map(|i| i.multiple_frames).unwrap_or(false);
+    let has_animation = source_image_info.as_ref().map(|i| i.multiple_frames).unwrap_or(false);
 
     // Keep becomes auto if no decoders exist, otherwise inherits from the first io.
     let explicit_format = match format {
-        Some(OutputImageFormat::Keep) => source_mime_format.or(None),
+        Some(OutputImageFormat::Keep) => source_image_format.or(None),
         other => other,
     };
 
@@ -703,18 +718,21 @@ fn build_auto_encoder_details(
         (None, None) => None,
     };
     if quality_profile == Some(s::QualityProfile::Lossless) {
-        needs_lossless = Some(true);
+        lossless_setting = Some(true);
     }
     Ok(AutoEncoderDetails {
+        format_auto_mode: format.is_none(),
         format: explicit_format,
         quality_profile,
         quality_profile_dpr,
+        lossless_setting,
+        source_image_format,
         matte: matte.clone(),
         allow: evaluate_allowed_formats(allow),
         encoder_hints,
-        needs_animation,
-        needs_alpha,
-        needs_lossless,
+        has_animation,
+        has_alpha,
+        source_lossless_capable,
         final_pixel_count,
         source_image_info: source_image_info_copy,
     })
@@ -767,9 +785,6 @@ fn format_select_with_specified(specified_format: Option<OutputImageFormat>, det
 
 fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat> {
     let allowed = details.allow;
-    let needs_animation = details.needs_animation;
-    let wants_alpha = details.needs_alpha;
-    let wants_lossless = details.needs_lossless;
     let pixel_count = details.final_pixel_count;
     let quality_profile = details.quality_profile;
 
@@ -783,7 +798,7 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
     // Fourth, respect lossless setting
 
     // For animation,Avif if available, otherwise WebP if available, otherwise GIF. A this time, we don't implement avif or webp animation
-    if needs_animation {
+    if details.has_animation {
         if FEATURES_IMPLEMENTED.avif_animation && allowed.avif == Some(true) {
             return Some(OutputImageFormat::Avif);
         }
@@ -812,7 +827,7 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
 
     // Lossless path: PNG and WebP are faster and often smaller than AVIF for lossless
     // We are assuming all lossless formats support alpha
-    if wants_lossless == Some(true) {
+    if details.lossless_setting == Some(true) || details.source_lossless_capable == Some(true) {
         // webp lossless is slow but so much smaller than avif/png
         if allowed.webp == Some(true) {
             return Some(OutputImageFormat::Webp);
@@ -829,7 +844,7 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
     }
 
     // For lossy images with alpha, prefer AVIF over WebP over PNG (better compression)
-    if wants_alpha {
+    if details.has_alpha {
         // AVIF handles lossy alpha very well
         if FEATURES_IMPLEMENTED.avif && allowed.avif == Some(true) {
             return Some(OutputImageFormat::Avif);
