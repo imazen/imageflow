@@ -1723,3 +1723,39 @@ fn test_get_version_info() {
 fn test_file_macro_for_this_build() {
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
 }
+
+
+
+// / Prints the error to stderr if an error has been raised on the context.
+// /
+// / If an error is present:
+// / * Prints error details to stderr
+// / * Returns true
+// /
+// / If no error is present:
+// / * Returns false
+// / * Does not exit
+// /
+// / **DO NOT USE IN SERVICES, LIBRARIES, OR LONG-RUNNING PROCESSES!**
+// / This pollutes the error stream with error messages.
+// /
+// / # Safety
+// /
+// / * `context` must be a valid pointer from `imageflow_context_create`
+// / * `context` must not be NULL (will abort process)
+// /
+// / # Thread Safety
+
+// #[no_mangle]
+// #[cfg(test)]
+// unsafe extern "C" fn imageflow_context_print_error(
+//     context: *mut ThreadSafeContext,
+// ) -> bool {
+//     let e = context!(context).outward_error();
+//     if e.has_error() {
+//         eprintln!("{}", e);
+//         true
+//     } else {
+//         false
+//     }
+// }
