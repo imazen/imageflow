@@ -39,6 +39,9 @@ impl GifDecoder {
             }
         }
     }
+    fn single_frame_requested(&self) -> bool {
+        return false;
+    }
 
     pub fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<GifDecoder> {
         let mut options = ::gif::Decoder::<IoProxy>::build();
@@ -122,7 +125,7 @@ impl Decoder for GifDecoder {
             preferred_mime_type: "image/gif".to_owned(),
             preferred_extension: "gif".to_owned(),
             lossless: false,
-            multiple_frames: self.is_animated().unwrap_or(false), //false if we didn't read any frames yet
+            multiple_frames: self.is_animated().unwrap_or(false) && !self.single_frame_requested(), //false if we didn't read any frames yet
         })
     }
 
