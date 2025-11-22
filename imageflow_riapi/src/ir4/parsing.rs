@@ -235,12 +235,13 @@ pub enum ScalingColorspace {
     Linear,
     Gamma
 }
-
-
 }
+
+
+
 #[rustfmt::skip]
 
-pub static IR4_KEYS: [&str;100] = [
+pub static IR4_KEYS: [&str;101] = [
     "mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
@@ -256,7 +257,7 @@ pub static IR4_KEYS: [&str;100] = [
     "png.quality","png.min_quality", "png.quantization_speed", "png.libpng", "png.max_deflate",
     "png.lossless", "up.filter", "down.filter", "dpr", "dppx", "up.colorspace", "srcset", "short","accept.webp",
     "accept.avif","accept.jxl", "accept.color_profiles", "c", "c.gravity", "qp", "qp.dpr", "qp.dppx",
-    "avif.speed", "avif.quality", "jxl.effort", "jxl.distance", "jxl.quality", "jxl.lossless", "jpeg.li", "lossless"];
+    "avif.speed", "avif.quality", "jxl.effort", "jxl.distance", "jxl.quality", "jxl.lossless", "jpeg.li", "lossless", "v"];
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ParseWarning {
@@ -266,6 +267,7 @@ pub enum ParseWarning {
     KeyNotRecognized((String, String)),
     KeyNotSupported((String, String)),
     ValueInvalid((&'static str, String)),
+    // ApiVersionInvalid{message: String, version_provided: String, full_query: String},
 }
 
 impl ParseWarning {
