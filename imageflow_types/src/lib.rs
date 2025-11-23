@@ -823,6 +823,14 @@ pub enum ColorSrgb {
     Hex(String),
 }
 
+impl std::fmt::Display for ColorSrgb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ColorSrgb::Hex(hex) => write!(f, "#{}", hex),
+        }
+    }
+}
+
 /// Represents arbitrary colors (not color space specific)
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
@@ -834,6 +842,16 @@ pub enum Color {
     Black,
     #[serde(rename = "srgb")]
     Srgb(ColorSrgb),
+}
+
+impl std::fmt::Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Color::Transparent => write!(f, "transparent"),
+            Color::Black => write!(f, "black"),
+            Color::Srgb(srgb) => write!(f, "{}", srgb),
+        }
+    }
 }
 
 use imageflow_helpers::colors::*;
@@ -1830,6 +1848,8 @@ pub struct EncodeResult {
     pub h: i32,
 
     pub bytes: ResultBytes,
+
+    pub diagnostic_data: Option<Box<std::collections::BTreeMap<String, String>>>,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
@@ -2115,6 +2135,7 @@ impl Response001 {
                     preferred_mime_type: mime.to_owned(),
                     preferred_extension: ext.to_owned(),
                     bytes: ResultBytes::Elsewhere,
+                    diagnostic_data: None,
                 }],
                 performance: Some(BuildPerformance { frames: vec![frame_perf] }),
             }),
