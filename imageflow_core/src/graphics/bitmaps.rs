@@ -1310,6 +1310,39 @@ impl<'a> BitmapWindowMut<'a, BGRA8> {
 
         Ok((v, w, h))
     }
+
+    pub fn to_vec_rgb(&mut self) -> Result<(Vec<rgb::RGB8>, usize, usize), FlowError> {
+        let w = self.w() as usize;
+        let h = self.h() as usize;
+
+        let mut v = Vec::new();
+        v.try_reserve(w * h).map_err(|e| {
+            nerror!(ErrorKind::InvalidOperation, "Failed to reserve memory for contiguous vec")
+        })?;
+
+        let mut pixels_present = 0;
+        for line in self.scanlines() {
+            pixels_present += line.row.len();
+            v.extend(line.row.iter().map(|pix| rgb::RGB8 {
+                r: pix.r,
+                g: pix.g,
+                b: pix.b,
+            }));
+        }
+        if v.len() != w * h {
+            return Err(nerror!(
+                ErrorKind::InvalidOperation,
+                "to_vec_rgb produced {} pixels from {} pixels present, expected {} ({}x{})",
+                v.len(),
+                pixels_present,
+                w * h,
+                w,
+                h
+            ));
+        }
+
+        Ok((v, w, h))
+    }
     pub fn get_pixel_buffer(&self) -> Result<PixelBuffer<'_>, FlowError> {
         if self.info.pixel_layout() != PixelLayout::BGRA {
             return Err(nerror!(ErrorKind::InvalidArgument, "Bitmap is not BGRA"));

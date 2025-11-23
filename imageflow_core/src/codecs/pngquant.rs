@@ -118,6 +118,7 @@ impl Encoder for PngquantEncoder {
         };
         match error {
             Some(imagequant::liq_error::QualityTooLow) => {
+                if window.info().alpha_meaningful() {
                 let (vec, w, h) = window.to_vec_rgba().map_err(|e| e.at(here!()))?;
 
                 let slice_as_u8 = bytemuck::cast_slice::<rgb::RGBA8, u8>(vec.as_slice());
@@ -131,6 +132,25 @@ impl Encoder for PngquantEncoder {
                     self.maximum_deflate,
                 )
                 .map_err(|e| e.at(here!()))?;
+
+                    // data.add("result.format", "png32");
+                } else {
+                    let (vec, w, h) = window.to_vec_rgb().map_err(|e| e.at(here!()))?;
+
+                    let slice_as_u8 = bytemuck::cast_slice::<rgb::RGB8, u8>(vec.as_slice());
+
+                    lode::LodepngEncoder::write_png_auto_slice(
+                        &mut self.io,
+                        slice_as_u8,
+                        w,
+                        h,
+                        lodepng::ColorType::RGB,
+                        self.maximum_deflate,
+                    )
+                    .map_err(|e| e.at(here!()))?;
+
+                    // data.add("result.format", "png24");
+                }
             }
             Some(err) => return Err(err)?,
             None => {}
