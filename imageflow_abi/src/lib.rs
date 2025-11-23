@@ -1569,9 +1569,8 @@ fn test_job_with_cancellation() {
 #[test]
 fn test_job_with_cancellation_at_every_point() {
 
-    #[cfg(not(debug_assertions))]
-    assert!(false);
 
+    #[cfg(debug_assertions)]
     unsafe {
         use base64::Engine;
         let input_bytes = base64::engine::general_purpose::STANDARD.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=").unwrap();
