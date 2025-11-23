@@ -273,9 +273,15 @@ impl Encoder for WebPEncoder {
         let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
+        let mut data = diagnostic_collector::DiagnosticCollector::new("webp.encoder.");
+
         if self.matte.is_some() {
+            data.add("params.matte", self.matte.clone().unwrap());
+            data.add("input.had_alpha", bitmap.info().alpha_meaningful());
             bitmap.apply_matte(self.matte.clone().unwrap())?;
         }
+        data.add("input.has_alpha", bitmap.info().alpha_meaningful());
+
 
         let mut window = bitmap.get_window_u8().unwrap();
 
@@ -290,20 +296,28 @@ impl Encoder for WebPEncoder {
         let lossless = self.lossless.unwrap_or(false);
         let quality = self.quality.unwrap_or(85.0).clamp(0.0, 100.0);
 
+  
+        data.add("params.lossless", lossless);
+        data.add("params.quality", quality);
+
         unsafe {
             let mut output: *mut u8 = ptr::null_mut();
             let mut output_len: usize = 0;
             if !lossless {
                 if layout == PixelLayout::BGRA {
+                    data.add("method", "WebPEncodeBGRA");
                     output_len =
                         WebPEncodeBGRA(mut_slice.as_ptr(), w, h, stride, quality, &mut output);
                 } else if layout == PixelLayout::BGR {
+                    data.add("method", "WebPEncodeBGR");
                     output_len =
                         WebPEncodeBGR(mut_slice.as_ptr(), w, h, stride, quality, &mut output);
                 }
             } else if layout == PixelLayout::BGRA {
+                data.add("method", "WebPEncodeLosslessBGRA");
                 output_len = WebPEncodeLosslessBGRA(mut_slice.as_ptr(), w, h, stride, &mut output);
             } else if layout == PixelLayout::BGR {
+                data.add("method", "WebPEncodeLosslessBGR");
                 output_len = WebPEncodeLosslessBGR(mut_slice.as_ptr(), w, h, stride, &mut output);
             }
 
@@ -325,6 +339,7 @@ impl Encoder for WebPEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "webp".to_owned(),
             preferred_mime_type: "image/webp".to_owned(),
+            diagnostic_data: data.into(),
         })
     }
 

@@ -53,11 +53,23 @@ impl Encoder for LibPngEncoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
+        let mut data = crate::codecs::diagnostic_collector::DiagnosticCollector::new("libpng.encoder.");
+        data.add("input.had_alpha", &bitmap.info().alpha_meaningful());
+
         if let Some(ref matte) = self.matte {
+            data.add("params.matte", &matte);
             bitmap.apply_matte(matte.clone()).map_err(|e| e.at(here!()))?;
+            data.add("result.applied_custom_matte", &matte);
         }
+        data.add("input.has_alpha", &bitmap.info().alpha_meaningful());
 
         let mut window = bitmap.get_window_u8().unwrap();
+
+        let disable_alpha = self.depth.unwrap_or(imageflow_types::PngBitDepth::Png32)
+            == imageflow_types::PngBitDepth::Png24;
+        data.add("params.disable_alpha", &disable_alpha);
+        data.add_debug("params.zlib_compression", &self.zlib_compression);
+        data.add_debug("params.depth", &self.depth);
 
         self.write_png(&mut window, self.depth, self.zlib_compression)
             .map_err(|e| e.at(here!()))?;
@@ -69,6 +81,7 @@ impl Encoder for LibPngEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "png".to_owned(),
             preferred_mime_type: "image/png".to_owned(),
+            diagnostic_data: data.into(),
         })
     }
 

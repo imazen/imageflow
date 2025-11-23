@@ -9,6 +9,8 @@ extern crate imageflow_helpers as hlp;
 extern crate serde_json;
 
 pub mod common;
+use std::collections::BTreeMap;
+
 use crate::common::*;
 
 use imageflow_core::{Context,Result, here};
@@ -67,12 +69,12 @@ fn generate_tiny_png(with_alpha: bool, with_palette: bool) -> Result<Vec<u8>> {
                 w: 1,
                 h: 1,
                 format,
-                color: Color::Srgb(ColorSrgb::Hex("FF0000FF".to_owned())),
+                color: if with_alpha {Color::Srgb(ColorSrgb::Hex("FF0000CC".to_owned()))} else {Color::Srgb(ColorSrgb::Hex("FF0000FF".to_owned()))},
             },
             Node::Encode {
                 io_id: 1,
                 preset: match with_palette {
-                    true => EncoderPreset::Pngquant { quality: Some(100), minimum_quality: Some(100), speed: None, maximum_deflate: None },
+                    true => EncoderPreset::Pngquant { quality: Some(100), minimum_quality: Some(0), speed: None, maximum_deflate: None },
                     false => EncoderPreset::Lodepng { maximum_deflate: None },
                 },
             },
@@ -201,7 +203,7 @@ fn check_magic_bytes(bytes: &[u8]) -> &'static str {
 pub fn test_format_selection_json_with_source(
     preset: EncoderPreset,
     source_bytes: Option<&[u8]>,
-) -> Result<String> {
+) -> Result<EncodingOutput> {
     format_selection_core(Some(preset), None, source_bytes.map(|bytes| SourceImageType::ByteArray(bytes.to_vec())).unwrap_or(SourceImageType::CanvasBgra32)).map_err(|e| e.at(here!()))
 }
 /// Test JSON API format selection with an EncoderPreset
@@ -210,21 +212,27 @@ pub fn test_format_selection_json_with_source(
 pub fn preset_format_selection(
     preset: EncoderPreset,
     source: SourceImageType,
-) -> Result<String> {
+) -> Result<EncodingOutput> {
     format_selection_core(Some(preset), None, source).map_err(|e| e.at(here!()))
 }
 pub fn riapi_format_selection(
     command: &str,
     source: SourceImageType,
-) -> Result<String> {
+) -> Result<EncodingOutput> {
     format_selection_core(None, Some(command), source).map_err(|e| e.at(here!()))
+}
+
+
+pub struct EncodingOutput {
+    pub format: &'static str,
+    pub diagnostics: Box<BTreeMap<String, String>>,
 }
 
 pub fn format_selection_core(
     preset: Option<EncoderPreset>,
     command: Option<&str>,
     source: SourceImageType,
-) -> Result<String> {
+) -> Result<EncodingOutput> {
     use imageflow_core::Context;
     use imageflow_types as s;
 
@@ -316,14 +324,28 @@ pub fn format_selection_core(
         framewise: s::Framewise::Steps(steps),
     };
 
-    context.execute_1(build).map_err(|e| e.at(here!()))?;
+    let response = context.execute_1(build).map_err(|e| e.at(here!()))?;
 
     let bytes = context.get_output_buffer_slice(1).map_err(|e| e.at(here!()))?;
-    Ok(check_magic_bytes(bytes).to_owned())
+
+    match response{
+        ResponsePayload::JobResult(job_result) => {
+            let diagnostics = job_result.encodes.first().unwrap().diagnostic_data.clone().unwrap_or_else(|| Box::new(BTreeMap::new()));
+            // eprintln all diagnostics
+            for (key, value) in diagnostics.iter() {
+                eprintln!("{}: {}", key, value);
+            }
+            Ok(EncodingOutput {
+                format: check_magic_bytes(bytes),
+                diagnostics,
+            })
+        }
+        _ => unreachable!()
+    }
 }
 
 /// Test JSON API format selection with an EncoderPreset (no source image)
-pub fn test_format_selection_json(preset: EncoderPreset) -> Result<String> {
+pub fn test_format_selection_json(preset: EncoderPreset) -> Result<EncodingOutput> {
     test_format_selection_json_with_source(preset, None).map_err(|e|e.at(here!()))
 }
 
@@ -387,7 +409,7 @@ fn test_json_format_explicit_avif_with_allow() {
     }, SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "Expected AVIF output with format=avif + allow.avif=true"
     );
 }
@@ -411,7 +433,7 @@ fn test_json_format_explicit_avif_without_allow() {
 
     // DOCUMENTS CURRENT BEHAVIOR: explicit format bypasses allow check
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "Current behavior: explicit format=avif bypasses allow.avif=false"
     );
 }
@@ -432,7 +454,7 @@ fn test_json_format_auto_with_avif_allowed() {
     }, SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "Auto format should select AVIF when allow.avif=true"
     );
 }
@@ -450,7 +472,7 @@ fn test_json_format_auto_for_bgr32_without_avif_allowed() {
     }, SourceImageType::CanvasBgr32).unwrap();
 
     assert_eq!(
-        format, "jpeg",
+        format.format, "jpeg",
         "Auto format should fall back to JPEG when AVIF not in allow list"
     );
 }
@@ -469,7 +491,7 @@ fn test_json_format_explicit_png() {
         encoder_hints: None,
     }, SourceImageType::CanvasBgra32).unwrap();
 
-    assert_eq!(format, "png", "Explicit format=png should produce PNG");
+    assert_eq!(format.format, "png", "Explicit format=png should produce PNG");
 }
 
 #[test]
@@ -489,7 +511,7 @@ fn test_json_format_explicit_webp() {
         encoder_hints: None,
     }, SourceImageType::CanvasBgra32).unwrap();
 
-    assert_eq!(format, "webp", "Explicit format=webp should produce WebP");
+    assert_eq!(format.format, "webp", "Explicit format=webp should produce WebP");
 }
 
 #[test]
@@ -508,7 +530,7 @@ fn test_json_format_auto_with_webp_only() {
     }, SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "webp",
+        format.format, "webp",
         "Auto format with only allow.webp=true should select WebP over JPEG"
     );
 }
@@ -530,7 +552,7 @@ fn test_json_format_auto_with_avif_and_webp() {
     }, SourceImageType::CanvasBgra32).unwrap() ;
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "Auto format with both allow.avif and allow.webp should prefer AVIF"
     );
 }
@@ -547,7 +569,7 @@ fn test_json_format_auto_for_bgr32_with_default_allow() {
     }, SourceImageType::CanvasBgr32).unwrap() ;
 
     assert_eq!(
-        format, "jpeg",
+        format.format, "jpeg",
         "Auto format with no allow defined should select JPEG"
     );
 }
@@ -558,7 +580,7 @@ fn test_riapi_format_avif_with_accept() {
     let format = riapi_format_selection("format=avif&accept.avif=1", SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "RIAPI format=avif with accept.avif=1 should produce AVIF"
     );
 }
@@ -568,7 +590,7 @@ fn test_riapi_format_avif_with_accept_false() {
     let format = riapi_format_selection("format=avif&accept.avif=0", SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "RIAPI format=avif with accept.avif=0 should produce AVIF"
     );
 }
@@ -577,7 +599,7 @@ fn test_riapi_format_avif_without_accept() {
     let format = riapi_format_selection("format=avif", SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "Current behavior: RIAPI format=avif works without accept.avif"
     );
 }
@@ -587,7 +609,7 @@ fn test_riapi_format_auto_with_accept_avif() {
     let format = riapi_format_selection("format=auto&accept.avif=1", SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "RIAPI format=auto with accept.avif=1 should select AVIF"
     );
 }
@@ -597,7 +619,7 @@ fn test_riapi_format_auto_for_alpha_canvas_without_accept_avif_or_webp() {
     let format = riapi_format_selection("format=auto", SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "png",
+        format.format, "png",
         "RIAPI format=auto on opaque created canvas image without accept.avif or accept.webp should select PNG"
     );
 }
@@ -606,7 +628,7 @@ fn test_riapi_format_auto_for_bgr32_without_accept_avif_or_webp() {
     let format = riapi_format_selection("format=auto", SourceImageType::CanvasBgr32).unwrap();
 
     assert_eq!(
-        format, "jpeg",
+        format.format, "jpeg",
         "RIAPI format=auto on opaque created canvas image without accept.avif or accept.webp should select JPEG"
     );
 }
@@ -616,7 +638,7 @@ fn test_riapi_format_auto_with_webp_only() {
     let format = riapi_format_selection("format=auto&accept.webp=1", SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "webp",
+        format.format, "webp",
         "RIAPI format=auto with accept.webp=1 should select WebP over JPEG"
     );
 }
@@ -626,7 +648,7 @@ fn test_riapi_format_auto_with_avif_and_webp() {
     let format = riapi_format_selection("format=auto&accept.avif=1&accept.webp=1", SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "RIAPI format=auto with both accept.avif and accept.webp should prefer AVIF over WebP"
     );
 }
@@ -635,21 +657,21 @@ fn test_riapi_format_auto_with_avif_and_webp() {
 fn test_riapi_format_png_explicit() {
     let format = riapi_format_selection("format=png", SourceImageType::CanvasBgra32).unwrap() ;
 
-    assert_eq!(format, "png", "RIAPI format=png should produce PNG");
+    assert_eq!(format.format, "png", "RIAPI format=png should produce PNG");
 }
 
 #[test]
 fn test_riapi_format_jpeg_explicit() {
     let format = riapi_format_selection("format=jpg", SourceImageType::CanvasBgra32).unwrap() ;
 
-    assert_eq!(format, "jpeg", "RIAPI format=jpg should produce JPEG");
+    assert_eq!(format.format, "jpeg", "RIAPI format=jpg should produce JPEG");
 }
 
 #[test]
 fn test_riapi_format_webp_explicit() {
     let format = riapi_format_selection("format=webp", SourceImageType::CanvasBgra32).unwrap();
 
-    assert_eq!(format, "webp", "RIAPI format=webp should produce WebP");
+    assert_eq!(format.format, "webp", "RIAPI format=webp should produce WebP");
 }
 
 #[test]
@@ -657,7 +679,7 @@ fn test_riapi_format_webp_with_quality() {
     let format = riapi_format_selection("format=webp&webp.quality=75", SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "webp",
+        format.format, "webp",
         "RIAPI format=webp with quality parameter should produce WebP"
     );
 }
@@ -667,7 +689,7 @@ fn test_riapi_format_avif_with_quality_and_speed() {
     let format = riapi_format_selection("format=avif&avif.quality=80&avif.speed=6", SourceImageType::CanvasBgra32).unwrap();
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "RIAPI format=avif with quality and speed parameters should produce AVIF"
     )           ;
 }
@@ -693,7 +715,7 @@ fn test_json_auto_from_jpeg_source() {
     ).unwrap()  ;
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "Auto format from JPEG source with allow.avif should select AVIF"
     );
 }
@@ -719,13 +741,39 @@ fn test_json_auto_from_png_alpha_source() {
 
     // PNG with alpha should prefer WebP for lossless alpha over AVIF
     assert_eq!(
-        format, "webp",
+        format.format, "webp",
         "Auto format from PNG with alpha should prefer WebP for lossless alpha compression"
     );
 }
 
+
 #[test]
-fn test_json_auto_from_png_source() {
+fn test_json_auto_png24_to_png_qp_lossless() {
+    use imageflow_types as s;
+
+    let format = preset_format_selection(
+        s::EncoderPreset::Auto {
+            quality_profile: s::QualityProfile::Lossless,
+            quality_profile_dpr: None,
+            lossless: None,
+            matte: None,
+            allow: Some(s::AllowedFormats {
+                avif: Some(true),
+                webp: Some(false),
+                ..s::AllowedFormats::web_safe()
+            }),
+        },
+        SourceImageType::Png{ with_alpha: false, with_palette: false },
+    ).unwrap(); 
+
+    assert_eq!(
+        format.format, "png",
+        "PNG24 -> Auto format ( qp=lossless, allow.avif=1, allow.webp=0) -> should select PNG to preserve likely losslessness"
+    );
+}
+
+#[test]
+fn test_json_auto_png24_qp_high() {
     use imageflow_types as s;
 
     let format = preset_format_selection(
@@ -736,17 +784,19 @@ fn test_json_auto_from_png_source() {
             matte: None,
             allow: Some(s::AllowedFormats {
                 avif: Some(true),
+                webp: Some(false),
                 ..s::AllowedFormats::web_safe()
             }),
         },
-        SourceImageType::Png{ with_alpha: false, with_palette: false },
-    ).unwrap()  ;
+        SourceImageType::Png { with_alpha: false, with_palette: false },
+    ).unwrap(); 
 
     assert_eq!(
-        format, "png",
-        "Auto format from PNG without alpha with allow.avif should select PNG to preserve likely losslessness"
+        format.format, "png",
+        "PNG24 -> Auto format ( qp=high, allow.avif=1, allow.webp=0) -> should select PNG"
     );
 }
+
 
 #[test]
 fn test_json_auto_from_animated_gif_source() {
@@ -769,7 +819,7 @@ fn test_json_auto_from_animated_gif_source() {
 
     // GIF source should preserve as GIF (animation capability)
     assert_eq!(
-        format, "gif",
+        format.format, "gif",
         "Auto format from GIF source should preserve as GIF for animation capability" // (until we implement webp animation)
     );
 }
@@ -780,7 +830,7 @@ fn test_riapi_auto_from_jpeg_source() {
         riapi_format_selection("format=auto&accept.avif=1", SourceImageType::Jpeg).unwrap()  ;
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "RIAPI auto from JPEG source with accept.avif should select AVIF"
     );
 }
@@ -790,7 +840,7 @@ fn test_riapi_auto_from_png_alpha_source() {
     let format = riapi_format_selection("format=auto&accept.avif=1&accept.webp=1", SourceImageType::Png{ with_alpha: true, with_palette: false }).unwrap()  ;
 
     assert_eq!(
-        format, "webp",
+        format.format, "webp",
         "RIAPI auto from PNG with alpha should prefer WebP"
     );
 }
@@ -800,7 +850,7 @@ fn test_riapi_auto_from_gif_source() {
     let format = riapi_format_selection("format=auto&accept.avif=1&accept.webp=1", SourceImageType::Gif { animated: false }).unwrap()  ;
 
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "RIAPI auto from single-frame GIF source should switch to avif"
     );
 }
@@ -810,7 +860,7 @@ fn test_riapi_keep_from_gif_source() {
     let format = riapi_format_selection("format=keep&accept.avif=1&accept.webp=1", SourceImageType::Gif { animated: false }).unwrap()  ;
 
     assert_eq!(
-        format, "gif",
+        format.format, "gif",
         "RIAPI format=keep from GIF source should preserve as GIF"
     );
 }
@@ -836,7 +886,7 @@ fn test_json_auto_from_canvas_opaque() {
 
     // Documents current behavior with CreateCanvas
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "Current behavior: Auto from CreateCanvas defaults to avif (no source format to reference)"
     );
 }
@@ -848,7 +898,7 @@ fn test_riapi_auto_from_canvas() {
 
     // Documents current behavior
     assert_eq!(
-        format, "avif",
+        format.format, "avif",
         "Current behavior: RIAPI auto from CreateCanvas defaults to avif (no source format to reference)"
     );
 }

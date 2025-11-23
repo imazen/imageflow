@@ -28,6 +28,7 @@ mod libpng_encoder;
 mod mozjpeg;
 mod mozjpeg_decoder;
 mod mozjpeg_decoder_helpers;
+mod diagnostic_collector;
 mod webp;
 use crate::codecs::color_transform_cache::ColorTransformCache;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;

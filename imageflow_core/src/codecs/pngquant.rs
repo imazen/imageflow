@@ -67,10 +67,21 @@ impl Encoder for PngquantEncoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
+        let mut data = crate::codecs::diagnostic_collector::DiagnosticCollector::new("pngquant.encoder.");
+
+        data.add("input.has_alpha", bitmap.info().alpha_meaningful());
         if self.matte.is_some() {
+            data.add("params.matte", self.matte.clone().unwrap());
             bitmap.apply_matte(self.matte.clone().unwrap()).map_err(|e| e.at(here!()))?;
         }
+        data.add("input.has_alpha", bitmap.info().alpha_meaningful());
 
+        data.add("params.quality_minimum", self.liq.quality().0);
+        data.add("params.quality_target", self.liq.quality().1);
+        data.add("params.speed", self.liq.speed());
+        data.add_debug("params.maximum_deflate", self.maximum_deflate);
+        
+       
         bitmap.get_window_u8().unwrap().normalize_unused_alpha().map_err(|e| e.at(here!()))?;
         let mut window = bitmap.get_window_bgra32().unwrap();
 
@@ -103,6 +114,9 @@ impl Encoder for PngquantEncoder {
 
                     let (pal, pixels) = res.remapped(&mut img).unwrap(); // could have alloc failure here, should map
 
+                    
+                    data.add("result.palette_size", pal.len());
+                    data.add("result.format", "png8");
                     lode::LodepngEncoder::write_png8(
                         &mut self.io,
                         &pal,
@@ -116,24 +130,25 @@ impl Encoder for PngquantEncoder {
                 Err(e) => Some(e),
             }
         };
+        data.add_debug("result.quantize_error", error);
         match error {
             Some(imagequant::liq_error::QualityTooLow) => {
                 if window.info().alpha_meaningful() {
-                let (vec, w, h) = window.to_vec_rgba().map_err(|e| e.at(here!()))?;
+                    let (vec, w, h) = window.to_vec_rgba().map_err(|e| e.at(here!()))?;
 
-                let slice_as_u8 = bytemuck::cast_slice::<rgb::RGBA8, u8>(vec.as_slice());
+                    let slice_as_u8 = bytemuck::cast_slice::<rgb::RGBA8, u8>(vec.as_slice());
 
-                lode::LodepngEncoder::write_png_auto_slice(
-                    &mut self.io,
-                    slice_as_u8,
-                    w,
-                    h,
-                    lodepng::ColorType::RGBA,
-                    self.maximum_deflate,
-                )
-                .map_err(|e| e.at(here!()))?;
+                        lode::LodepngEncoder::write_png_auto_slice(
+                        &mut self.io,
+                        slice_as_u8,
+                        w,
+                        h,
+                        lodepng::ColorType::RGBA,
+                        self.maximum_deflate,
+                    )
+                    .map_err(|e| e.at(here!()))?;
 
-                    // data.add("result.format", "png32");
+                    data.add("result.format", "png32");
                 } else {
                     let (vec, w, h) = window.to_vec_rgb().map_err(|e| e.at(here!()))?;
 
@@ -149,7 +164,7 @@ impl Encoder for PngquantEncoder {
                     )
                     .map_err(|e| e.at(here!()))?;
 
-                    // data.add("result.format", "png24");
+                    data.add("result.format", "png24");
                 }
             }
             Some(err) => return Err(err)?,
@@ -163,6 +178,7 @@ impl Encoder for PngquantEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "png".to_owned(),
             preferred_mime_type: "image/png".to_owned(),
+            diagnostic_data: data.into(),
         })
     }
 

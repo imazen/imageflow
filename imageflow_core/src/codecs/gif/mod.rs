@@ -338,7 +338,7 @@ impl Encoder for GifEncoder {
             }
         }
 
-        //        eprintln!("decoders: {:?}, found_frame: {}", decoder_io_ids, decoded_frame.is_some() );
+        // eprintln!("decoders: {:?}, found_frame: {}", decoder_io_ids, decoded_frame.is_some() );
 
         let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
 
@@ -405,6 +405,7 @@ impl Encoder for GifEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "gif".to_owned(),
             preferred_mime_type: "image/gif".to_owned(),
+            diagnostic_data: None, // For now.
         })
     }
     fn get_io(&self) -> Result<IoProxyRef<'_>> {

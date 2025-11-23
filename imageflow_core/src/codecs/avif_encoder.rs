@@ -54,6 +54,8 @@ impl Encoder for AvifEncoder {
     ) -> Result<EncodeResult> {
         return_if_cancelled!(c);
 
+        let mut data = crate::codecs::diagnostic_collector::DiagnosticCollector::new("avif.encoder.");
+
         // 1. Borrow bitmap from Context
         let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
@@ -61,6 +63,8 @@ impl Encoder for AvifEncoder {
         // 2. Apply matte if needed (blend alpha with background color)
         if let Some(matte) = &self.matte {
             let was_alpha_meaningful = bitmap.info().alpha_meaningful();
+            data.add("params.matte", &matte);
+            data.add("input.had_alpha", &was_alpha_meaningful);
             bitmap
                 .get_window_bgra32()
                 .unwrap()
@@ -76,6 +80,7 @@ impl Encoder for AvifEncoder {
                 .normalize_unused_alpha()
                 .map_err(|e| e.at(here!()))?;
         }
+        data.add("input.has_alpha", &bitmap.info().alpha_meaningful());
 
         // 3. Get window for pixel access
         let mut window = bitmap.get_window_u8().unwrap();
@@ -116,16 +121,26 @@ impl Encoder for AvifEncoder {
         // ravif's imgref supports stride, so we can pass the padded buffer directly
         let img = imgref::Img::new_stride(rgba_slice, w as usize, h as usize, stride_in_pixels as usize);
 
+        
         // 8. Configure encoder with quality and speed settings
+        let quality_value = self.quality.unwrap_or(80.0);
+        let speed_value = self.speed.unwrap_or(6);
+        let alpha_color_mode = ravif::AlphaColorMode::UnassociatedClean;
+
+        data.add("params.quality", &quality_value);
+        data.add("params.speed", &speed_value);
+        data.add_debug("params.alpha_color_mode", &alpha_color_mode);
+
         let mut encoder = ravif::Encoder::new();
         encoder = encoder
-            .with_quality(self.quality.unwrap_or(80.0))
-            .with_speed(self.speed.unwrap_or(6))
-            .with_alpha_color_mode(ravif::AlphaColorMode::UnassociatedClean);
+            .with_quality(quality_value)
+            .with_speed(speed_value)
+            .with_alpha_color_mode(alpha_color_mode);
 
         // Apply separate alpha quality if specified
         if let Some(alpha_q) = self.alpha_quality {
             encoder = encoder.with_alpha_quality(alpha_q.clamp(0.0, 100.0));
+            data.add("params.alpha_quality", &alpha_q);
         }
 
         // 9. Encode to AVIF format
@@ -138,6 +153,10 @@ impl Encoder for AvifEncoder {
             .write_all(&encoded.avif_file)
             .map_err(|e| nerror!(ErrorKind::EncodingIoError, "Failed to write AVIF data: {:?}", e))?;
 
+        data.add("result.alpha_byte_size", &encoded.alpha_byte_size);
+        data.add("result.color_byte_size", &encoded.color_byte_size);
+        data.add("result.total_byte_size", &encoded.avif_file.len());
+
         // 11. Return encoding result metadata
         Ok(EncodeResult {
             w,
@@ -146,6 +165,7 @@ impl Encoder for AvifEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere, // Data written to io
             preferred_extension: "avif".to_owned(),
             preferred_mime_type: "image/avif".to_owned(),
+            diagnostic_data: data.into()
         })
     }
 
