@@ -1433,7 +1433,7 @@ dependencies = [
 [[package]]
 name = "libpng-sys"
 version = "1.1.10"
-source = "git+https://github.com/lilith/rust-libpng-sys#593e6f5284fbc8ccd900bf866c73e74c77310c5a"
+source = "git+https://github.com/kornelski/rust-libpng-sys#d38f3997b38e3fe88249323dacc2fcbb1106b9ed"
 dependencies = [
  "cc",
  "dunce",
