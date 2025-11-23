@@ -93,7 +93,7 @@ schemars = { version = "1.0.0-alpha.17", features = ["derive"], optional = true 
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
 dssim = "3.3.4"
 load_image = "3.2.1"
-criterion = "0.5"
+criterion = "0.7"
 rand = "*"
 include_dir = { version = "0.7.4", features = ["glob"] }
 anyhow = "1.0"
