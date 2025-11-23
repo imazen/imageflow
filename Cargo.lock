@@ -1444,8 +1444,9 @@ dependencies = [
 
 [[package]]
 name = "libwebp-sys"
-version = "0.13.3"
-source = "git+https://github.com/imazen/libwebp-sys#75591beb9e2588576dadd8ed0858066ff2bc92a0"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39f019895d5064a40a6d1e8859d8093c3dfdaee8d4a15fa08c80405a856658f0"
 dependencies = [
  "cc",
  "glob",
