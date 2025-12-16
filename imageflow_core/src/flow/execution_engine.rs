@@ -183,7 +183,7 @@ impl<'a> Engine<'a> {
         perf.reverse();
 
         let total_node_ns = self.g.node_weights_mut().map(|n| n.cost.wall_ns).sum::<u64>();
-        let total_ns = precise_time_ns() - start;
+        let total_ns = precise_time_ns().saturating_sub(start);
         let wall_microseconds = (total_ns as f64 / 1000f64).round() as u64;
         let overhead_microseconds =
             ((total_ns as i64 - total_node_ns as i64) as f64 / 1000f64).round() as i64;
@@ -341,7 +341,7 @@ impl<'a> Engine<'a> {
             Engine::validate_frame_size(v, &ctx.c.security)?;
         }
 
-        ctx.weight_mut(node_id).cost.wall_ns += precise_time_ns() - now;
+        ctx.weight_mut(node_id).cost.wall_ns += precise_time_ns().saturating_sub(now);
         result
     }
 
@@ -535,7 +535,7 @@ impl<'a> Engine<'a> {
                             }
                             ctx.weight_mut(next_ix).result = result;
                         }
-                        ctx.weight_mut(next_ix).cost.wall_ns += precise_time_ns() - now;
+                        ctx.weight_mut(next_ix).cost.wall_ns += precise_time_ns().saturating_sub(now);
                         ctx.more_frames.get()
                     };
 
