@@ -622,7 +622,7 @@ fn create_png_auto(
     decoder_io_ids: &[i32],
     details: AutoEncoderDetails,
 ) -> Result<Box<dyn Encoder>> {
-    eprintln!("Encoding parameters: {:?}", &details);
+    //eprintln!("Encoding parameters: {:?}", &details);
     let png_details = match details.v {
         EncodeEngineVersion::Preview => {
             config_png_auto_preview(ctx,  details)?
@@ -631,7 +631,7 @@ fn create_png_auto(
             config_png_legacy(ctx, details)?
         }
     };
-    eprintln!("Final params: {:?}",&png_details);
+    //eprintln!("Final params: {:?}",&png_details);
     match png_details {
         PngEncodingDetails::LodePngLossless { max_deflate, matte } => {
             Ok(Box::new(
