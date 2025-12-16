@@ -564,14 +564,12 @@ fn test_transparent_canvas() {
         "TestTransparentCanvas",
         POPULATE_CHECKSUMS,
         DEBUG_GRAPH,
-        vec![
-            Node::CreateCanvas {
-                w: 200,
-                h: 200,
-                format: PixelFormat::Bgra32,
-                color: Color::Srgb(ColorSrgb::Hex("00000000".to_owned())),
-            }
-        ],
+        vec![Node::CreateCanvas {
+            w: 200,
+            h: 200,
+            format: PixelFormat::Bgra32,
+            color: Color::Srgb(ColorSrgb::Hex("00000000".to_owned())),
+        }],
     );
     assert!(matched);
 }
@@ -2211,11 +2209,11 @@ fn test_encode_avif_smoke() {
 
     // Verify encoder reports AVIF format
     match result {
-        imageflow_types::ResponsePayload::JobResult(build_result) |
-        imageflow_types::ResponsePayload::BuildResult(build_result) => {
+        imageflow_types::ResponsePayload::JobResult(build_result)
+        | imageflow_types::ResponsePayload::BuildResult(build_result) => {
             assert_eq!(build_result.encodes[0].preferred_mime_type, "image/avif");
             assert_eq!(build_result.encodes[0].preferred_extension, "avif");
-        },
+        }
         _ => panic!("Expected BuildResult or JobResult, got {:?}", result),
     }
 }
@@ -2257,11 +2255,11 @@ fn test_encode_avif_alpha_smoke() {
 
     // Verify encoder reports AVIF format
     match result {
-        imageflow_types::ResponsePayload::JobResult(build_result) |
-        imageflow_types::ResponsePayload::BuildResult(build_result) => {
+        imageflow_types::ResponsePayload::JobResult(build_result)
+        | imageflow_types::ResponsePayload::BuildResult(build_result) => {
             assert_eq!(build_result.encodes[0].preferred_mime_type, "image/avif");
             assert_eq!(build_result.encodes[0].preferred_extension, "avif");
-        },
+        }
         _ => panic!("Expected BuildResult or JobResult, got {:?}", result),
     }
 }
@@ -2290,11 +2288,11 @@ fn smoke_test_avif_ir4() {
 
     // Verify RIAPI correctly produces AVIF
     match result {
-        imageflow_types::ResponsePayload::JobResult(build_result) |
-        imageflow_types::ResponsePayload::BuildResult(build_result) => {
+        imageflow_types::ResponsePayload::JobResult(build_result)
+        | imageflow_types::ResponsePayload::BuildResult(build_result) => {
             assert_eq!(build_result.encodes[0].preferred_mime_type, "image/avif");
             assert_eq!(build_result.encodes[0].preferred_extension, "avif");
-        },
+        }
         _ => panic!("Expected BuildResult or JobResult, got {:?}", result),
     }
 }
@@ -2331,11 +2329,11 @@ fn test_encode_avif_with_matte() {
 
     // Verify matte encoding produces AVIF
     match result {
-        imageflow_types::ResponsePayload::JobResult(build_result) |
-        imageflow_types::ResponsePayload::BuildResult(build_result) => {
+        imageflow_types::ResponsePayload::JobResult(build_result)
+        | imageflow_types::ResponsePayload::BuildResult(build_result) => {
             assert_eq!(build_result.encodes[0].preferred_mime_type, "image/avif");
             assert_eq!(build_result.encodes[0].preferred_extension, "avif");
-        },
+        }
         _ => panic!("Expected BuildResult or JobResult, got {:?}", result),
     }
 }
@@ -2683,15 +2681,32 @@ fn zz_verify_all_checksum_files_uploaded() {
     ctx.verify_all_active_images_uploaded();
 }
 
-
 #[test]
 fn test_avif_encode_opaque() {
-    let steps = vec![Node::Decode { io_id: 0, commands: None }, 
-    // resize to 100x100 for speed
-    Node::Constrain (Constraint{mode: ConstraintMode::Within, w: Some(100), h: Some(100), hints: None, gravity: None, canvas_color: None}),
-    Node::Encode { io_id: 1, preset: EncoderPreset::Format { format: OutputImageFormat::Avif, 
-        quality_profile: None, quality_profile_dpr: None, matte: None, allow: None, encoder_hints: None
-        , lossless: None } }];
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        // resize to 100x100 for speed
+        Node::Constrain(Constraint {
+            mode: ConstraintMode::Within,
+            w: Some(100),
+            h: Some(100),
+            hints: None,
+            gravity: None,
+            canvas_color: None,
+        }),
+        Node::Encode {
+            io_id: 1,
+            preset: EncoderPreset::Format {
+                format: OutputImageFormat::Avif,
+                quality_profile: None,
+                quality_profile_dpr: None,
+                matte: None,
+                allow: None,
+                encoder_hints: None,
+                lossless: None,
+            },
+        },
+    ];
 
     let mut io_list = Vec::new();
     io_list.push(IoTestEnum::Url(
@@ -2710,12 +2725,30 @@ fn test_avif_encode_opaque() {
 
 #[test]
 fn test_avif_encode_transparent() {
-    let steps = vec![Node::Decode { io_id: 0, commands: None }, 
-    // resize to 100x100 for speed
-    Node::Constrain (Constraint{mode: ConstraintMode::Within, w: Some(100), h: Some(100), hints: None, gravity: None, canvas_color: None}),
-    Node::Encode { io_id: 1, preset: EncoderPreset::Format { format: OutputImageFormat::Avif, 
-        quality_profile: None, quality_profile_dpr: None, matte: None, allow: None, encoder_hints: None
-        , lossless: None } }];
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        // resize to 100x100 for speed
+        Node::Constrain(Constraint {
+            mode: ConstraintMode::Within,
+            w: Some(100),
+            h: Some(100),
+            hints: None,
+            gravity: None,
+            canvas_color: None,
+        }),
+        Node::Encode {
+            io_id: 1,
+            preset: EncoderPreset::Format {
+                format: OutputImageFormat::Avif,
+                quality_profile: None,
+                quality_profile_dpr: None,
+                matte: None,
+                allow: None,
+                encoder_hints: None,
+                lossless: None,
+            },
+        },
+    ];
 
     let mut io_list = Vec::new();
     io_list.push(IoTestEnum::Url(

@@ -30,7 +30,6 @@ pub(crate) fn create_encoder(
     let v = &EncodeEngineVersion::Preview;
 
     let codec = match *preset {
-        
         // Can only be triggered in RIAPI with format=auto, or qp=something when format is not specified.
         s::EncoderPreset::Auto {
             quality_profile,
@@ -167,11 +166,10 @@ fn create_encoder_auto(
     decoder_io_ids: &[i32],
     details: AutoEncoderDetails,
 ) -> Result<Box<dyn Encoder>> {
-    let final_format =format_select_with_specified(details.format, &details)
-    .map_err(|e| e.at(here!()))?;
+    let final_format =
+        format_select_with_specified(details.format, &details).map_err(|e| e.at(here!()))?;
 
     //eprintln!("AutoEncoderDetails: {:?}", details);
-    
 
     Ok(match final_format {
         OutputImageFormat::Keep => unreachable!(),
@@ -451,8 +449,6 @@ fn create_jpeg_auto(
     }
 }
 
-
-
 #[derive(Debug, Clone)]
 struct WebPEncodingDetails {
     lossy: Option<f32>,
@@ -468,20 +464,21 @@ fn create_webp_auto(
 ) -> Result<Box<dyn Encoder>> {
     let params = match details.v {
         EncodeEngineVersion::Preview => config_webp_auto_preview(ctx, details)?,
-        _ => config_webp_auto_v2(ctx, details)?
+        _ => config_webp_auto_v2(ctx, details)?,
     };
     Ok(Box::new(
-        crate::codecs::webp::WebPEncoder::create(ctx, io, params.lossy, Some(params.lossless), params.matte)
-            .map_err(|e| e.at(here!()))?,
+        crate::codecs::webp::WebPEncoder::create(
+            ctx,
+            io,
+            params.lossy,
+            Some(params.lossless),
+            params.matte,
+        )
+        .map_err(|e| e.at(here!()))?,
     ))
 }
 
-
-
-fn config_webp_auto_v2(
-    ctx: &Context,
-    details: AutoEncoderDetails,
-) -> Result<WebPEncodingDetails> {
+fn config_webp_auto_v2(ctx: &Context, details: AutoEncoderDetails) -> Result<WebPEncodingDetails> {
     let profile_hints = details
         .quality_profile
         .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
@@ -507,13 +504,8 @@ fn config_webp_auto_v2(
         None
     };
 
-    Ok(WebPEncodingDetails {
-        lossy: quality,
-        lossless,
-        matte,
-    })
+    Ok(WebPEncodingDetails { lossy: quality, lossless, matte })
 }
-
 
 fn config_webp_auto_preview(
     ctx: &Context,
@@ -528,33 +520,43 @@ fn config_webp_auto_preview(
 
     let manual_hint_lossless = BoolKeep::and_resolve(
         manual_and_default_hints.and_then(|hints| hints.lossless),
-         details.source_lossless_capable);
+        details.source_lossless_capable,
+    );
 
     let source_format = details.source_image_format;
 
     let good_defaults_for_source = match source_format {
-        _ if details.source_lossless_capable == Some(true) => get_quality_hints(&QualityProfile::Lossless),
+        _ if details.source_lossless_capable == Some(true) => {
+            get_quality_hints(&QualityProfile::Lossless)
+        }
         Some(OutputImageFormat::Webp) => get_quality_hints(&QualityProfile::High),
         Some(OutputImageFormat::Jpeg) => get_quality_hints(&QualityProfile::High),
         Some(OutputImageFormat::Jxl) => get_quality_hints(&QualityProfile::High),
         _ => get_quality_hints(&QualityProfile::High),
     };
 
-    let lossless_inferred_from_quality_and_source = manual_quality.is_none()
-            && good_defaults_for_source.is_lossless();
-    
-    let lossless = details.lossless_setting.or(manual_hint_lossless).unwrap_or(lossless_inferred_from_quality_and_source);
+    let lossless_inferred_from_quality_and_source =
+        manual_quality.is_none() && good_defaults_for_source.is_lossless();
 
+    let lossless = details
+        .lossless_setting
+        .or(manual_hint_lossless)
+        .unwrap_or(lossless_inferred_from_quality_and_source);
 
     let matte = details.matte;
-    let quality =
-        manual_and_default_hints.and_then(|hints| hints.quality).unwrap_or(good_defaults_for_source.webp).clamp(0.0, 100.0);
+    let quality = manual_and_default_hints
+        .and_then(|hints| hints.quality)
+        .unwrap_or(good_defaults_for_source.webp)
+        .clamp(0.0, 100.0);
 
+    let profile_or_manual_lossless =
+        profile_hints.map(|hints| hints.is_lossless()).unwrap_or(lossless);
+    let profile_or_manual_quality = if !profile_or_manual_lossless {
+        profile_hints.map(|hints| hints.webp).or(Some(quality))
+    } else {
+        None
+    };
 
-    let profile_or_manual_lossless = profile_hints.map(|hints| hints.is_lossless()).unwrap_or(lossless);
-    let profile_or_manual_quality =if !profile_or_manual_lossless { profile_hints.map(|hints| hints.webp).or(Some(quality)) } else { None };
-
-   
     Ok(WebPEncodingDetails {
         lossy: profile_or_manual_quality,
         lossless: profile_or_manual_lossless,
@@ -577,7 +579,7 @@ fn create_avif_auto(
     let matte = details.matte;
 
     let good_defaults = get_quality_hints(&QualityProfile::Good);
-    
+
     // Get quality from profile hints or manual hints
     let quality = profile_hints
         .map(|hints| hints.avif)
@@ -609,10 +611,23 @@ fn create_avif_auto(
 }
 
 #[derive(Debug, Clone)]
-enum PngEncodingDetails{
-    LodePngLossless{ max_deflate: Option<bool>, matte: Option<Color> },
-    PngQuant{ speed: Option<u8>, target_quality: Option<u8>, minimum_quality: Option<u8>, max_deflate: Option<bool>, matte: Option<Color> },
-    LibPng{ depth: Option<imageflow_types::PngBitDepth>, matte: Option<Color>, zlib_compression: Option<u8> }
+enum PngEncodingDetails {
+    LodePngLossless {
+        max_deflate: Option<bool>,
+        matte: Option<Color>,
+    },
+    PngQuant {
+        speed: Option<u8>,
+        target_quality: Option<u8>,
+        minimum_quality: Option<u8>,
+        max_deflate: Option<bool>,
+        matte: Option<Color>,
+    },
+    LibPng {
+        depth: Option<imageflow_types::PngBitDepth>,
+        matte: Option<Color>,
+        zlib_compression: Option<u8>,
+    },
 }
 
 fn create_png_auto(
@@ -624,50 +639,45 @@ fn create_png_auto(
 ) -> Result<Box<dyn Encoder>> {
     //eprintln!("Encoding parameters: {:?}", &details);
     let png_details = match details.v {
-        EncodeEngineVersion::Preview => {
-            config_png_auto_preview(ctx,  details)?
-        }
-        _ => {
-            config_png_legacy(ctx, details)?
-        }
+        EncodeEngineVersion::Preview => config_png_auto_preview(ctx, details)?,
+        _ => config_png_legacy(ctx, details)?,
     };
     //eprintln!("Final params: {:?}",&png_details);
     match png_details {
-        PngEncodingDetails::LodePngLossless { max_deflate, matte } => {
-            Ok(Box::new(
-                crate::codecs::lode::LodepngEncoder::create(ctx, io, max_deflate, matte)
-                    .map_err(|e| e.at(here!()))?,
-            ))
-        }
-        PngEncodingDetails::PngQuant { speed, target_quality, minimum_quality, max_deflate, matte } => {
-            Ok(Box::new(
-                crate::codecs::pngquant::PngquantEncoder::create(
-                    ctx,
-                    io,
-                    speed,
-                    target_quality,
-                    minimum_quality,
-                    max_deflate,
-                    matte,
-                )
+        PngEncodingDetails::LodePngLossless { max_deflate, matte } => Ok(Box::new(
+            crate::codecs::lode::LodepngEncoder::create(ctx, io, max_deflate, matte)
                 .map_err(|e| e.at(here!()))?,
-            ))
-        }
-        PngEncodingDetails::LibPng { depth, matte, zlib_compression } => {
-            Ok(Box::new(
-                crate::codecs::libpng_encoder::LibPngEncoder::create(
-                    ctx,
-                    io,
-                    depth,
-                    matte,
-                    zlib_compression,
-                )
-                .map_err(|e| e.at(here!()))?,
-            ))
-        }
+        )),
+        PngEncodingDetails::PngQuant {
+            speed,
+            target_quality,
+            minimum_quality,
+            max_deflate,
+            matte,
+        } => Ok(Box::new(
+            crate::codecs::pngquant::PngquantEncoder::create(
+                ctx,
+                io,
+                speed,
+                target_quality,
+                minimum_quality,
+                max_deflate,
+                matte,
+            )
+            .map_err(|e| e.at(here!()))?,
+        )),
+        PngEncodingDetails::LibPng { depth, matte, zlib_compression } => Ok(Box::new(
+            crate::codecs::libpng_encoder::LibPngEncoder::create(
+                ctx,
+                io,
+                depth,
+                matte,
+                zlib_compression,
+            )
+            .map_err(|e| e.at(here!()))?,
+        )),
     }
 }
-
 
 fn config_png_auto_preview(
     ctx: &Context,
@@ -678,31 +688,36 @@ fn config_png_auto_preview(
         .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
     let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.png);
     let manual_target_quality = manual_and_default_hints.and_then(|hints| hints.quality);
-    let manual_min_quality = manual_and_default_hints
-                    .and_then(|hints| hints.min_quality);
+    let manual_min_quality = manual_and_default_hints.and_then(|hints| hints.min_quality);
     let matte = details.matte;
     let png_style =
         manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(PngEncoderStyle::Default);
 
     let manual_hint_lossless = BoolKeep::and_resolve(
         manual_and_default_hints.and_then(|hints| hints.lossless),
-         details.source_lossless_capable);
+        details.source_lossless_capable,
+    );
 
     let source_format = details.source_image_format;
 
     let good_defaults_for_source = match source_format {
-        _ if details.source_lossless_capable == Some(true) => get_quality_hints(&QualityProfile::Lossless),
+        _ if details.source_lossless_capable == Some(true) => {
+            get_quality_hints(&QualityProfile::Lossless)
+        }
         Some(OutputImageFormat::Webp) => get_quality_hints(&QualityProfile::High),
         Some(OutputImageFormat::Jpeg) => get_quality_hints(&QualityProfile::High),
         Some(OutputImageFormat::Jxl) => get_quality_hints(&QualityProfile::High),
         _ => get_quality_hints(&QualityProfile::Lossless),
     };
 
+    let lossless_inferred_from_quality_and_source = manual_target_quality.is_none()
+        && manual_min_quality.is_none()
+        && good_defaults_for_source.is_lossless();
 
-    let lossless_inferred_from_quality_and_source = manual_target_quality.is_none() && manual_min_quality.is_none()
-            && good_defaults_for_source.is_lossless();
-    
-    let lossless = details.lossless_setting.or(manual_hint_lossless).unwrap_or(lossless_inferred_from_quality_and_source);
+    let lossless = details
+        .lossless_setting
+        .or(manual_hint_lossless)
+        .unwrap_or(lossless_inferred_from_quality_and_source);
 
     let max_deflate = manual_and_default_hints.and_then(|hints| hints.hint_max_deflate);
 
@@ -721,21 +736,19 @@ fn config_png_auto_preview(
     } else {
         match png_style {
             PngEncoderStyle::Libpng => {
-                let depth = if !details.has_alpha {
-                    s::PngBitDepth::Png24
-                } else {
-                    s::PngBitDepth::Png32
-                };
+                let depth =
+                    if !details.has_alpha { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 };
                 let zlib_compression = if max_deflate == Some(true) { Some(9) } else { None };
-                Ok(PngEncodingDetails::LibPng {
-                    depth: Some(depth),
-                    matte,
-                    zlib_compression,
-                })
+                Ok(PngEncodingDetails::LibPng { depth: Some(depth), matte, zlib_compression })
             }
             PngEncoderStyle::Pngquant | PngEncoderStyle::Default if !lossless => {
-                let manual_target_quality = manual_target_quality.unwrap_or(good_defaults_for_source.png_max as f32).clamp(0.0, 100.0) as u8;
-                let manual_min_quality = manual_min_quality.unwrap_or(good_defaults_for_source.png as f32).clamp(0.0, manual_target_quality.into()) as u8;
+                let manual_target_quality = manual_target_quality
+                    .unwrap_or(good_defaults_for_source.png_max as f32)
+                    .clamp(0.0, 100.0) as u8;
+                let manual_min_quality = manual_min_quality
+                    .unwrap_or(good_defaults_for_source.png as f32)
+                    .clamp(0.0, manual_target_quality.into())
+                    as u8;
                 let manual_quantization_speed = manual_and_default_hints
                     .and_then(|hints| hints.quantization_speed)
                     .unwrap_or(good_defaults_for_source.png_s)
@@ -756,19 +769,13 @@ fn config_png_auto_preview(
     }
 }
 
-
-
-fn config_png_legacy(
-    ctx: &Context,
-    details: AutoEncoderDetails,
-) -> Result<PngEncodingDetails> {
+fn config_png_legacy(ctx: &Context, details: AutoEncoderDetails) -> Result<PngEncodingDetails> {
     let profile_hints = details
         .quality_profile
         .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
     let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.png);
     let manual_target_quality = manual_and_default_hints.and_then(|hints| hints.quality);
-    let manual_min_quality = manual_and_default_hints
-                    .and_then(|hints| hints.min_quality);
+    let manual_min_quality = manual_and_default_hints.and_then(|hints| hints.min_quality);
     let matte = details.matte;
     let png_style =
         manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(PngEncoderStyle::Default);
@@ -782,7 +789,9 @@ fn config_png_legacy(
         (_, Some(BoolKeep::True)) => Some(true),
         (_, Some(BoolKeep::False)) => Some(false),
         (Some(false), None) => Some(false),
-        (None, None) => Some(manual_target_quality.is_none() || png_style == PngEncoderStyle::Libpng),
+        (None, None) => {
+            Some(manual_target_quality.is_none() || png_style == PngEncoderStyle::Libpng)
+        }
     }
     .unwrap();
 
@@ -803,20 +812,14 @@ fn config_png_legacy(
     } else {
         match png_style {
             PngEncoderStyle::Libpng => {
-                let depth = if !details.has_alpha {
-                    s::PngBitDepth::Png24
-                } else {
-                    s::PngBitDepth::Png32
-                };
+                let depth =
+                    if !details.has_alpha { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 };
                 let zlib_compression = if max_deflate == Some(true) { Some(9) } else { None };
-                Ok(PngEncodingDetails::LibPng {
-                    depth: Some(depth),
-                    matte,
-                    zlib_compression,
-                })
+                Ok(PngEncodingDetails::LibPng { depth: Some(depth), matte, zlib_compression })
             }
             PngEncoderStyle::Pngquant | PngEncoderStyle::Default if !lossless => {
-                let manual_target_quality = manual_target_quality.map(|s| s.clamp(0.0, 100.0) as u8);
+                let manual_target_quality =
+                    manual_target_quality.map(|s| s.clamp(0.0, 100.0) as u8);
                 let manual_min_quality = manual_and_default_hints
                     .and_then(|hints| hints.min_quality)
                     .map(|s| s.clamp(0.0, 100.0) as u8);
@@ -895,7 +898,7 @@ fn build_auto_encoder_details(
     let source_image_info: Option<ImageInfo> = if !decoder_io_ids.is_empty() {
         Some(
             // This logic may not be correct with watermarks if they are added before the decoder
-            // But in Imageflow.Net, we make sure the main image is decoder 0 
+            // But in Imageflow.Net, we make sure the main image is decoder 0
             ctx.get_unscaled_unrotated_image_info(*decoder_io_ids.first().unwrap())
                 .map_err(|e| e.at(here!()))?,
         )
@@ -916,24 +919,25 @@ fn build_auto_encoder_details(
         .and_then(|i| OutputImageFormat::from_str(&i.preferred_mime_type));
 
     let has_animation = source_image_info.as_ref().map(|i| i.multiple_frames).unwrap_or(false);
-    
+
     // Keep becomes auto if no decoders exist, otherwise inherits from the first io.
     let explicit_format = match format {
         Some(OutputImageFormat::Keep) => source_image_format.or(None),
         other => other,
     };
 
-    let mut legacy_needs_lossless = match (source_image_info.as_ref().map(|i| i.lossless), lossless_setting) {
-        (Some(true), Some(BoolKeep::Keep)) => Some(true),
-        (Some(false), Some(BoolKeep::Keep)) => Some(false),
-        (None, Some(BoolKeep::Keep)) => Some(has_alpha), //No decoder, no source, default to match alpha
-        (_, Some(BoolKeep::True)) => Some(true),
-        (_, Some(BoolKeep::False)) => Some(false),
-        (_, None) => None
-    };
-    
+    let mut legacy_needs_lossless =
+        match (source_image_info.as_ref().map(|i| i.lossless), lossless_setting) {
+            (Some(true), Some(BoolKeep::Keep)) => Some(true),
+            (Some(false), Some(BoolKeep::Keep)) => Some(false),
+            (None, Some(BoolKeep::Keep)) => Some(has_alpha), //No decoder, no source, default to match alpha
+            (_, Some(BoolKeep::True)) => Some(true),
+            (_, Some(BoolKeep::False)) => Some(false),
+            (_, None) => None,
+        };
+
     let source_lossless_capable = source_image_info.as_ref().map(|i| i.lossless).or(None);
-    let mut lossless_setting = BoolKeep::and_resolve(lossless_setting , source_lossless_capable);
+    let mut lossless_setting = BoolKeep::and_resolve(lossless_setting, source_lossless_capable);
     if quality_profile == Some(s::QualityProfile::Lossless) {
         lossless_setting = Some(true);
         legacy_needs_lossless = Some(true);
@@ -954,7 +958,7 @@ fn build_auto_encoder_details(
         source_lossless_capable,
         final_pixel_count,
         source_image_info: source_image_info_copy,
-        v: *v
+        v: *v,
     })
 }
 
@@ -974,11 +978,19 @@ struct FeaturesImplemented {
     avif_animation: bool,
     jpegli: bool,
 }
-const FEATURES_IMPLEMENTED: FeaturesImplemented =
-    FeaturesImplemented { jxl: false, avif: true, webp_animation: false, avif_lossless: false, avif_animation: false, jpegli: false };
+const FEATURES_IMPLEMENTED: FeaturesImplemented = FeaturesImplemented {
+    jxl: false,
+    avif: true,
+    webp_animation: false,
+    avif_lossless: false,
+    avif_animation: false,
+    jpegli: false,
+};
 
-fn format_select_with_specified(mut specified_format: Option<OutputImageFormat>, details: &AutoEncoderDetails) -> Result<OutputImageFormat> {
-
+fn format_select_with_specified(
+    mut specified_format: Option<OutputImageFormat>,
+    details: &AutoEncoderDetails,
+) -> Result<OutputImageFormat> {
     if specified_format == Some(OutputImageFormat::Jxl) && !FEATURES_IMPLEMENTED.jxl {
         specified_format = None;
     }
@@ -989,14 +1001,14 @@ fn format_select_with_specified(mut specified_format: Option<OutputImageFormat>,
         Some(other) => Ok(other),
         None => match details.v {
             EncodeEngineVersion::Preview => format_auto_select_preview(details).ok_or(nerror!(
-            ErrorKind::InvalidArgument,
-            "No formats enabled; try 'allow': {{ 'web_safe':true}}"
-        )),
+                ErrorKind::InvalidArgument,
+                "No formats enabled; try 'allow': {{ 'web_safe':true}}"
+            )),
             _ => format_auto_select_legacy(details).ok_or(nerror!(
-            ErrorKind::InvalidArgument,
-            "No formats enabled; try 'allow': {{ 'web_safe':true}}"
-        ))
-        }
+                ErrorKind::InvalidArgument,
+                "No formats enabled; try 'allow': {{ 'web_safe':true}}"
+            )),
+        },
     }
 }
 
@@ -1043,14 +1055,18 @@ fn format_auto_select_preview(details: &AutoEncoderDetails) -> Option<OutputImag
     // lossless (manga) jxl-e9 (too slow) > jxl-e5 (ok) | webp-m4 (too slow) > optipng-o2 (way too slow)
     // > optipng-o1 (too slow) > png (ok) > avif-s5 (too slow) -> avif-s8 (ok)
 
-    // JXL is always the best if available, regardless of lossless 
+    // JXL is always the best if available, regardless of lossless
     if FEATURES_IMPLEMENTED.jxl && allowed.jxl == Some(true) {
         return Some(OutputImageFormat::Jxl);
     }
 
     let choose_lossless = match details.v {
-        EncodeEngineVersion::Preview => details.lossless_setting == Some(true) || details.source_lossless_capable == Some(true),
-        _ => details.legacy_needs_lossless.unwrap_or(details.has_alpha || details.source_lossless_capable == Some(true)),
+        EncodeEngineVersion::Preview => {
+            details.lossless_setting == Some(true) || details.source_lossless_capable == Some(true)
+        }
+        _ => details
+            .legacy_needs_lossless
+            .unwrap_or(details.has_alpha || details.source_lossless_capable == Some(true)),
     };
 
     // Lossless path: PNG and WebP are faster and often smaller than AVIF for lossless
@@ -1103,7 +1119,7 @@ fn format_auto_select_preview(details: &AutoEncoderDetails) -> Option<OutputImag
         return Some(OutputImageFormat::Avif);
     }
     // Use jpegli if available, it's way faster than webp and comparable or better on size/quality.
-    // We already handled alpha/lossless/animation above. 
+    // We already handled alpha/lossless/animation above.
     if can_jpegli {
         return Some(OutputImageFormat::Jpeg);
     }
@@ -1142,8 +1158,6 @@ fn format_auto_select_preview(details: &AutoEncoderDetails) -> Option<OutputImag
 
     None
 }
-
-
 
 fn format_auto_select_legacy(details: &AutoEncoderDetails) -> Option<OutputImageFormat> {
     let allowed = details.allow;
@@ -1190,13 +1204,19 @@ fn format_auto_select_legacy(details: &AutoEncoderDetails) -> Option<OutputImage
     }
 
     if FEATURES_IMPLEMENTED.avif && allowed.avif == Some(true) {
-        if details.lossless_setting != Some(true) && details.source_lossless_capable != Some(true) && has_alpha{
+        if details.lossless_setting != Some(true)
+            && details.source_lossless_capable != Some(true)
+            && has_alpha
+        {
             return Some(OutputImageFormat::Avif);
         }
     }
 
     // Lossless path and alpha path are the same.
-    if details.legacy_needs_lossless.unwrap_or(details.has_alpha || details.source_lossless_capable == Some(true)) {
+    if details
+        .legacy_needs_lossless
+        .unwrap_or(details.has_alpha || details.source_lossless_capable == Some(true))
+    {
         // JXL is better - webp lossless is slow but so much smaller than avif/png
         if allowed.webp == Some(true) {
             return Some(OutputImageFormat::Webp);

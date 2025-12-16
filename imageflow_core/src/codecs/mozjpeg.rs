@@ -91,7 +91,8 @@ impl Encoder for MozjpegEncoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
-        let mut data = crate::codecs::diagnostic_collector::DiagnosticCollector::new("mozjpeg.encoder.");
+        let mut data =
+            crate::codecs::diagnostic_collector::DiagnosticCollector::new("mozjpeg.encoder.");
 
         let had_alpha = bitmap.info().alpha_meaningful();
         data.add("input.had_alpha", &had_alpha);
@@ -103,8 +104,9 @@ impl Encoder for MozjpegEncoder {
             data.add("result.applied_custom_matte", &self.matte.clone().unwrap());
         }
         if bitmap.info().alpha_meaningful() {
-            let white = imageflow_types::Color::Srgb(
-            imageflow_types::ColorSrgb::Hex("FFFFFFFF".to_owned()));
+            let white = imageflow_types::Color::Srgb(imageflow_types::ColorSrgb::Hex(
+                "FFFFFFFF".to_owned(),
+            ));
             bitmap.apply_matte(white.clone())?;
             data.add("result.applied_white_matte", true);
         }
@@ -113,8 +115,7 @@ impl Encoder for MozjpegEncoder {
         let mut window = bitmap.get_window_u8().unwrap();
 
         // mozjpeg Default quality is 75
-        let quality = self.quality.map(|q| u8::min(100,q as u8)).unwrap_or(DEFAULT_QUALITY);
-
+        let quality = self.quality.map(|q| u8::min(100, q as u8)).unwrap_or(DEFAULT_QUALITY);
 
         data.add("params.quality", &quality);
 
@@ -126,7 +127,6 @@ impl Encoder for MozjpegEncoder {
         };
         let mut cinfo = mozjpeg::Compress::new(in_color_space);
         data.add_debug("params.color_space", &in_color_space);
-
 
         cinfo.set_size(window.w() as usize, window.h() as usize);
 
@@ -149,7 +149,6 @@ impl Encoder for MozjpegEncoder {
         if let Some(o) = self.optimize_coding {
             cinfo.set_optimize_coding(o);
         }
-        
 
         let chroma_quality = quality as f32; // Lower values allow blurrier color
         let pixel_buffer = window.get_pixel_buffer().unwrap();
@@ -173,8 +172,6 @@ impl Encoder for MozjpegEncoder {
         data.add_debug("result.evalchroma.chroma_quality", &res.chroma_quality);
         data.add_debug("result.evalchroma.sharpness", &res.sharpness);
 
-
-
         // Translate chroma pixel size into JPEG's channel-relative samples per pixel
         let max_sampling_h = res.subsampling.cb.0.max(res.subsampling.cr.0);
         let max_sampling_v = res.subsampling.cb.1.max(res.subsampling.cr.1);
@@ -182,7 +179,10 @@ impl Encoder for MozjpegEncoder {
         for (c, &(h, v)) in cinfo.components_mut().iter_mut().zip(px_sizes) {
             c.h_samp_factor = (max_sampling_h / h).into();
             c.v_samp_factor = (max_sampling_v / v).into();
-            data.add(&format!("result.component[{}]", c.component_index), format!("h={}, v={}", c.h_samp_factor, c.v_samp_factor));
+            data.add(
+                &format!("result.component[{}]", c.component_index),
+                format!("h={}, v={}", c.h_samp_factor, c.v_samp_factor),
+            );
         }
 
         let mut compressor = cinfo

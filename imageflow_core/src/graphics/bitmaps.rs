@@ -1323,11 +1323,7 @@ impl<'a> BitmapWindowMut<'a, BGRA8> {
         let mut pixels_present = 0;
         for line in self.scanlines() {
             pixels_present += line.row.len();
-            v.extend(line.row.iter().map(|pix| rgb::RGB8 {
-                r: pix.r,
-                g: pix.g,
-                b: pix.b,
-            }));
+            v.extend(line.row.iter().map(|pix| rgb::RGB8 { r: pix.r, g: pix.g, b: pix.b }));
         }
         if v.len() != w * h {
             return Err(nerror!(

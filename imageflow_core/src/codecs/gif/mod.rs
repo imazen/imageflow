@@ -293,21 +293,25 @@ impl GifEncoder {
             io_id,
             io_ref: io_ref.clone(),
             // Global color table??
-            encoder: Some(::gif::Encoder::new(
-                IoProxyProxy(io_ref),
-                bitmap.w() as u16,
-                bitmap.h() as u16,
-                &[],
-            )
-            .map_err(|e| FlowError::from(e).at(here!()))?),
+            encoder: Some(
+                ::gif::Encoder::new(
+                    IoProxyProxy(io_ref),
+                    bitmap.w() as u16,
+                    bitmap.h() as u16,
+                    &[],
+                )
+                .map_err(|e| FlowError::from(e).at(here!()))?,
+            ),
             frame_ix: 0,
         })
     }
 
     fn finish(&mut self) -> Result<()> {
-        let encoder = self.encoder.take().ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?;
-        let flushed_writer = encoder.into_inner()
-                    .map_err(|e| FlowError::from(e).at(here!()))?;
+        let encoder = self
+            .encoder
+            .take()
+            .ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?;
+        let flushed_writer = encoder.into_inner().map_err(|e| FlowError::from(e).at(here!()))?;
         drop(flushed_writer);
         Ok(())
     }
@@ -374,7 +378,9 @@ impl Encoder for GifEncoder {
                 //                    eprintln!("Writing repeat");
                 self.encoder
                     .as_mut()
-                    .ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?
+                    .ok_or_else(|| {
+                        nerror!(ErrorKind::InternalError, "Gif encoder not initialized")
+                    })?
                     .write_extension(::gif::ExtensionData::Repetitions(r))
                     .map_err(|e| FlowError::from(e).at(here!()))?;
             } else {
@@ -393,9 +399,6 @@ impl Encoder for GifEncoder {
             .ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?
             .write_frame(&f)
             .map_err(|e| FlowError::from(e).at(here!()))?;
-
-
-
 
         self.frame_ix += 1;
         Ok(s::EncodeResult {
@@ -427,7 +430,6 @@ impl Encoder for GifEncoder {
             }
         }
     }
-
 }
 
 fn remove_padding(width: u16, pixels: &[u8], stride: usize) -> Vec<u8> {

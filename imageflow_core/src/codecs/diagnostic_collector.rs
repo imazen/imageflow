@@ -7,21 +7,23 @@ pub(crate) struct DiagnosticCollector {
 
 impl DiagnosticCollector {
     pub fn new(prefix: &'static str) -> Self {
-        Self {
-            data: Box::new(std::collections::BTreeMap::new()),
-            prefix,
-        }
+        Self { data: Box::new(std::collections::BTreeMap::new()), prefix }
     }
-    pub fn add_debug<T>(&mut self, key: &str, value: T) where T: fmt::Debug {
+    pub fn add_debug<T>(&mut self, key: &str, value: T)
+    where
+        T: fmt::Debug,
+    {
         self.data.insert(format!("{}{}", self.prefix, key), format!("{:?}", value));
     }
     pub fn add_string(&mut self, key: &str, value: String) {
         self.data.insert(format!("{}{}", self.prefix, key), value);
     }
-    pub fn add<T>(&mut self, key: &str, value: T) where T: fmt::Display {
+    pub fn add<T>(&mut self, key: &str, value: T)
+    where
+        T: fmt::Display,
+    {
         self.data.insert(format!("{}{}", self.prefix, key), value.to_string());
     }
-
 
     pub fn into_diagnostic_data(self) -> Option<Box<std::collections::BTreeMap<String, String>>> {
         if self.data.is_empty() {

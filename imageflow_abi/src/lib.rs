@@ -757,7 +757,6 @@ pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(
     }
 }
 
-
 /// Reads fields from a JsonResponse and writes them to the provided output parameters.
 ///
 /// The buffer pointer will be a UTF-8 byte array (NOT null-terminated).
@@ -1565,11 +1564,8 @@ fn test_job_with_cancellation() {
     }
 }
 
-
 #[test]
 fn test_job_with_cancellation_at_every_point() {
-
-
     #[cfg(debug_assertions)]
     unsafe {
         use base64::Engine;
@@ -1580,8 +1576,7 @@ fn test_job_with_cancellation_at_every_point() {
         // track time
         let start = std::time::Instant::now();
         let mut cancel_on_poll = 1;
-        loop{
-
+        loop {
             let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
             assert!(!c.is_null());
             let res = imageflow_context_add_input_buffer(
@@ -1604,7 +1599,8 @@ fn test_job_with_cancellation_at_every_point() {
             let method_in = static_char!("v1/execute");
             let json_in = r#"{"framewise":{"steps":[{"decode":{"io_id":0}},{"flip_h":null},{"rotate_90":null},{"resample_2d":{"w":10,"h":10,"hints":{"sharpen_percent":null}}},{"constrain":{ "mode" :"within", "w": 5,"h": 5}},{"encode":{"io_id":1,"preset":{"gif":null}}}]}}"#;
 
-            let response = imageflow_context_send_json(c, method_in, json_in.as_ptr(), json_in.len());
+            let response =
+                imageflow_context_send_json(c, method_in, json_in.as_ptr(), json_in.len());
 
             assert!(!response.is_null());
 
@@ -1612,18 +1608,32 @@ fn test_job_with_cancellation_at_every_point() {
 
             if polls_remaining > 0 {
                 if ctx.outward_error().has_error() {
-                    assert!(false, "Expected no error since there were polls remaining, but got error {}", ctx.outward_error().to_string());
+                    assert!(
+                        false,
+                        "Expected no error since there were polls remaining, but got error {}",
+                        ctx.outward_error().to_string()
+                    );
                 }
-                
-                eprintln!("Tested {}-{}={} cancellation points in {} ms", cancel_on_poll, polls_remaining, cancel_on_poll - polls_remaining, start.elapsed().as_millis());
+
+                eprintln!(
+                    "Tested {}-{}={} cancellation points in {} ms",
+                    cancel_on_poll,
+                    polls_remaining,
+                    cancel_on_poll - polls_remaining,
+                    start.elapsed().as_millis()
+                );
                 //imageflow_context_print_error(c);
                 imageflow_context_destroy(c);
                 assert!(polls_remaining < cancel_on_poll);
-                return; 
-            }else {
+                return;
+            } else {
                 let expected_error_code = 21;
                 if imageflow_context_error_code(c) != expected_error_code {
-                    eprintln!("Expected cancellation, but {} polls reamined, and got error {}", cancel_on_poll, ctx.outward_error().to_string());
+                    eprintln!(
+                        "Expected cancellation, but {} polls reamined, and got error {}",
+                        cancel_on_poll,
+                        ctx.outward_error().to_string()
+                    );
                     imageflow_context_print_and_exit_if_error(c);
                 }
                 imageflow_context_destroy(c);
@@ -1632,7 +1642,6 @@ fn test_job_with_cancellation_at_every_point() {
         }
     }
 }
-
 
 #[test]
 fn test_job_with_bad_json() {
@@ -1722,8 +1731,6 @@ fn test_get_version_info() {
 fn test_file_macro_for_this_build() {
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
 }
-
-
 
 // / Prints the error to stderr if an error has been raised on the context.
 // /

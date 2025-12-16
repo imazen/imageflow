@@ -387,7 +387,7 @@ impl MzDec {
 
         Ok(())
     }
-    
+
     #[no_mangle]
     extern "C" fn source_fill_buffer(
         codec_info: &mut mozjpeg_sys::jpeg_decompress_struct,
@@ -614,4 +614,3 @@ impl Drop for MozJpegDecoder {
         self.decoder.dispose_codec();
     }
 }
-    

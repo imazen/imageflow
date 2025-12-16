@@ -21,6 +21,7 @@ pub use lode::write_png;
 mod auto;
 mod avif_encoder;
 mod color_transform_cache;
+mod diagnostic_collector;
 mod image_png_decoder;
 mod jpeg_decoder;
 mod libpng_decoder;
@@ -28,7 +29,6 @@ mod libpng_encoder;
 mod mozjpeg;
 mod mozjpeg_decoder;
 mod mozjpeg_decoder_helpers;
-mod diagnostic_collector;
 mod webp;
 use crate::codecs::color_transform_cache::ColorTransformCache;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
@@ -302,7 +302,8 @@ impl CodecInstanceContainer {
                 Ok(())
             }
             CodecKind::Encoder(_) => {
-                let encoder_variant = std::mem::replace(&mut self.codec, CodecKind::EncoderFinished);
+                let encoder_variant =
+                    std::mem::replace(&mut self.codec, CodecKind::EncoderFinished);
                 if let CodecKind::Encoder(encoder) = encoder_variant {
                     let io = encoder.into_io().map_err(|e| e.at(here!()))?;
                     self.encode_io = Some(io);

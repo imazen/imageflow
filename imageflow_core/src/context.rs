@@ -9,8 +9,8 @@ use imageflow_types::collections::AddRemoveSet;
 use std::any::Any;
 #[cfg(debug_assertions)]
 use std::sync::atomic::AtomicI64;
-use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
 use std::sync::*;
 
@@ -78,7 +78,6 @@ impl CancellationToken {
         self.flag.store(true, Ordering::Relaxed);
     }
 
-
     #[cfg(not(debug_assertions))]
     pub fn new() -> CancellationToken {
         CancellationToken { flag: Arc::new(AtomicBool::new(false)) }
@@ -86,7 +85,10 @@ impl CancellationToken {
 
     #[cfg(debug_assertions)]
     pub fn new() -> CancellationToken {
-        CancellationToken { flag: Arc::new(AtomicBool::new(false)), poll_countdown: Arc::new(AtomicI64::new(i64::MAX)) }
+        CancellationToken {
+            flag: Arc::new(AtomicBool::new(false)),
+            poll_countdown: Arc::new(AtomicI64::new(i64::MAX)),
+        }
     }
     #[cfg(debug_assertions)]
     pub fn request_cancellation_after_n_polls(&self, cancel_after_polls: i64) {
@@ -94,9 +96,9 @@ impl CancellationToken {
         // eprintln!("Requesting cancellation after {} polls", cancel_after_polls);
         // eprintln!("Poll count remaining: {}", self.poll_countdown.load(Ordering::SeqCst));
     }
-   #[cfg(debug_assertions)]
+    #[cfg(debug_assertions)]
     pub fn request_cancellation_after_n_polls_remaining(&self) -> i64 {
-        self.poll_countdown.load( Ordering::SeqCst)
+        self.poll_countdown.load(Ordering::SeqCst)
     }
 }
 
@@ -126,7 +128,9 @@ impl ThreadSafeContext {
     pub fn create_can_panic() -> Result<Box<ThreadSafeContext>> {
         let cancellation_token = CancellationToken::new();
         Ok(Box::new(ThreadSafeContext {
-            context: std::sync::RwLock::new(Context::create_can_panic_unboxed(cancellation_token.clone())?),
+            context: std::sync::RwLock::new(Context::create_can_panic_unboxed(
+                cancellation_token.clone(),
+            )?),
             outward_error: std::sync::RwLock::new(OutwardErrorBuffer::new()),
             allocations: std::sync::Mutex::new(AllocationContainer::new()),
             cancellation_token,
@@ -146,11 +150,10 @@ impl ThreadSafeContext {
     pub fn request_cancellation_after_n_polls(&self, cancel_after_polls: i64) {
         self.cancellation_token.request_cancellation_after_n_polls(cancel_after_polls);
     }
-   #[cfg(debug_assertions)]
+    #[cfg(debug_assertions)]
     pub fn request_cancellation_after_n_polls_remaining(&self) -> i64 {
         self.cancellation_token.request_cancellation_after_n_polls_remaining()
     }
-
 
     pub fn outward_error(&self) -> RwLockReadGuard<'_, OutwardErrorBuffer> {
         self.outward_error
@@ -293,9 +296,7 @@ impl Context {
     fn default_codecs_capacity() -> usize {
         2
     }
-    fn create_can_panic_unboxed(
-        cancellation_token: CancellationToken,
-    ) -> Result<Context> {
+    fn create_can_panic_unboxed(cancellation_token: CancellationToken) -> Result<Context> {
         Ok(Context {
             debug_job_id: unsafe { JOB_ID },
             next_graph_version: 0,

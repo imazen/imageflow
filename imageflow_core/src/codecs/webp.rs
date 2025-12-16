@@ -282,7 +282,6 @@ impl Encoder for WebPEncoder {
         }
         data.add("input.has_alpha", bitmap.info().alpha_meaningful());
 
-
         let mut window = bitmap.get_window_u8().unwrap();
 
         let (w, h) = window.size_i32();
@@ -296,7 +295,6 @@ impl Encoder for WebPEncoder {
         let lossless = self.lossless.unwrap_or(false);
         let quality = self.quality.unwrap_or(85.0).clamp(0.0, 100.0);
 
-  
         data.add("params.lossless", lossless);
         data.add("params.quality", quality);
 

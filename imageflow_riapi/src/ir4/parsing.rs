@@ -237,8 +237,6 @@ pub enum ScalingColorspace {
 }
 }
 
-
-
 #[rustfmt::skip]
 
 pub static IR4_KEYS: [&str;101] = [

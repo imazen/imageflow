@@ -11,7 +11,10 @@ pub mod common;
 use crate::common::*;
 
 use imageflow_core::Context;
-use s::{Color, ColorSrgb, CommandStringKind, EncoderPreset, Execute001, Framewise, Node, PixelFormat, ResponsePayload};
+use s::{
+    Color, ColorSrgb, CommandStringKind, EncoderPreset, Execute001, Framewise, Node, PixelFormat,
+    ResponsePayload,
+};
 
 const DEBUG_GRAPH: bool = false;
 const FRYMIRE_URL: &'static str =
@@ -284,7 +287,7 @@ pub fn compare_encoded_to_source(
     )
 }
 
-// test a job that generates a canvas, encodes to a gif,  then another job decodes it. 
+// test a job that generates a canvas, encodes to a gif,  then another job decodes it.
 #[test]
 fn test_gif_roundtrip() {
     let steps = vec![
@@ -294,10 +297,7 @@ fn test_gif_roundtrip() {
             format: PixelFormat::Bgra32,
             color: Color::Srgb(ColorSrgb::Hex("FF0000FF".to_owned())),
         },
-        Node::Encode {
-            io_id: 0,       
-            preset: EncoderPreset::Gif,
-        },
+        Node::Encode { io_id: 0, preset: EncoderPreset::Gif },
     ];
     let mut ctx1 = Context::create().unwrap();
     ctx1.add_output_buffer(0).unwrap();
@@ -308,7 +308,7 @@ fn test_gif_roundtrip() {
     };
     ctx1.execute_1(execute1).unwrap();
     let bytes = ctx1.get_output_buffer_slice(0).unwrap().to_vec();
-    
+
     let mut ctx2 = Context::create().unwrap();
     ctx2.add_input_vector(0, bytes.to_vec()).unwrap();
     let execute2 = Execute001 {

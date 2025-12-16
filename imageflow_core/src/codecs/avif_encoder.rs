@@ -54,7 +54,8 @@ impl Encoder for AvifEncoder {
     ) -> Result<EncodeResult> {
         return_if_cancelled!(c);
 
-        let mut data = crate::codecs::diagnostic_collector::DiagnosticCollector::new("avif.encoder.");
+        let mut data =
+            crate::codecs::diagnostic_collector::DiagnosticCollector::new("avif.encoder.");
 
         // 1. Borrow bitmap from Context
         let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
@@ -71,14 +72,10 @@ impl Encoder for AvifEncoder {
                 .apply_matte(matte.clone())
                 .map_err(|e| e.at(here!()))?;
             bitmap.set_alpha_meaningful(!matte.is_opaque() && was_alpha_meaningful);
-        } 
+        }
         // Ensure alpha is normalized if not meaningful
         if !bitmap.info().alpha_meaningful() {
-            bitmap
-                .get_window_u8()
-                .unwrap()
-                .normalize_unused_alpha()
-                .map_err(|e| e.at(here!()))?;
+            bitmap.get_window_u8().unwrap().normalize_unused_alpha().map_err(|e| e.at(here!()))?;
         }
         data.add("input.has_alpha", &bitmap.info().alpha_meaningful());
 
@@ -119,9 +116,9 @@ impl Encoder for AvifEncoder {
 
         // 7. Create imgref with stride to handle padding
         // ravif's imgref supports stride, so we can pass the padded buffer directly
-        let img = imgref::Img::new_stride(rgba_slice, w as usize, h as usize, stride_in_pixels as usize);
+        let img =
+            imgref::Img::new_stride(rgba_slice, w as usize, h as usize, stride_in_pixels as usize);
 
-        
         // 8. Configure encoder with quality and speed settings
         let quality_value = self.quality.unwrap_or(80.0);
         let speed_value = self.speed.unwrap_or(6);
@@ -149,9 +146,9 @@ impl Encoder for AvifEncoder {
             .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "AVIF encoding failed: {:?}", e))?;
 
         // 10. Write encoded AVIF data to IoProxy
-        self.io
-            .write_all(&encoded.avif_file)
-            .map_err(|e| nerror!(ErrorKind::EncodingIoError, "Failed to write AVIF data: {:?}", e))?;
+        self.io.write_all(&encoded.avif_file).map_err(|e| {
+            nerror!(ErrorKind::EncodingIoError, "Failed to write AVIF data: {:?}", e)
+        })?;
 
         data.add("result.alpha_byte_size", &encoded.alpha_byte_size);
         data.add("result.color_byte_size", &encoded.color_byte_size);
@@ -165,7 +162,7 @@ impl Encoder for AvifEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere, // Data written to io
             preferred_extension: "avif".to_owned(),
             preferred_mime_type: "image/avif".to_owned(),
-            diagnostic_data: data.into()
+            diagnostic_data: data.into(),
         })
     }
 

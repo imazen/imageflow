@@ -67,7 +67,8 @@ impl Encoder for PngquantEncoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
-        let mut data = crate::codecs::diagnostic_collector::DiagnosticCollector::new("pngquant.encoder.");
+        let mut data =
+            crate::codecs::diagnostic_collector::DiagnosticCollector::new("pngquant.encoder.");
 
         data.add("input.has_alpha", bitmap.info().alpha_meaningful());
         if self.matte.is_some() {
@@ -80,8 +81,7 @@ impl Encoder for PngquantEncoder {
         data.add("params.quality_target", self.liq.quality().1);
         data.add("params.speed", self.liq.speed());
         data.add_debug("params.maximum_deflate", self.maximum_deflate);
-        
-       
+
         bitmap.get_window_u8().unwrap().normalize_unused_alpha().map_err(|e| e.at(here!()))?;
         let mut window = bitmap.get_window_bgra32().unwrap();
 
@@ -114,7 +114,6 @@ impl Encoder for PngquantEncoder {
 
                     let (pal, pixels) = res.remapped(&mut img).unwrap(); // could have alloc failure here, should map
 
-                    
                     data.add("result.palette_size", pal.len());
                     data.add("result.format", "png8");
                     lode::LodepngEncoder::write_png8(
@@ -138,7 +137,7 @@ impl Encoder for PngquantEncoder {
 
                     let slice_as_u8 = bytemuck::cast_slice::<rgb::RGBA8, u8>(vec.as_slice());
 
-                        lode::LodepngEncoder::write_png_auto_slice(
+                    lode::LodepngEncoder::write_png_auto_slice(
                         &mut self.io,
                         slice_as_u8,
                         w,

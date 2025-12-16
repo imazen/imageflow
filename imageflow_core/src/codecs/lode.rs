@@ -50,7 +50,8 @@ impl Encoder for LodepngEncoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
-        let mut data = crate::codecs::diagnostic_collector::DiagnosticCollector::new("lodepng.encoder.");
+        let mut data =
+            crate::codecs::diagnostic_collector::DiagnosticCollector::new("lodepng.encoder.");
 
         data.add("input.had_alpha", bitmap.info().alpha_meaningful());
         if self.matte.is_some() {
@@ -204,7 +205,7 @@ impl LodepngEncoder {
         lode.info_png_mut().color.set_bitdepth(8);
         lode.set_auto_convert(false);
 
-        // Dithered images don't filter well. The default of MINSUM, true, when used on paletted images, produces the same as ZERO, false.  
+        // Dithered images don't filter well. The default of MINSUM, true, when used on paletted images, produces the same as ZERO, false.
         lode.set_filter_strategy(lodepng::FilterStrategy::ZERO, false);
 
         if use_highest_compression.unwrap_or(false) {

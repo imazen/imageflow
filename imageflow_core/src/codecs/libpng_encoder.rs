@@ -53,7 +53,8 @@ impl Encoder for LibPngEncoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
-        let mut data = crate::codecs::diagnostic_collector::DiagnosticCollector::new("libpng.encoder.");
+        let mut data =
+            crate::codecs::diagnostic_collector::DiagnosticCollector::new("libpng.encoder.");
         data.add("input.had_alpha", &bitmap.info().alpha_meaningful());
 
         if let Some(ref matte) = self.matte {

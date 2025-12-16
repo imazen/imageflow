@@ -906,7 +906,6 @@ fn test_is_opaque() {
     assert!(!Color::Srgb(ColorSrgb::Hex("FFAAEECC".to_owned())).is_opaque());
 }
 
-
 #[test]
 fn test_color() {
     assert_eq_hex(

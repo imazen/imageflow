@@ -131,8 +131,13 @@ impl<'a> Engine<'a> {
                 {
                     self.notify_graph_complete()?;
                 }
-                return Err(nerror!(ErrorKind::InternalError, "Maximum graph passes exceeded ({}>{}). Graph:\n{:#?}",
-                 passes, self.c.max_calc_flatten_execute_passes, self.g)); 
+                return Err(nerror!(
+                    ErrorKind::InternalError,
+                    "Maximum graph passes exceeded ({}>{}). Graph:\n{:#?}",
+                    passes,
+                    self.c.max_calc_flatten_execute_passes,
+                    self.g
+                ));
             }
             self.request_decoder_commands()?;
 
@@ -238,7 +243,6 @@ impl<'a> Engine<'a> {
     }
 
     fn notify_graph_changed(&mut self) -> Result<()> {
-
         if self.c.cancellation_requested() {
             return Err(cancelled!("Cancelled within notify_graph_changed"));
         }
@@ -504,7 +508,6 @@ impl<'a> Engine<'a> {
             match next {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
-
                     let more_frames = {
                         let now = precise_time_ns();
                         let mut ctx = self.op_ctx_mut();
@@ -535,7 +538,8 @@ impl<'a> Engine<'a> {
                             }
                             ctx.weight_mut(next_ix).result = result;
                         }
-                        ctx.weight_mut(next_ix).cost.wall_ns += precise_time_ns().saturating_sub(now);
+                        ctx.weight_mut(next_ix).cost.wall_ns +=
+                            precise_time_ns().saturating_sub(now);
                         ctx.more_frames.get()
                     };
 

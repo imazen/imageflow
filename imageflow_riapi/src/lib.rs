@@ -17,9 +17,9 @@ extern crate time;
 pub mod ir4;
 pub mod sizing;
 
-pub mod version;
 #[cfg(test)]
 mod sizing_tests;
+pub mod version;
 
 #[cfg(test)]
 mod tests {

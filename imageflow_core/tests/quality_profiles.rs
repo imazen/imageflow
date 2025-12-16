@@ -149,10 +149,7 @@ struct PreScalingConfig {
 }
 
 const PRESCALING_CONFIGS: &[PreScalingConfig] = &[
-    PreScalingConfig {
-        name: "baseline",
-        encode_commands: "",
-    },
+    PreScalingConfig { name: "baseline", encode_commands: "" },
     PreScalingConfig {
         name: "sharp-mitchell",
         encode_commands: "f.sharpen=15&f.sharpen_when=downscaling&down.filter=mitchell",
@@ -208,8 +205,12 @@ impl<'a> TestVariant<'a> {
     fn description(&self) -> String {
         format!(
             "image={}, width={}@{}x, prescaling={}, qp={}, format={}",
-            self.source_image.name, self.target_width_1x, self.dpr,
-            self.prescaling.name, self.quality_profile, self.format
+            self.source_image.name,
+            self.target_width_1x,
+            self.dpr,
+            self.prescaling.name,
+            self.quality_profile,
+            self.format
         )
     }
 }
@@ -252,10 +253,7 @@ fn get_image_dimensions(source_bytes: &[u8]) -> Result<(u32, u32), FlowError> {
         .execute_1(s::Execute001 {
             security: None,
             graph_recording: None,
-            framewise: s::Framewise::Steps(vec![s::Node::Decode {
-                io_id: 0,
-                commands: None,
-            }]),
+            framewise: s::Framewise::Steps(vec![s::Node::Decode { io_id: 0, commands: None }]),
         })
         .map_err(|e| e.at(here!()))?;
 
@@ -339,8 +337,9 @@ fn create_reference_context(
         })
         .map_err(|e| e.at(here!()))?;
 
-    let key = unsafe { result_bitmap.bitmap_key(&context) }
-        .ok_or_else(|| nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get reference bitmap"))?;
+    let key = unsafe { result_bitmap.bitmap_key(&context) }.ok_or_else(|| {
+        nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get reference bitmap")
+    })?;
 
     // Get the actual dimensions of the reference bitmap
     let bitmaps = context.borrow_bitmaps().map_err(|e| e.at(here!()))?;
@@ -400,7 +399,9 @@ fn run_test_variant(
         return Err(nerror!(
             imageflow_core::ErrorKind::InvalidArgument,
             "Encode format mismatch: expected '{}' but encoder reported '{}' for command: {}",
-            expected_mime, encoded_mime_type, encode_command
+            expected_mime,
+            encoded_mime_type,
+            encode_command
         ));
     }
 
@@ -414,9 +415,7 @@ fn run_test_variant(
 
     // Step 2: Decode and resize to visual comparison dimensions using Lanczos
     let mut decode_context = Context::create().map_err(|e| e.at(here!()))?;
-    decode_context
-        .add_input_vector(0, encoded_bytes_vec)
-        .map_err(|e| e.at(here!()))?;
+    decode_context.add_input_vector(0, encoded_bytes_vec).map_err(|e| e.at(here!()))?;
 
     let mut result_bitmap = BitmapBgraContainer::empty();
 
@@ -447,11 +446,11 @@ fn run_test_variant(
 
     // Validate decoder reported the correct format (should match what we encoded)
     let decoded_mime_type = match &decode_response {
-        ResponsePayload::JobResult(job) | ResponsePayload::BuildResult(job) => {
-            job.decodes.first()
-                .map(|d| d.preferred_mime_type.clone())
-                .unwrap_or_else(|| "no_decode_result".to_string())
-        }
+        ResponsePayload::JobResult(job) | ResponsePayload::BuildResult(job) => job
+            .decodes
+            .first()
+            .map(|d| d.preferred_mime_type.clone())
+            .unwrap_or_else(|| "no_decode_result".to_string()),
         _ => "unexpected_response".to_string(),
     };
 
@@ -459,26 +458,33 @@ fn run_test_variant(
         return Err(nerror!(
             imageflow_core::ErrorKind::InvalidArgument,
             "Decode format mismatch: expected '{}' but decoder reported '{}' for format '{}'",
-            expected_mime, decoded_mime_type, variant.format
+            expected_mime,
+            decoded_mime_type,
+            variant.format
         ));
     }
 
-    let result_key = unsafe { result_bitmap.bitmap_key(&decode_context) }
-        .ok_or_else(|| nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get result bitmap"))?;
+    let result_key = unsafe { result_bitmap.bitmap_key(&decode_context) }.ok_or_else(|| {
+        nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get result bitmap")
+    })?;
 
     // Step 3: DSSIM compare using existing infrastructure
     let ctx = ChecksumCtx::visuals();
 
     // Get mutable windows for both bitmaps
     let result_bitmaps = decode_context.borrow_bitmaps().map_err(|e| e.at(here!()))?;
-    let mut result_bitmap_ref = result_bitmaps.try_borrow_mut(result_key).map_err(|e| e.at(here!()))?;
-    let mut result_window = result_bitmap_ref.get_window_u8()
-        .ok_or_else(|| nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get result window"))?;
+    let mut result_bitmap_ref =
+        result_bitmaps.try_borrow_mut(result_key).map_err(|e| e.at(here!()))?;
+    let mut result_window = result_bitmap_ref.get_window_u8().ok_or_else(|| {
+        nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get result window")
+    })?;
 
     let ref_bitmaps = reference_context.borrow_bitmaps().map_err(|e| e.at(here!()))?;
-    let mut ref_bitmap_ref = ref_bitmaps.try_borrow_mut(reference_key).map_err(|e| e.at(here!()))?;
-    let mut ref_window = ref_bitmap_ref.get_window_u8()
-        .ok_or_else(|| nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get reference window"))?;
+    let mut ref_bitmap_ref =
+        ref_bitmaps.try_borrow_mut(reference_key).map_err(|e| e.at(here!()))?;
+    let mut ref_window = ref_bitmap_ref.get_window_u8().ok_or_else(|| {
+        nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get reference window")
+    })?;
 
     // Use very loose bounds to always get the dssim value
     let compare_result = compare_bitmaps(
@@ -540,18 +546,17 @@ fn test_quality_profiles_dpr_consistency() {
             // Test all prescaling configs
             for prescaling in PRESCALING_CONFIGS {
                 // Create reference for this image + prescaling + target size combination
-                let (reference_context, reference_key, ref_width, ref_height) = match create_reference_context(
-                    &source_bytes,
-                    prescaling,
-                    target_width_1x,
-                ) {
-                    Ok(r) => r,
-                    Err(e) => {
-                        eprintln!("Failed to create reference for {} at {}px: {:?}",
-                            source_image.name, target_width_1x, e);
-                        continue;
-                    }
-                };
+                let (reference_context, reference_key, ref_width, ref_height) =
+                    match create_reference_context(&source_bytes, prescaling, target_width_1x) {
+                        Ok(r) => r,
+                        Err(e) => {
+                            eprintln!(
+                                "Failed to create reference for {} at {}px: {:?}",
+                                source_image.name, target_width_1x, e
+                            );
+                            continue;
+                        }
+                    };
 
                 for &qp in QUALITY_PROFILES {
                     for &dpr in DPR_VALUES {
@@ -678,7 +683,11 @@ fn test_quality_profiles_dpr_consistency() {
             for &format in FORMATS {
                 let qp_results: Vec<_> = in_bounds
                     .iter()
-                    .filter(|r| r.prescaling == prescaling.name && r.quality_profile == qp && r.format == format)
+                    .filter(|r| {
+                        r.prescaling == prescaling.name
+                            && r.quality_profile == qp
+                            && r.format == format
+                    })
                     .collect();
 
                 if qp_results.is_empty() {
@@ -690,7 +699,8 @@ fn test_quality_profiles_dpr_consistency() {
                 let max_dssim = dssim_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
                 let mean_dssim: f64 = dssim_values.iter().sum::<f64>() / dssim_values.len() as f64;
                 let spread = max_dssim - min_dssim;
-                let relative_spread = if mean_dssim > 0.0 { spread / mean_dssim * 100.0 } else { 0.0 };
+                let relative_spread =
+                    if mean_dssim > 0.0 { spread / mean_dssim * 100.0 } else { 0.0 };
 
                 println!(
                     "QP={:<8} Format={:<6}: mean={:.6}, spread={:.6} ({:.1}% relative)",
@@ -703,7 +713,10 @@ fn test_quality_profiles_dpr_consistency() {
 
     // Compare prescaling configs for same quality profiles (in-bounds only)
     println!("\n=== Prescaling Comparison (same QP, format, in-bounds only) ===\n");
-    println!("{:<16} {:<10} {:<8} {:<12} {:<12}", "Prescaling", "QP", "Format", "Mean DSSIM", "Mean Size");
+    println!(
+        "{:<16} {:<10} {:<8} {:<12} {:<12}",
+        "Prescaling", "QP", "Format", "Mean DSSIM", "Mean Size"
+    );
     println!("{}", "-".repeat(60));
 
     for &qp in &["medium", "high"] {
@@ -711,15 +724,21 @@ fn test_quality_profiles_dpr_consistency() {
             for prescaling in PRESCALING_CONFIGS {
                 let filtered: Vec<_> = in_bounds
                     .iter()
-                    .filter(|r| r.prescaling == prescaling.name && r.quality_profile == qp && r.format == format)
+                    .filter(|r| {
+                        r.prescaling == prescaling.name
+                            && r.quality_profile == qp
+                            && r.format == format
+                    })
                     .collect();
 
                 if filtered.is_empty() {
                     continue;
                 }
 
-                let mean_dssim: f64 = filtered.iter().map(|r| r.dssim).sum::<f64>() / filtered.len() as f64;
-                let mean_size: f64 = filtered.iter().map(|r| r.file_size as f64).sum::<f64>() / filtered.len() as f64;
+                let mean_dssim: f64 =
+                    filtered.iter().map(|r| r.dssim).sum::<f64>() / filtered.len() as f64;
+                let mean_size: f64 = filtered.iter().map(|r| r.file_size as f64).sum::<f64>()
+                    / filtered.len() as f64;
 
                 println!(
                     "{:<16} {:<10} {:<8} {:<12.6} {:<12.0}",
@@ -743,15 +762,13 @@ fn test_quality_profiles_dpr_consistency() {
     let high_count = in_bounds.iter().filter(|r| r.quality_profile == "high").count();
 
     if low_count > 0 && high_count > 0 {
-        let low_mean: f64 = in_bounds.iter()
-            .filter(|r| r.quality_profile == "low")
-            .map(|r| r.dssim)
-            .sum::<f64>() / low_count as f64;
+        let low_mean: f64 =
+            in_bounds.iter().filter(|r| r.quality_profile == "low").map(|r| r.dssim).sum::<f64>()
+                / low_count as f64;
 
-        let high_mean: f64 = in_bounds.iter()
-            .filter(|r| r.quality_profile == "high")
-            .map(|r| r.dssim)
-            .sum::<f64>() / high_count as f64;
+        let high_mean: f64 =
+            in_bounds.iter().filter(|r| r.quality_profile == "high").map(|r| r.dssim).sum::<f64>()
+                / high_count as f64;
 
         println!("Mean DSSIM for 'low' quality (in-bounds): {:.6}", low_mean);
         println!("Mean DSSIM for 'high' quality (in-bounds): {:.6}", high_mean);
@@ -776,19 +793,25 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
     let source_image = &SOURCE_IMAGES[0];
     let target_width_1x = 400;
 
-    let source_bytes = get_url_bytes_with_retry(source_image.url).expect("Failed to fetch source image");
+    let source_bytes =
+        get_url_bytes_with_retry(source_image.url).expect("Failed to fetch source image");
 
     // Get native source dimensions
-    let (source_width, source_height) = get_image_dimensions(&source_bytes).expect("Failed to get source dimensions");
+    let (source_width, source_height) =
+        get_image_dimensions(&source_bytes).expect("Failed to get source dimensions");
 
     let baseline = &PRESCALING_CONFIGS[0]; // Use baseline prescaling
     let (reference_context, reference_key, ref_width, ref_height) =
-        create_reference_context(&source_bytes, baseline, target_width_1x).expect("Failed to create reference bitmap");
+        create_reference_context(&source_bytes, baseline, target_width_1x)
+            .expect("Failed to create reference bitmap");
 
     // Report image info
     println!("\n=== Image Info ===");
     println!("Source: {} (native: {}x{})", source_image.name, source_width, source_height);
-    println!("1x target: {}px, visual comparison at {}x = {}x{}", target_width_1x, VISUAL_COMPARISON_DPR, ref_width, ref_height);
+    println!(
+        "1x target: {}px, visual comparison at {}x = {}x{}",
+        target_width_1x, VISUAL_COMPARISON_DPR, ref_width, ref_height
+    );
 
     // Use the full constants for testing
     let test_qps = QUALITY_PROFILES;
@@ -804,8 +827,10 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
     }
 
     println!("\n=== Quality Profile Results (with qp.dpr) ===\n");
-    println!("{:<10} {:<8} {:<12} {:<12} {:<10}",
-        "QP", "Format", "DSSIM Spread", "Mean DSSIM", "Mean BPP");
+    println!(
+        "{:<10} {:<8} {:<12} {:<12} {:<10}",
+        "QP", "Format", "DSSIM Spread", "Mean DSSIM", "Mean BPP"
+    );
     println!("{}", "-".repeat(60));
 
     for &qp in test_qps {
@@ -830,7 +855,14 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
                     ref_width,
                     ref_height,
                 ) {
-                    results.push((dpr, result.dssim, result.file_size, result.actual_encoded_width, result.actual_encoded_height, result.dimensions_match));
+                    results.push((
+                        dpr,
+                        result.dssim,
+                        result.file_size,
+                        result.actual_encoded_width,
+                        result.actual_encoded_height,
+                        result.dimensions_match,
+                    ));
                 }
             }
 
@@ -845,12 +877,14 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
             let mean_dssim: f64 = dssims.iter().sum::<f64>() / dssims.len() as f64;
             let spread = (max_dssim - min_dssim) / mean_dssim * 100.0;
 
-            let mean_bpp: f64 = in_bounds.iter()
-                .map(|(_, _, size, w, h, _)| calc_bpp(*size, *w, *h))
-                .sum::<f64>() / in_bounds.len() as f64;
+            let mean_bpp: f64 =
+                in_bounds.iter().map(|(_, _, size, w, h, _)| calc_bpp(*size, *w, *h)).sum::<f64>()
+                    / in_bounds.len() as f64;
 
-            println!("{:<10} {:<8} {:<12.1}% {:<12.6} {:<10.2}",
-                qp, format, spread, mean_dssim, mean_bpp);
+            println!(
+                "{:<10} {:<8} {:<12.1}% {:<12.6} {:<10.2}",
+                qp, format, spread, mean_dssim, mean_bpp
+            );
         }
     }
 
@@ -877,17 +911,30 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
                     ref_width,
                     ref_height,
                 ) {
-                    results.push((dpr, result.dssim, result.file_size, result.actual_encoded_width, result.actual_encoded_height, result.dimensions_match));
+                    results.push((
+                        dpr,
+                        result.dssim,
+                        result.file_size,
+                        result.actual_encoded_width,
+                        result.actual_encoded_height,
+                        result.dimensions_match,
+                    ));
                 }
             }
 
             println!("\n=== {} / {} ===\n", qp, format);
-            println!("{:<6} {:<12} {:<10} {:<8} {:<10} {:<10}", "DPR", "DSSIM", "Size", "BPP", "Dims", "In-Bounds");
+            println!(
+                "{:<6} {:<12} {:<10} {:<8} {:<10} {:<10}",
+                "DPR", "DSSIM", "Size", "BPP", "Dims", "In-Bounds"
+            );
             for (dpr, dssim, size, width, height, matched) in &results {
                 let bpp = calc_bpp(*size, *width, *height);
                 let dims = format!("{}x{}", width, height);
                 let bounds = if *matched { "yes" } else { "NO" };
-                println!("{:<6.2} {:<12.6} {:<10} {:<8.2} {:<10} {:<10}", dpr, dssim, size, bpp, dims, bounds);
+                println!(
+                    "{:<6.2} {:<12.6} {:<10} {:<8.2} {:<10} {:<10}",
+                    dpr, dssim, size, bpp, dims, bounds
+                );
             }
         }
     }
@@ -901,16 +948,15 @@ fn test_quality_profiles_avif() {
     let source_image = &SOURCE_IMAGES[0];
     let target_width_1x = 400;
 
-    let source_bytes = get_url_bytes_with_retry(source_image.url).expect("Failed to fetch source image");
+    let source_bytes =
+        get_url_bytes_with_retry(source_image.url).expect("Failed to fetch source image");
     let baseline = &PRESCALING_CONFIGS[0]; // Use baseline prescaling
     let (reference_context, reference_key, ref_width, ref_height) =
-        create_reference_context(&source_bytes, baseline, target_width_1x).expect("Failed to create reference bitmap");
+        create_reference_context(&source_bytes, baseline, target_width_1x)
+            .expect("Failed to create reference bitmap");
 
     println!("\n=== AVIF Quality Profile Test ===\n");
-    println!(
-        "{:<10} {:<6} {:<12} {:<12}",
-        "QP", "DPR", "DSSIM", "File Size"
-    );
+    println!("{:<10} {:<6} {:<12} {:<12}", "QP", "DPR", "DSSIM", "File Size");
     println!("{}", "-".repeat(50));
 
     for &qp in &["medium", "high"] {
@@ -935,10 +981,7 @@ fn test_quality_profiles_avif() {
                 Ok(result) => {
                     println!(
                         "{:<10} {:<6.1} {:<12.6} {:<12}",
-                        result.quality_profile,
-                        result.dpr,
-                        result.dssim,
-                        result.file_size
+                        result.quality_profile, result.dpr, result.dssim, result.file_size
                     );
                 }
                 Err(e) => {
