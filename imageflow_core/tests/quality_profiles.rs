@@ -17,14 +17,17 @@
 //!   when upscaled by the browser, so we need higher quality.
 //!
 //! Methodology:
-//! 1. Create a "perfect" reference image at the target 1x size using lossless encoding
+//! 1. Create a "perfect" reference image at visual comparison size (target_1x * VISUAL_COMPARISON_DPR)
 //! 2. For each test variant (source, size, prescaling, qp, dpr, format):
 //!    - Resize source to (target_size * dpr) pixels
 //!    - Encode with qp= and qp.dpr= parameters
 //!    - Decode the encoded bytes
-//!    - Resize back down to target_size using Lanczos (simulating human vision's
-//!      inability to distinguish sub-pixel detail)
-//!    - DSSIM compare to reference
+//!    - Resize to visual comparison size (target_1x * VISUAL_COMPARISON_DPR) using Lanczos
+//!    - DSSIM compare to reference at this consistent visual density
+//!
+//! Visual comparison density: Using a constant comparison size (e.g., 3x) ensures that
+//! quality differences are measured at a resolution where they're perceptually significant.
+//! Lower DPR images get upscaled, higher DPR images get downscaled to this common size.
 //!
 //! Expected outcome: For a given quality profile, the DSSIM should be relatively
 //! consistent across DPR values, validating that the DPR adjustment algorithm
@@ -122,38 +125,37 @@ const QUALITY_PROFILES: &[&str] = &[
 /// These simulate different device pixel ratios
 const DPR_VALUES: &[f32] = &[1.0, 1.5, 2.0, 3.0, 3.875, 4.0];
 
+/// Visual comparison density multiplier
+/// All DSSIM comparisons are performed at (target_width_1x * VISUAL_COMPARISON_DPR) resolution.
+/// This simulates viewing the image at a consistent pixel density regardless of the encoded DPR.
+/// Using 3x means we compare at "retina" resolution where quality differences are more visible.
+const VISUAL_COMPARISON_DPR: f32 = 3.0;
+
 /// Output formats to test (used with format= parameter)
+/// Note: PNG excluded - it's lossless so qp.dpr has no effect
 const FORMATS: &[&str] = &["jpg", "webp"];
 
 //=============================================================================
 // Test Configuration: Pre-scaling (resize filter and sharpening)
 //=============================================================================
 
-/// Pre-scaling configuration: commands applied during reference, encoding, and decoding
+/// Pre-scaling configuration: commands applied during encoding
 #[derive(Debug, Clone)]
 struct PreScalingConfig {
     /// Name of this configuration
     name: &'static str,
-    /// Commands for creating the reference image (should match decode for fair comparison)
-    reference_commands: &'static str,
     /// Commands applied during encoding (e.g., sharpening, filter selection)
     encode_commands: &'static str,
-    /// Commands applied during decode/resize to reference size (simulating human vision)
-    decode_commands: &'static str,
 }
 
 const PRESCALING_CONFIGS: &[PreScalingConfig] = &[
     PreScalingConfig {
         name: "baseline",
-        reference_commands: "down.filter=lanczos",
         encode_commands: "",
-        decode_commands: "down.filter=lanczos",
     },
     PreScalingConfig {
         name: "sharp-mitchell",
-        reference_commands: "down.filter=lanczos",
         encode_commands: "f.sharpen=15&f.sharpen_when=downscaling&down.filter=mitchell",
-        decode_commands: "down.filter=lanczos",
     },
 ];
 
@@ -197,19 +199,6 @@ impl<'a> TestVariant<'a> {
         cmd
     }
 
-    /// Build the decode command string for resizing back to reference dimensions
-    fn build_decode_command(&self, ref_width: u32, ref_height: u32) -> String {
-        let mut cmd = format!("width={}&height={}&mode=stretch", ref_width, ref_height);
-
-        // Add prescaling decode commands if any
-        if !self.prescaling.decode_commands.is_empty() {
-            cmd.push('&');
-            cmd.push_str(self.prescaling.decode_commands);
-        }
-
-        cmd
-    }
-
     /// Get the expected encoded width in pixels
     fn encoded_width(&self) -> u32 {
         (self.target_width_1x as f32 * self.dpr) as u32
@@ -222,23 +211,6 @@ impl<'a> TestVariant<'a> {
             self.source_image.name, self.target_width_1x, self.dpr,
             self.prescaling.name, self.quality_profile, self.format
         )
-    }
-
-    /// Build encode command WITHOUT qp.dpr= hint (for comparison testing)
-    /// Uses dpr= for width calculation, but omits qp.dpr= so quality is not DPR-adjusted
-    fn build_encode_command_no_dpr_hint(&self) -> String {
-        let mut cmd = format!(
-            "width={}&dpr={}&format={}&qp={}",
-            self.target_width_1x, self.dpr, self.format, self.quality_profile
-        );
-
-        // Add prescaling encode commands if any
-        if !self.prescaling.encode_commands.is_empty() {
-            cmd.push('&');
-            cmd.push_str(self.prescaling.encode_commands);
-        }
-
-        cmd
     }
 }
 
@@ -314,6 +286,8 @@ struct QualityTestResult {
     expected_encoded_width: u32,
     /// Actual width of the encoded image (from encoder response)
     actual_encoded_width: u32,
+    /// Actual height of the encoded image (from encoder response)
+    actual_encoded_height: u32,
     /// True if actual dimensions match expected (within bounds)
     dimensions_match: bool,
     /// Validated: the encoder reported this MIME type
@@ -322,11 +296,11 @@ struct QualityTestResult {
     decoded_mime_type: String,
 }
 
-/// Create the reference bitmap at 1x target size (high quality, uncompressed)
+/// Create the reference bitmap at visual comparison size (target_width_1x * VISUAL_COMPARISON_DPR)
 /// Returns (context, bitmap_key, width, height)
 fn create_reference_context(
     source_bytes: &[u8],
-    prescaling: &PreScalingConfig,
+    _prescaling: &PreScalingConfig,
     target_width_1x: u32,
 ) -> Result<(Box<Context>, imageflow_core::BitmapKey, u32, u32), FlowError> {
     let mut context = Context::create().map_err(|e| e.at(here!()))?;
@@ -334,26 +308,32 @@ fn create_reference_context(
 
     let mut result_bitmap = BitmapBgraContainer::empty();
 
-    // Use highest quality settings for reference - no lossy encoding
-    // Use reference_commands from prescaling config (typically down.filter=lanczos)
-    let command = if prescaling.reference_commands.is_empty() {
-        format!("width={}", target_width_1x)
-    } else {
-        format!("width={}&{}", target_width_1x, prescaling.reference_commands)
-    };
+    // Reference is created at visual comparison size (target_width * VISUAL_COMPARISON_DPR)
+    let comparison_width = (target_width_1x as f32 * VISUAL_COMPARISON_DPR) as u32;
 
+    // Use explicit Decode + Constrain with Lanczos for highest quality reference (no sharpening)
     context
         .execute_1(s::Execute001 {
             security: None,
             graph_recording: None,
             framewise: s::Framewise::Steps(vec![
-                Node::CommandString {
-                    kind: CommandStringKind::ImageResizer4,
-                    value: command,
-                    decode: Some(0),
-                    encode: None,
-                    watermarks: None,
-                },
+                Node::Decode { io_id: 0, commands: None },
+                Node::Constrain(s::Constraint {
+                    mode: s::ConstraintMode::Within,
+                    w: Some(comparison_width),
+                    h: None,
+                    hints: Some(s::ResampleHints {
+                        sharpen_percent: Some(0.0),
+                        down_filter: Some(s::Filter::Lanczos),
+                        up_filter: Some(s::Filter::Lanczos),
+                        scaling_colorspace: None,
+                        background_color: None,
+                        resample_when: None,
+                        sharpen_when: None,
+                    }),
+                    gravity: None,
+                    canvas_color: None,
+                }),
                 unsafe { result_bitmap.as_mut().get_node() },
             ]),
         })
@@ -404,15 +384,15 @@ fn run_test_variant(
         .map_err(|e| e.at(here!()))?;
 
     // Extract encoder results: MIME type and actual dimensions
-    let (encoded_mime_type, actual_encoded_width) = match &encode_response {
+    let (encoded_mime_type, actual_encoded_width, actual_encoded_height) = match &encode_response {
         ResponsePayload::JobResult(job) | ResponsePayload::BuildResult(job) => {
             if let Some(enc) = job.encodes.first() {
-                (enc.preferred_mime_type.clone(), enc.w as u32)
+                (enc.preferred_mime_type.clone(), enc.w as u32, enc.h as u32)
             } else {
-                ("no_encode_result".to_string(), 0)
+                ("no_encode_result".to_string(), 0, 0)
             }
         }
-        _ => ("unexpected_response".to_string(), 0),
+        _ => ("unexpected_response".to_string(), 0, 0),
     };
 
     let expected_mime = expected_mime_type(variant.format);
@@ -432,26 +412,33 @@ fn run_test_variant(
     let file_size = encoded_bytes.len();
     let encoded_bytes_vec = encoded_bytes.to_vec();
 
-    // Step 2: Decode and resize back to reference dimensions (simulating human vision)
+    // Step 2: Decode and resize to visual comparison dimensions using Lanczos
     let mut decode_context = Context::create().map_err(|e| e.at(here!()))?;
     decode_context
         .add_input_vector(0, encoded_bytes_vec)
         .map_err(|e| e.at(here!()))?;
 
     let mut result_bitmap = BitmapBgraContainer::empty();
-    let decode_command = variant.build_decode_command(ref_width, ref_height);
 
+    // Use explicit Decode + Resample2D nodes for precise control over resize
     let decode_response = decode_context
         .execute_1(s::Execute001 {
             security: None,
             graph_recording: None,
             framewise: s::Framewise::Steps(vec![
-                Node::CommandString {
-                    kind: CommandStringKind::ImageResizer4,
-                    value: decode_command,
-                    decode: Some(0),
-                    encode: None,
-                    watermarks: None,
+                Node::Decode { io_id: 0, commands: None },
+                Node::Resample2D {
+                    w: ref_width,
+                    h: ref_height,
+                    hints: Some(s::ResampleHints {
+                        sharpen_percent: Some(0.0),
+                        down_filter: Some(s::Filter::Lanczos),
+                        up_filter: Some(s::Filter::Lanczos),
+                        scaling_colorspace: None,
+                        background_color: None,
+                        resample_when: None,
+                        sharpen_when: None,
+                    }),
                 },
                 unsafe { result_bitmap.as_mut().get_node() },
             ]),
@@ -515,6 +502,7 @@ fn run_test_variant(
         file_size,
         expected_encoded_width,
         actual_encoded_width,
+        actual_encoded_height,
         dimensions_match,
         encoded_mime_type,
         decoded_mime_type,
@@ -789,39 +777,42 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
     let target_width_1x = 400;
 
     let source_bytes = get_url_bytes_with_retry(source_image.url).expect("Failed to fetch source image");
+
+    // Get native source dimensions
+    let (source_width, source_height) = get_image_dimensions(&source_bytes).expect("Failed to get source dimensions");
+
     let baseline = &PRESCALING_CONFIGS[0]; // Use baseline prescaling
     let (reference_context, reference_key, ref_width, ref_height) =
         create_reference_context(&source_bytes, baseline, target_width_1x).expect("Failed to create reference bitmap");
 
-    // Test multiple quality profiles and formats
-    let test_qps = &["low", "medium", "high"];
-    let test_formats = FORMATS;
+    // Report image info
+    println!("\n=== Image Info ===");
+    println!("Source: {} (native: {}x{})", source_image.name, source_width, source_height);
+    println!("1x target: {}px, visual comparison at {}x = {}x{}", target_width_1x, VISUAL_COMPARISON_DPR, ref_width, ref_height);
 
-    // Calculate spread helper
-    fn calc_spread(values: &[(f32, f64, usize, bool)]) -> (f64, f64, f64, f64, usize) {
-        let in_bounds: Vec<_> = values.iter().filter(|(_, _, _, m)| *m).collect();
-        if in_bounds.is_empty() {
-            return (0.0, 0.0, 0.0, 0.0, 0);
+    // Use the full constants for testing
+    let test_qps = QUALITY_PROFILES;
+    let test_formats = FORMATS;
+    let test_dprs = DPR_VALUES;
+
+    // Helper to calculate bpp
+    fn calc_bpp(file_size: usize, width: u32, height: u32) -> f64 {
+        if width == 0 || height == 0 {
+            return 0.0;
         }
-        let dssims: Vec<f64> = in_bounds.iter().map(|(_, d, _, _)| *d).collect();
-        let min = dssims.iter().cloned().fold(f64::INFINITY, f64::min);
-        let max = dssims.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        let mean: f64 = dssims.iter().sum::<f64>() / dssims.len() as f64;
-        let spread = max - min;
-        let relative_spread = if mean > 0.0 { spread / mean * 100.0 } else { 0.0 };
-        (min, max, mean, relative_spread, in_bounds.len())
+        (file_size as f64 * 8.0) / (width as f64 * height as f64)
     }
 
-    println!("\n=== DPR Adjustment Analysis ===\n");
-    println!("{:<8} {:<8} {:<12} {:<12} {:<12} {:<12} {:<8}",
-        "QP", "Format", "WITH Spread", "W/O Spread", "WITH Mean", "W/O Mean", "Better?");
-    println!("{}", "-".repeat(80));
+    println!("\n=== Quality Profile Results (with qp.dpr) ===\n");
+    println!("{:<10} {:<8} {:<12} {:<12} {:<10}",
+        "QP", "Format", "DSSIM Spread", "Mean DSSIM", "Mean BPP");
+    println!("{}", "-".repeat(60));
 
     for &qp in test_qps {
         for &format in test_formats {
-            // Test WITH qp.dpr adjustment
-            let mut with_results: Vec<(f32, f64, usize, bool)> = Vec::new();
-            for &dpr in DPR_VALUES {
+            let mut results: Vec<(f32, f64, usize, u32, u32, bool)> = Vec::new();
+
+            for &dpr in test_dprs {
                 let variant = TestVariant {
                     source_image,
                     target_width_1x,
@@ -839,13 +830,36 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
                     ref_width,
                     ref_height,
                 ) {
-                    with_results.push((dpr, result.dssim, result.file_size, result.dimensions_match));
+                    results.push((dpr, result.dssim, result.file_size, result.actual_encoded_width, result.actual_encoded_height, result.dimensions_match));
                 }
             }
 
-            // Test WITHOUT qp.dpr adjustment
-            let mut without_results: Vec<(f32, f64, usize, bool)> = Vec::new();
-            for &dpr in DPR_VALUES {
+            // Calculate stats
+            let in_bounds: Vec<_> = results.iter().filter(|(_, _, _, _, _, m)| *m).collect();
+            if in_bounds.is_empty() {
+                continue;
+            }
+            let dssims: Vec<f64> = in_bounds.iter().map(|(_, d, _, _, _, _)| *d).collect();
+            let min_dssim = dssims.iter().cloned().fold(f64::INFINITY, f64::min);
+            let max_dssim = dssims.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let mean_dssim: f64 = dssims.iter().sum::<f64>() / dssims.len() as f64;
+            let spread = (max_dssim - min_dssim) / mean_dssim * 100.0;
+
+            let mean_bpp: f64 = in_bounds.iter()
+                .map(|(_, _, size, w, h, _)| calc_bpp(*size, *w, *h))
+                .sum::<f64>() / in_bounds.len() as f64;
+
+            println!("{:<10} {:<8} {:<12.1}% {:<12.6} {:<10.2}",
+                qp, format, spread, mean_dssim, mean_bpp);
+        }
+    }
+
+    // Detailed output for all qp/format combinations
+    for &qp in test_qps {
+        for &format in test_formats {
+            let mut results: Vec<(f32, f64, usize, u32, u32, bool)> = Vec::new();
+
+            for &dpr in test_dprs {
                 let variant = TestVariant {
                     source_image,
                     target_width_1x,
@@ -855,7 +869,7 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
                     format,
                 };
 
-                if let Ok(result) = run_test_variant_no_dpr_hint(
+                if let Ok(result) = run_test_variant(
                     &source_bytes,
                     &variant,
                     &reference_context,
@@ -863,272 +877,20 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
                     ref_width,
                     ref_height,
                 ) {
-                    without_results.push((dpr, result.dssim, result.file_size, result.dimensions_match));
+                    results.push((dpr, result.dssim, result.file_size, result.actual_encoded_width, result.actual_encoded_height, result.dimensions_match));
                 }
             }
 
-            let (_, _, with_mean, with_spread, _) = calc_spread(&with_results);
-            let (_, _, without_mean, without_spread, _) = calc_spread(&without_results);
-
-            let better = if with_spread < without_spread { "YES" } else { "no" };
-
-            println!("{:<8} {:<8} {:<12.1}% {:<12.1}% {:<12.6} {:<12.6} {:<8}",
-                qp, format, with_spread, without_spread, with_mean, without_mean, better);
-        }
-    }
-
-    // Detailed output for medium/jpg
-    let qp = "medium";
-    let format = "jpg";
-
-    let mut with_dpr_adjustment: Vec<(f32, f64, usize, bool)> = Vec::new();
-    for &dpr in DPR_VALUES {
-        let variant = TestVariant {
-            source_image,
-            target_width_1x,
-            prescaling: baseline,
-            quality_profile: qp,
-            dpr,
-            format,
-        };
-
-        if let Ok(result) = run_test_variant(
-            &source_bytes,
-            &variant,
-            &reference_context,
-            reference_key,
-            ref_width,
-            ref_height,
-        ) {
-            if !result.dimensions_match {
-                eprintln!("  [OUT OF BOUNDS] dpr={}: expected {}px, got {}px",
-                    dpr, result.expected_encoded_width, result.actual_encoded_width);
-            }
-            with_dpr_adjustment.push((dpr, result.dssim, result.file_size, result.dimensions_match));
-        }
-    }
-
-    let mut without_dpr_adjustment: Vec<(f32, f64, usize, bool)> = Vec::new();
-    for &dpr in DPR_VALUES {
-        let variant = TestVariant {
-            source_image,
-            target_width_1x,
-            prescaling: baseline,
-            quality_profile: qp,
-            dpr,
-            format,
-        };
-
-        if let Ok(result) = run_test_variant_no_dpr_hint(
-            &source_bytes,
-            &variant,
-            &reference_context,
-            reference_key,
-            ref_width,
-            ref_height,
-        ) {
-            without_dpr_adjustment.push((dpr, result.dssim, result.file_size, result.dimensions_match));
-        }
-    }
-
-    println!("\n=== Detailed: {} / {} ===\n", qp, format);
-    println!("WITH qp.dpr adjustment:");
-    println!("{:<8} {:<12} {:<12} {:<10}", "DPR", "DSSIM", "File Size", "In-Bounds");
-    for (dpr, dssim, size, matched) in &with_dpr_adjustment {
-        println!("{:<8.2} {:<12.6} {:<12} {:<10}", dpr, dssim, size, if *matched { "yes" } else { "NO" });
-    }
-
-    println!("\nWITHOUT qp.dpr adjustment:");
-    println!("{:<8} {:<12} {:<12} {:<10}", "DPR", "DSSIM", "File Size", "In-Bounds");
-    for (dpr, dssim, size, matched) in &without_dpr_adjustment {
-        println!("{:<8.2} {:<12.6} {:<12} {:<10}", dpr, dssim, size, if *matched { "yes" } else { "NO" });
-    }
-
-    let (_, _, with_mean, with_spread, _) = calc_spread(&with_dpr_adjustment);
-    let (_, _, without_mean, without_spread, _) = calc_spread(&without_dpr_adjustment);
-
-    println!("\n=== Spread Comparison ===");
-    println!("WITH qp.dpr:    mean={:.6}, spread={:.1}%", with_mean, with_spread);
-    println!("WITHOUT qp.dpr: mean={:.6}, spread={:.1}%", without_mean, without_spread);
-
-    // Calculate file size savings
-    let with_total_size: usize = with_dpr_adjustment.iter().map(|(_, _, s, _)| s).sum();
-    let without_total_size: usize = without_dpr_adjustment.iter().map(|(_, _, s, _)| s).sum();
-    let size_savings = 100.0 * (1.0 - with_total_size as f64 / without_total_size as f64);
-
-    println!("\n=== File Size Impact ===");
-    println!("Total file size WITH adjustment: {} bytes", with_total_size);
-    println!("Total file size WITHOUT adjustment: {} bytes", without_total_size);
-    println!("Size savings from DPR adjustment: {:.1}%", size_savings);
-
-    println!("\n=== Interpretation ===");
-    println!("The current DPR adjustment reduces quality at higher DPR to save file size.");
-    println!("After downsampling (simulating human perception), the DSSIM varies by {:.1}%.", with_spread);
-    println!("For comparison, without adjustment the spread would be {:.1}%.", without_spread);
-
-    if with_spread < without_spread {
-        println!("The DPR adjustment IMPROVES perceptual consistency (lower spread).");
-    } else {
-        println!("The DPR adjustment does NOT improve perceptual consistency (higher spread).");
-        println!("This suggests the quality_factor formula may need tuning.");
-    }
-
-    // Don't fail the test - this is exploratory analysis
-    // The assertion below is for detecting major regressions only
-    assert!(
-        with_mean < 0.1,
-        "Mean DSSIM should be reasonable (< 0.1). Got: {:.6}",
-        with_mean
-    );
-}
-
-/// Run test variant WITHOUT qp.dpr hint - uses base quality profile only
-fn run_test_variant_no_dpr_hint(
-    source_bytes: &[u8],
-    variant: &TestVariant,
-    reference_context: &Context,
-    reference_key: imageflow_core::BitmapKey,
-    ref_width: u32,
-    ref_height: u32,
-) -> Result<QualityTestResult, FlowError> {
-    // Encode WITHOUT qp.dpr hint
-    let mut encode_context = Context::create().map_err(|e| e.at(here!()))?;
-    encode_context.add_input_vector(0, source_bytes.to_vec()).map_err(|e| e.at(here!()))?;
-    encode_context.add_output_buffer(1).map_err(|e| e.at(here!()))?;
-
-    // Build command without qp.dpr parameter
-    let encode_command = variant.build_encode_command_no_dpr_hint();
-
-    let encode_response = encode_context
-        .execute_1(s::Execute001 {
-            security: None,
-            graph_recording: None,
-            framewise: s::Framewise::Steps(vec![Node::CommandString {
-                kind: CommandStringKind::ImageResizer4,
-                value: encode_command.clone(),
-                decode: Some(0),
-                encode: Some(1),
-                watermarks: None,
-            }]),
-        })
-        .map_err(|e| e.at(here!()))?;
-
-    // Extract encoder results: MIME type and actual dimensions
-    let (encoded_mime_type, actual_encoded_width) = match &encode_response {
-        ResponsePayload::JobResult(job) | ResponsePayload::BuildResult(job) => {
-            if let Some(enc) = job.encodes.first() {
-                (enc.preferred_mime_type.clone(), enc.w as u32)
-            } else {
-                ("no_encode_result".to_string(), 0)
+            println!("\n=== {} / {} ===\n", qp, format);
+            println!("{:<6} {:<12} {:<10} {:<8} {:<10} {:<10}", "DPR", "DSSIM", "Size", "BPP", "Dims", "In-Bounds");
+            for (dpr, dssim, size, width, height, matched) in &results {
+                let bpp = calc_bpp(*size, *width, *height);
+                let dims = format!("{}x{}", width, height);
+                let bounds = if *matched { "yes" } else { "NO" };
+                println!("{:<6.2} {:<12.6} {:<10} {:<8.2} {:<10} {:<10}", dpr, dssim, size, bpp, dims, bounds);
             }
         }
-        _ => ("unexpected_response".to_string(), 0),
-    };
-
-    let expected_mime = expected_mime_type(variant.format);
-    if encoded_mime_type != expected_mime {
-        return Err(nerror!(
-            imageflow_core::ErrorKind::InvalidArgument,
-            "Encode format mismatch: expected '{}' but encoder reported '{}' for command: {}",
-            expected_mime, encoded_mime_type, encode_command
-        ));
     }
-
-    // Check if actual dimensions match expected
-    let expected_encoded_width = variant.encoded_width();
-    let dimensions_match = actual_encoded_width == expected_encoded_width;
-
-    let encoded_bytes = encode_context.get_output_buffer_slice(1).map_err(|e| e.at(here!()))?;
-    let file_size = encoded_bytes.len();
-    let encoded_bytes_vec = encoded_bytes.to_vec();
-
-    // Decode and resize back to reference dimensions (for DSSIM comparison)
-    let mut decode_context = Context::create().map_err(|e| e.at(here!()))?;
-    decode_context
-        .add_input_vector(0, encoded_bytes_vec)
-        .map_err(|e| e.at(here!()))?;
-
-    let mut result_bitmap = BitmapBgraContainer::empty();
-    // Apply perceptual-match decode commands (simulating human vision)
-    // Use exact reference dimensions to ensure DSSIM comparison works
-    let decode_command = variant.build_decode_command(ref_width, ref_height);
-
-    let decode_response = decode_context
-        .execute_1(s::Execute001 {
-            security: None,
-            graph_recording: None,
-            framewise: s::Framewise::Steps(vec![
-                Node::CommandString {
-                    kind: CommandStringKind::ImageResizer4,
-                    value: decode_command,
-                    decode: Some(0),
-                    encode: None,
-                    watermarks: None,
-                },
-                unsafe { result_bitmap.as_mut().get_node() },
-            ]),
-        })
-        .map_err(|e| e.at(here!()))?;
-
-    // Validate decoder reported the correct format
-    let decoded_mime_type = match &decode_response {
-        ResponsePayload::JobResult(job) | ResponsePayload::BuildResult(job) => {
-            job.decodes.first()
-                .map(|d| d.preferred_mime_type.clone())
-                .unwrap_or_else(|| "no_decode_result".to_string())
-        }
-        _ => "unexpected_response".to_string(),
-    };
-
-    if decoded_mime_type != expected_mime {
-        return Err(nerror!(
-            imageflow_core::ErrorKind::InvalidArgument,
-            "Decode format mismatch: expected '{}' but decoder reported '{}' for format '{}'",
-            expected_mime, decoded_mime_type, variant.format
-        ));
-    }
-
-    let result_key = unsafe { result_bitmap.bitmap_key(&decode_context) }
-        .ok_or_else(|| nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get result bitmap"))?;
-
-    // DSSIM compare
-    let ctx = ChecksumCtx::visuals();
-
-    let result_bitmaps = decode_context.borrow_bitmaps().map_err(|e| e.at(here!()))?;
-    let mut result_bitmap_ref = result_bitmaps.try_borrow_mut(result_key).map_err(|e| e.at(here!()))?;
-    let mut result_window = result_bitmap_ref.get_window_u8()
-        .ok_or_else(|| nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get result window"))?;
-
-    let ref_bitmaps = reference_context.borrow_bitmaps().map_err(|e| e.at(here!()))?;
-    let mut ref_bitmap_ref = ref_bitmaps.try_borrow_mut(reference_key).map_err(|e| e.at(here!()))?;
-    let mut ref_window = ref_bitmap_ref.get_window_u8()
-        .ok_or_else(|| nerror!(imageflow_core::ErrorKind::InternalError, "Failed to get reference window"))?;
-
-    let compare_result = compare_bitmaps(
-        &ctx,
-        &mut result_window,
-        &mut ref_window,
-        Similarity::AllowDssimMatch(0.0, 10.0),
-        false,
-    );
-
-    let dssim = compare_result.dssim.unwrap_or(0.0);
-
-    Ok(QualityTestResult {
-        source_image: variant.source_image.name.to_string(),
-        target_width_1x: variant.target_width_1x,
-        prescaling: variant.prescaling.name.to_string(),
-        quality_profile: variant.quality_profile.to_string(),
-        dpr: variant.dpr,
-        format: variant.format.to_string(),
-        dssim,
-        file_size,
-        expected_encoded_width,
-        actual_encoded_width,
-        dimensions_match,
-        encoded_mime_type,
-        decoded_mime_type,
-    })
 }
 
 /// Test with AVIF format (slower, run separately)
