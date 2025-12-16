@@ -992,234 +992,423 @@ fn test_quality_profiles_avif() {
     }
 }
 
+/// Helper function to print QP mapping and adjustment factor tables
+fn print_qp_tables(
+    title: &str,
+    dssim_cache: &std::collections::HashMap<(u32, usize), f64>,
+    dpr_values: &[f32],
+    reference_qps: &[u32],
+    qp_values: &[u32],
+    ref_dpr_idx: usize,
+) {
+    println!("\n--- {} ---", title);
+    println!("\nOptimal QP Mapping (QP at DPR -> adjusted QP to match DPR={} quality)\n",
+        dpr_values[ref_dpr_idx]);
+
+    print!("{:<6}", "QP\\DPR");
+    for &dpr in dpr_values {
+        print!(" {:>5.1}", dpr);
+    }
+    println!();
+    println!("{}", "-".repeat(6 + dpr_values.len() * 6));
+
+    let mut best_qps: std::collections::HashMap<(u32, usize), u32> = std::collections::HashMap::new();
+
+    for &ref_qp in reference_qps {
+        let target_dssim = match dssim_cache.get(&(ref_qp, ref_dpr_idx)) {
+            Some(&d) => d,
+            None => {
+                println!("{:<6} (skipped - no data)", ref_qp);
+                continue;
+            }
+        };
+
+        print!("{:<6}", ref_qp);
+
+        for (dpr_idx, &_dpr) in dpr_values.iter().enumerate() {
+            if dpr_idx == ref_dpr_idx {
+                print!(" {:>5}", ref_qp);
+                best_qps.insert((ref_qp, dpr_idx), ref_qp);
+                continue;
+            }
+
+            // Check if we have any data for this DPR
+            let has_data = qp_values.iter().any(|&qp| dssim_cache.contains_key(&(qp, dpr_idx)));
+            if !has_data {
+                print!(" {:>5}", "-");
+                continue;
+            }
+
+            // Find qp with closest DSSIM to target
+            let mut best_qp = ref_qp;
+            let mut best_diff = f64::INFINITY;
+
+            for &qp in qp_values {
+                if let Some(&dssim) = dssim_cache.get(&(qp, dpr_idx)) {
+                    let diff = (dssim - target_dssim).abs();
+                    if diff < best_diff {
+                        best_diff = diff;
+                        best_qp = qp;
+                    }
+                }
+            }
+
+            print!(" {:>5}", best_qp);
+            best_qps.insert((ref_qp, dpr_idx), best_qp);
+        }
+        println!();
+    }
+
+    // Print adjustment factors
+    println!("\nAdjustment Factors (adjusted_qp / original_qp)\n");
+    print!("{:<6}", "QP\\DPR");
+    for &dpr in dpr_values {
+        print!(" {:>5.1}", dpr);
+    }
+    println!();
+    println!("{}", "-".repeat(6 + dpr_values.len() * 6));
+
+    for &ref_qp in reference_qps {
+        if !dssim_cache.contains_key(&(ref_qp, ref_dpr_idx)) {
+            continue;
+        }
+
+        print!("{:<6}", ref_qp);
+
+        for (dpr_idx, _) in dpr_values.iter().enumerate() {
+            if let Some(&best_qp) = best_qps.get(&(ref_qp, dpr_idx)) {
+                let factor = best_qp as f64 / ref_qp as f64;
+                print!(" {:>5.2}", factor);
+            } else {
+                print!(" {:>5}", "-");
+            }
+        }
+        println!();
+    }
+}
+
 /// Calibration test: find the optimal qp adjustment for each DPR to match reference quality at DPR=3
 ///
 /// This test builds a mapping table: for each (reference_qp, dpr) -> best_adjusted_qp
 /// The reference point is DPR=3.0 (our visual comparison density).
+///
+/// Optimizations:
+/// - Uses multiple source images and averages results
+/// - Tests odd QP values only (1, 3, 5, ..., 99) for 2x speedup
+/// - Uses 0.5 DPR intervals instead of 0.25 for 2x speedup
+/// - Parallelizes across DPR values using threads
 #[test]
 fn test_calibrate_qp_dpr_mapping() {
     use std::collections::HashMap;
     use std::io::Write;
     use std::fs::File;
+    use std::sync::{Arc, Mutex};
+    use std::thread;
 
-    let source_image = &SOURCE_IMAGES[0]; // waterhouse
     let target_width_1x = 400;
 
-    let source_bytes = get_url_bytes_with_retry(source_image.url)
-        .expect("Failed to fetch source image");
+    // Use multiple images for more robust calibration
+    // We'll filter by width after fetching since SourceImage doesn't store dimensions
+    let test_images: Vec<_> = SOURCE_IMAGES.iter()
+        .take(6) // Test up to 6 images, filter by dimension after fetch
+        .collect();
 
-    let (source_width, source_height) = get_image_dimensions(&source_bytes)
-        .expect("Failed to get source dimensions");
-
-    let baseline = &PRESCALING_CONFIGS[0];
-    let (reference_context, reference_key, ref_width, ref_height) =
-        create_reference_context(&source_bytes, baseline, target_width_1x)
-            .expect("Failed to create reference bitmap");
-
-    // Open log file
-    let mut log_file = File::create("/tmp/qp_calibration_log.csv")
-        .expect("Failed to create log file");
-    writeln!(log_file, "format,dpr,encoded_width,qp,dssim").ok();
-
-    println!("\n=== QP-DPR Calibration Test ===");
-    println!("Source: {} ({}x{})", source_image.name, source_width, source_height);
-    println!("1x target: {}px, comparison at {}x = {}x{}",
-        target_width_1x, VISUAL_COMPARISON_DPR, ref_width, ref_height);
-    println!("Logging raw DSSIM values to /tmp/qp_calibration_log.csv");
+    println!("\n=== QP-DPR Calibration Test (Multi-threaded) ===");
+    println!("Testing {} images: {}", test_images.len(),
+        test_images.iter().map(|i| i.name).collect::<Vec<_>>().join(", "));
 
     // Reference quality values (corresponding to named profiles)
-    // lowest=15, low=20, mediumlow=34, medium=55, good=73, high=91, highest=96
-    let reference_qps: &[u32] = &[15, 20, 34, 55, 73, 91, 96];
+    let reference_qps: &[u32] = &[15, 21, 35, 55, 73, 91, 95]; // Use odd values close to profiles
 
-    // DPR range: 0.25 to 5.0 in 0.25 increments (limited to avoid upscaling with 2048px source)
-    let dpr_values: Vec<f32> = (1..=20).map(|i| i as f32 * 0.25).collect();
+    // DPR range: 0.5 to 5.0 in 0.5 increments
+    let dpr_values: Vec<f32> = (1..=10).map(|i| i as f32 * 0.5).collect();
+
+    // QP values to test: odd numbers only for speed
+    let qp_values: Vec<u32> = (1..=99).step_by(2).collect();
 
     // Reference DPR (the baseline we're calibrating against)
     let reference_dpr: f32 = 3.0;
+    let ref_dpr_idx = dpr_values.iter().position(|&d| (d - reference_dpr).abs() < 0.01)
+        .expect("Reference DPR not in list");
+
+    // Open log file in current directory
+    let log_file = Arc::new(Mutex::new(
+        File::create("qp_calibration_log.csv").expect("Failed to create log file")
+    ));
+    {
+        let mut f = log_file.lock().unwrap();
+        writeln!(f, "image,format,dpr,encoded_width,qp,dssim").ok();
+    }
+
+    println!("DPR values: {:?}", dpr_values);
+    println!("Testing {} QP values (odd only)", qp_values.len());
+    println!("Reference DPR: {}", reference_dpr);
 
     // Test each format
     for format in FORMATS {
         println!("\n=== Format: {} ===", format);
 
-        // Cache: (qp, dpr_index) -> dssim
-        // Pre-compute all DSSIM values for this format to avoid redundant encodes
-        let mut dssim_cache: HashMap<(u32, usize), f64> = HashMap::new();
+        // Aggregated cache across all images: (qp, dpr_index) -> Vec<dssim>
+        let aggregated_cache: Arc<Mutex<HashMap<(u32, usize), Vec<f64>>>> =
+            Arc::new(Mutex::new(HashMap::new()));
 
-        println!("Pre-computing DSSIM values...");
-        for (dpr_idx, &dpr) in dpr_values.iter().enumerate() {
-            let encoded_width = (target_width_1x as f32 * dpr) as u32;
-            if encoded_width > source_width {
-                continue;
-            }
+        // Track successfully processed images
+        let mut images_processed = 0u32;
 
-            for qp in 1..=100u32 {
-                // Use direct width (not width+dpr) to avoid any internal DPR-based quality adjustments
-                // This gives us clean data on how output dimensions affect perceptual quality
-                let encode_command = format!(
-                    "width={}&format={}&qp={}",
-                    encoded_width, format, qp
-                );
+        // Process each image
+        for (img_idx, source_image) in test_images.iter().enumerate() {
+            println!("Processing image {}/{}: {}", img_idx + 1, test_images.len(), source_image.name);
 
-                let dssim = (|| -> Option<f64> {
-                    let mut encode_context = Context::create().ok()?;
-                    encode_context.add_input_vector(0, source_bytes.clone()).ok()?;
-                    encode_context.add_output_buffer(1).ok()?;
-
-                    encode_context.execute_1(s::Execute001 {
-                        security: None,
-                        graph_recording: None,
-                        framewise: s::Framewise::Steps(vec![Node::CommandString {
-                            kind: CommandStringKind::ImageResizer4,
-                            value: encode_command,
-                            decode: Some(0),
-                            encode: Some(1),
-                            watermarks: None,
-                        }]),
-                    }).ok()?;
-
-                    let encoded_bytes = encode_context.get_output_buffer_slice(1).ok()?.to_vec();
-
-                    let mut decode_context = Context::create().ok()?;
-                    decode_context.add_input_vector(0, encoded_bytes).ok()?;
-
-                    let mut result_bitmap = BitmapBgraContainer::empty();
-
-                    decode_context.execute_1(s::Execute001 {
-                        security: None,
-                        graph_recording: None,
-                        framewise: s::Framewise::Steps(vec![
-                            Node::Decode { io_id: 0, commands: None },
-                            Node::Resample2D {
-                                w: ref_width,
-                                h: ref_height,
-                                hints: Some(s::ResampleHints {
-                                    sharpen_percent: Some(0.0),
-                                    down_filter: Some(s::Filter::Lanczos),
-                                    up_filter: Some(s::Filter::Lanczos),
-                                    scaling_colorspace: None,
-                                    background_color: None,
-                                    resample_when: None,
-                                    sharpen_when: None,
-                                }),
-                            },
-                            unsafe { result_bitmap.as_mut().get_node() },
-                        ]),
-                    }).ok()?;
-
-                    let result_key = unsafe { result_bitmap.bitmap_key(&decode_context) }?;
-
-                    let ctx = ChecksumCtx::visuals();
-                    let result_bitmaps = decode_context.borrow_bitmaps().ok()?;
-                    let mut result_bitmap_ref = result_bitmaps.try_borrow_mut(result_key).ok()?;
-                    let mut result_window = result_bitmap_ref.get_window_u8()?;
-
-                    let ref_bitmaps = reference_context.borrow_bitmaps().ok()?;
-                    let mut ref_bitmap_ref = ref_bitmaps.try_borrow_mut(reference_key).ok()?;
-                    let mut ref_window = ref_bitmap_ref.get_window_u8()?;
-
-                    let compare_result = compare_bitmaps(
-                        &ctx,
-                        &mut result_window,
-                        &mut ref_window,
-                        Similarity::AllowDssimMatch(0.0, 10.0),
-                        false,
-                    );
-
-                    compare_result.dssim
-                })();
-
-                if let Some(d) = dssim {
-                    dssim_cache.insert((qp, dpr_idx), d);
-                    // Log to file
-                    writeln!(log_file, "{},{},{},{},{:.8}", format, dpr, encoded_width, qp, d).ok();
-                }
-            }
-            print!(".");
-            std::io::stdout().flush().ok();
-        }
-        log_file.flush().ok();
-        println!(" done ({} entries)", dssim_cache.len());
-
-        // Find reference DPR index
-        let ref_dpr_idx = dpr_values.iter().position(|&d| (d - reference_dpr).abs() < 0.01)
-            .expect("Reference DPR not in list");
-
-        // Print mapping table
-        println!("\n--- Optimal QP Mapping (QP at DPR -> adjusted QP to match DPR=3 quality) ---\n");
-        print!("{:<6}", "QP\\DPR");
-        for &dpr in &dpr_values {
-            print!(" {:>5.2}", dpr);
-        }
-        println!();
-        println!("{}", "-".repeat(6 + dpr_values.len() * 6));
-
-        // Store results for factor calculation
-        let mut best_qps: HashMap<(u32, usize), u32> = HashMap::new();
-
-        for &ref_qp in reference_qps {
-            // Get target DSSIM (at reference DPR with this qp)
-            let target_dssim = match dssim_cache.get(&(ref_qp, ref_dpr_idx)) {
-                Some(&d) => d,
-                None => {
-                    println!("{:<6} (skipped)", ref_qp);
+            let source_bytes = match get_url_bytes_with_retry(source_image.url) {
+                Ok(b) => b,
+                Err(e) => {
+                    println!("  Skipping (failed to fetch): {}", e);
                     continue;
                 }
             };
 
-            print!("{:<6}", ref_qp);
-
-            for (dpr_idx, &dpr) in dpr_values.iter().enumerate() {
-                if dpr_idx == ref_dpr_idx {
-                    print!(" {:>5}", ref_qp);
-                    best_qps.insert((ref_qp, dpr_idx), ref_qp);
+            let (source_width, source_height) = match get_image_dimensions(&source_bytes) {
+                Ok(dims) => dims,
+                Err(e) => {
+                    println!("  Skipping (failed to get dimensions): {:?}", e);
                     continue;
                 }
+            };
 
-                // Find qp with closest DSSIM to target
-                let mut best_qp = ref_qp;
-                let mut best_diff = f64::INFINITY;
+            // Adjust target_width_1x for this image based on source size
+            // We want the max DPR (5.0) to still fit within source_width
+            let max_dpr = dpr_values.iter().cloned().fold(0.0_f32, f32::max);
+            let effective_target_1x = (source_width as f32 / max_dpr).floor() as u32;
+            let effective_target_1x = effective_target_1x.min(target_width_1x).max(100); // At least 100px
 
-                for qp in 1..=100u32 {
-                    if let Some(&dssim) = dssim_cache.get(&(qp, dpr_idx)) {
-                        let diff = (dssim - target_dssim).abs();
-                        if diff < best_diff {
-                            best_diff = diff;
-                            best_qp = qp;
+            println!("  Source: {}x{}, effective 1x target: {}px",
+                source_width, source_height, effective_target_1x);
+
+            let baseline = &PRESCALING_CONFIGS[0];
+            let ref_result = create_reference_context(&source_bytes, baseline, effective_target_1x);
+            let (_reference_context, _reference_key, ref_width, ref_height) = match ref_result {
+                Ok(r) => r,
+                Err(e) => {
+                    println!("  Skipping (failed to create reference): {:?}", e);
+                    continue;
+                }
+            };
+
+            // Build work items for parallel processing
+            // Skip DPR values that would exceed source width
+            let work_items: Vec<(usize, f32, u32)> = dpr_values.iter().enumerate()
+                .filter(|(_, &dpr)| {
+                    let encoded_width = (effective_target_1x as f32 * dpr) as u32;
+                    encoded_width <= source_width
+                })
+                .flat_map(|(dpr_idx, &dpr)| {
+                    qp_values.iter().map(move |&qp| (dpr_idx, dpr, qp))
+                })
+                .collect();
+
+            let total_items = work_items.len();
+            let completed = Arc::new(Mutex::new(0usize));
+
+            // Process in parallel using thread pool
+            let num_threads = std::thread::available_parallelism()
+                .map(|p| p.get())
+                .unwrap_or(4)
+                .min(8); // Cap at 8 threads
+
+            let chunk_size = (work_items.len() + num_threads - 1) / num_threads;
+            let work_chunks: Vec<_> = work_items.chunks(chunk_size).map(|c| c.to_vec()).collect();
+
+            let results: Arc<Mutex<Vec<(u32, usize, f64)>>> = Arc::new(Mutex::new(Vec::new()));
+
+            let handles: Vec<_> = work_chunks.into_iter().map(|chunk| {
+                let source_bytes = source_bytes.clone();
+                let format = format.to_string();
+                let results = Arc::clone(&results);
+                let completed = Arc::clone(&completed);
+                let log_file = Arc::clone(&log_file);
+                let image_name = source_image.name.to_string();
+                let eff_target_1x = effective_target_1x;
+
+                thread::spawn(move || {
+                    for (dpr_idx, dpr, qp) in chunk {
+                        let encoded_width = (eff_target_1x as f32 * dpr) as u32;
+                        let encode_command = format!(
+                            "width={}&format={}&qp={}",
+                            encoded_width, format, qp
+                        );
+
+                        let dssim = (|| -> Option<f64> {
+                            let mut encode_context = Context::create().ok()?;
+                            encode_context.add_input_vector(0, source_bytes.clone()).ok()?;
+                            encode_context.add_output_buffer(1).ok()?;
+
+                            encode_context.execute_1(s::Execute001 {
+                                security: None,
+                                graph_recording: None,
+                                framewise: s::Framewise::Steps(vec![Node::CommandString {
+                                    kind: CommandStringKind::ImageResizer4,
+                                    value: encode_command,
+                                    decode: Some(0),
+                                    encode: Some(1),
+                                    watermarks: None,
+                                }]),
+                            }).ok()?;
+
+                            let encoded_bytes = encode_context.get_output_buffer_slice(1).ok()?.to_vec();
+
+                            // Decode and resize to comparison size
+                            let mut decode_context = Context::create().ok()?;
+                            decode_context.add_input_vector(0, encoded_bytes).ok()?;
+
+                            let mut result_bitmap = BitmapBgraContainer::empty();
+
+                            decode_context.execute_1(s::Execute001 {
+                                security: None,
+                                graph_recording: None,
+                                framewise: s::Framewise::Steps(vec![
+                                    Node::Decode { io_id: 0, commands: None },
+                                    Node::Resample2D {
+                                        w: ref_width,
+                                        h: ref_height,
+                                        hints: Some(s::ResampleHints {
+                                            sharpen_percent: Some(0.0),
+                                            down_filter: Some(s::Filter::Lanczos),
+                                            up_filter: Some(s::Filter::Lanczos),
+                                            scaling_colorspace: None,
+                                            background_color: None,
+                                            resample_when: None,
+                                            sharpen_when: None,
+                                        }),
+                                    },
+                                    unsafe { result_bitmap.as_mut().get_node() },
+                                ]),
+                            }).ok()?;
+
+                            // Create reference for this thread
+                            let mut ref_context = Context::create().ok()?;
+                            ref_context.add_input_vector(0, source_bytes.clone()).ok()?;
+                            let mut ref_bitmap = BitmapBgraContainer::empty();
+                            ref_context.execute_1(s::Execute001 {
+                                security: None,
+                                graph_recording: None,
+                                framewise: s::Framewise::Steps(vec![
+                                    Node::Decode { io_id: 0, commands: None },
+                                    Node::Resample2D {
+                                        w: ref_width,
+                                        h: ref_height,
+                                        hints: Some(s::ResampleHints {
+                                            sharpen_percent: Some(0.0),
+                                            down_filter: Some(s::Filter::Lanczos),
+                                            up_filter: Some(s::Filter::Lanczos),
+                                            scaling_colorspace: None,
+                                            background_color: None,
+                                            resample_when: None,
+                                            sharpen_when: None,
+                                        }),
+                                    },
+                                    unsafe { ref_bitmap.as_mut().get_node() },
+                                ]),
+                            }).ok()?;
+
+                            let result_key = unsafe { result_bitmap.bitmap_key(&decode_context) }?;
+                            let ref_key = unsafe { ref_bitmap.bitmap_key(&ref_context) }?;
+
+                            let ctx = ChecksumCtx::visuals();
+                            let result_bitmaps = decode_context.borrow_bitmaps().ok()?;
+                            let mut result_bitmap_ref = result_bitmaps.try_borrow_mut(result_key).ok()?;
+                            let mut result_window = result_bitmap_ref.get_window_u8()?;
+
+                            let ref_bitmaps = ref_context.borrow_bitmaps().ok()?;
+                            let mut ref_bitmap_ref = ref_bitmaps.try_borrow_mut(ref_key).ok()?;
+                            let mut ref_window = ref_bitmap_ref.get_window_u8()?;
+
+                            let compare_result = compare_bitmaps(
+                                &ctx,
+                                &mut result_window,
+                                &mut ref_window,
+                                Similarity::AllowDssimMatch(0.0, 10.0),
+                                false,
+                            );
+
+                            compare_result.dssim
+                        })();
+
+                        if let Some(d) = dssim {
+                            results.lock().unwrap().push((qp, dpr_idx, d));
+
+                            // Log to file
+                            if let Ok(mut f) = log_file.lock() {
+                                writeln!(f, "{},{},{},{},{},{:.8}",
+                                    image_name, format, dpr, encoded_width, qp, d).ok();
+                            }
+                        }
+
+                        let mut c = completed.lock().unwrap();
+                        *c += 1;
+                        if *c % 50 == 0 {
+                            print!(".");
+                            std::io::stdout().flush().ok();
                         }
                     }
-                }
+                })
+            }).collect();
 
-                print!(" {:>5}", best_qp);
-                best_qps.insert((ref_qp, dpr_idx), best_qp);
+            // Wait for all threads
+            for handle in handles {
+                handle.join().ok();
             }
-            println!();
-        }
+            println!(" done ({} items)", total_items);
 
-        // Print adjustment factors
-        println!("\n--- Adjustment Factors (adjusted_qp / original_qp) ---\n");
-        print!("{:<6}", "QP\\DPR");
-        for &dpr in &dpr_values {
-            print!(" {:>5.2}", dpr);
-        }
-        println!();
-        println!("{}", "-".repeat(6 + dpr_values.len() * 6));
-
-        for &ref_qp in reference_qps {
-            if !dssim_cache.contains_key(&(ref_qp, ref_dpr_idx)) {
-                continue;
+            // Build per-image dssim cache and print table
+            let results = results.lock().unwrap();
+            let mut per_image_cache: HashMap<(u32, usize), f64> = HashMap::new();
+            for &(qp, dpr_idx, dssim) in results.iter() {
+                per_image_cache.insert((qp, dpr_idx), dssim);
             }
 
-            print!("{:<6}", ref_qp);
+            // Print per-image table
+            let title = format!("{} - {} ({}x{})",
+                format, source_image.name, source_width, source_height);
+            print_qp_tables(
+                &title,
+                &per_image_cache,
+                &dpr_values,
+                reference_qps,
+                &qp_values,
+                ref_dpr_idx,
+            );
 
-            for (dpr_idx, _) in dpr_values.iter().enumerate() {
-                if let Some(&best_qp) = best_qps.get(&(ref_qp, dpr_idx)) {
-                    let factor = best_qp as f64 / ref_qp as f64;
-                    print!(" {:>5.2}", factor);
-                } else {
-                    print!(" {:>5}", "-");
-                }
+            // Merge results into aggregated cache
+            let mut cache = aggregated_cache.lock().unwrap();
+            for &(qp, dpr_idx, dssim) in results.iter() {
+                cache.entry((qp, dpr_idx)).or_insert_with(Vec::new).push(dssim);
             }
-            println!();
+            images_processed += 1;
         }
+
+        // Average DSSIM values across images
+        let cache = aggregated_cache.lock().unwrap();
+        let mut dssim_cache: HashMap<(u32, usize), f64> = HashMap::new();
+        for ((qp, dpr_idx), values) in cache.iter() {
+            if !values.is_empty() {
+                let avg = values.iter().sum::<f64>() / values.len() as f64;
+                dssim_cache.insert((*qp, *dpr_idx), avg);
+            }
+        }
+
+        // Print averaged table across all images
+        let title = format!("{} - AVERAGED across {} images",
+            format, images_processed);
+        print_qp_tables(
+            &title,
+            &dssim_cache,
+            &dpr_values,
+            reference_qps,
+            &qp_values,
+            ref_dpr_idx,
+        );
+
+        println!("\n({} unique (qp, dpr) combinations averaged)",
+            dssim_cache.len());
     }
 }
