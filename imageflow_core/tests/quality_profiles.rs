@@ -58,31 +58,39 @@ struct SourceImage {
     url: &'static str,
 }
 
+// Ordered by resolution, smallest to largest
 const SOURCE_IMAGES: &[SourceImage] = &[
-    SourceImage {
-        name: "waterhouse",
-        url: "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg",
-    },
-    SourceImage {
-        name: "frymire",
-        url: "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/frymire.png",
-    },
-    SourceImage {
-        name: "mountain",
-        url: "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/mountain_800.png",
-    },
-    SourceImage {
-        name: "rings2",
-        url: "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/rings2.png",
-    },
+    // ~480,000 px (800x600)
     SourceImage {
         name: "roof_test",
         url: "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/roof_test_800x600.jpg",
     },
+    // ~640,000 px (800x800)
+    SourceImage {
+        name: "mountain",
+        url: "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/mountain_800.png",
+    },
+    // ~1,044,484 px (1022x1022)
+    SourceImage {
+        name: "rings2",
+        url: "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/rings2.png",
+    },
+    // ~1,249,924 px (1118x1118)
+    SourceImage {
+        name: "frymire",
+        url: "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/frymire.png",
+    },
+    // ~4,194,304 px (2048x2048)
+    SourceImage {
+        name: "waterhouse",
+        url: "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg",
+    },
+    // ~24,285,184 px (4928x4928)
     SourceImage {
         name: "turtleegglarge",
         url: "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/turtleegglarge.jpg",
     },
+    // Unknown resolution - larger images
     SourceImage {
         name: "wrenches",
         url: "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/wrenches.jpg",
@@ -415,6 +423,9 @@ fn run_test_variant(
 
     // Step 2: Decode and resize to visual comparison dimensions using Lanczos
     let mut decode_context = Context::create().map_err(|e| e.at(here!()))?;
+    // Enable AVIF decoder when feature is available
+    #[cfg(feature = "avif-decode")]
+    decode_context.enabled_codecs.enable_avif_decoder();
     decode_context.add_input_vector(0, encoded_bytes_vec).map_err(|e| e.at(here!()))?;
 
     let mut result_bitmap = BitmapBgraContainer::empty();
@@ -941,8 +952,10 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
 }
 
 /// Test with AVIF format (slower, run separately)
+/// Requires `--features avif-decode` to enable AVIF round-trip testing
 #[test]
 #[ignore] // AVIF encoding is slow, run explicitly with --ignored
+#[cfg(feature = "avif-decode")]
 fn test_quality_profiles_avif() {
     // Use the first source image (waterhouse) for this focused test
     let source_image = &SOURCE_IMAGES[0];
@@ -1087,6 +1100,239 @@ fn print_qp_tables(
     }
 }
 
+/// Result of encoding with a specific configuration
+#[derive(Debug, Clone)]
+struct EncodeResult {
+    dssim: f64,
+    file_size: usize,
+}
+
+/// Encode an image and measure DSSIM against a reference bitmap
+fn encode_and_measure(
+    source_bytes: &[u8],
+    encode_command: &str,
+    ref_width: u32,
+    ref_height: u32,
+) -> Option<EncodeResult> {
+    use imageflow_core::Context;
+
+    let mut encode_context = Context::create().ok()?;
+    encode_context.add_input_vector(0, source_bytes.to_vec()).ok()?;
+    encode_context.add_output_buffer(1).ok()?;
+
+    encode_context.execute_1(s::Execute001 {
+        security: None,
+        graph_recording: None,
+        framewise: s::Framewise::Steps(vec![Node::CommandString {
+            kind: CommandStringKind::ImageResizer4,
+            value: encode_command.to_string(),
+            decode: Some(0),
+            encode: Some(1),
+            watermarks: None,
+        }]),
+    }).ok()?;
+
+    let encoded_bytes = encode_context.get_output_buffer_slice(1).ok()?.to_vec();
+    let file_size = encoded_bytes.len();
+
+    // Decode and resize to comparison size
+    let mut decode_context = Context::create().ok()?;
+    decode_context.add_input_vector(0, encoded_bytes).ok()?;
+
+    let mut result_bitmap = BitmapBgraContainer::empty();
+
+    decode_context.execute_1(s::Execute001 {
+        security: None,
+        graph_recording: None,
+        framewise: s::Framewise::Steps(vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: ref_width,
+                h: ref_height,
+                hints: Some(s::ResampleHints {
+                    sharpen_percent: Some(0.0),
+                    down_filter: Some(s::Filter::Lanczos),
+                    up_filter: Some(s::Filter::Lanczos),
+                    scaling_colorspace: None,
+                    background_color: None,
+                    resample_when: None,
+                    sharpen_when: None,
+                }),
+            },
+            unsafe { result_bitmap.as_mut().get_node() },
+        ]),
+    }).ok()?;
+
+    // Create reference from original source
+    let mut ref_context = Context::create().ok()?;
+    ref_context.add_input_vector(0, source_bytes.to_vec()).ok()?;
+    let mut ref_bitmap = BitmapBgraContainer::empty();
+    ref_context.execute_1(s::Execute001 {
+        security: None,
+        graph_recording: None,
+        framewise: s::Framewise::Steps(vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: ref_width,
+                h: ref_height,
+                hints: Some(s::ResampleHints {
+                    sharpen_percent: Some(0.0),
+                    down_filter: Some(s::Filter::Lanczos),
+                    up_filter: Some(s::Filter::Lanczos),
+                    scaling_colorspace: None,
+                    background_color: None,
+                    resample_when: None,
+                    sharpen_when: None,
+                }),
+            },
+            unsafe { ref_bitmap.as_mut().get_node() },
+        ]),
+    }).ok()?;
+
+    let result_key = unsafe { result_bitmap.bitmap_key(&decode_context) }?;
+    let ref_key = unsafe { ref_bitmap.bitmap_key(&ref_context) }?;
+
+    let ctx = ChecksumCtx::visuals();
+    let result_bitmaps = decode_context.borrow_bitmaps().ok()?;
+    let mut result_bitmap_ref = result_bitmaps.try_borrow_mut(result_key).ok()?;
+    let mut result_window = result_bitmap_ref.get_window_u8()?;
+
+    let ref_bitmaps = ref_context.borrow_bitmaps().ok()?;
+    let mut ref_bitmap_ref = ref_bitmaps.try_borrow_mut(ref_key).ok()?;
+    let mut ref_window = ref_bitmap_ref.get_window_u8()?;
+
+    let compare_result = compare_bitmaps(
+        &ctx,
+        &mut result_window,
+        &mut ref_window,
+        Similarity::AllowDssimMatch(0.0, 10.0),
+        false,
+    );
+
+    Some(EncodeResult {
+        dssim: compare_result.dssim?,
+        file_size,
+    })
+}
+
+/// Get the dpr_quality_range bounds for a given QP value
+/// Returns (floor_p, ceiling_p) based on the quality profile tiers
+fn get_qp_bounds(qp: u32) -> (u32, u32) {
+    // These match the dpr_quality_range values from QUALITY_HINTS in auto.rs
+    match qp {
+        0..=17 => (10, 55),    // Lowest: floor~10, ceiling=Medium
+        18..=27 => (15, 73),   // Low: floor=Lowest, ceiling=Good
+        28..=44 => (15, 91),   // MediumLow: floor=Lowest, ceiling=High
+        45..=64 => (20, 91),   // Medium: floor=Low, ceiling=High
+        65..=82 => (34, 91),   // Good: floor=MediumLow, ceiling=High
+        83..=93 => (55, 96),   // High: floor=Medium, ceiling=Highest
+        94..=99 => (73, 96),   // Highest: floor=Good, ceiling=Highest
+        _ => (100, 100),       // Lossless: no adjustment
+    }
+}
+
+/// Compare qp.dpr implementation against calibration-found optimal QP (within clamped bounds)
+fn compare_qp_dpr_implementation(
+    source_bytes: &[u8],
+    source_name: &str,
+    format: &str,
+    target_width_1x: u32,
+    dpr_values: &[f32],
+    reference_qps: &[u32],
+    ref_dpr_idx: usize,
+    dssim_cache: &std::collections::HashMap<(u32, usize), f64>,
+    qp_values: &[u32],
+) {
+    let reference_dpr = dpr_values[ref_dpr_idx];
+    let ref_width = (target_width_1x as f32 * reference_dpr) as u32;
+    // Approximate height based on typical aspect ratio
+    let ref_height = (ref_width as f32 * 0.67) as u32;
+
+    println!("\n=== qp.dpr Implementation Comparison: {} - {} ===", format, source_name);
+    println!("Comparing: reference (DPR={}), qp.dpr adjustment, and clamped-optimal QP\n", reference_dpr);
+
+    // Header
+    println!("{:<6} {:>5} {:>5}-{:<5} | {:>10} {:>6} | {:>10} {:>6} {:>5} | {:>10} {:>6} {:>5}",
+        "QP", "DPR", "floor", "ceil",
+        "Ref DSSIM", "KB",
+        "qp.dpr", "KB", "Δ%",
+        "ClampOpt", "KB", "OptQP");
+    println!("{}", "-".repeat(95));
+
+    for &ref_qp in reference_qps {
+        let (floor_qp, ceiling_qp) = get_qp_bounds(ref_qp);
+
+        // Get reference DSSIM at DPR=3
+        let ref_dssim = match dssim_cache.get(&(ref_qp, ref_dpr_idx)) {
+            Some(&d) => d,
+            None => continue,
+        };
+
+        // Get reference file size (encode at DPR=3 with ref_qp)
+        let ref_encoded_width = (target_width_1x as f32 * reference_dpr) as u32;
+        let ref_cmd = format!("width={}&format={}&qp={}", ref_encoded_width, format, ref_qp);
+        let ref_result = match encode_and_measure(source_bytes, &ref_cmd, ref_width, ref_height) {
+            Some(r) => r,
+            None => continue,
+        };
+
+        for (dpr_idx, &dpr) in dpr_values.iter().enumerate() {
+            let encoded_width = (target_width_1x as f32 * dpr) as u32;
+
+            if dpr_idx == ref_dpr_idx {
+                // Reference DPR row - show baseline (no adjustment needed)
+                println!("{:<6} {:>5.1} {:>5}-{:<5} | {:>10.6} {:>6.1} | {:>10.6} {:>6.1} {:>5} | {:>10.6} {:>6.1} {:>5}  (reference)",
+                    ref_qp, dpr, floor_qp, ceiling_qp,
+                    ref_dssim, ref_result.file_size as f64 / 1024.0,
+                    ref_dssim, ref_result.file_size as f64 / 1024.0, "  0%",
+                    ref_dssim, ref_result.file_size as f64 / 1024.0, ref_qp);
+                continue;
+            }
+
+            // 1. Encode with qp.dpr (the actual implementation - already clamps internally)
+            let qp_dpr_cmd = format!("width={}&format={}&qp={}&qp.dpr={}",
+                encoded_width, format, ref_qp, dpr);
+            let qp_dpr_result = match encode_and_measure(source_bytes, &qp_dpr_cmd, ref_width, ref_height) {
+                Some(r) => r,
+                None => continue,
+            };
+
+            // 2. Find optimal QP from calibration WITHIN THE CLAMPED BOUNDS
+            let mut best_qp = ref_qp;
+            let mut best_diff = f64::INFINITY;
+            for &qp in qp_values {
+                // Only consider QP values within the allowed range
+                if qp < floor_qp || qp > ceiling_qp {
+                    continue;
+                }
+                if let Some(&d) = dssim_cache.get(&(qp, dpr_idx)) {
+                    let diff = (d - ref_dssim).abs();
+                    if diff < best_diff {
+                        best_diff = diff;
+                        best_qp = qp;
+                    }
+                }
+            }
+
+            // 3. Encode with clamped-optimal QP
+            let opt_cmd = format!("width={}&format={}&qp={}", encoded_width, format, best_qp);
+            let opt_result = match encode_and_measure(source_bytes, &opt_cmd, ref_width, ref_height) {
+                Some(r) => r,
+                None => continue,
+            };
+
+            // Calculate size difference percentage (qp.dpr vs clamped optimal)
+            let size_diff_pct = ((qp_dpr_result.file_size as f64 / opt_result.file_size as f64) - 1.0) * 100.0;
+
+            println!("{:<6} {:>5.1} {:>5}-{:<5} | {:>10.6} {:>6.1} | {:>10.6} {:>6.1} {:>+4.0}% | {:>10.6} {:>6.1} {:>5}",
+                ref_qp, dpr, floor_qp, ceiling_qp,
+                ref_dssim, ref_result.file_size as f64 / 1024.0,
+                qp_dpr_result.dssim, qp_dpr_result.file_size as f64 / 1024.0, size_diff_pct,
+                opt_result.dssim, opt_result.file_size as f64 / 1024.0, best_qp);
+        }
+    }
+}
+
 /// Calibration test: find the optimal qp adjustment for each DPR to match reference quality at DPR=3
 ///
 /// This test builds a mapping table: for each (reference_qp, dpr) -> best_adjusted_qp
@@ -1137,7 +1383,7 @@ fn test_calibrate_qp_dpr_mapping() {
     ));
     {
         let mut f = log_file.lock().unwrap();
-        writeln!(f, "image,format,dpr,encoded_width,qp,dssim").ok();
+        writeln!(f, "image,format,dpr,encoded_width,qp,dssim,file_size_bytes").ok();
     }
 
     println!("DPR values: {:?}", dpr_values);
@@ -1148,12 +1394,13 @@ fn test_calibrate_qp_dpr_mapping() {
     for format in FORMATS {
         println!("\n=== Format: {} ===", format);
 
-        // Aggregated cache across all images: (qp, dpr_index) -> Vec<dssim>
-        let aggregated_cache: Arc<Mutex<HashMap<(u32, usize), Vec<f64>>>> =
-            Arc::new(Mutex::new(HashMap::new()));
-
         // Track successfully processed images
         let mut images_processed = 0u32;
+
+        // Store the last (largest) successful image for comparison
+        // Images are ordered smallest to largest, so last = largest resolution
+        // Tuple: (source_bytes, image_name, per_image_dssim_cache)
+        let mut largest_image_for_comparison: Option<(Vec<u8>, String, HashMap<(u32, usize), f64>)> = None;
 
         // Process each image
         for (img_idx, source_image) in test_images.iter().enumerate() {
@@ -1218,7 +1465,8 @@ fn test_calibrate_qp_dpr_mapping() {
             let chunk_size = (work_items.len() + num_threads - 1) / num_threads;
             let work_chunks: Vec<_> = work_items.chunks(chunk_size).map(|c| c.to_vec()).collect();
 
-            let results: Arc<Mutex<Vec<(u32, usize, f64)>>> = Arc::new(Mutex::new(Vec::new()));
+            // Results: (qp, dpr_idx, dssim, file_size)
+            let results: Arc<Mutex<Vec<(u32, usize, f64, usize)>>> = Arc::new(Mutex::new(Vec::new()));
 
             let handles: Vec<_> = work_chunks.into_iter().map(|chunk| {
                 let source_bytes = source_bytes.clone();
@@ -1237,7 +1485,7 @@ fn test_calibrate_qp_dpr_mapping() {
                             encoded_width, format, qp
                         );
 
-                        let dssim = (|| -> Option<f64> {
+                        let result = (|| -> Option<(f64, usize)> {
                             let mut encode_context = Context::create().ok()?;
                             encode_context.add_input_vector(0, source_bytes.clone()).ok()?;
                             encode_context.add_output_buffer(1).ok()?;
@@ -1255,6 +1503,7 @@ fn test_calibrate_qp_dpr_mapping() {
                             }).ok()?;
 
                             let encoded_bytes = encode_context.get_output_buffer_slice(1).ok()?.to_vec();
+                            let file_size = encoded_bytes.len();
 
                             // Decode and resize to comparison size
                             let mut decode_context = Context::create().ok()?;
@@ -1330,16 +1579,16 @@ fn test_calibrate_qp_dpr_mapping() {
                                 false,
                             );
 
-                            compare_result.dssim
+                            Some((compare_result.dssim?, file_size))
                         })();
 
-                        if let Some(d) = dssim {
-                            results.lock().unwrap().push((qp, dpr_idx, d));
+                        if let Some((dssim, file_size)) = result {
+                            results.lock().unwrap().push((qp, dpr_idx, dssim, file_size));
 
                             // Log to file
                             if let Ok(mut f) = log_file.lock() {
-                                writeln!(f, "{},{},{},{},{},{:.8}",
-                                    image_name, format, dpr, encoded_width, qp, d).ok();
+                                writeln!(f, "{},{},{},{},{},{:.8},{}",
+                                    image_name, format, dpr, encoded_width, qp, dssim, file_size).ok();
                             }
                         }
 
@@ -1362,8 +1611,10 @@ fn test_calibrate_qp_dpr_mapping() {
             // Build per-image dssim cache and print table
             let results = results.lock().unwrap();
             let mut per_image_cache: HashMap<(u32, usize), f64> = HashMap::new();
-            for &(qp, dpr_idx, dssim) in results.iter() {
+            let mut per_image_size_cache: HashMap<(u32, usize), usize> = HashMap::new();
+            for &(qp, dpr_idx, dssim, file_size) in results.iter() {
                 per_image_cache.insert((qp, dpr_idx), dssim);
+                per_image_size_cache.insert((qp, dpr_idx), file_size);
             }
 
             // Print per-image table
@@ -1378,37 +1629,244 @@ fn test_calibrate_qp_dpr_mapping() {
                 ref_dpr_idx,
             );
 
-            // Merge results into aggregated cache
-            let mut cache = aggregated_cache.lock().unwrap();
-            for &(qp, dpr_idx, dssim) in results.iter() {
-                cache.entry((qp, dpr_idx)).or_insert_with(Vec::new).push(dssim);
-            }
+            // Store this image for comparison (last one wins = largest resolution)
+            // DSSIM values are not comparable across images, so we use only the largest image for comparisons
+            largest_image_for_comparison = Some((
+                source_bytes.clone(),
+                source_image.name.to_string(),
+                per_image_cache.clone(),
+            ));
+
             images_processed += 1;
         }
 
-        // Average DSSIM values across images
-        let cache = aggregated_cache.lock().unwrap();
-        let mut dssim_cache: HashMap<(u32, usize), f64> = HashMap::new();
-        for ((qp, dpr_idx), values) in cache.iter() {
-            if !values.is_empty() {
-                let avg = values.iter().sum::<f64>() / values.len() as f64;
-                dssim_cache.insert((*qp, *dpr_idx), avg);
-            }
+        println!("\nProcessed {} images for format {}", images_processed, format);
+
+        // Compare qp.dpr implementation to calibration results using largest image's DSSIM cache
+        // (DSSIM values are not comparable across images, so we don't average)
+        if let Some((ref comparison_bytes, ref comparison_name, ref per_image_dssim)) = largest_image_for_comparison {
+            compare_qp_dpr_implementation(
+                comparison_bytes,
+                comparison_name,
+                format,
+                target_width_1x,
+                &dpr_values,
+                reference_qps,
+                ref_dpr_idx,
+                per_image_dssim,
+                &qp_values,
+            );
+
+            // Compare formula approaches using the same image's DSSIM cache
+            compare_formula_approaches(
+                format,
+                &dpr_values,
+                reference_qps,
+                ref_dpr_idx,
+                per_image_dssim,
+                &qp_values,
+            );
         }
+    }
+}
 
-        // Print averaged table across all images
-        let title = format!("{} - AVERAGED across {} images",
-            format, images_processed);
-        print_qp_tables(
-            &title,
-            &dssim_cache,
-            &dpr_values,
-            reference_qps,
-            &qp_values,
-            ref_dpr_idx,
-        );
+/// Formula approach 1: Continuous p-dependent k values
+fn formula_continuous(p: f32, dpr: f32, floor_p: f32, ceiling_p: f32) -> f32 {
+    let reference_dpr = 3.0_f32;
+    let ratio = reference_dpr / dpr;
+    let p_normalized = p / 100.0;
 
-        println!("\n({} unique (qp, dpr) combinations averaged)",
-            dssim_cache.len());
+    let adjusted = if dpr < reference_dpr {
+        // Low DPR: boost quality, but less for already-high quality
+        // k_up decreases as p increases (less headroom to increase)
+        let k_up = 2.0 * (1.0 - p_normalized).powf(1.2);
+        p * ratio.powf(k_up)
+    } else {
+        // High DPR: reduce quality, more aggressively for high quality
+        // k_down increases as p increases (more room to decrease)
+        let k_down = 0.8 + 1.2 * p_normalized;
+        p * ratio.powf(k_down)
+    };
+
+    adjusted.clamp(floor_p, ceiling_p)
+}
+
+/// Formula approach 2: Discrete tier-based k values
+fn formula_tiered(p: f32, dpr: f32, floor_p: f32, ceiling_p: f32) -> f32 {
+    let reference_dpr = 3.0_f32;
+    let ratio = reference_dpr / dpr;
+
+    let (k_up, k_down) = match p as u32 {
+        0..=30   => (1.8, 1.0),   // Low quality: big swings up, modest down
+        31..=60  => (1.2, 1.3),   // Medium: moderate both ways
+        61..=85  => (0.6, 1.6),   // Good: small up, larger down
+        _        => (0.2, 1.8),   // High: minimal up, big down
+    };
+
+    let adjusted = if dpr < reference_dpr {
+        p * ratio.powf(k_up)
+    } else {
+        p * ratio.powf(k_down)
+    };
+
+    adjusted.clamp(floor_p, ceiling_p)
+}
+
+/// Current implementation formula (for comparison)
+fn formula_current(p: f32, dpr: f32, floor_p: f32, ceiling_p: f32, format: &str) -> f32 {
+    let reference_dpr = 3.0_f32;
+    let ratio = reference_dpr / dpr;
+
+    // Current per-format k values from auto.rs
+    let (k_up, k_down) = match format {
+        "jpg" => (2.3, 1.6),
+        "webp" => (3.0, 2.5),
+        _ => (2.3, 1.6),
+    };
+
+    let adjusted = if dpr < reference_dpr {
+        p * ratio.powf(k_up)
+    } else {
+        p * ratio.powf(k_down)
+    };
+
+    adjusted.clamp(floor_p, ceiling_p)
+}
+
+/// Compare formula approaches against calibration-optimal
+fn compare_formula_approaches(
+    format: &str,
+    dpr_values: &[f32],
+    reference_qps: &[u32],
+    ref_dpr_idx: usize,
+    dssim_cache: &std::collections::HashMap<(u32, usize), f64>,
+    qp_values: &[u32],
+) {
+    println!("\n=== Formula Comparison: {} ===", format);
+    println!("Comparing: Current impl, Continuous p-dependent, Tiered k-values vs Calibration Optimal\n");
+
+    // Header
+    println!("{:<6} {:>5} {:>5}-{:<5} | {:>6} {:>6} {:>6} | {:>6} | {:>5} {:>5} {:>5}",
+        "QP", "DPR", "floor", "ceil",
+        "Curr", "Cont", "Tier",
+        "Optim",
+        "ΔCurr", "ΔCont", "ΔTier");
+    println!("{}", "-".repeat(85));
+
+    let mut total_error_current = 0.0_f32;
+    let mut total_error_continuous = 0.0_f32;
+    let mut total_error_tiered = 0.0_f32;
+    let mut count = 0;
+
+    for &ref_qp in reference_qps {
+        let (floor_qp, ceiling_qp) = get_qp_bounds(ref_qp);
+        let floor_p = floor_qp as f32;
+        let ceiling_p = ceiling_qp as f32;
+        let p = ref_qp as f32;
+
+        // Get reference DSSIM at DPR=3
+        let ref_dssim = match dssim_cache.get(&(ref_qp, ref_dpr_idx)) {
+            Some(&d) => d,
+            None => continue,
+        };
+
+        for (dpr_idx, &dpr) in dpr_values.iter().enumerate() {
+            if dpr_idx == ref_dpr_idx {
+                // Reference DPR row - all formulas should produce ref_qp
+                println!("{:<6} {:>5.1} {:>5}-{:<5} | {:>6} {:>6} {:>6} | {:>6} | {:>5} {:>5} {:>5}  (reference)",
+                    ref_qp, dpr, floor_qp, ceiling_qp,
+                    ref_qp, ref_qp, ref_qp,
+                    ref_qp,
+                    "  =  ", "  =  ", "  =  ");
+                continue;
+            }
+
+            // Find calibration-optimal QP within clamped bounds
+            let mut optimal_qp = ref_qp;
+            let mut best_diff = f64::INFINITY;
+            for &qp in qp_values {
+                if qp < floor_qp || qp > ceiling_qp {
+                    continue;
+                }
+                if let Some(&d) = dssim_cache.get(&(qp, dpr_idx)) {
+                    let diff = (d - ref_dssim).abs();
+                    if diff < best_diff {
+                        best_diff = diff;
+                        optimal_qp = qp;
+                    }
+                }
+            }
+
+            // Calculate what each formula produces
+            let current_qp = formula_current(p, dpr, floor_p, ceiling_p, format).round() as u32;
+            let continuous_qp = formula_continuous(p, dpr, floor_p, ceiling_p).round() as u32;
+            let tiered_qp = formula_tiered(p, dpr, floor_p, ceiling_p).round() as u32;
+
+            // Calculate errors (difference from optimal)
+            let err_current = (current_qp as i32 - optimal_qp as i32).abs();
+            let err_continuous = (continuous_qp as i32 - optimal_qp as i32).abs();
+            let err_tiered = (tiered_qp as i32 - optimal_qp as i32).abs();
+
+            total_error_current += err_current as f32;
+            total_error_continuous += err_continuous as f32;
+            total_error_tiered += err_tiered as f32;
+            count += 1;
+
+            // Format error display
+            let err_str = |_e: i32, qp: u32, opt: u32| -> String {
+                if qp == opt {
+                    "  =  ".to_string()
+                } else {
+                    format!("{:>+4}", qp as i32 - opt as i32)
+                }
+            };
+
+            println!("{:<6} {:>5.1} {:>5}-{:<5} | {:>6} {:>6} {:>6} | {:>6} | {:>5} {:>5} {:>5}",
+                ref_qp, dpr, floor_qp, ceiling_qp,
+                current_qp, continuous_qp, tiered_qp,
+                optimal_qp,
+                err_str(err_current, current_qp, optimal_qp),
+                err_str(err_continuous, continuous_qp, optimal_qp),
+                err_str(err_tiered, tiered_qp, optimal_qp));
+        }
+    }
+
+    // Summary statistics
+    println!("\n--- Summary ({} comparisons) ---", count);
+    println!("Mean Absolute Error:");
+    println!("  Current:    {:>6.2} QP units", total_error_current / count as f32);
+    println!("  Continuous: {:>6.2} QP units", total_error_continuous / count as f32);
+    println!("  Tiered:     {:>6.2} QP units", total_error_tiered / count as f32);
+
+    // Show k values for each formula at key points
+    println!("\n--- Effective k values ---");
+    println!("{:<6} | {:>12} | {:>12} | {:>12}", "QP", "Current k", "Continuous k", "Tiered k");
+    println!("{}", "-".repeat(50));
+
+    for &qp in &[15u32, 35, 55, 73, 91] {
+        let p = qp as f32;
+        let p_norm = p / 100.0;
+
+        let (curr_up, curr_down) = match format {
+            "jpg" => (2.3, 1.6),
+            "webp" => (3.0, 2.5),
+            _ => (2.3, 1.6),
+        };
+
+        let cont_up = 2.0 * (1.0 - p_norm).powf(1.2);
+        let cont_down = 0.8 + 1.2 * p_norm;
+
+        let (tier_up, tier_down) = match qp {
+            0..=30   => (1.8, 1.0),
+            31..=60  => (1.2, 1.3),
+            61..=85  => (0.6, 1.6),
+            _        => (0.2, 1.8),
+        };
+
+        println!("{:<6} | {:>5.2}/{:<5.2} | {:>5.2}/{:<5.2} | {:>5.2}/{:<5.2}",
+            qp,
+            curr_up, curr_down,
+            cont_up, cont_down,
+            tier_up, tier_down);
     }
 }
