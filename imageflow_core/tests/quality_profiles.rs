@@ -423,9 +423,9 @@ fn run_test_variant(
 
     // Step 2: Decode and resize to visual comparison dimensions using Lanczos
     let mut decode_context = Context::create().map_err(|e| e.at(here!()))?;
-    // Enable AVIF decoder when feature is available
-    #[cfg(feature = "avif-decode")]
-    decode_context.enabled_codecs.enable_avif_decoder();
+    // Enable AVIF decoder when feature is available (bad-avif-decoder is for testing only)
+    #[cfg(feature = "bad-avif-decoder")]
+    decode_context.enabled_codecs.enable_bad_avif_decoder();
     decode_context.add_input_vector(0, encoded_bytes_vec).map_err(|e| e.at(here!()))?;
 
     let mut result_bitmap = BitmapBgraContainer::empty();
@@ -951,11 +951,11 @@ fn test_dpr_adjustment_reduces_dssim_variance() {
     }
 }
 
-/// Test with AVIF format (slower, run separately)
-/// Requires `--features avif-decode` to enable AVIF round-trip testing
+/// Full AVIF calibration test - find optimal QP adjustments for each DPR
+/// Requires `--features bad-avif-decoder` to enable AVIF round-trip testing
 #[test]
 #[ignore] // AVIF encoding is slow, run explicitly with --ignored
-#[cfg(feature = "avif-decode")]
+#[cfg(feature = "bad-avif-decoder")]
 fn test_quality_profiles_avif() {
     // Use the first source image (waterhouse) for this focused test
     let source_image = &SOURCE_IMAGES[0];
@@ -1137,6 +1137,8 @@ fn encode_and_measure(
 
     // Decode and resize to comparison size
     let mut decode_context = Context::create().ok()?;
+    #[cfg(feature = "bad-avif-decoder")]
+    decode_context.enabled_codecs.enable_bad_avif_decoder();
     decode_context.add_input_vector(0, encoded_bytes).ok()?;
 
     let mut result_bitmap = BitmapBgraContainer::empty();
@@ -1721,6 +1723,8 @@ fn formula_current(p: f32, dpr: f32, floor_p: f32, ceiling_p: f32, format: &str)
     let (k_up, k_down) = match format {
         "jpg" => (2.3, 1.6),
         "webp" => (3.0, 2.5),
+        // AVIF needs aggressive adjustment due to visible compression artifacts when upscaled
+        "avif" => (3.5, 3.5),
         _ => (2.3, 1.6),
     };
 

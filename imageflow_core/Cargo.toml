@@ -76,6 +76,7 @@ evalchroma = "1"
 utoipa = { version = "5.3.1", features = [], optional = true }
 
 ravif = { version = "0.12", default-features = false }
+avif-decode = { version = "1", optional = true }
 #jxl-oxide = { version = "0.11.4", features = ["lcms2"] }
 #jpegxl-rs = { version = "0.11", features = ["vendored"] }
 
@@ -107,6 +108,14 @@ neon = ["libwebp-sys/neon"]
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]
 # Enable schemars-based JSON Schema generation. Enables the corresponding feature in imageflow_types
 json-schema = ["dep:schemars", "imageflow_types/json-schema"]
+# UNSAFE: AVIF decoding for integration testing ONLY. DO NOT USE IN PRODUCTION.
+# This decoder has significant limitations:
+# - No ICC color profile handling (colors will be wrong for images with embedded profiles)
+# - No CICP/NCLX color space conversion (colors may be wrong)
+# - Increased attack surface from avif-decode/aom-decode dependencies
+# - Not audited for security vulnerabilities
+# Only use this for verifying AVIF encoding roundtrips in tests.
+bad-avif-decoder = ["dep:avif-decode"]
 
 [[bench]]
 name="bench_graphics"

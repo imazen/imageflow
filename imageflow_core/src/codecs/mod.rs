@@ -30,6 +30,9 @@ mod mozjpeg;
 mod mozjpeg_decoder;
 mod mozjpeg_decoder_helpers;
 mod webp;
+
+#[cfg(feature = "bad-avif-decoder")]
+mod avif_decoder;
 use crate::codecs::color_transform_cache::ColorTransformCache;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
 use crate::graphics::bitmaps::BitmapKey;
@@ -81,6 +84,8 @@ pub enum NamedDecoders {
     LibPngRsDecoder,
     GifRsDecoder,
     WebPDecoder,
+    #[cfg(feature = "bad-avif-decoder")]
+    AvifDecoder,
 }
 impl NamedDecoders {
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
@@ -96,6 +101,11 @@ impl NamedDecoders {
             }
             NamedDecoders::WebPDecoder => {
                 bytes.starts_with(b"RIFF") && bytes[8..12].starts_with(b"WEBP")
+            }
+            #[cfg(feature = "bad-avif-decoder")]
+            NamedDecoders::AvifDecoder => {
+                // AVIF uses ISOBMFF container: check for 'ftyp' box and 'avif' brand
+                bytes.len() >= 12 && &bytes[4..8] == b"ftyp" && &bytes[8..12] == b"avif"
             }
         }
     }
@@ -119,6 +129,10 @@ impl NamedDecoders {
             NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
             NamedDecoders::WICJpegDecoder => {
                 panic!("WIC Jpeg Decoder not implemented"); //TODO, use actual error for this
+            }
+            #[cfg(feature = "bad-avif-decoder")]
+            NamedDecoders::AvifDecoder => {
+                Ok(Box::new(avif_decoder::AvifDecoder::create(c, io, io_id)?))
             }
         }
     }
@@ -170,6 +184,22 @@ impl EnabledCodecs {
     }
     pub fn disable_encoder(&mut self, encoder: NamedEncoders) {
         self.encoders.retain(|item| item != &encoder);
+    }
+    /// Enables the bad AVIF decoder for integration testing.
+    ///
+    /// # Safety Warning
+    /// DO NOT USE IN PRODUCTION. This decoder has significant limitations:
+    /// - No ICC color profile handling (colors will be wrong for images with embedded profiles)
+    /// - No CICP/NCLX color space conversion (colors may be incorrect)
+    /// - Increased attack surface from avif-decode/aom-decode dependencies
+    /// - Not audited for security vulnerabilities
+    ///
+    /// Only use this for verifying AVIF encoding roundtrips in integration tests.
+    #[cfg(feature = "bad-avif-decoder")]
+    pub fn enable_bad_avif_decoder(&mut self) {
+        if !self.decoders.contains(&NamedDecoders::AvifDecoder) {
+            self.decoders.push(NamedDecoders::AvifDecoder);
+        }
     }
     pub fn create_decoder_for_magic_bytes(
         &self,

@@ -116,6 +116,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
+name = "aom-decode"
+version = "0.2.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "045795fa770d3b7ec2a98d96d8a4a3a81402d1e7bb71a70968f0d799729deda0"
+dependencies = [
+ "avif-parse",
+ "imgref",
+ "libaom-sys",
+ "log",
+ "quick-error",
+ "rgb",
+ "yuv",
+]
+
+[[package]]
 name = "arbitrary"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -200,6 +215,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "avif-decode"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5093f6d7c910d1859387a8d7d29a26ec4822d60cba632fdb32121c5c0cb1312a"
+dependencies = [
+ "aom-decode",
+ "avif-parse",
+ "imgref",
+ "lodepng",
+ "owning_ref",
+ "quick-error",
+ "rgb",
+ "yuv",
+]
+
+[[package]]
+name = "avif-parse"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f85ce2a7cd14ac0a30dc29a115de22466aeb8a029410f9f1e4f283443c959d1"
+dependencies = [
+ "arrayvec 0.7.6",
+ "bitreader",
+ "byteorder",
+ "fallible_collections",
+ "leb128",
+ "log",
+]
+
+[[package]]
 name = "avif-serialize"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -240,6 +285,15 @@ name = "bitflags"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
+
+[[package]]
+name = "bitreader"
+version = "0.3.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "886559b1e163d56c765bc3a985febb4eee8009f625244511d8ee3c432e08c066"
+dependencies = [
+ "cfg-if",
+]
 
 [[package]]
 name = "bitstream-io"
@@ -408,6 +462,15 @@ name = "clap_lex"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1d728cc89cf3aee9ff92b05e62b19ee65a02b5702cff7d5a377e32c6ae29d8d"
+
+[[package]]
+name = "cmake"
+version = "0.1.56"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b042e5d8a74ae91bb0961acd039822472ec99f8ab0948cbf6d1369588f8be586"
+dependencies = [
+ "cc",
+]
 
 [[package]]
 name = "color_quant"
@@ -710,6 +773,12 @@ dependencies = [
  "imgref",
  "rgb",
 ]
+
+[[package]]
+name = "fallible_collections"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b3e85d14d419ba3e1db925519461c0d17a49bdd2d67ea6316fa965ca7acdf74"
 
 [[package]]
 name = "fastrand"
@@ -1104,6 +1173,7 @@ name = "imageflow_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "avif-decode",
  "base64",
  "blake2-rfc",
  "bytemuck",
@@ -1402,6 +1472,21 @@ dependencies = [
  "dunce",
  "libc",
  "pkg-config",
+]
+
+[[package]]
+name = "leb128"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "884e2677b40cc8c339eaefcb701c32ef1fd2493d71118dc0ca4b6a736c93bd67"
+
+[[package]]
+name = "libaom-sys"
+version = "0.17.2+libaom.3.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c4fce8aaf0c2d8534529b0698ed98ec1da8d35319588d20b0d79ce6446e4194"
+dependencies = [
+ "cmake",
 ]
 
 [[package]]
@@ -1844,6 +1929,15 @@ name = "ordered-channel"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95be4d57809897b5a7539fc15a7dfe0e84141bc3dfaa2e9b1b27caa90acf61ab"
+
+[[package]]
+name = "owning_ref"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ff55baddef9e4ad00f88b6c743a2a8062d4c6ade126c2a528644b8e444d52ce"
+dependencies = [
+ "stable_deref_trait",
+]
 
 [[package]]
 name = "parking_lot_core"
@@ -3051,6 +3145,16 @@ dependencies = [
  "quote",
  "syn",
  "synstructure",
+]
+
+[[package]]
+name = "yuv"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8cbe2d856acbe6d86c0fa6f458b73e962834061ca2f7f94c6e4633afc9efd4d4"
+dependencies = [
+ "num-traits",
+ "rgb",
 ]
 
 [[package]]
