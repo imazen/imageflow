@@ -98,6 +98,9 @@ criterion = "0.7"
 rand = "*"
 include_dir = { version = "0.7.4", features = ["glob"] }
 anyhow = "1.0"
+walkdir = "2"
+csv = "1"
+rayon = "1"
 
 [features]
 default = []

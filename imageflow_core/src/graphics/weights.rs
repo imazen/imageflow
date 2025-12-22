@@ -238,6 +238,7 @@ impl InterpolationDetails {
             Filter::Mitchell => {
                 InterpolationDetails::bicubic(2f64, 1f64, 1.0f64 / 3.0f64, 1.0f64 / 3.0f64)
             }
+            // B = 0.5 , C = 0.25, for perceptual testing perhaps?
             Filter::MitchellFast => {
                 InterpolationDetails::bicubic(1f64, 1f64, 1.0f64 / 3.0f64, 1.0f64 / 3.0f64)
             }
@@ -662,8 +663,8 @@ pub fn populate_weights<T: WeightContainer>(
 
     let filter_func = details.filter;
 
-    let mut negative_area: f64 = 0f64;
-    let mut positive_area: f64 = 0f64;
+    //let mut negative_area: f64 = 0f64;
+    //let mut positive_area: f64 = 0f64;
 
     let mut weights: Vec<f32> = Vec::with_capacity(allocated_window_size as usize); //Allocation!
     for u in 0..output_line_size {
@@ -727,10 +728,10 @@ pub fn populate_weights<T: WeightContainer>(
         for v in weights.iter_mut() {
             if *v < 0f32 {
                 *v *= neg_factor;
-                negative_area -= *v as f64;
+                //negative_area -= *v as f64;
             } else {
                 *v *= pos_factor;
-                positive_area += *v as f64;
+                //positive_area += *v as f64;
             }
         }
 
