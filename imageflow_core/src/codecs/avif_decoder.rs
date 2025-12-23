@@ -43,13 +43,7 @@ pub struct AvifDecoder {
 
 impl AvifDecoder {
     pub fn create(_c: &Context, io: IoProxy, _io_id: i32) -> Result<AvifDecoder> {
-        Ok(AvifDecoder {
-            io,
-            bytes: None,
-            width: None,
-            height: None,
-            has_alpha: None,
-        })
+        Ok(AvifDecoder { io, bytes: None, width: None, height: None, has_alpha: None })
     }
 
     fn ensure_data_buffered(&mut self) -> Result<()> {
@@ -68,9 +62,9 @@ impl AvifDecoder {
             let decoder = avif_decode::Decoder::from_avif(bytes)
                 .map_err(|e| nerror!(ErrorKind::ImageDecodingError, "AVIF parse error: {:?}", e))?;
 
-            let image = decoder
-                .to_image()
-                .map_err(|e| nerror!(ErrorKind::ImageDecodingError, "AVIF decode error: {:?}", e))?;
+            let image = decoder.to_image().map_err(|e| {
+                nerror!(ErrorKind::ImageDecodingError, "AVIF decode error: {:?}", e)
+            })?;
 
             let (w, h, alpha) = match &image {
                 avif_decode::Image::Rgb8(img) => (img.width() as u32, img.height() as u32, false),
@@ -255,11 +249,11 @@ impl Decoder for AvifDecoder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use imageflow_types::PixelFormat as PixFmt;
     use imageflow_types::{
         Color, ColorSrgb, EncoderPreset, Execute001, Framewise, Node, OutputImageFormat,
         QualityProfile,
     };
-    use imageflow_types::PixelFormat as PixFmt;
 
     fn generate_tiny_avif() -> Result<Vec<u8>> {
         let mut context = Context::create()?;
@@ -313,10 +307,7 @@ mod tests {
             security: None,
             framewise: Framewise::Steps(vec![
                 Node::Decode { io_id: 0, commands: None },
-                Node::Encode {
-                    io_id: 1,
-                    preset: EncoderPreset::Lodepng { maximum_deflate: None },
-                },
+                Node::Encode { io_id: 1, preset: EncoderPreset::Lodepng { maximum_deflate: None } },
             ]),
         };
 
