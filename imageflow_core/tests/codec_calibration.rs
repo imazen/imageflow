@@ -636,6 +636,7 @@ fn resample_to_jpeg100(
 }
 
 /// Decode to JPEG q100 (for consistent intermediate storage)
+#[allow(dead_code)]
 fn decode_to_jpeg100(src: &[u8]) -> Result<Vec<u8>, FlowError> {
     let mut ctx = Context::create().map_err(|e| e.at(here!()))?;
     #[cfg(feature = "bad-avif-decoder")]

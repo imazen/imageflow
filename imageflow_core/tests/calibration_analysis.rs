@@ -196,8 +196,13 @@ fn percentile(values: &mut [f64], p: f64) -> f64 {
         return 0.0;
     }
     values.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let idx = ((values.len() - 1) as f64 * p) as usize;
-    values[idx.min(values.len() - 1)]
+    // Use "inclusive" percentile method (R-7 in R terminology)
+    // This matches Excel's PERCENTILE.INC and numpy's default
+    let pos = p * (values.len() - 1) as f64;
+    let lower = pos.floor() as usize;
+    let upper = (lower + 1).min(values.len() - 1);
+    let frac = pos - lower as f64;
+    values[lower] * (1.0 - frac) + values[upper] * frac
 }
 
 fn mean(values: &[f64]) -> f64 {
@@ -1177,7 +1182,8 @@ mod tests {
 
         assert_eq!(median(&mut values.clone()), 5.5);
         assert_eq!(mean(&values), 5.5);
-        assert!((percentile(&mut values.clone(), 0.75) - 8.0).abs() < 0.1);
+        // Linear interpolation: pos = 0.75 * 9 = 6.75, result = 7*0.25 + 8*0.75 = 7.75
+        assert!((percentile(&mut values.clone(), 0.75) - 7.75).abs() < 0.01);
         assert!((trimmed_mean(&mut values.clone(), 0.1) - 5.5).abs() < 0.1);
     }
 }
