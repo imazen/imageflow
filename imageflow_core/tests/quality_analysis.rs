@@ -20,6 +20,11 @@
 //!    - Maps reference quality to equivalent quality at other conditions
 //!    - Uses forgiveness factor (1.05x) to allow slightly worse DSSIM for smaller files
 //!
+//! 3. **Gap-Based Polynomial Interpolation**
+//!    - For each gap between measured quality values, fit a polynomial
+//!    - Cross-validate by skipping points and checking prediction accuracy
+//!    - Average adjacent polynomials for smooth transitions
+//!
 //! ### Key Parameters
 //!
 //! - **Baseline**: 1x-laptop (PPD=70, ratio=1.0) - typical premium laptop viewing
@@ -38,91 +43,191 @@
 //! ```
 
 use std::collections::HashMap;
+use std::fmt::Write as FmtWrite;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 //=============================================================================
-// Configuration
+// Configuration Types
 //=============================================================================
 
-/// Path to calibration measurements CSV
-const CSV_PATH: &str = "/mnt/v/work/corpus_cache/v2/results/measurements_p2.csv";
+/// A viewing condition defined by pixel density and display ratio
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewingCondition {
+    pub name: &'static str,
+    pub ratio: f32, // srcset_multiplier / device_DPPX
+    pub ppd: u32,   // pixels per degree (viewing distance dependent)
+}
 
-/// Baseline condition for quality mapping
-const BASELINE_PPD: u32 = 70;
-const BASELINE_RATIO: f32 = 1.0;
+impl ViewingCondition {
+    pub const fn new(name: &'static str, ratio: f32, ppd: u32) -> Self {
+        Self { name, ratio, ppd }
+    }
 
-/// Condition for diminishing returns analysis (most demanding)
-const DEMANDING_PPD: u32 = 40;
-const DEMANDING_RATIO: f32 = 1.0;
-
-/// Forgiveness factor: allows target DSSIM to be this much worse than baseline
-/// A 5% difference is typically imperceptible
-const FORGIVENESS_FACTOR: f64 = 1.05;
-
-/// Perceptibility thresholds (conservative, for desktop viewing at PPD=40)
-const THRESH_IMPERCEPTIBLE: f64 = 0.0003;
-const THRESH_MARGINAL: f64 = 0.0007;
-const THRESH_SUBTLE: f64 = 0.0015;
-const THRESH_NOTICEABLE: f64 = 0.0030;
-
-/// Upper bounds from diminishing returns analysis
-/// These are quality levels where each codec enters the imperceptible zone
-fn quality_upper_bound(codec: &str) -> u32 {
-    match codec {
-        "mozjpeg" => 95, // Imperceptible at q96
-        "webp" => 100,   // Still visible improvement at q100
-        "avif_s6" => 95, // Imperceptible at q95
-        _ => 100,
+    /// Check if this condition matches the given ratio and ppd
+    pub fn matches(&self, ratio: f32, ppd: u32) -> bool {
+        (self.ratio - ratio).abs() < 0.02 && self.ppd == ppd
     }
 }
 
-/// Reference conditions for quality mapping (from most demanding to least)
-/// Format: (name, ratio, ppd)
-const REFERENCE_CONDITIONS: &[(&str, f32, u32)] = &[
-    ("native-desktop", 1.0, 40), // Most demanding: desktop viewing
-    ("native-laptop", 1.0, 70),  // Medium: laptop viewing
-    ("native-phone", 1.0, 95),   // Least demanding: phone viewing
-];
+/// Standard viewing conditions for analysis
+pub mod conditions {
+    use super::ViewingCondition;
 
-/// Quality tiers with MozJPEG reference values
-const QUALITY_TIERS: &[(&str, u32)] = &[
-    ("lossless", 100),
-    ("highest", 95),
-    ("high", 90),
-    ("good", 85),
-    ("medium", 76),
-    ("mediumlow", 65),
-    ("low", 50),
-    ("lowest", 30),
-];
+    // Native conditions (srcset matches device DPPX)
+    pub const NATIVE_DESKTOP: ViewingCondition = ViewingCondition::new("native-desktop", 1.0, 40);
+    pub const NATIVE_LAPTOP: ViewingCondition = ViewingCondition::new("native-laptop", 1.0, 70);
+    pub const NATIVE_PHONE: ViewingCondition = ViewingCondition::new("native-phone", 1.0, 95);
 
-/// Target viewing conditions for quality mapping analysis
-///
-/// Format: (name, ratio, ppd) where ratio = srcset_multiplier / device_DPPX
-///
-/// Srcset analysis table:
-/// | Srcset | Phone (3x, 95ppd) | Laptop (1.5x, 70ppd) | Desktop (1x, 40ppd) |
-/// |--------|-------------------|----------------------|---------------------|
-/// | 1x     | 0.33, 95          | 0.67, 70             | 1.0, 40             |
-/// | 1.5x   | 0.5, 95           | 1.0, 70              | 1.5, 40             |
-/// | 2x     | 0.67, 95          | 1.33, 70             | 2.0, 40             |
-/// | 3x     | 1.0, 95           | 2.0, 70              | 3.0, 40             |
-const TARGET_CONDITIONS: &[(&str, f32, u32)] = &[
-    // Demanding: undersized images (browser upscales, artifacts amplified)
-    ("1x→phone", 0.33, 95),  // 1x srcset to 3x phone (worst case)
-    ("1x→laptop", 0.67, 70), // 1x srcset to 1.5x laptop
-    ("2x→phone", 0.67, 95),  // 2x srcset to 3x phone
-    // Native: srcset matches device DPPX
-    ("native-desktop", 1.0, 40), // 1x srcset to 1x desktop (baseline: most demanding PPD)
-    ("native-laptop", 1.0, 70),  // 1.5x srcset to 1.5x laptop
-    ("native-phone", 1.0, 95),   // 3x srcset to 3x phone
-    // Forgiving: oversized images (browser downscales, artifacts hidden)
-    ("2x→desktop", 2.0, 40), // 2x srcset to 1x desktop
-];
+    // Undersized (browser upscales, artifacts amplified)
+    pub const SRCSET_1X_PHONE: ViewingCondition = ViewingCondition::new("1x→phone", 0.33, 95);
+    pub const SRCSET_1X_LAPTOP: ViewingCondition = ViewingCondition::new("1x→laptop", 0.67, 70);
+    pub const SRCSET_2X_PHONE: ViewingCondition = ViewingCondition::new("2x→phone", 0.67, 95);
 
-const CODECS: &[&str] = &["mozjpeg", "webp", "avif_s6"];
+    // Oversized (browser downscales, artifacts hidden)
+    pub const SRCSET_2X_DESKTOP: ViewingCondition = ViewingCondition::new("2x→desktop", 2.0, 40);
+    pub const SRCSET_2X_LAPTOP: ViewingCondition = ViewingCondition::new("2x→laptop", 1.33, 70);
+    pub const SRCSET_3X_PHONE: ViewingCondition = ViewingCondition::new("3x→phone", 1.0, 95);
+
+    /// All standard conditions for comprehensive analysis
+    pub const ALL: &[ViewingCondition] = &[
+        SRCSET_1X_PHONE,
+        SRCSET_1X_LAPTOP,
+        SRCSET_2X_PHONE,
+        NATIVE_DESKTOP,
+        NATIVE_LAPTOP,
+        NATIVE_PHONE,
+        SRCSET_2X_DESKTOP,
+    ];
+
+    /// Key conditions for compact tables
+    pub const KEY: &[ViewingCondition] = &[
+        NATIVE_DESKTOP,
+        NATIVE_LAPTOP,
+        NATIVE_PHONE,
+        SRCSET_2X_DESKTOP,
+    ];
+
+    /// Baseline condition for quality mapping
+    pub const BASELINE: ViewingCondition = NATIVE_LAPTOP;
+
+    /// Most demanding condition (for diminishing returns analysis)
+    pub const DEMANDING: ViewingCondition = NATIVE_DESKTOP;
+}
+
+/// DSSIM bucket definition for perceptibility analysis
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DssimBucket {
+    Imperceptible, // < 0.0003
+    Marginal,      // < 0.0007
+    Subtle,        // < 0.0015
+    Noticeable,    // < 0.0030
+    Degraded,      // >= 0.0030
+}
+
+impl DssimBucket {
+    pub const THRESHOLDS: &'static [(DssimBucket, f64, &'static str)] = &[
+        (DssimBucket::Imperceptible, 0.0003, "IMP"),
+        (DssimBucket::Marginal, 0.0007, "MAR"),
+        (DssimBucket::Subtle, 0.0015, "SUB"),
+        (DssimBucket::Noticeable, 0.0030, "NOT"),
+        (DssimBucket::Degraded, f64::INFINITY, "DEG"),
+    ];
+
+    pub fn from_dssim(dssim: f64) -> Self {
+        for (bucket, threshold, _) in Self::THRESHOLDS {
+            if dssim < *threshold {
+                return *bucket;
+            }
+        }
+        DssimBucket::Degraded
+    }
+
+    pub fn abbrev(&self) -> &'static str {
+        for (bucket, _, abbrev) in Self::THRESHOLDS {
+            if bucket == self {
+                return abbrev;
+            }
+        }
+        "DEG"
+    }
+
+    pub fn threshold(&self) -> f64 {
+        for (bucket, threshold, _) in Self::THRESHOLDS {
+            if bucket == self {
+                return *threshold;
+            }
+        }
+        f64::INFINITY
+    }
+}
+
+/// Configuration for report generation
+#[derive(Debug, Clone)]
+pub struct ReportConfig {
+    /// Include raw data (measured points only)
+    pub include_data_only: bool,
+    /// Include interpolated values
+    pub include_interpolated: bool,
+    /// Forgiveness factor for DSSIM matching (1.05 = allow 5% worse)
+    pub forgiveness_factor: f64,
+    /// Percentiles to report
+    pub percentiles: Vec<u32>,
+    /// Viewing conditions to include
+    pub conditions: Vec<ViewingCondition>,
+    /// Quality tiers to report
+    pub quality_tiers: Vec<(&'static str, u32)>,
+    /// Codecs to analyze
+    pub codecs: Vec<&'static str>,
+}
+
+impl Default for ReportConfig {
+    fn default() -> Self {
+        Self {
+            include_data_only: true,
+            include_interpolated: true,
+            forgiveness_factor: 1.05,
+            percentiles: vec![50, 75, 90, 95],
+            conditions: conditions::KEY.to_vec(),
+            quality_tiers: vec![
+                ("lossless", 100),
+                ("highest", 95),
+                ("high", 90),
+                ("good", 85),
+                ("medium", 76),
+                ("mediumlow", 65),
+                ("low", 50),
+                ("lowest", 30),
+            ],
+            codecs: vec!["mozjpeg", "webp", "avif_s6"],
+        }
+    }
+}
+
+/// Configuration for polynomial interpolation
+#[derive(Debug, Clone)]
+pub struct InterpolationConfig {
+    /// Minimum exponent for power law fitting
+    pub min_exponent: f64,
+    /// Maximum exponent for power law fitting
+    pub max_exponent: f64,
+    /// Exponent search step size
+    pub exponent_step: f64,
+    /// Minimum R² for valid fit
+    pub min_r_squared: f64,
+}
+
+impl Default for InterpolationConfig {
+    fn default() -> Self {
+        Self {
+            min_exponent: 0.5,
+            max_exponent: 3.0,
+            exponent_step: 0.1,
+            min_r_squared: 0.90,
+        }
+    }
+}
 
 //=============================================================================
 // Data Structures
@@ -131,98 +236,153 @@ const CODECS: &[&str] = &["mozjpeg", "webp", "avif_s6"];
 /// A single measurement from the calibration run
 #[derive(Debug, Clone)]
 pub struct Measurement {
-    image: String,
-    subdir: String, // Category/subfolder in corpus
-    codec: String,
-    quality: u32,
-    ratio: f32,
-    ppd: u32,
-    dssim: f64,
-    file_size: usize,
+    pub image: String,
+    pub subdir: String, // Category/subfolder in corpus
+    pub codec: String,
+    pub quality: u32,
+    pub ratio: f32,
+    pub ppd: u32,
+    pub dssim: f64,
+    pub file_size: usize,
 }
 
-/// Perceptibility zone for a DSSIM value
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum PerceptibilityZone {
-    Imperceptible, // < 0.0003
-    Marginal,      // < 0.0007
-    Subtle,        // < 0.0015
-    Noticeable,    // < 0.0030
-    Degraded,      // >= 0.0030
+/// Polynomial coefficients for quality interpolation: q_out = a * q_in^b + c
+#[derive(Debug, Clone, Copy)]
+pub struct GapPolynomial {
+    pub q_low: u32,
+    pub q_high: u32,
+    pub a: f64,
+    pub b: f64, // exponent
+    pub c: f64,
+    pub r_squared: f64,
+    pub validation_error: f64, // Error when predicting skipped point
 }
 
-impl PerceptibilityZone {
-    fn from_dssim(dssim: f64) -> Self {
-        if dssim < THRESH_IMPERCEPTIBLE {
-            Self::Imperceptible
-        } else if dssim < THRESH_MARGINAL {
-            Self::Marginal
-        } else if dssim < THRESH_SUBTLE {
-            Self::Subtle
-        } else if dssim < THRESH_NOTICEABLE {
-            Self::Noticeable
+impl GapPolynomial {
+    /// Interpolate quality for a given input quality
+    pub fn interpolate(&self, q_in: f64) -> f64 {
+        (self.a * q_in.powf(self.b) + self.c).clamp(0.0, 100.0)
+    }
+
+    /// Check if this polynomial covers the given quality value
+    pub fn covers(&self, q: u32) -> bool {
+        q >= self.q_low && q <= self.q_high
+    }
+}
+
+/// Collection of gap polynomials for a specific (codec, condition) pair
+#[derive(Debug, Clone)]
+pub struct InterpolationTable {
+    pub codec: String,
+    pub condition: ViewingCondition,
+    pub polynomials: Vec<GapPolynomial>,
+}
+
+impl InterpolationTable {
+    /// Find the polynomial that covers the given quality
+    pub fn find_polynomial(&self, q: u32) -> Option<&GapPolynomial> {
+        self.polynomials.iter().find(|p| p.covers(q))
+    }
+
+    /// Interpolate quality, falling back to linear if no polynomial found
+    pub fn interpolate(&self, q_in: f64) -> f64 {
+        let q_u32 = q_in.round() as u32;
+        if let Some(poly) = self.find_polynomial(q_u32) {
+            poly.interpolate(q_in)
         } else {
-            Self::Degraded
-        }
-    }
-
-    fn abbrev(&self) -> &'static str {
-        match self {
-            Self::Imperceptible => "IMP",
-            Self::Marginal => "MAR",
-            Self::Subtle => "SUB",
-            Self::Noticeable => "NOT",
-            Self::Degraded => "DEG",
+            q_in // fallback
         }
     }
 }
 
-/// Result of analyzing a quality step (q_from → q_to)
-#[derive(Debug, Clone)]
-pub struct QualityStepAnalysis {
-    q_from: u32,
-    q_to: u32,
-    dssim_from: f64,
-    dssim_to: f64,
-    zone_from: PerceptibilityZone,
-    zone_to: PerceptibilityZone,
-    dssim_reduction_pct: f64,
-    size_increase_pct: f64,
-    efficiency: f64, // dssim_reduction_pct / size_increase_pct
+//=============================================================================
+// Statistical Helpers (with unit tests)
+//=============================================================================
+
+/// Compute median of a slice (sorts in place)
+pub fn median(values: &mut [f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let mid = values.len() / 2;
+    if values.len() % 2 == 0 {
+        (values[mid - 1] + values[mid]) / 2.0
+    } else {
+        values[mid]
+    }
 }
 
-/// Per-image quality mapping result
-#[derive(Debug, Clone)]
-#[allow(dead_code)] // Fields used for debugging and potential future reporting
-struct PerImageMapping {
-    image: String,
-    mapped_quality: u32,
-    size_ratio: f64,
-    dssim_ratio: f64,
+/// Compute percentile using linear interpolation (R-7 method)
+pub fn percentile(values: &mut [f64], p: f64) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let pos = p * (values.len() - 1) as f64;
+    let lower = pos.floor() as usize;
+    let upper = (lower + 1).min(values.len() - 1);
+    let frac = pos - lower as f64;
+    values[lower] * (1.0 - frac) + values[upper] * frac
 }
 
-/// Aggregated quality mapping with percentiles
-#[derive(Debug, Clone)]
-#[allow(dead_code)] // Fields used for debugging and potential future reporting
-struct AggregatedMapping {
-    codec: String,
-    ref_quality: u32,
-    target_condition: String,
-    n_images: usize,
-    p50: u32,
-    p75: u32,
-    p90: u32,
-    p95: u32,
-    min: u32,
-    max: u32,
-    size_ratio_median: f64,
+/// Compute percentile for u32 values
+pub fn percentile_u32(values: &mut [u32], p: f64) -> u32 {
+    if values.is_empty() {
+        return 0;
+    }
+    values.sort();
+    let pos = p * (values.len() - 1) as f64;
+    let lower = pos.floor() as usize;
+    let upper = (lower + 1).min(values.len() - 1);
+    let frac = pos - lower as f64;
+    let result = values[lower] as f64 * (1.0 - frac) + values[upper] as f64 * frac;
+    result.round() as u32
+}
+
+/// Compute arithmetic mean
+pub fn mean(values: &[f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    values.iter().sum::<f64>() / values.len() as f64
+}
+
+/// Compute trimmed mean (removes top and bottom trim_pct)
+pub fn trimmed_mean(values: &mut [f64], trim_pct: f64) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let trim_count = (values.len() as f64 * trim_pct) as usize;
+    if trim_count * 2 >= values.len() {
+        return median(values);
+    }
+    let trimmed = &values[trim_count..values.len() - trim_count];
+    mean(trimmed)
+}
+
+/// Compute sample standard deviation
+pub fn std_dev(values: &[f64]) -> f64 {
+    if values.len() < 2 {
+        return 0.0;
+    }
+    let m = mean(values);
+    let variance = values.iter().map(|x| (x - m).powi(2)).sum::<f64>() / (values.len() - 1) as f64;
+    variance.sqrt()
+}
+
+/// Compute interquartile range
+pub fn iqr(values: &mut [f64]) -> f64 {
+    percentile(values, 0.75) - percentile(values, 0.25)
 }
 
 //=============================================================================
 // Data Loading
 //=============================================================================
 
-fn load_measurements(path: &Path) -> Result<Vec<Measurement>, String> {
+/// Load measurements from CSV file
+pub fn load_measurements(path: &Path) -> Result<Vec<Measurement>, String> {
     let file = File::open(path).map_err(|e| format!("Failed to open CSV: {}", e))?;
     let reader = BufReader::new(file);
     let mut measurements = Vec::new();
@@ -233,7 +393,10 @@ fn load_measurements(path: &Path) -> Result<Vec<Measurement>, String> {
     let headers: Vec<&str> = header.split(',').collect();
 
     let col = |name: &str| -> Result<usize, String> {
-        headers.iter().position(|&h| h == name).ok_or_else(|| format!("Missing column: {}", name))
+        headers
+            .iter()
+            .position(|&h| h == name)
+            .ok_or_else(|| format!("Missing column: {}", name))
     };
 
     let col_image = col("image")?;
@@ -267,38 +430,8 @@ fn load_measurements(path: &Path) -> Result<Vec<Measurement>, String> {
     Ok(measurements)
 }
 
-//=============================================================================
-// Statistical Helpers
-//=============================================================================
-
-fn percentile(values: &mut [f64], p: f64) -> f64 {
-    if values.is_empty() {
-        return 0.0;
-    }
-    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let idx = ((values.len() - 1) as f64 * p / 100.0) as usize;
-    values[idx.min(values.len() - 1)]
-}
-
-fn percentile_u32(values: &mut [u32], p: f64) -> u32 {
-    if values.is_empty() {
-        return 0;
-    }
-    values.sort();
-    let idx = ((values.len() - 1) as f64 * p / 100.0) as usize;
-    values[idx.min(values.len() - 1)]
-}
-
-fn median(values: &mut [f64]) -> f64 {
-    percentile(values, 50.0)
-}
-
-//=============================================================================
-// Analysis: Diminishing Returns
-//=============================================================================
-
-/// Groups measurements by image for per-image analysis
-fn group_by_image(measurements: &[Measurement]) -> HashMap<String, Vec<&Measurement>> {
+/// Group measurements by image name
+pub fn group_by_image(measurements: &[Measurement]) -> HashMap<String, Vec<&Measurement>> {
     let mut by_image: HashMap<String, Vec<&Measurement>> = HashMap::new();
     for m in measurements {
         by_image.entry(m.image.clone()).or_default().push(m);
@@ -306,58 +439,259 @@ fn group_by_image(measurements: &[Measurement]) -> HashMap<String, Vec<&Measurem
     by_image
 }
 
-/// Gets measurements at a specific condition (codec, ratio, ppd)
-fn get_at_condition<'a>(
+/// Get measurements at a specific condition
+pub fn get_at_condition<'a>(
     img_data: &[&'a Measurement],
     codec: &str,
-    ratio: f32,
-    ppd: u32,
+    condition: ViewingCondition,
 ) -> Vec<&'a Measurement> {
     img_data
         .iter()
-        .filter(|m| m.codec == codec && (m.ratio - ratio).abs() < 0.02 && m.ppd == ppd)
+        .filter(|m| {
+            (m.codec == codec || m.codec.starts_with(codec))
+                && condition.matches(m.ratio, m.ppd)
+        })
         .copied()
         .collect()
 }
 
-/// Gets measurement at a specific quality from a condition's measurements
-fn get_at_quality<'a>(measurements: &[&'a Measurement], quality: u32) -> Option<&'a Measurement> {
-    measurements.iter().find(|m| m.quality == quality).copied()
-}
+//=============================================================================
+// Gap-Based Polynomial Interpolation
+//=============================================================================
 
-/// Computes DSSIM reduction percentage, clamped at imperceptible threshold
-///
-/// # Algorithm
-/// - Clamp both values to imperceptible threshold (improvements below that don't matter)
-/// - Return (before - after) / before * 100
-fn dssim_reduction_percent(dssim_before: f64, dssim_after: f64) -> f64 {
-    let before = dssim_before.max(THRESH_IMPERCEPTIBLE);
-    let after = dssim_after.max(THRESH_IMPERCEPTIBLE);
-    if before <= after {
-        return 0.0;
+/// Fit a polynomial q_out = a * q_in^b + c using grid search
+/// Returns (a, b, c, r_squared)
+fn fit_power_law(points: &[(f64, f64)], config: &InterpolationConfig) -> Option<(f64, f64, f64, f64)> {
+    if points.len() < 3 {
+        return None;
     }
-    (before - after) / before * 100.0
+
+    let mut best_fit: Option<(f64, f64, f64, f64)> = None;
+    let mut b = config.min_exponent;
+
+    while b <= config.max_exponent {
+        // Transform: let x' = q_in^b, then fit q_out = a*x' + c (linear regression)
+        let x_transformed: Vec<f64> = points.iter().map(|(x, _)| x.powf(b)).collect();
+        let y: Vec<f64> = points.iter().map(|(_, y)| *y).collect();
+
+        // Linear regression for a and c
+        let n = points.len() as f64;
+        let sum_x: f64 = x_transformed.iter().sum();
+        let sum_y: f64 = y.iter().sum();
+        let sum_xy: f64 = x_transformed.iter().zip(&y).map(|(x, y)| x * y).sum();
+        let sum_x2: f64 = x_transformed.iter().map(|x| x * x).sum();
+
+        let denom = n * sum_x2 - sum_x * sum_x;
+        if denom.abs() < 1e-10 {
+            b += config.exponent_step;
+            continue;
+        }
+
+        let a = (n * sum_xy - sum_x * sum_y) / denom;
+        let c = (sum_y - a * sum_x) / n;
+
+        // Compute R²
+        let y_mean = sum_y / n;
+        let ss_tot: f64 = y.iter().map(|yi| (yi - y_mean).powi(2)).sum();
+        let ss_res: f64 = x_transformed
+            .iter()
+            .zip(&y)
+            .map(|(xi, yi)| (yi - (a * xi + c)).powi(2))
+            .sum();
+
+        let r_squared = if ss_tot > 0.0 {
+            1.0 - ss_res / ss_tot
+        } else {
+            0.0
+        };
+
+        if best_fit.is_none() || r_squared > best_fit.unwrap().3 {
+            best_fit = Some((a, b, c, r_squared));
+        }
+
+        b += config.exponent_step;
+    }
+
+    best_fit
 }
 
-/// Analyzes diminishing returns for a codec at the most demanding condition (1x-desktop)
-///
-/// # Algorithm
-/// For each quality step q_low → q_high:
-/// 1. For each image, measure DSSIM at q_low and q_high
-/// 2. Compute DSSIM reduction % (clamped at imperceptible threshold)
-/// 3. Compute file size increase %
-/// 4. Compute efficiency = DSSIM reduction % / size increase %
-/// 5. Return median across all images
+/// Fit a gap polynomial by skipping a point and validating prediction
+/// Returns the polynomial with validation error
+pub fn fit_gap_polynomial(
+    points: &[(u32, f64)], // (quality, dssim) pairs sorted by quality
+    skip_idx: usize,
+    config: &InterpolationConfig,
+) -> Option<GapPolynomial> {
+    if points.len() < 4 || skip_idx >= points.len() {
+        return None;
+    }
+
+    let skipped = points[skip_idx];
+    let training: Vec<(f64, f64)> = points
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != skip_idx)
+        .map(|(_, (q, d))| (*q as f64, *d))
+        .collect();
+
+    let (a, b, c, r_squared) = fit_power_law(&training, config)?;
+
+    // Validate by predicting the skipped point
+    let predicted = a * (skipped.0 as f64).powf(b) + c;
+    let validation_error = (predicted - skipped.1).abs();
+
+    let q_low = points.first()?.0;
+    let q_high = points.last()?.0;
+
+    Some(GapPolynomial {
+        q_low,
+        q_high,
+        a,
+        b,
+        c,
+        r_squared,
+        validation_error,
+    })
+}
+
+/// Compute gap polynomials for all quality gaps, averaging adjacent fits
+pub fn compute_gap_polynomials(
+    points: &[(u32, f64)], // (quality, dssim) pairs sorted by quality
+    config: &InterpolationConfig,
+) -> Vec<GapPolynomial> {
+    if points.len() < 4 {
+        return Vec::new();
+    }
+
+    let mut gap_polys = Vec::new();
+
+    // For each internal point (not first or last), fit by skipping it
+    for skip_idx in 1..points.len() - 1 {
+        let q_low = points[skip_idx - 1].0;
+        let q_high = points[skip_idx + 1].0;
+
+        // Skip if gap is too small (consecutive quality values)
+        if q_high - q_low <= 2 {
+            continue;
+        }
+
+        // Fit polynomial by skipping this point
+        if let Some(poly) = fit_gap_polynomial(points, skip_idx, config) {
+            gap_polys.push((skip_idx, poly));
+        }
+    }
+
+    // Average adjacent polynomials for each gap
+    let mut result = Vec::new();
+    for i in 0..gap_polys.len() {
+        let (idx, poly) = &gap_polys[i];
+
+        // Find adjacent polynomials to average with
+        let mut a_sum = poly.a;
+        let mut b_sum = poly.b;
+        let mut c_sum = poly.c;
+        let mut count = 1.0;
+
+        // Average with previous if exists and overlaps
+        if i > 0 {
+            let (prev_idx, prev_poly) = &gap_polys[i - 1];
+            if idx - prev_idx <= 2 {
+                a_sum += prev_poly.a;
+                b_sum += prev_poly.b;
+                c_sum += prev_poly.c;
+                count += 1.0;
+            }
+        }
+
+        // Average with next if exists and overlaps
+        if i + 1 < gap_polys.len() {
+            let (next_idx, next_poly) = &gap_polys[i + 1];
+            if next_idx - idx <= 2 {
+                a_sum += next_poly.a;
+                b_sum += next_poly.b;
+                c_sum += next_poly.c;
+                count += 1.0;
+            }
+        }
+
+        result.push(GapPolynomial {
+            q_low: poly.q_low,
+            q_high: poly.q_high,
+            a: a_sum / count,
+            b: b_sum / count,
+            c: c_sum / count,
+            r_squared: poly.r_squared,
+            validation_error: poly.validation_error,
+        });
+    }
+
+    result
+}
+
+/// Linear interpolation between two points for quality
+pub fn linear_interpolate_quality(
+    target_dssim: f64,
+    points: &[(u32, f64)], // (quality, dssim) sorted by quality
+) -> Option<f64> {
+    if points.len() < 2 {
+        return points.first().map(|(q, _)| *q as f64);
+    }
+
+    // DSSIM typically decreases as quality increases
+    // Find two adjacent points that bracket the target
+    for i in 0..points.len() - 1 {
+        let (q1, d1) = points[i];
+        let (q2, d2) = points[i + 1];
+
+        // Check if target falls between these DSSIM values
+        let in_range =
+            (d1 <= target_dssim && target_dssim <= d2) || (d2 <= target_dssim && target_dssim <= d1);
+
+        if in_range && (d2 - d1).abs() > 1e-12 {
+            let t = (target_dssim - d1) / (d2 - d1);
+            let interp_q = q1 as f64 + t * (q2 as f64 - q1 as f64);
+            return Some(interp_q.clamp(0.0, 100.0));
+        }
+    }
+
+    // Target outside range - return closest
+    points
+        .iter()
+        .min_by(|a, b| (a.1 - target_dssim).abs().partial_cmp(&(b.1 - target_dssim).abs()).unwrap())
+        .map(|(q, _)| *q as f64)
+}
+
+//=============================================================================
+// Analysis Functions
+//=============================================================================
+
+/// Result of analyzing a quality step (q_from → q_to)
+#[derive(Debug, Clone)]
+pub struct QualityStepAnalysis {
+    pub q_from: u32,
+    pub q_to: u32,
+    pub dssim_from: f64,
+    pub dssim_to: f64,
+    pub bucket_from: DssimBucket,
+    pub bucket_to: DssimBucket,
+    pub dssim_reduction_pct: f64,
+    pub size_increase_pct: f64,
+    pub efficiency: f64,
+}
+
+/// Analyze diminishing returns for a codec at a given condition
 pub fn analyze_diminishing_returns(
     by_image: &HashMap<String, Vec<&Measurement>>,
     codec: &str,
+    condition: ViewingCondition,
 ) -> Vec<QualityStepAnalysis> {
-    // Get all quality values for this codec at the demanding condition
+    // Get all quality values for this codec at condition
     let mut all_qualities: Vec<u32> = by_image
         .values()
         .flat_map(|img_data| {
-            let measurements = get_at_condition(img_data, codec, DEMANDING_RATIO, DEMANDING_PPD);
-            measurements.into_iter().map(|m| m.quality).collect::<Vec<_>>()
+            get_at_condition(img_data, codec, condition)
+                .into_iter()
+                .map(|m| m.quality)
         })
         .collect();
     all_qualities.sort();
@@ -365,7 +699,6 @@ pub fn analyze_diminishing_returns(
 
     let mut results = Vec::new();
 
-    // Analyze each quality step
     for i in 0..all_qualities.len().saturating_sub(1) {
         let q_from = all_qualities[i];
         let q_to = all_qualities[i + 1];
@@ -376,19 +709,29 @@ pub fn analyze_diminishing_returns(
         let mut size_increases = Vec::new();
 
         for img_data in by_image.values() {
-            let measurements = get_at_condition(img_data, codec, DEMANDING_RATIO, DEMANDING_PPD);
+            let measurements = get_at_condition(img_data, codec, condition);
 
-            let m_from = get_at_quality(&measurements, q_from);
-            let m_to = get_at_quality(&measurements, q_to);
+            let m_from = measurements.iter().find(|m| m.quality == q_from);
+            let m_to = measurements.iter().find(|m| m.quality == q_to);
 
             if let (Some(from), Some(to)) = (m_from, m_to) {
                 dssim_froms.push(from.dssim);
                 dssim_tos.push(to.dssim);
-                reductions.push(dssim_reduction_percent(from.dssim, to.dssim));
+
+                // Compute DSSIM reduction clamped at imperceptible threshold
+                let thresh = DssimBucket::Imperceptible.threshold();
+                let before = from.dssim.max(thresh);
+                let after = to.dssim.max(thresh);
+                let reduction = if before > after {
+                    (before - after) / before * 100.0
+                } else {
+                    0.0
+                };
+                reductions.push(reduction);
+
                 if from.file_size > 0 {
-                    let size_inc = (to.file_size as f64 - from.file_size as f64)
-                        / from.file_size as f64
-                        * 100.0;
+                    let size_inc =
+                        (to.file_size as f64 - from.file_size as f64) / from.file_size as f64 * 100.0;
                     size_increases.push(size_inc);
                 }
             }
@@ -402,15 +745,19 @@ pub fn analyze_diminishing_returns(
         let med_dssim_to = median(&mut dssim_tos);
         let med_reduction = median(&mut reductions);
         let med_size_inc = median(&mut size_increases);
-        let efficiency = if med_size_inc > 0.0 { med_reduction / med_size_inc } else { 0.0 };
+        let efficiency = if med_size_inc > 0.0 {
+            med_reduction / med_size_inc
+        } else {
+            0.0
+        };
 
         results.push(QualityStepAnalysis {
             q_from,
             q_to,
             dssim_from: med_dssim_from,
             dssim_to: med_dssim_to,
-            zone_from: PerceptibilityZone::from_dssim(med_dssim_from),
-            zone_to: PerceptibilityZone::from_dssim(med_dssim_to),
+            bucket_from: DssimBucket::from_dssim(med_dssim_from),
+            bucket_to: DssimBucket::from_dssim(med_dssim_to),
             dssim_reduction_pct: med_reduction,
             size_increase_pct: med_size_inc,
             efficiency,
@@ -420,236 +767,31 @@ pub fn analyze_diminishing_returns(
     results
 }
 
-/// Finds the quality level where a codec first enters the imperceptible zone
-pub fn find_imperceptible_threshold(steps: &[QualityStepAnalysis]) -> Option<u32> {
-    for step in steps {
-        if step.zone_to == PerceptibilityZone::Imperceptible {
-            return Some(step.q_to);
-        }
-    }
-    None
-}
-
-//=============================================================================
-// Analysis: Quality Mapping
-//=============================================================================
-
-/// Maps a reference quality to equivalent quality at a target condition
-///
-/// # Algorithm
-/// For each image:
-/// 1. Get DSSIM at baseline condition (1x-laptop) at ref_quality
-/// 2. Compute threshold = base_dssim * forgiveness_factor
-/// 3. Find LOWEST quality at target condition where DSSIM <= threshold
-/// 4. Record this per-image mapping
-///
-/// Returns per-image mappings for aggregation
-fn compute_per_image_mappings(
-    by_image: &HashMap<String, Vec<&Measurement>>,
-    codec: &str,
-    ref_quality: u32,
-    target_ratio: f32,
-    target_ppd: u32,
-) -> Vec<PerImageMapping> {
-    let mut mappings = Vec::new();
-
-    for (image, img_data) in by_image {
-        let baseline = get_at_condition(img_data, codec, BASELINE_RATIO, BASELINE_PPD);
-        let target = get_at_condition(img_data, codec, target_ratio, target_ppd);
-
-        let base_m = match get_at_quality(&baseline, ref_quality) {
-            Some(m) => m,
-            None => continue,
-        };
-
-        let threshold = base_m.dssim * FORGIVENESS_FACTOR;
-
-        // Find LOWEST quality that achieves threshold (smallest file)
-        let mut target_sorted: Vec<_> = target.iter().collect();
-        target_sorted.sort_by_key(|m| m.quality);
-
-        let mut best_q = None;
-        let mut best_m = None;
-
-        for m in &target_sorted {
-            if m.dssim <= threshold {
-                best_q = Some(m.quality);
-                best_m = Some(*m);
-                break;
-            }
-        }
-
-        // If none found, use highest available
-        if best_q.is_none() {
-            if let Some(max_m) = target_sorted.last() {
-                best_q = Some(max_m.quality);
-                best_m = Some(*max_m);
-            }
-        }
-
-        if let (Some(q), Some(m)) = (best_q, best_m) {
-            mappings.push(PerImageMapping {
-                image: image.clone(),
-                mapped_quality: q,
-                size_ratio: if base_m.file_size > 0 {
-                    m.file_size as f64 / base_m.file_size as f64
-                } else {
-                    1.0
-                },
-                dssim_ratio: if base_m.dssim > 0.0 { m.dssim / base_m.dssim } else { 1.0 },
-            });
-        }
-    }
-
-    mappings
-}
-
-/// Maps quality from explicit reference condition to target condition
-/// Like compute_per_image_mappings but with configurable reference
-fn compute_per_image_mappings_with_ref(
-    by_image: &HashMap<String, Vec<&Measurement>>,
-    codec: &str,
-    ref_quality: u32,
-    ref_ratio: f32,
-    ref_ppd: u32,
-    target_ratio: f32,
-    target_ppd: u32,
-) -> Vec<PerImageMapping> {
-    let mut mappings = Vec::new();
-
-    for (image, img_data) in by_image {
-        let baseline = get_at_condition(img_data, codec, ref_ratio, ref_ppd);
-        let target = get_at_condition(img_data, codec, target_ratio, target_ppd);
-
-        let base_m = match get_at_quality(&baseline, ref_quality) {
-            Some(m) => m,
-            None => continue,
-        };
-
-        let threshold = base_m.dssim * FORGIVENESS_FACTOR;
-
-        // Find LOWEST quality that achieves threshold (smallest file)
-        let mut target_sorted: Vec<_> = target.iter().collect();
-        target_sorted.sort_by_key(|m| m.quality);
-
-        let mut best_q = None;
-        let mut best_m = None;
-
-        for m in &target_sorted {
-            if m.dssim <= threshold {
-                best_q = Some(m.quality);
-                best_m = Some(*m);
-                break;
-            }
-        }
-
-        // If none found, use highest available
-        if best_q.is_none() {
-            if let Some(max_m) = target_sorted.last() {
-                best_q = Some(max_m.quality);
-                best_m = Some(*max_m);
-            }
-        }
-
-        if let (Some(q), Some(m)) = (best_q, best_m) {
-            mappings.push(PerImageMapping {
-                image: image.clone(),
-                mapped_quality: q,
-                size_ratio: if base_m.file_size > 0 {
-                    m.file_size as f64 / base_m.file_size as f64
-                } else {
-                    1.0
-                },
-                dssim_ratio: if base_m.dssim > 0.0 { m.dssim / base_m.dssim } else { 1.0 },
-            });
-        }
-    }
-
-    mappings
-}
-
-/// Aggregates per-image mappings into percentiles
-fn aggregate_mappings(
-    mappings: &[PerImageMapping],
-    codec: &str,
-    ref_quality: u32,
-    target_name: &str,
-) -> Option<AggregatedMapping> {
-    if mappings.is_empty() {
-        return None;
-    }
-
-    let qualities: Vec<u32> = mappings.iter().map(|m| m.mapped_quality).collect();
-    let mut size_ratios: Vec<f64> = mappings.iter().map(|m| m.size_ratio).collect();
-
-    Some(AggregatedMapping {
-        codec: codec.to_string(),
-        ref_quality,
-        target_condition: target_name.to_string(),
-        n_images: mappings.len(),
-        p50: percentile_u32(&mut qualities.clone(), 50.0),
-        p75: percentile_u32(&mut qualities.clone(), 75.0),
-        p90: percentile_u32(&mut qualities.clone(), 90.0),
-        p95: percentile_u32(&mut qualities.clone(), 95.0),
-        min: *qualities.iter().min().unwrap_or(&0),
-        max: *qualities.iter().max().unwrap_or(&0),
-        size_ratio_median: median(&mut size_ratios),
-    })
-}
-
-/// Applies constraints to a mapping
-///
-/// # Constraints
-/// 1. Upper bound from diminishing returns (imperceptible zone)
-/// 2. For demanding conditions: max 2x file size increase, fall back to P50 if exceeded
-fn apply_constraints(agg: &AggregatedMapping, _ref_quality: u32, is_demanding: bool) -> u32 {
-    let upper = quality_upper_bound(&agg.codec);
-    let mut quality = agg.p75;
-
-    // Apply upper bound
-    quality = quality.min(upper);
-
-    // For demanding conditions with large size increase, use P50
-    if is_demanding && agg.size_ratio_median > 2.0 {
-        quality = agg.p50.min(upper);
-    }
-
-    quality
-}
-
-//=============================================================================
-// Cross-Codec Equivalence Analysis
-//=============================================================================
-
-/// Cross-codec quality equivalence result with multiple percentiles
+/// Cross-codec quality equivalence result
 #[derive(Debug, Clone)]
 pub struct CodecEquivalence {
     pub ref_codec: String,
     pub ref_quality: u32,
     pub target_codec: String,
-    /// Quality at various percentiles (P45, P50, P75, P90)
-    pub p45: u32,
+    pub condition: ViewingCondition,
     pub p50: u32,
     pub p75: u32,
     pub p90: u32,
     pub dssim_ref: f64,
     pub dssim_target: f64,
-    /// Size ratios at various percentiles
     pub size_ratio_p50: f64,
     pub size_ratio_p75: f64,
     pub n_images: usize,
 }
 
-/// Finds equivalent quality in target codec that matches reference codec's DSSIM
-/// at native 1:1 conditions (no browser scaling, same PPD)
-/// Returns multiple percentiles (P45, P50, P75, P90) for flexibility
-fn find_codec_equivalence(
+/// Find equivalent quality between codecs at a given condition
+pub fn find_codec_equivalence(
     by_image: &HashMap<String, Vec<&Measurement>>,
     ref_codec: &str,
     ref_quality: u32,
     target_codec: &str,
-    ratio: f32,
-    ppd: u32,
+    condition: ViewingCondition,
+    forgiveness: f64,
 ) -> Option<CodecEquivalence> {
     let mut equivalent_qualities: Vec<u32> = Vec::new();
     let mut size_ratios: Vec<f64> = Vec::new();
@@ -657,21 +799,22 @@ fn find_codec_equivalence(
     let mut target_dssims: Vec<f64> = Vec::new();
 
     for img_data in by_image.values() {
-        let ref_measurements = get_at_condition(img_data, ref_codec, ratio, ppd);
-        let target_measurements = get_at_condition(img_data, target_codec, ratio, ppd);
+        let ref_measurements = get_at_condition(img_data, ref_codec, condition);
+        let target_measurements = get_at_condition(img_data, target_codec, condition);
 
-        let ref_m = match get_at_quality(&ref_measurements, ref_quality) {
+        let ref_m = ref_measurements.iter().find(|m| m.quality == ref_quality);
+        let ref_m = match ref_m {
             Some(m) => m,
             None => continue,
         };
 
-        // Find target quality that achieves same or better DSSIM
+        // Find target quality that achieves same or better DSSIM (with forgiveness)
+        let threshold = ref_m.dssim * forgiveness;
+
         let mut target_sorted: Vec<_> = target_measurements.iter().collect();
         target_sorted.sort_by_key(|m| m.quality);
 
-        // Find lowest quality in target codec that achieves ref DSSIM (with small tolerance)
-        let threshold = ref_m.dssim * 1.02; // 2% tolerance
-
+        // Find lowest quality that achieves threshold
         let mut best_q = None;
         let mut best_m = None;
         for m in &target_sorted {
@@ -682,7 +825,7 @@ fn find_codec_equivalence(
             }
         }
 
-        // If none found below threshold, use highest quality
+        // If none found, use highest quality
         if best_q.is_none() {
             if let Some(max_m) = target_sorted.last() {
                 best_q = Some(max_m.quality);
@@ -708,125 +851,129 @@ fn find_codec_equivalence(
         ref_codec: ref_codec.to_string(),
         ref_quality,
         target_codec: target_codec.to_string(),
-        p45: percentile_u32(&mut equivalent_qualities.clone(), 45.0),
-        p50: percentile_u32(&mut equivalent_qualities.clone(), 50.0),
-        p75: percentile_u32(&mut equivalent_qualities.clone(), 75.0),
-        p90: percentile_u32(&mut equivalent_qualities.clone(), 90.0),
+        condition,
+        p50: percentile_u32(&mut equivalent_qualities.clone(), 0.50),
+        p75: percentile_u32(&mut equivalent_qualities.clone(), 0.75),
+        p90: percentile_u32(&mut equivalent_qualities.clone(), 0.90),
         dssim_ref: median(&mut ref_dssims),
         dssim_target: median(&mut target_dssims),
-        size_ratio_p50: percentile(&mut size_ratios.clone(), 50.0),
-        size_ratio_p75: percentile(&mut size_ratios.clone(), 75.0),
+        size_ratio_p50: percentile(&mut size_ratios.clone(), 0.50),
+        size_ratio_p75: percentile(&mut size_ratios.clone(), 0.75),
         n_images: equivalent_qualities.len(),
     })
 }
 
-/// Formats cross-codec equivalence table with multiple percentile columns
-pub fn format_codec_equivalence_table<W: Write>(
-    out: &mut W,
-    equivalences: &[CodecEquivalence],
-    ref_codec: &str,
-) -> std::io::Result<()> {
-    // Group by ref_quality
-    let mut by_quality: HashMap<u32, Vec<&CodecEquivalence>> = HashMap::new();
-    for eq in equivalences {
-        if eq.ref_codec == ref_codec {
-            by_quality.entry(eq.ref_quality).or_default().push(eq);
+/// DSSIM bucket analysis result
+#[derive(Debug, Clone)]
+pub struct DssimBucketAnalysis {
+    pub codec: String,
+    pub bucket: DssimBucket,
+    pub condition_qualities: Vec<(ViewingCondition, u32, u32, u32)>, // (condition, p50, p75, p90)
+}
+
+/// Analyze quality required to achieve each DSSIM bucket at various conditions
+pub fn analyze_dssim_buckets(
+    by_image: &HashMap<String, Vec<&Measurement>>,
+    codec: &str,
+    conditions: &[ViewingCondition],
+) -> Vec<DssimBucketAnalysis> {
+    let mut results = Vec::new();
+
+    for (bucket, threshold, _) in DssimBucket::THRESHOLDS {
+        if *bucket == DssimBucket::Degraded {
+            continue; // Skip degraded - it's the catchall
         }
-    }
 
-    let mut qualities: Vec<u32> = by_quality.keys().copied().collect();
-    qualities.sort();
+        let mut condition_quals = Vec::new();
 
-    // Wide format with multiple percentiles
-    writeln!(out, "\n┌{}┐", "─".repeat(130))?;
-    writeln!(
-        out,
-        "│ {:^128} │",
-        format!(
-            "CODEC EQUIVALENCE (reference: {} at native 1:1, PPD=40)",
-            ref_codec.to_uppercase()
-        )
-    )?;
-    writeln!(
-        out,
-        "│ {:^128} │",
-        "Lower percentiles = more aggressive (works for fewer images), Higher = conservative"
-    )?;
-    writeln!(out, "├────────┬────────────────────────────────────────────────────────────┬────────────────────────────────────────────────────────────┤")?;
-    writeln!(out, "│ {:^6} │ {:^58} │ {:^58} │", ref_codec, "WebP", "AVIF (speed=6)")?;
-    writeln!(
-        out,
-        "│        │ {:^13} {:^13} {:^13} {:^13} │ {:^13} {:^13} {:^13} {:^13} │",
-        "P45", "P50", "P75", "P90", "P45", "P50", "P75", "P90"
-    )?;
-    writeln!(out, "├────────┼────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────┤")?;
+        for condition in conditions {
+            let mut qualities_achieving_bucket: Vec<u32> = Vec::new();
 
-    for q in &qualities {
-        if let Some(eqs) = by_quality.get(q) {
-            let webp = eqs.iter().find(|e| e.target_codec == "webp");
-            let avif = eqs.iter().find(|e| e.target_codec == "avif_s6");
+            for img_data in by_image.values() {
+                let measurements = get_at_condition(img_data, codec, *condition);
+                let mut sorted: Vec<_> = measurements.iter().collect();
+                sorted.sort_by_key(|m| m.quality);
 
-            let format_eq = |eq: Option<&CodecEquivalence>| -> String {
-                match eq {
-                    Some(e) => {
-                        let size_pct = (e.size_ratio_p75 * 100.0) as i32;
-                        format!(
-                            "{:>3} {:>3} {:>3} {:>3}  ({:>2}%)",
-                            e.p45, e.p50, e.p75, e.p90, size_pct
-                        )
+                // Find lowest quality that achieves this bucket (dssim < threshold)
+                for m in &sorted {
+                    if m.dssim < *threshold {
+                        qualities_achieving_bucket.push(m.quality);
+                        break;
                     }
-                    None => "       N/A           ".to_string(),
                 }
-            };
+            }
 
-            writeln!(
-                out,
-                "│ {:>6} │ {:^58} │ {:^58} │",
-                format!("q{}", q),
-                format_eq(webp.copied()),
-                format_eq(avif.copied())
-            )?;
+            if !qualities_achieving_bucket.is_empty() {
+                let p50 = percentile_u32(&mut qualities_achieving_bucket.clone(), 0.50);
+                let p75 = percentile_u32(&mut qualities_achieving_bucket.clone(), 0.75);
+                let p90 = percentile_u32(&mut qualities_achieving_bucket.clone(), 0.90);
+                condition_quals.push((*condition, p50, p75, p90));
+            }
         }
+
+        results.push(DssimBucketAnalysis {
+            codec: codec.to_string(),
+            bucket: *bucket,
+            condition_qualities: condition_quals,
+        });
     }
 
-    writeln!(out, "└────────┴────────────────────────────────────────────────────────────┴────────────────────────────────────────────────────────────┘")?;
-
-    writeln!(out, "\nSize % shows P75 file size relative to MozJPEG reference at same quality.")?;
-    writeln!(out, "Note: P45=aggressive (may show artifacts on 45% of images), P75=conservative default, P90=very safe.")?;
-
-    Ok(())
+    results
 }
 
 //=============================================================================
-// Reporting (separated from analysis)
+// Reporting Helpers
 //=============================================================================
 
-/// Formats the diminishing returns analysis as a report
-pub fn format_diminishing_returns_report<W: Write>(
-    out: &mut W,
+/// Format a table header row
+pub fn format_table_header(columns: &[&str], widths: &[usize]) -> String {
+    let mut row = String::from("│");
+    for (col, width) in columns.iter().zip(widths.iter()) {
+        write!(row, " {:^width$} │", col, width = width - 2).unwrap();
+    }
+    row
+}
+
+/// Format a table separator
+pub fn format_table_separator(widths: &[usize], style: char) -> String {
+    let mut sep = String::new();
+    let (left, mid, right) = match style {
+        '┌' => ('┌', '┬', '┐'),
+        '├' => ('├', '┼', '┤'),
+        '└' => ('└', '┴', '┘'),
+        _ => ('├', '┼', '┤'),
+    };
+    sep.push(left);
+    for (i, width) in widths.iter().enumerate() {
+        sep.push_str(&"─".repeat(*width));
+        if i < widths.len() - 1 {
+            sep.push(mid);
+        }
+    }
+    sep.push(right);
+    sep
+}
+
+/// Format diminishing returns report
+pub fn format_diminishing_returns_report(
     codec: &str,
     steps: &[QualityStepAnalysis],
-) -> std::io::Result<()> {
-    writeln!(out, "\n{}", "━".repeat(120))?;
-    writeln!(out, " {}", codec.to_uppercase())?;
-    writeln!(out, "{}", "━".repeat(120))?;
+    condition: ViewingCondition,
+) -> String {
+    let mut out = String::new();
+
+    writeln!(out, "\n{}", "━".repeat(120)).unwrap();
+    writeln!(out, " {} at {} (PPD={})", codec.to_uppercase(), condition.name, condition.ppd).unwrap();
+    writeln!(out, "{}", "━".repeat(120)).unwrap();
     writeln!(
         out,
         "{:<10} │ {:>11} │ {:>4} │ {:>11} │ {:>4} │ {:>9} │ {:>8} │ {:>7} │ {:>12}",
-        "Step",
-        "DSSIM(from)",
-        "Zone",
-        "DSSIM(to)",
-        "Zone",
-        "Δ DSSIM%",
-        "Size+%",
-        "Effic",
-        "Worth it?"
-    )?;
-    writeln!(out, "{}", "─".repeat(120))?;
+        "Step", "DSSIM(from)", "Zone", "DSSIM(to)", "Zone", "Δ DSSIM%", "Size+%", "Effic", "Worth it?"
+    ).unwrap();
+    writeln!(out, "{}", "─".repeat(120)).unwrap();
 
     for step in steps {
-        let verdict = if step.zone_to == PerceptibilityZone::Imperceptible {
+        let verdict = if step.bucket_to == DssimBucket::Imperceptible {
             "NO (lossless)"
         } else if step.dssim_reduction_pct < 0.5 {
             "NO (tiny)"
@@ -840,417 +987,265 @@ pub fn format_diminishing_returns_report<W: Write>(
             "NO (costly)"
         };
 
-        writeln!(out,
+        writeln!(
+            out,
             "q{:<2}→{:<3} │ {:>11.5} │ {:>4} │ {:>11.5} │ {:>4} │ {:>8.1}% │ {:>7.1}% │ {:>7.2} │ {:>12}",
             step.q_from, step.q_to,
-            step.dssim_from, step.zone_from.abbrev(),
-            step.dssim_to, step.zone_to.abbrev(),
+            step.dssim_from, step.bucket_from.abbrev(),
+            step.dssim_to, step.bucket_to.abbrev(),
             step.dssim_reduction_pct, step.size_increase_pct,
             step.efficiency, verdict
-        )?;
+        ).unwrap();
     }
 
-    Ok(())
+    out
 }
 
-/// Multi-percentile aggregated mapping for a single condition
-#[derive(Debug, Clone)]
-pub struct ConditionMapping {
-    pub condition_name: String,
-    pub p50: u32,
-    pub p75: u32,
-    pub p90: u32,
-    pub size_ratio_p75: f64,
-}
+/// Format DSSIM bucket table
+pub fn format_dssim_bucket_table(analyses: &[DssimBucketAnalysis], config: &ReportConfig) -> String {
+    let mut out = String::new();
 
-/// Formats quality mappings with multiple percentile columns
-pub fn format_quality_mappings_multi<W: Write>(
-    out: &mut W,
-    codec: &str,
-    // ref_q -> [(condition_name, ConditionMapping)]
-    mappings: &[(u32, Vec<ConditionMapping>)],
-) -> std::io::Result<()> {
-    // Calculate column width per condition: we show P50/P75/P90
-    let col_width = 20;
-    let total_width = 8 + 6 + TARGET_CONDITIONS.len() * (col_width + 1) + 3;
-
-    writeln!(out, "\n┌{}┐", "─".repeat(total_width))?;
-    writeln!(out, "│ {:^width$} │", codec.to_uppercase(), width = total_width - 2)?;
-    writeln!(
-        out,
-        "│ {:^width$} │",
-        "P50 / P75 / P90 (lower percentile = more aggressive)",
-        width = total_width - 2
-    )?;
-
-    // Build header separator
-    let mut sep = String::from("├────────┬──────");
-    for _ in TARGET_CONDITIONS {
-        sep.push_str(&format!("┬{}", "─".repeat(col_width)));
+    // Group by codec
+    let mut by_codec: HashMap<&str, Vec<&DssimBucketAnalysis>> = HashMap::new();
+    for a in analyses {
+        by_codec.entry(&a.codec).or_default().push(a);
     }
-    sep.push_str("┤");
-    writeln!(out, "{}", sep)?;
 
-    // Condition names header
-    write!(out, "│ {:6} │ {:>4} ", "Tier", "Ref")?;
-    for (name, _, _) in TARGET_CONDITIONS {
-        write!(out, "│ {:^width$} ", name, width = col_width - 1)?;
-    }
-    writeln!(out, "│")?;
+    for (codec, codec_analyses) in &by_codec {
+        writeln!(out, "\n{}", "═".repeat(100)).unwrap();
+        writeln!(out, " {} - Quality required for each DSSIM bucket", codec.to_uppercase()).unwrap();
+        writeln!(out, " P50 / P75 / P90 (lower percentile = more aggressive)").unwrap();
+        writeln!(out, "{}", "═".repeat(100)).unwrap();
 
-    // Separator before data rows
-    let mut sep = String::from("├────────┼──────");
-    for _ in TARGET_CONDITIONS {
-        sep.push_str(&format!("┼{}", "─".repeat(col_width)));
-    }
-    sep.push_str("┤");
-    writeln!(out, "{}", sep)?;
-
-    for (tier_name, ref_q) in QUALITY_TIERS {
-        write!(out, "│ {:6} │ {:>4} ", tier_name, ref_q)?;
-
-        // Find mappings for this ref_q
-        let row_mappings = mappings.iter().find(|(q, _)| q == ref_q).map(|(_, v)| v);
-
-        for (cond_name, _, _) in TARGET_CONDITIONS {
-            let cell = if *ref_q == 100 {
-                "100".to_string()
-            } else if let Some(m) = row_mappings {
-                if let Some(cm) = m.iter().find(|c| c.condition_name == *cond_name) {
-                    // Show P50/P75/P90 compactly
-                    format!("{:>2}/{:>2}/{:>2}", cm.p50, cm.p75, cm.p90)
-                } else {
-                    "N/A".to_string()
-                }
-            } else {
-                "N/A".to_string()
-            };
-            write!(out, "│ {:^width$} ", cell, width = col_width - 1)?;
+        // Header
+        write!(out, "{:>15} │", "Bucket").unwrap();
+        for cond in &config.conditions {
+            write!(out, " {:^18} │", cond.name).unwrap();
         }
-        writeln!(out, "│")?;
+        writeln!(out).unwrap();
+        writeln!(out, "{}", "─".repeat(100)).unwrap();
+
+        for analysis in codec_analyses.iter() {
+            write!(out, "{:>15} │", format!("{} (<{:.4})", analysis.bucket.abbrev(), analysis.bucket.threshold())).unwrap();
+
+            for cond in &config.conditions {
+                let cell = analysis
+                    .condition_qualities
+                    .iter()
+                    .find(|(c, _, _, _)| c.name == cond.name)
+                    .map(|(_, p50, p75, p90)| format!("{:>2}/{:>2}/{:>2}", p50, p75, p90))
+                    .unwrap_or_else(|| "N/A".to_string());
+                write!(out, " {:^18} │", cell).unwrap();
+            }
+            writeln!(out).unwrap();
+        }
     }
 
-    // Footer
-    let mut sep = String::from("└────────┴──────");
-    for _ in TARGET_CONDITIONS {
-        sep.push_str(&format!("┴{}", "─".repeat(col_width)));
-    }
-    sep.push_str("┘");
-    writeln!(out, "{}", sep)?;
-
-    Ok(())
+    out
 }
 
-/// Formats quality mappings as a table (legacy single-value format)
-pub fn format_quality_mappings<W: Write>(
-    out: &mut W,
-    codec: &str,
-    mappings: &[(u32, Vec<(String, u32)>)], // ref_q -> [(condition_name, mapped_q)]
-) -> std::io::Result<()> {
-    writeln!(out, "\n┌{}┐", "─".repeat(95))?;
-    writeln!(out, "│ {:^93} │", codec.to_uppercase())?;
-    writeln!(
-        out,
-        "├──────────┬──────┬{}┤",
-        "─────────────────┬".repeat(TARGET_CONDITIONS.len()).trim_end_matches('┬')
-    )?;
+/// Format codec equivalence table
+pub fn format_codec_equivalence_table(
+    equivalences: &[CodecEquivalence],
+    ref_codec: &str,
+    config: &ReportConfig,
+) -> String {
+    let mut out = String::new();
 
-    write!(out, "│ {:8} │ {:>4} │", "Tier", "Ref")?;
-    for (name, _, _) in TARGET_CONDITIONS {
-        write!(out, " {:^15} │", name)?;
-    }
-    writeln!(out)?;
-    writeln!(
-        out,
-        "├──────────┼──────┼{}┤",
-        "─────────────────┼".repeat(TARGET_CONDITIONS.len()).trim_end_matches('┼')
-    )?;
-
-    for (tier_name, ref_q) in QUALITY_TIERS {
-        write!(out, "│ {:8} │ {:>4} │", tier_name, ref_q)?;
-
-        // Find mappings for this ref_q
-        let row_mappings = mappings.iter().find(|(q, _)| q == ref_q).map(|(_, v)| v);
-
-        for (cond_name, _, _) in TARGET_CONDITIONS {
-            let cell = if *ref_q == 100 {
-                "100".to_string()
-            } else if let Some(m) = row_mappings {
-                if let Some((_, mapped_q)) = m.iter().find(|(n, _)| n == *cond_name) {
-                    let delta = *mapped_q as i32 - *ref_q as i32;
-                    if delta.abs() <= 3 {
-                        format!("{}", mapped_q)
-                    } else if delta > 0 {
-                        format!("{} (+{})", mapped_q, delta)
-                    } else {
-                        format!("{} ({})", mapped_q, delta)
-                    }
-                } else {
-                    "N/A".to_string()
-                }
-            } else {
-                "N/A".to_string()
-            };
-            write!(out, " {:^15} │", cell)?;
+    // Group by ref_quality
+    let mut by_quality: HashMap<u32, Vec<&CodecEquivalence>> = HashMap::new();
+    for eq in equivalences {
+        if eq.ref_codec == ref_codec {
+            by_quality.entry(eq.ref_quality).or_default().push(eq);
         }
-        writeln!(out)?;
     }
 
+    let mut qualities: Vec<u32> = by_quality.keys().copied().collect();
+    qualities.sort();
+
+    writeln!(out, "\n┌{}┐", "─".repeat(100)).unwrap();
     writeln!(
         out,
-        "└──────────┴──────┴{}┘",
-        "─────────────────┴".repeat(TARGET_CONDITIONS.len()).trim_end_matches('┴')
-    )?;
+        "│ {:^98} │",
+        format!("CODEC EQUIVALENCE (reference: {} at {:?})", ref_codec.to_uppercase(), conditions::DEMANDING.name)
+    ).unwrap();
+    writeln!(out, "│ {:^98} │", "P50 / P75 / P90 (size%)").unwrap();
+    writeln!(out, "├────────┬──────────────────────────────────────────┬──────────────────────────────────────────┤").unwrap();
 
-    Ok(())
+    write!(out, "│ {:^6} │", ref_codec).unwrap();
+    for codec in &config.codecs {
+        if *codec != ref_codec {
+            write!(out, " {:^40} │", codec).unwrap();
+        }
+    }
+    writeln!(out).unwrap();
+    writeln!(out, "├────────┼──────────────────────────────────────────┼──────────────────────────────────────────┤").unwrap();
+
+    for q in &qualities {
+        write!(out, "│ {:>6} │", format!("q{}", q)).unwrap();
+
+        if let Some(eqs) = by_quality.get(q) {
+            for codec in &config.codecs {
+                if *codec == ref_codec {
+                    continue;
+                }
+                let eq = eqs.iter().find(|e| e.target_codec.starts_with(codec));
+                let cell = match eq {
+                    Some(e) => format!(
+                        "{:>2}/{:>2}/{:>2} ({:>3.0}%)",
+                        e.p50, e.p75, e.p90, e.size_ratio_p75 * 100.0
+                    ),
+                    None => "N/A".to_string(),
+                };
+                write!(out, " {:^40} │", cell).unwrap();
+            }
+        }
+        writeln!(out).unwrap();
+    }
+
+    writeln!(out, "└────────┴──────────────────────────────────────────┴──────────────────────────────────────────┘").unwrap();
+
+    out
 }
 
 //=============================================================================
-// Main Analysis Entry Point
+// Main Analysis Entry Points
 //=============================================================================
 
-pub fn run_quality_analysis(csv_path: &Path) -> Result<String, String> {
+/// Full analysis with configurable output
+pub fn run_analysis(
+    measurements: &[Measurement],
+    config: &ReportConfig,
+) -> String {
     let mut output = String::new();
-    use std::fmt::Write as FmtWrite;
 
-    // Header with timestamp
-    writeln!(output, "Generated: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"))
-        .map_err(|e| e.to_string())?;
-    writeln!(output).map_err(|e| e.to_string())?;
+    writeln!(output, "Generated: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S")).unwrap();
 
-    // Load data
-    let measurements = load_measurements(csv_path)?;
-    writeln!(output, "Loaded {} measurements", measurements.len()).map_err(|e| e.to_string())?;
+    let by_image = group_by_image(measurements);
+    writeln!(output, "Loaded {} measurements across {} images", measurements.len(), by_image.len()).unwrap();
 
-    let by_image = group_by_image(&measurements);
-    writeln!(output, "Across {} images", by_image.len()).map_err(|e| e.to_string())?;
-
-    // Count images by category
+    // Category breakdown
     let mut by_category: HashMap<String, usize> = HashMap::new();
-    for (_image_name, image_measurements) in &by_image {
-        if let Some(m) = image_measurements.first() {
+    for (_, img_measurements) in &by_image {
+        if let Some(m) = img_measurements.first() {
             *by_category.entry(m.subdir.clone()).or_insert(0) += 1;
         }
     }
+    writeln!(output, "\nImages by category:").unwrap();
     let mut categories: Vec<_> = by_category.iter().collect();
-    categories.sort_by(|a, b| b.1.cmp(a.1)); // Sort by count descending
-
-    writeln!(output, "\nImages by category:").map_err(|e| e.to_string())?;
+    categories.sort_by(|a, b| b.1.cmp(a.1));
     for (cat, count) in &categories {
-        writeln!(output, "  {:20} {:>4} images", cat, count).map_err(|e| e.to_string())?;
+        writeln!(output, "  {:20} {:>4} images", cat, count).unwrap();
     }
-    writeln!(output).map_err(|e| e.to_string())?;
 
-    // Methodology section
-    writeln!(output, "{}", "=".repeat(120)).map_err(|e| e.to_string())?;
-    writeln!(output, " METHODOLOGY").map_err(|e| e.to_string())?;
-    writeln!(output, "{}", "=".repeat(120)).map_err(|e| e.to_string())?;
-    writeln!(
-        output,
-        r#"
-ALGORITHM:
-  1. For each source image:
-     a. Measure DSSIM at baseline (1x-laptop: PPD={}, ratio={}) at reference quality
-     b. Compute threshold = base_dssim * {} (forgiveness factor)
-     c. Find LOWEST quality at target condition where DSSIM <= threshold
-     d. Record per-image quality mapping
+    // Diminishing returns analysis
+    writeln!(output, "\n{}", "=".repeat(120)).unwrap();
+    writeln!(output, " DIMINISHING RETURNS ANALYSIS").unwrap();
+    writeln!(output, "{}", "=".repeat(120)).unwrap();
 
-  2. Aggregate per-image mappings:
-     - P50 (median): works for 50% of images
-     - P75: works for 75% of images (default, conservative)
-     - P90/P95: more conservative options
-
-  3. Apply constraints:
-     - Upper bounds from diminishing returns (MozJPEG≤95, WebP≤100, AVIF≤95)
-     - For demanding conditions: max 2x file size, fall back to P50 if exceeded
-
-PERCEPTIBILITY THRESHOLDS (desktop, PPD={}):
-  DSSIM < {:.4}: Imperceptible (visually lossless)
-  DSSIM < {:.4}: Marginal (only A/B comparison)
-  DSSIM < {:.4}: Subtle (barely noticeable)
-  DSSIM < {:.4}: Noticeable (visible on inspection)
-  DSSIM >= {:.4}: Degraded (clearly visible)
-"#,
-        BASELINE_PPD,
-        BASELINE_RATIO,
-        FORGIVENESS_FACTOR,
-        DEMANDING_PPD,
-        THRESH_IMPERCEPTIBLE,
-        THRESH_MARGINAL,
-        THRESH_SUBTLE,
-        THRESH_NOTICEABLE,
-        THRESH_NOTICEABLE
-    )
-    .map_err(|e| e.to_string())?;
-
-    // Part 1: Diminishing Returns
-    writeln!(output, "\n{}", "=".repeat(120)).map_err(|e| e.to_string())?;
-    writeln!(output, " DIMINISHING RETURNS ANALYSIS (1x-desktop, PPD={})", DEMANDING_PPD)
-        .map_err(|e| e.to_string())?;
-    writeln!(output, "{}", "=".repeat(120)).map_err(|e| e.to_string())?;
-    writeln!(output, "\nThis is the MOST DEMANDING condition - where artifacts are most visible.")
-        .map_err(|e| e.to_string())?;
-    writeln!(
-        output,
-        "Used to determine upper bounds (quality beyond which improvements are imperceptible)."
-    )
-    .map_err(|e| e.to_string())?;
-
-    let mut out_bytes = output.as_bytes().to_vec();
-    for codec in CODECS {
-        let steps = analyze_diminishing_returns(&by_image, codec);
-        format_diminishing_returns_report(&mut out_bytes, codec, &steps)
-            .map_err(|e| e.to_string())?;
-
-        // Summary
-        let imperceptible_at = find_imperceptible_threshold(&steps);
-        writeln!(
-            out_bytes,
-            "\n  {} reaches imperceptible zone at: q{}",
-            codec.to_uppercase(),
-            imperceptible_at.map(|q| q.to_string()).unwrap_or("never".to_string())
-        )
-        .map_err(|e| e.to_string())?;
+    for codec in &config.codecs {
+        let steps = analyze_diminishing_returns(&by_image, codec, conditions::DEMANDING);
+        output.push_str(&format_diminishing_returns_report(codec, &steps, conditions::DEMANDING));
     }
-    output = String::from_utf8(out_bytes).map_err(|e| e.to_string())?;
 
-    // Part 2: Cross-Codec Equivalence (native 1:1 at desktop PPD=40)
-    writeln!(output, "\n\n{}", "=".repeat(120)).map_err(|e| e.to_string())?;
-    writeln!(output, " CROSS-CODEC QUALITY EQUIVALENCE (native 1:1, PPD={})", DEMANDING_PPD)
-        .map_err(|e| e.to_string())?;
-    writeln!(output, "{}", "=".repeat(120)).map_err(|e| e.to_string())?;
-    writeln!(
-        output,
-        "\nDirect quality translation between codecs at the most demanding viewing condition."
-    )
-    .map_err(|e| e.to_string())?;
-    writeln!(
-        output,
-        "For each MozJPEG quality, find WebP/AVIF quality that produces equivalent DSSIM."
-    )
-    .map_err(|e| e.to_string())?;
-    writeln!(output, "Size % shows target file size relative to MozJPEG reference.")
-        .map_err(|e| e.to_string())?;
+    // Cross-codec equivalence
+    writeln!(output, "\n{}", "=".repeat(120)).unwrap();
+    writeln!(output, " CROSS-CODEC EQUIVALENCE").unwrap();
+    writeln!(output, "{}", "=".repeat(120)).unwrap();
 
-    // Dynamically get all measured MozJPEG quality values at demanding condition
-    let mut equivalences: Vec<CodecEquivalence> = Vec::new();
-    let mut mozjpeg_qualities: Vec<u32> = by_image
+    let ref_codec = "mozjpeg";
+    let mut equivalences = Vec::new();
+
+    // Get measured quality values
+    let mut ref_qualities: Vec<u32> = by_image
         .values()
         .flat_map(|img_data| {
-            get_at_condition(img_data, "mozjpeg", DEMANDING_RATIO, DEMANDING_PPD)
+            get_at_condition(img_data, ref_codec, conditions::DEMANDING)
                 .into_iter()
                 .map(|m| m.quality)
         })
         .collect::<std::collections::HashSet<_>>()
         .into_iter()
         .collect();
-    mozjpeg_qualities.sort();
-    writeln!(
-        output,
-        "Found {} MozJPEG quality levels with data at demanding condition",
-        mozjpeg_qualities.len()
-    )
-    .map_err(|e| e.to_string())?;
+    ref_qualities.sort();
 
-    for &ref_q in &mozjpeg_qualities {
-        for target_codec in &["webp", "avif_s6"] {
+    for &ref_q in &ref_qualities {
+        for target_codec in &config.codecs {
+            if *target_codec == ref_codec {
+                continue;
+            }
             if let Some(eq) = find_codec_equivalence(
                 &by_image,
-                "mozjpeg",
+                ref_codec,
                 ref_q,
                 target_codec,
-                DEMANDING_RATIO,
-                DEMANDING_PPD,
+                conditions::DEMANDING,
+                config.forgiveness_factor,
             ) {
                 equivalences.push(eq);
             }
         }
     }
 
-    let mut out_bytes = output.as_bytes().to_vec();
-    format_codec_equivalence_table(&mut out_bytes, &equivalences, "mozjpeg")
-        .map_err(|e| e.to_string())?;
-    output = String::from_utf8(out_bytes).map_err(|e| e.to_string())?;
+    output.push_str(&format_codec_equivalence_table(&equivalences, ref_codec, config));
 
-    // Part 3: Quality Mappings from multiple reference baselines (with multi-percentile display)
-    for (ref_name, ref_ratio, ref_ppd) in REFERENCE_CONDITIONS {
-        writeln!(output, "\n\n{}", "=".repeat(160)).map_err(|e| e.to_string())?;
-        writeln!(
-            output,
-            " QUALITY MAPPINGS (reference: {}, ratio={}, PPD={})",
-            ref_name, ref_ratio, ref_ppd
-        )
-        .map_err(|e| e.to_string())?;
-        writeln!(output, "{}", "=".repeat(160)).map_err(|e| e.to_string())?;
-        writeln!(output, "\nShowing P50/P75/P90 with {}x forgiveness factor. Lower percentile = more aggressive quality reduction.", FORGIVENESS_FACTOR).map_err(|e| e.to_string())?;
-        writeln!(output, "Maps quality FROM reference condition TO each target condition.")
-            .map_err(|e| e.to_string())?;
+    // DSSIM bucket analysis
+    writeln!(output, "\n{}", "=".repeat(120)).unwrap();
+    writeln!(output, " DSSIM BUCKET ANALYSIS").unwrap();
+    writeln!(output, "{}", "=".repeat(120)).unwrap();
+    writeln!(output, " Quality required to achieve each perceptibility level").unwrap();
 
-        let mut out_bytes = output.as_bytes().to_vec();
-        for codec in CODECS {
-            let mut codec_mappings: Vec<(u32, Vec<ConditionMapping>)> = Vec::new();
-
-            for (_tier_name, tier_q) in QUALITY_TIERS {
-                let mut row: Vec<ConditionMapping> = Vec::new();
-
-                for (cond_name, target_ratio, target_ppd) in TARGET_CONDITIONS {
-                    let mapping = if *tier_q == 100 {
-                        ConditionMapping {
-                            condition_name: cond_name.to_string(),
-                            p50: 100,
-                            p75: 100,
-                            p90: 100,
-                            size_ratio_p75: 1.0,
-                        }
-                    } else {
-                        // Use the current reference condition as baseline
-                        let per_image = compute_per_image_mappings_with_ref(
-                            &by_image,
-                            codec,
-                            *tier_q,
-                            *ref_ratio,
-                            *ref_ppd, // Reference condition
-                            *target_ratio,
-                            *target_ppd, // Target condition
-                        );
-
-                        if let Some(agg) = aggregate_mappings(&per_image, codec, *tier_q, cond_name)
-                        {
-                            ConditionMapping {
-                                condition_name: cond_name.to_string(),
-                                p50: agg.p50,
-                                p75: agg.p75,
-                                p90: agg.p90,
-                                size_ratio_p75: agg.size_ratio_median,
-                            }
-                        } else {
-                            ConditionMapping {
-                                condition_name: cond_name.to_string(),
-                                p50: *tier_q,
-                                p75: *tier_q,
-                                p90: *tier_q,
-                                size_ratio_p75: 1.0,
-                            }
-                        }
-                    };
-
-                    row.push(mapping);
-                }
-
-                codec_mappings.push((*tier_q, row));
-            }
-
-            format_quality_mappings_multi(&mut out_bytes, codec, &codec_mappings)
-                .map_err(|e| e.to_string())?;
-        }
-        output = String::from_utf8(out_bytes).map_err(|e| e.to_string())?;
+    let mut bucket_analyses = Vec::new();
+    for codec in &config.codecs {
+        let analyses = analyze_dssim_buckets(&by_image, codec, &config.conditions);
+        bucket_analyses.extend(analyses);
     }
 
-    writeln!(output, "\n{}", "=".repeat(120)).map_err(|e| e.to_string())?;
-    writeln!(output, " ANALYSIS COMPLETE").map_err(|e| e.to_string())?;
-    writeln!(output, "{}", "=".repeat(120)).map_err(|e| e.to_string())?;
+    output.push_str(&format_dssim_bucket_table(&bucket_analyses, config));
 
-    Ok(output)
+    output
+}
+
+/// Generate lookup tables with polynomial coefficients
+pub fn generate_interpolation_tables(
+    measurements: &[Measurement],
+    config: &InterpolationConfig,
+) -> Vec<InterpolationTable> {
+    let by_image = group_by_image(measurements);
+    let mut tables = Vec::new();
+
+    let codecs = ["mozjpeg", "webp", "avif_s6"];
+
+    for codec in &codecs {
+        for condition in conditions::KEY {
+            // Collect (quality, dssim) pairs aggregated across images
+            let mut quality_dssims: HashMap<u32, Vec<f64>> = HashMap::new();
+
+            for img_data in by_image.values() {
+                let measurements = get_at_condition(img_data, codec, *condition);
+                for m in measurements {
+                    quality_dssims.entry(m.quality).or_default().push(m.dssim);
+                }
+            }
+
+            // Use median DSSIM for each quality
+            let mut points: Vec<(u32, f64)> = quality_dssims
+                .into_iter()
+                .map(|(q, mut dssims)| (q, median(&mut dssims)))
+                .collect();
+            points.sort_by_key(|(q, _)| *q);
+
+            let polynomials = compute_gap_polynomials(&points, config);
+
+            tables.push(InterpolationTable {
+                codec: codec.to_string(),
+                condition: *condition,
+                polynomials,
+            });
+        }
+    }
+
+    tables
 }
 
 //=============================================================================
@@ -1260,110 +1255,212 @@ PERCEPTIBILITY THRESHOLDS (desktop, PPD={}):
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
-    #[test]
-    fn test_perceptibility_zones() {
-        assert_eq!(PerceptibilityZone::from_dssim(0.0001), PerceptibilityZone::Imperceptible);
-        assert_eq!(PerceptibilityZone::from_dssim(0.0005), PerceptibilityZone::Marginal);
-        assert_eq!(PerceptibilityZone::from_dssim(0.001), PerceptibilityZone::Subtle);
-        assert_eq!(PerceptibilityZone::from_dssim(0.002), PerceptibilityZone::Noticeable);
-        assert_eq!(PerceptibilityZone::from_dssim(0.01), PerceptibilityZone::Degraded);
+    // Statistical function tests
+    mod stats {
+        use super::*;
+
+        #[test]
+        fn test_median_odd() {
+            let mut values = vec![1.0, 3.0, 2.0];
+            assert_eq!(median(&mut values), 2.0);
+        }
+
+        #[test]
+        fn test_median_even() {
+            let mut values = vec![1.0, 2.0, 3.0, 4.0];
+            assert_eq!(median(&mut values), 2.5);
+        }
+
+        #[test]
+        fn test_median_empty() {
+            let mut values: Vec<f64> = vec![];
+            assert_eq!(median(&mut values), 0.0);
+        }
+
+        #[test]
+        fn test_percentile_interpolation() {
+            let mut values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+            // p=0.75, pos=6.75, interpolate between 7 and 8
+            let p75 = percentile(&mut values, 0.75);
+            assert!((p75 - 7.75).abs() < 0.01, "Expected 7.75, got {}", p75);
+        }
+
+        #[test]
+        fn test_percentile_u32() {
+            let mut values = vec![10u32, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+            let p75 = percentile_u32(&mut values, 0.75);
+            assert!((p75 as i32 - 78).abs() <= 1, "Expected ~78, got {}", p75);
+        }
+
+        #[test]
+        fn test_mean() {
+            let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+            assert_eq!(mean(&values), 3.0);
+        }
+
+        #[test]
+        fn test_trimmed_mean() {
+            // With 20% trim on 10 values, removes 2 from each end
+            let mut values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 100.0];
+            let tm = trimmed_mean(&mut values, 0.2);
+            // Trimmed: [3, 4, 5, 6, 7, 8], mean = 5.5
+            assert!((tm - 5.5).abs() < 0.01, "Expected 5.5, got {}", tm);
+        }
+
+        #[test]
+        fn test_std_dev() {
+            let values = vec![2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
+            let sd = std_dev(&values);
+            // Sample std dev of [2,4,4,4,5,5,7,9] is ~2.14
+            assert!((sd - 2.14).abs() < 0.1, "Expected ~2.14, got {}", sd);
+        }
+
+        #[test]
+        fn test_iqr() {
+            let mut values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+            let iqr_val = iqr(&mut values);
+            // Q3 = 7.75, Q1 = 3.25, IQR = 4.5
+            assert!((iqr_val - 4.5).abs() < 0.1, "Expected ~4.5, got {}", iqr_val);
+        }
     }
 
-    #[test]
-    fn test_dssim_reduction() {
-        // Normal case
-        assert!((dssim_reduction_percent(0.01, 0.005) - 50.0).abs() < 0.1);
+    // Interpolation tests
+    mod interpolation {
+        use super::*;
 
-        // Both below threshold - should be 0
-        assert_eq!(dssim_reduction_percent(0.0001, 0.00005), 0.0);
+        #[test]
+        fn test_linear_interpolate_basic() {
+            let points = vec![(50u32, 0.01), (60, 0.008), (70, 0.005), (80, 0.003)];
 
-        // One below threshold
-        let result = dssim_reduction_percent(0.001, 0.0001);
-        // 0.001 -> 0.0003 (clamped) = 70% reduction
-        assert!(result > 60.0 && result < 80.0);
+            // Target DSSIM between 70 and 80
+            let q = linear_interpolate_quality(0.004, &points);
+            assert!(q.is_some());
+            let q = q.unwrap();
+            assert!(q > 70.0 && q < 80.0, "Expected between 70-80, got {}", q);
+        }
+
+        #[test]
+        fn test_linear_interpolate_exact() {
+            let points = vec![(50u32, 0.01), (60, 0.008), (70, 0.005)];
+            let q = linear_interpolate_quality(0.008, &points);
+            assert!(q.is_some());
+            assert!((q.unwrap() - 60.0).abs() < 0.1);
+        }
+
+        #[test]
+        fn test_fit_power_law() {
+            // Create points that follow q_out = 0.5 * q_in^1.5 + 10
+            let points: Vec<(f64, f64)> = vec![
+                (30.0, 0.5 * 30.0_f64.powf(1.5) + 10.0),
+                (50.0, 0.5 * 50.0_f64.powf(1.5) + 10.0),
+                (70.0, 0.5 * 70.0_f64.powf(1.5) + 10.0),
+                (90.0, 0.5 * 90.0_f64.powf(1.5) + 10.0),
+            ];
+
+            let config = InterpolationConfig::default();
+            let fit = fit_power_law(&points, &config);
+            assert!(fit.is_some());
+
+            let (_a, b, _c, r_squared) = fit.unwrap();
+            assert!(r_squared > 0.99, "R² should be very high, got {}", r_squared);
+            assert!((b - 1.5).abs() < 0.2, "Exponent should be ~1.5, got {}", b);
+        }
+
+        #[test]
+        fn test_gap_polynomial_covers() {
+            let poly = GapPolynomial {
+                q_low: 50,
+                q_high: 80,
+                a: 1.0,
+                b: 1.0,
+                c: 0.0,
+                r_squared: 0.99,
+                validation_error: 0.001,
+            };
+
+            assert!(poly.covers(50));
+            assert!(poly.covers(65));
+            assert!(poly.covers(80));
+            assert!(!poly.covers(49));
+            assert!(!poly.covers(81));
+        }
     }
 
+    // DSSIM bucket tests
+    mod dssim_buckets {
+        use super::*;
+
+        #[test]
+        fn test_bucket_classification() {
+            assert_eq!(DssimBucket::from_dssim(0.0001), DssimBucket::Imperceptible);
+            assert_eq!(DssimBucket::from_dssim(0.0005), DssimBucket::Marginal);
+            assert_eq!(DssimBucket::from_dssim(0.001), DssimBucket::Subtle);
+            assert_eq!(DssimBucket::from_dssim(0.002), DssimBucket::Noticeable);
+            assert_eq!(DssimBucket::from_dssim(0.01), DssimBucket::Degraded);
+        }
+
+        #[test]
+        fn test_bucket_abbrev() {
+            assert_eq!(DssimBucket::Imperceptible.abbrev(), "IMP");
+            assert_eq!(DssimBucket::Marginal.abbrev(), "MAR");
+            assert_eq!(DssimBucket::Subtle.abbrev(), "SUB");
+            assert_eq!(DssimBucket::Noticeable.abbrev(), "NOT");
+            assert_eq!(DssimBucket::Degraded.abbrev(), "DEG");
+        }
+    }
+
+    // Viewing condition tests
+    mod viewing_conditions {
+        use super::*;
+
+        #[test]
+        fn test_condition_matching() {
+            let cond = ViewingCondition::new("test", 1.0, 70);
+            assert!(cond.matches(1.0, 70));
+            assert!(cond.matches(1.01, 70)); // Within tolerance
+            assert!(!cond.matches(1.0, 40));
+            assert!(!cond.matches(0.5, 70));
+        }
+    }
+
+    // Integration tests (require CSV data)
     #[test]
     #[ignore]
     fn run_full_analysis() {
-        let csv_path = PathBuf::from(CSV_PATH);
-        match run_quality_analysis(&csv_path) {
-            Ok(report) => {
-                println!("{}", report);
+        let csv_path = std::path::PathBuf::from("/mnt/v/work/corpus_cache/v2/results/measurements_p2.csv");
+        let measurements = load_measurements(&csv_path).expect("Failed to load CSV");
 
-                // Also write to file
-                let output_path = csv_path.parent().unwrap().join("quality_analysis_rust.txt");
-                std::fs::write(&output_path, &report).expect("Failed to write report");
-                println!("\nWrote: {}", output_path.display());
-            }
-            Err(e) => eprintln!("Analysis failed: {}", e),
-        }
+        let config = ReportConfig::default();
+        let report = run_analysis(&measurements, &config);
+        println!("{}", report);
+
+        // Write to file
+        let output_path = csv_path.parent().unwrap().join("quality_analysis_report.txt");
+        std::fs::write(&output_path, &report).expect("Failed to write report");
+        println!("\nWrote: {}", output_path.display());
     }
 
     #[test]
     #[ignore]
-    fn generate_comparer_data() {
-        let csv_path = PathBuf::from(CSV_PATH);
-        let measurements = load_measurements(&csv_path).expect("Failed to load measurements");
-        let by_image = group_by_image(&measurements);
+    fn test_interpolation_tables() {
+        let csv_path = std::path::PathBuf::from("/mnt/v/work/corpus_cache/v2/results/measurements_p2.csv");
+        let measurements = load_measurements(&csv_path).expect("Failed to load CSV");
 
-        // Build JSON structure for comparer
-        let mut output =
-            String::from("// Generated by quality_analysis.rs\nconst imageArray = [\n");
+        let config = InterpolationConfig::default();
+        let tables = generate_interpolation_tables(&measurements, &config);
 
-        // Group images by category and name
-        let mut images: Vec<(&str, &str, u32, u32, &Vec<&Measurement>)> = Vec::new();
-        for (image_name, img_measurements) in &by_image {
-            if let Some(first) = img_measurements.first() {
-                // Get image dimensions from any measurement with ratio=1.0
-                let dims = img_measurements
-                    .iter()
-                    .find(|m| (m.ratio - 1.0).abs() < 0.01)
-                    .map(|_| (512, 512)) // Default dimensions
-                    .unwrap_or((512, 512));
-
-                images.push((&first.subdir, image_name, dims.0, dims.1, img_measurements));
+        for table in &tables {
+            println!(
+                "\n{} at {} ({} polynomials)",
+                table.codec, table.condition.name, table.polynomials.len()
+            );
+            for poly in &table.polynomials {
+                println!(
+                    "  q{}-{}: y = {:.4} * x^{:.2} + {:.4} (R²={:.3}, err={:.5})",
+                    poly.q_low, poly.q_high, poly.a, poly.b, poly.c, poly.r_squared, poly.validation_error
+                );
             }
         }
-        images.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
-
-        for (category, name, width, height, img_measurements) in &images {
-            output.push_str(&format!(
-                "  {{\n    \"category\": \"{}\",\n    \"name\": \"{}\",\n    \"width\": {},\n    \"height\": {},\n    \"measurements\": {{\n",
-                category, name, width, height
-            ));
-
-            // Add measurements as a lookup map
-            let mut first_m = true;
-            for m in *img_measurements {
-                if !first_m {
-                    output.push_str(",\n");
-                }
-                first_m = false;
-
-                let ratio_int = (m.ratio * 100.0).round() as u32;
-                let key = format!("{}_q{}_r{}_ppd{}", m.codec, m.quality, ratio_int, m.ppd);
-
-                output.push_str(&format!(
-                    "      \"{}\": {{\"file_size\": {}, \"dssim\": {:.8}}}",
-                    key, m.file_size, m.dssim
-                ));
-            }
-
-            output.push_str("\n    }\n  },\n");
-        }
-
-        output.push_str("];\n");
-
-        // Write to comparer directory
-        let comparer_dir = PathBuf::from("/mnt/v/work/corpus_cache/v2/comparer");
-        std::fs::create_dir_all(&comparer_dir).expect("Failed to create comparer directory");
-        let data_path = comparer_dir.join("data.js");
-        std::fs::write(&data_path, &output).expect("Failed to write data.js");
-
-        println!("Generated {} images with measurements", images.len());
-        println!("Wrote: {}", data_path.display());
     }
 }
