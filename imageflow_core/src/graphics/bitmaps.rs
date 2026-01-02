@@ -6,7 +6,10 @@ use bytemuck::{try_cast_slice, try_cast_slice_mut, Pod};
 use imageflow_helpers::colors::Color32;
 use imageflow_types::{CompositingMode, PixelBuffer};
 use imgref::ImgRef;
-use rgb::{Bgra, GrayA, Gray_v09 as Gray, BGR8, BGRA8, RGB8, RGBA8};
+// TODO(rgb-0.8.91): Change back to: use rgb::{Bgra, GrayA, Gray_v09 as Gray, BGR8, BGRA8, RGB8, RGBA8};
+// In rgb 0.8.91+, BGR8/BGRA8/RGB8/RGBA8 are exported at root level and Gray_v09 exists for compat
+use rgb::alt::{BGR8, BGRA8};
+use rgb::{Bgra, GrayA, Gray, RGB8, RGBA8};
 use slotmap::*;
 use std;
 use std::cell::{RefCell, RefMut};
@@ -1710,7 +1713,13 @@ impl BitmapRowAccess for Vec<u8> {
     fn row_grayalpha8(&self, row_ix: usize, stride: usize) -> Option<&[GrayA<u8>]> {
         let start = row_ix.checked_mul(stride)?;
         let row = self.get(start..start.checked_add(stride)?)?;
-        try_cast_slice(row).ok()
+        // TODO(rgb-0.8.91): Change back to try_cast_slice(row).ok() when GrayA has Pod impl
+        // In rgb 0.8.52, GrayA doesn't implement Pod, so we use unsafe pointer casting.
+        // This is safe because GrayA<u8> is repr(C) and consists of two u8 values.
+        if row.len() % 2 != 0 {
+            return None;
+        }
+        Some(unsafe { std::slice::from_raw_parts(row.as_ptr() as *const GrayA<u8>, row.len() / 2) })
     }
 
     fn row_mut_bgra8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [BGRA8]> {
@@ -1746,7 +1755,13 @@ impl BitmapRowAccess for Vec<u8> {
     fn row_mut_grayalpha8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [GrayA<u8>]> {
         let start = row_ix.checked_mul(stride)?;
         let row = self.get_mut(start..start.checked_add(stride)?)?;
-        try_cast_slice_mut(row).ok()
+        // TODO(rgb-0.8.91): Change back to try_cast_slice_mut(row).ok() when GrayA has Pod impl
+        // In rgb 0.8.52, GrayA doesn't implement Pod, so we use unsafe pointer casting.
+        // This is safe because GrayA<u8> is repr(C) and consists of two u8 values.
+        if row.len() % 2 != 0 {
+            return None;
+        }
+        Some(unsafe { std::slice::from_raw_parts_mut(row.as_mut_ptr() as *mut GrayA<u8>, row.len() / 2) })
     }
 }
 #[test]

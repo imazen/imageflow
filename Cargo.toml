@@ -28,8 +28,11 @@ opt-level = 2
 [patch.crates-io]
 #  libwebp-sys = { git = "https://github.com/imazen/libwebp-sys" }
 libpng-sys = { git = "https://github.com/kornelski/rust-libpng-sys" }
-rgb.git = "https://github.com/kornelski/rust-rgb"
 load_image.git = "https://gitlab.com/lilith6/load_image.git"
+# TODO(rgb-0.8.91): Uncomment when rgb 0.8.91+ is published to crates.io
+# This enables: root-level BGR8/BGRA8/RGB8/RGBA8 exports, Gray_v09 compat type,
+# and Pod impl for GrayA. Then revert changes in bitmaps.rs marked with TODO(rgb-0.8.91)
+# rgb.git = "https://github.com/kornelski/rust-rgb"
 
 #bennch with cpu native
 [profile.bench]

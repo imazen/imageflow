@@ -125,9 +125,11 @@ impl Decoder for ImagePngDecoder {
                     let from = buffer.row_mut_gray8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
                     from.iter_mut().zip(to.iter_mut()).for_each(|(f, to)| {
-                        to.r = f.v;
-                        to.g = f.v;
-                        to.b = f.v;
+                        // TODO(rgb-0.8.91): Can simplify to f.v when Gray has named field
+                        let v = f.value();
+                        to.r = v;
+                        to.g = v;
+                        to.b = v;
                         to.a = 255;
                     });
                 }
@@ -137,6 +139,7 @@ impl Decoder for ImagePngDecoder {
                     let from = buffer.row_mut_grayalpha8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
                     from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
+                        // GrayA/GrayAlpha uses .v and .a fields (via Deref)
                         to.r = from.v;
                         to.g = from.v;
                         to.b = from.v;

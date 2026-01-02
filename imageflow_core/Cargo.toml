@@ -36,7 +36,8 @@ base64 = "0.22"
 hex = "0.4"
 gif = "0.14"
 png = "0.17.16"
-rgb = { version = "0.8.91", features = ["bytemuck"] }
+# TODO(rgb-0.8.91): Change back to "0.8.91" when published to crates.io
+rgb = { version = "0.8.50", features = ["bytemuck"] }
 imagequant = "4"
 lodepng = "3"
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }
