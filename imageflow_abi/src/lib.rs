@@ -1565,6 +1565,85 @@ fn test_job_with_cancellation() {
 }
 
 #[test]
+fn test_job_with_cancellation_at_every_point() {
+    #[cfg(debug_assertions)]
+    unsafe {
+        use base64::Engine;
+        let input_bytes = base64::engine::general_purpose::STANDARD.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=").unwrap();
+
+        //TODO!! Test decoding jpeg since we have a cancellation point in there.
+
+        // track time
+        let start = std::time::Instant::now();
+        let mut cancel_on_poll = 1;
+        loop {
+            let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
+            assert!(!c.is_null());
+            let res = imageflow_context_add_input_buffer(
+                c,
+                0,
+                input_bytes.as_ptr(),
+                input_bytes.len(),
+                Lifetime::OutlivesContext,
+            );
+            imageflow_context_print_and_exit_if_error(c);
+            assert!(res);
+
+            let res = imageflow_context_add_output_buffer(c, 1);
+            imageflow_context_print_and_exit_if_error(c);
+            assert!(res);
+
+            let ctx = { &mut *c };
+            ctx.request_cancellation_after_n_polls(cancel_on_poll);
+
+            let method_in = static_char!("v1/execute");
+            let json_in = r#"{"framewise":{"steps":[{"decode":{"io_id":0}},{"flip_h":null},{"rotate_90":null},{"resample_2d":{"w":10,"h":10,"hints":{"sharpen_percent":null}}},{"constrain":{ "mode" :"within", "w": 5,"h": 5}},{"encode":{"io_id":1,"preset":{"gif":null}}}]}}"#;
+
+            let response =
+                imageflow_context_send_json(c, method_in, json_in.as_ptr(), json_in.len());
+
+            assert!(!response.is_null());
+
+            let polls_remaining = ctx.request_cancellation_after_n_polls_remaining();
+
+            if polls_remaining > 0 {
+                if ctx.outward_error().has_error() {
+                    assert!(
+                        false,
+                        "Expected no error since there were polls remaining, but got error {}",
+                        ctx.outward_error().to_string()
+                    );
+                }
+
+                eprintln!(
+                    "Tested {}-{}={} cancellation points in {} ms",
+                    cancel_on_poll,
+                    polls_remaining,
+                    cancel_on_poll - polls_remaining,
+                    start.elapsed().as_millis()
+                );
+                //imageflow_context_print_error(c);
+                imageflow_context_destroy(c);
+                assert!(polls_remaining < cancel_on_poll);
+                return;
+            } else {
+                let expected_error_code = 21;
+                if imageflow_context_error_code(c) != expected_error_code {
+                    eprintln!(
+                        "Expected cancellation, but {} polls reamined, and got error {}",
+                        cancel_on_poll,
+                        ctx.outward_error().to_string()
+                    );
+                    imageflow_context_print_and_exit_if_error(c);
+                }
+                imageflow_context_destroy(c);
+                cancel_on_poll += 1; //Test the next cancellation point
+            }
+        }
+    }
+}
+
+#[test]
 fn test_job_with_bad_json() {
     unsafe {
         let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
@@ -1652,3 +1731,37 @@ fn test_get_version_info() {
 fn test_file_macro_for_this_build() {
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
 }
+
+// / Prints the error to stderr if an error has been raised on the context.
+// /
+// / If an error is present:
+// / * Prints error details to stderr
+// / * Returns true
+// /
+// / If no error is present:
+// / * Returns false
+// / * Does not exit
+// /
+// / **DO NOT USE IN SERVICES, LIBRARIES, OR LONG-RUNNING PROCESSES!**
+// / This pollutes the error stream with error messages.
+// /
+// / # Safety
+// /
+// / * `context` must be a valid pointer from `imageflow_context_create`
+// / * `context` must not be NULL (will abort process)
+// /
+// / # Thread Safety
+
+// #[no_mangle]
+// #[cfg(test)]
+// unsafe extern "C" fn imageflow_context_print_error(
+//     context: *mut ThreadSafeContext,
+// ) -> bool {
+//     let e = context!(context).outward_error();
+//     if e.has_error() {
+//         eprintln!("{}", e);
+//         true
+//     } else {
+//         false
+//     }
+// }

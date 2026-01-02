@@ -567,6 +567,33 @@
           }
         }
       },
+      "AvifEncoderHints": {
+        "type": "object",
+        "properties": {
+          "alpha_quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "speed": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "BoolKeep": {
         "type": "string",
         "enum": [
@@ -1059,6 +1086,18 @@
           "bytes": {
             "$ref": "#/components/schemas/ResultBytes"
           },
+          "diagnostic_data": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
           "h": {
             "type": "integer",
             "format": "int32"
@@ -1082,6 +1121,16 @@
       "EncoderHints": {
         "type": "object",
         "properties": {
+          "avif": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AvifEncoderHints"
+              }
+            ]
+          },
           "gif": {
             "oneOf": [
               {

@@ -100,7 +100,8 @@ fn parse_format_tuning(
                     }
                     "s" => {
                         if format == OutputFormat::Avif {
-                            i.avif_speed = Some(f32::min(255.0, f32::max(0.0, s)) as u8);
+                            // Clamp to 3..10 range - speeds 0-2 are blocked for being too slow (DDoS risk)
+                            i.avif_speed = Some(f32::min(10.0, f32::max(3.0, s)) as u8);
                         } else {
                             warnings.push(ParseWarning::ValueInvalid((
                                 srcset_syntax_message_for(format),

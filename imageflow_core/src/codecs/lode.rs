@@ -50,9 +50,16 @@ impl Encoder for LodepngEncoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
+        let mut data =
+            crate::codecs::diagnostic_collector::DiagnosticCollector::new("lodepng.encoder.");
+
+        data.add("input.had_alpha", bitmap.info().alpha_meaningful());
         if self.matte.is_some() {
+            data.add("params.matte", self.matte.clone().unwrap());
             bitmap.apply_matte(self.matte.clone().unwrap()).map_err(|e| e.at(here!()))?;
         }
+        data.add("params.use_highest_compression", self.use_highest_compression.is_some());
+        data.add("input.has_alpha", bitmap.info().alpha_meaningful());
         // check if the top-right pixel is transparent
         // let x= bitmap.w() - 1;
         // let y= 0;
@@ -78,11 +85,17 @@ impl Encoder for LodepngEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "png".to_owned(),
             preferred_mime_type: "image/png".to_owned(),
+            diagnostic_data: Some(data.into()),
         })
     }
 
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Borrow(&self.io))
+    }
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy> {
+        // LodePNG encoder writes all data during write_frame, no additional cleanup needed
+        Ok(self.io)
     }
 }
 
@@ -191,7 +204,8 @@ impl LodepngEncoder {
         lode.info_png_mut().color.colortype = lodepng::ColorType::PALETTE;
         lode.info_png_mut().color.set_bitdepth(8);
         lode.set_auto_convert(false);
-        //TODO: is this filter strategy right?
+
+        // Dithered images don't filter well. The default of MINSUM, true, when used on paletted images, produces the same as ZERO, false.
         lode.set_filter_strategy(lodepng::FilterStrategy::ZERO, false);
 
         if use_highest_compression.unwrap_or(false) {

@@ -235,12 +235,11 @@ pub enum ScalingColorspace {
     Linear,
     Gamma
 }
-
-
 }
+
 #[rustfmt::skip]
 
-pub static IR4_KEYS: [&str;100] = [
+pub static IR4_KEYS: [&str;101] = [
     "mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
@@ -256,7 +255,7 @@ pub static IR4_KEYS: [&str;100] = [
     "png.quality","png.min_quality", "png.quantization_speed", "png.libpng", "png.max_deflate",
     "png.lossless", "up.filter", "down.filter", "dpr", "dppx", "up.colorspace", "srcset", "short","accept.webp",
     "accept.avif","accept.jxl", "accept.color_profiles", "c", "c.gravity", "qp", "qp.dpr", "qp.dppx",
-    "avif.speed", "avif.quality", "jxl.effort", "jxl.distance", "jxl.quality", "jxl.lossless", "jpeg.li", "lossless"];
+    "avif.speed", "avif.quality", "jxl.effort", "jxl.distance", "jxl.quality", "jxl.lossless", "jpeg.li", "lossless", "v"];
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ParseWarning {
@@ -266,6 +265,7 @@ pub enum ParseWarning {
     KeyNotRecognized((String, String)),
     KeyNotSupported((String, String)),
     ValueInvalid((&'static str, String)),
+    // ApiVersionInvalid{message: String, version_provided: String, full_query: String},
 }
 
 impl ParseWarning {
@@ -1783,8 +1783,19 @@ fn test_tostr(){
     t("jxl.effort=4", Instructions { jxl_effort: Some(4), ..Default::default() });
     t("jxl.lossless=keep", Instructions { jxl_lossless: Some(BoolKeep::Keep), ..Default::default() });
     t("jxl.lossless=false", Instructions { jxl_lossless: Some(BoolKeep::False), ..Default::default() });
+
+    // AVIF tests
     t("avif.quality=85", Instructions { avif_quality: Some(85f32), ..Default::default() });
-    t("avif.speed=2", Instructions { avif_speed: Some(2), ..Default::default() });
+    t("avif.speed=5", Instructions { avif_speed: Some(5), ..Default::default() });
+    t("avif.quality=80&avif.speed=6", Instructions { avif_quality: Some(80f32), avif_speed: Some(6), ..Default::default() });
+    t("format=avif&quality=90", Instructions { format: Some(OutputFormat::Avif), quality: Some(90), ..Default::default() });
+    t("avif.quality=75&format=avif", Instructions { format: Some(OutputFormat::Avif), avif_quality: Some(75f32), ..Default::default() });
+    t("avif.quality=80&format=avif", Instructions { format: Some(OutputFormat::Avif), avif_quality: Some(80f32), ..Default::default() });
+    t("format=avif&h=200&quality=85&w=200", Instructions { w: Some(200), h: Some(200), format: Some(OutputFormat::Avif), quality: Some(85), ..Default::default() });
+    t("avif.quality=90&format=avif&w=400", Instructions { w: Some(400), format: Some(OutputFormat::Avif), avif_quality: Some(90f32), ..Default::default() });
+    t("avif.speed=7&format=avif", Instructions { format: Some(OutputFormat::Avif), avif_speed: Some(7), ..Default::default() });
+    t("format=avif&qp=high", Instructions { format: Some(OutputFormat::Avif), qp: Some(QualityProfile::High), ..Default::default() });
+    t("avif.quality=50&format=avif&qp=medium", Instructions { format: Some(OutputFormat::Avif), qp: Some(QualityProfile::Medium), avif_quality: Some(50f32), ..Default::default() });
 
 
 }

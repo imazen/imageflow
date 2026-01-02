@@ -7,6 +7,9 @@ extern crate serde_json;
 extern crate smallvec;
 
 pub mod common;
+
+use std::io::Write;
+
 use crate::common::*;
 
 use imageflow_core::graphics::bitmaps::{BitmapCompositing, ColorSpace};
@@ -14,7 +17,8 @@ use imageflow_core::{Context, ErrorKind};
 use imageflow_types;
 use imageflow_types::{
     Color, ColorSrgb, CommandStringKind, Constraint, ConstraintMode, EncoderPreset, Filter, Node,
-    PixelFormat, PixelLayout, PngBitDepth, ResampleHints, RoundCornersMode,
+    OutputImageFormat, PixelFormat, PixelLayout, PngBitDepth, QualityProfile, ResampleHints,
+    RoundCornersMode,
 };
 
 const DEBUG_GRAPH: bool = false;
@@ -552,6 +556,24 @@ fn test_off_surface_region() {
     );
     assert!(matched);
 }
+#[test]
+fn test_transparent_canvas() {
+    let matched = compare(
+        None,
+        500,
+        "TestTransparentCanvas",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![Node::CreateCanvas {
+            w: 200,
+            h: 200,
+            format: PixelFormat::Bgra32,
+            color: Color::Srgb(ColorSrgb::Hex("00000000".to_owned())),
+        }],
+    );
+    assert!(matched);
+}
+
 #[test]
 fn test_partial_region() {
     let matched = compare(
@@ -2151,6 +2173,172 @@ fn test_encode_png32_smoke() {
 }
 
 #[test]
+fn test_encode_avif_smoke() {
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Resample2D {
+            w: 400,
+            h: 300,
+            hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+        },
+        Node::Encode {
+            io_id: 1,
+            preset: EncoderPreset::Format {
+                format: OutputImageFormat::Avif,
+                quality_profile: Some(QualityProfile::Good),
+                quality_profile_dpr: None,
+                matte: None,
+                lossless: None,
+                allow: None,
+                encoder_hints: None,
+            },
+        },
+    ];
+
+    let result = smoke_test(
+        Some(IoTestEnum::Url(
+            "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg"
+                .to_owned(),
+        )),
+        Some(IoTestEnum::OutputBuffer),
+        None,
+        DEBUG_GRAPH,
+        steps,
+    )
+    .unwrap();
+
+    // Verify encoder reports AVIF format
+    match result {
+        imageflow_types::ResponsePayload::JobResult(build_result)
+        | imageflow_types::ResponsePayload::BuildResult(build_result) => {
+            assert_eq!(build_result.encodes[0].preferred_mime_type, "image/avif");
+            assert_eq!(build_result.encodes[0].preferred_extension, "avif");
+        }
+        _ => panic!("Expected BuildResult or JobResult, got {:?}", result),
+    }
+}
+
+#[test]
+fn test_encode_avif_alpha_smoke() {
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Resample2D {
+            w: 200,
+            h: 200,
+            hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+        },
+        Node::Encode {
+            io_id: 1,
+            preset: EncoderPreset::Format {
+                format: OutputImageFormat::Avif,
+                quality_profile: Some(QualityProfile::High),
+                quality_profile_dpr: None,
+                matte: None,
+                lossless: None,
+                allow: None,
+                encoder_hints: None,
+            },
+        },
+    ];
+
+    let result = smoke_test(
+        Some(IoTestEnum::Url(
+            "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg"
+                .to_owned(),
+        )),
+        Some(IoTestEnum::OutputBuffer),
+        None,
+        DEBUG_GRAPH,
+        steps,
+    )
+    .unwrap();
+
+    // Verify encoder reports AVIF format
+    match result {
+        imageflow_types::ResponsePayload::JobResult(build_result)
+        | imageflow_types::ResponsePayload::BuildResult(build_result) => {
+            assert_eq!(build_result.encodes[0].preferred_mime_type, "image/avif");
+            assert_eq!(build_result.encodes[0].preferred_extension, "avif");
+        }
+        _ => panic!("Expected BuildResult or JobResult, got {:?}", result),
+    }
+}
+
+#[test]
+fn smoke_test_avif_ir4() {
+    let steps = vec![Node::CommandString {
+        kind: CommandStringKind::ImageResizer4,
+        value: "width=200&height=200&format=avif&quality=80".to_owned(),
+        decode: Some(0),
+        encode: Some(1),
+        watermarks: None,
+    }];
+
+    let result = smoke_test(
+        Some(IoTestEnum::Url(
+            "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg"
+                .to_owned(),
+        )),
+        Some(IoTestEnum::OutputBuffer),
+        None,
+        DEBUG_GRAPH,
+        steps,
+    )
+    .unwrap();
+
+    // Verify RIAPI correctly produces AVIF
+    match result {
+        imageflow_types::ResponsePayload::JobResult(build_result)
+        | imageflow_types::ResponsePayload::BuildResult(build_result) => {
+            assert_eq!(build_result.encodes[0].preferred_mime_type, "image/avif");
+            assert_eq!(build_result.encodes[0].preferred_extension, "avif");
+        }
+        _ => panic!("Expected BuildResult or JobResult, got {:?}", result),
+    }
+}
+
+#[test]
+fn test_encode_avif_with_matte() {
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Encode {
+            io_id: 1,
+            preset: EncoderPreset::Format {
+                format: OutputImageFormat::Avif,
+                quality_profile: Some(QualityProfile::Medium),
+                quality_profile_dpr: None,
+                matte: Some(Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_owned()))),
+                lossless: None,
+                allow: None,
+                encoder_hints: None,
+            },
+        },
+    ];
+
+    let result = smoke_test(
+        Some(IoTestEnum::Url(
+            "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/gradients.png"
+                .to_owned(),
+        )),
+        Some(IoTestEnum::OutputBuffer),
+        None,
+        DEBUG_GRAPH,
+        steps,
+    )
+    .unwrap();
+
+    // Verify matte encoding produces AVIF
+    match result {
+        imageflow_types::ResponsePayload::JobResult(build_result)
+        | imageflow_types::ResponsePayload::BuildResult(build_result) => {
+            assert_eq!(build_result.encodes[0].preferred_mime_type, "image/avif");
+            assert_eq!(build_result.encodes[0].preferred_extension, "avif");
+        }
+        _ => panic!("Expected BuildResult or JobResult, got {:?}", result),
+    }
+}
+
+#[test]
 fn test_dimensions() {
     let steps = vec![
         Node::CreateCanvas { w: 638, h: 423, format: PixelFormat::Bgra32, color: Color::Black },
@@ -2491,4 +2679,88 @@ fn test_idct_spatial_no_gamma() {
 fn zz_verify_all_checksum_files_uploaded() {
     let ctx = ChecksumCtx::visuals();
     ctx.verify_all_active_images_uploaded();
+}
+
+#[test]
+fn test_avif_encode_opaque() {
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        // resize to 100x100 for speed
+        Node::Constrain(Constraint {
+            mode: ConstraintMode::Within,
+            w: Some(100),
+            h: Some(100),
+            hints: None,
+            gravity: None,
+            canvas_color: None,
+        }),
+        Node::Encode {
+            io_id: 1,
+            preset: EncoderPreset::Format {
+                format: OutputImageFormat::Avif,
+                quality_profile: None,
+                quality_profile_dpr: None,
+                matte: None,
+                allow: None,
+                encoder_hints: None,
+                lossless: None,
+            },
+        },
+    ];
+
+    let mut io_list = Vec::new();
+    io_list.push(IoTestEnum::Url(
+        "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg"
+            .to_owned(),
+    ));
+    io_list.push(IoTestEnum::OutputBuffer);
+    let mut context = Context::create().unwrap();
+    let _ = build_steps(&mut context, &steps, io_list, None, DEBUG_GRAPH).unwrap();
+    // write result to file if env var WRITE_AVIF_TEST_FILES is set
+    if std::env::var("WRITE_AVIF_TEST_FILES").is_ok() {
+        let mut file = std::fs::File::create("avif_encode_opaque.avif").unwrap();
+        file.write_all(&context.get_output_buffer_slice(1).unwrap().to_vec()).unwrap();
+    }
+}
+
+#[test]
+fn test_avif_encode_transparent() {
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        // resize to 100x100 for speed
+        Node::Constrain(Constraint {
+            mode: ConstraintMode::Within,
+            w: Some(100),
+            h: Some(100),
+            hints: None,
+            gravity: None,
+            canvas_color: None,
+        }),
+        Node::Encode {
+            io_id: 1,
+            preset: EncoderPreset::Format {
+                format: OutputImageFormat::Avif,
+                quality_profile: None,
+                quality_profile_dpr: None,
+                matte: None,
+                allow: None,
+                encoder_hints: None,
+                lossless: None,
+            },
+        },
+    ];
+
+    let mut io_list = Vec::new();
+    io_list.push(IoTestEnum::Url(
+        "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/shirt_transparent.png"
+            .to_owned(),
+    ));
+    io_list.push(IoTestEnum::OutputBuffer);
+    let mut context = Context::create().unwrap();
+    let _ = build_steps(&mut context, &steps, io_list, None, DEBUG_GRAPH).unwrap();
+    // write result to file if env var WRITE_AVIF_TEST_FILES is set
+    if std::env::var("WRITE_AVIF_TEST_FILES").is_ok() {
+        let mut file = std::fs::File::create("avif_encode_transparent.avif").unwrap();
+        file.write(&context.get_output_buffer_slice(1).unwrap().to_vec()).unwrap();
+    }
 }

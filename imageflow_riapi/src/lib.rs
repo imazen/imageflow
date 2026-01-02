@@ -19,6 +19,7 @@ pub mod sizing;
 
 #[cfg(test)]
 mod sizing_tests;
+pub mod version;
 
 #[cfg(test)]
 mod tests {

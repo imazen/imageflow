@@ -39,6 +39,9 @@ impl GifDecoder {
             }
         }
     }
+    fn single_frame_requested(&self) -> bool {
+        return false;
+    }
 
     pub fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<GifDecoder> {
         let mut options = ::gif::Decoder::<IoProxy>::build();
@@ -122,7 +125,7 @@ impl Decoder for GifDecoder {
             preferred_mime_type: "image/gif".to_owned(),
             preferred_extension: "gif".to_owned(),
             lossless: false,
-            multiple_frames: self.is_animated().unwrap_or(false), //false if we didn't read any frames yet
+            multiple_frames: self.is_animated().unwrap_or(false) && !self.single_frame_requested(), //false if we didn't read any frames yet
         })
     }
 
@@ -179,77 +182,90 @@ impl Decoder for GifDecoder {
     }
 }
 
-pub trait EasyEncoder {
-    fn write_frame(
-        &mut self,
-        w: &mut dyn Write,
-        c: &Context,
-        bitmap_key: BitmapKey,
-    ) -> Result<s::EncodeResult>;
-}
+// pub trait EasyEncoder {
+//     fn write_frame(
+//         &mut self,
+//         w: &mut dyn Write,
+//         c: &Context,
+//         bitmap_key: BitmapKey,
+//     ) -> Result<s::EncodeResult>;
+// }
 
-pub struct EncoderAdapter<T>
-where
-    T: EasyEncoder,
-{
-    io_id: i32,
-    encoder: T,
-    io_ref: Rc<RefCell<IoProxy>>,
-}
-impl<T> EncoderAdapter<T>
-where
-    T: EasyEncoder,
-{
-    pub(crate) fn create(io: IoProxy, encoder: T) -> EncoderAdapter<T> {
-        let io_id = io.io_id();
-        let io_ref = Rc::new(RefCell::new(io));
+// pub struct EncoderAdapter<T>
+// where
+//     T: EasyEncoder,
+// {
+//     io_id: i32,
+//     encoder: T,
+//     io_ref: Rc<RefCell<IoProxy>>,
+// }
+// impl<T> EncoderAdapter<T>
+// where
+//     T: EasyEncoder,
+// {
+//     pub(crate) fn create(io: IoProxy, encoder: T) -> EncoderAdapter<T> {
+//         let io_id = io.io_id();
+//         let io_ref = Rc::new(RefCell::new(io));
 
-        EncoderAdapter { io_id, io_ref: io_ref.clone(), encoder }
-    }
+//         EncoderAdapter { io_id, io_ref: io_ref.clone(), encoder }
+//     }
 
-    fn get_io_ref(&self) -> Rc<RefCell<IoProxy>> {
-        self.io_ref.clone()
-    }
-}
+//     fn get_io_ref(&self) -> Rc<RefCell<IoProxy>> {
+//         self.io_ref.clone()
+//     }
+// }
 
-impl<T> Encoder for EncoderAdapter<T>
-where
-    T: EasyEncoder,
-{
-    fn write_frame(
-        &mut self,
-        c: &Context,
-        preset: &s::EncoderPreset,
-        bitmap_key: BitmapKey,
-        decoder_io_ids: &[i32],
-    ) -> Result<s::EncodeResult> {
-        let io_proxy = IoProxyProxy(self.io_ref.clone());
+// impl<T> Encoder for EncoderAdapter<T>
+// where
+//     T: EasyEncoder,
+// {
+//     fn write_frame(
+//         &mut self,
+//         c: &Context,
+//         preset: &s::EncoderPreset,
+//         bitmap_key: BitmapKey,
+//         decoder_io_ids: &[i32],
+//     ) -> Result<s::EncodeResult> {
+//         let io_proxy = IoProxyProxy(self.io_ref.clone());
 
-        self.encoder
-            .write_frame(&mut IoProxyProxy(self.io_ref.clone()), c, bitmap_key)
-            .map_err(|e| e.at(here!()))
-            .and_then(|mut r| {
-                r.io_id = self.io_id;
-                match r.bytes {
-                    s::ResultBytes::ByteArray(vec) => {
-                        IoProxyProxy(self.io_ref.clone())
-                            .write_all(&vec)
-                            .map_err(|e| FlowError::from_encoder(e).at(here!()))?;
-                        r.bytes = s::ResultBytes::Elsewhere;
-                        Ok(r)
-                    }
-                    _ => Ok(r),
-                }
-            })
-    }
+//         self.encoder
+//             .write_frame(&mut IoProxyProxy(self.io_ref.clone()), c, bitmap_key)
+//             .map_err(|e| e.at(here!()))
+//             .and_then(|mut r| {
+//                 r.io_id = self.io_id;
+//                 match r.bytes {
+//                     s::ResultBytes::ByteArray(vec) => {
+//                         IoProxyProxy(self.io_ref.clone())
+//                             .write_all(&vec)
+//                             .map_err(|e| FlowError::from_encoder(e).at(here!()))?;
+//                         r.bytes = s::ResultBytes::Elsewhere;
+//                         Ok(r)
+//                     }
+//                     _ => Ok(r),
+//                 }
+//             })
+//     }
 
-    fn get_io(&self) -> Result<IoProxyRef<'_>> {
-        Ok(IoProxyRef::Ref(self.io_ref.borrow()))
-    }
-}
+//     fn get_io(&self) -> Result<IoProxyRef<'_>> {
+//         Ok(IoProxyRef::Ref(self.io_ref.borrow()))
+//     }
+
+//     fn into_io(self: Box<Self>) -> Result<IoProxy> {
+//         // Extract the IoProxy from the Rc<RefCell<>>
+//         // Try to take ownership if this is the only reference
+//         match Rc::try_unwrap(self.io_ref) {
+//             Ok(cell) => Ok(cell.into_inner()),
+//             Err(_) => {
+//                 // If there are multiple references, this is an error
+//                 // This shouldn't happen in normal usage
+//                 Err(nerror!(ErrorKind::InternalError, "EncoderAdapter IoProxy has multiple references"))
+//             }
+//         }
+//     }
+// }
 pub struct GifEncoder {
     io_id: i32,
-    encoder: ::gif::Encoder<IoProxyProxy>,
+    encoder: Option<::gif::Encoder<IoProxyProxy>>,
     io_ref: Rc<RefCell<IoProxy>>,
     frame_ix: i32,
 }
@@ -277,15 +293,27 @@ impl GifEncoder {
             io_id,
             io_ref: io_ref.clone(),
             // Global color table??
-            encoder: ::gif::Encoder::new(
-                IoProxyProxy(io_ref),
-                bitmap.w() as u16,
-                bitmap.h() as u16,
-                &[],
-            )
-            .map_err(|e| FlowError::from(e).at(here!()))?,
+            encoder: Some(
+                ::gif::Encoder::new(
+                    IoProxyProxy(io_ref),
+                    bitmap.w() as u16,
+                    bitmap.h() as u16,
+                    &[],
+                )
+                .map_err(|e| FlowError::from(e).at(here!()))?,
+            ),
             frame_ix: 0,
         })
+    }
+
+    fn finish(&mut self) -> Result<()> {
+        let encoder = self
+            .encoder
+            .take()
+            .ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?;
+        let flushed_writer = encoder.into_inner().map_err(|e| FlowError::from(e).at(here!()))?;
+        drop(flushed_writer);
+        Ok(())
     }
 }
 
@@ -314,7 +342,7 @@ impl Encoder for GifEncoder {
             }
         }
 
-        //        eprintln!("decoders: {:?}, found_frame: {}", decoder_io_ids, decoded_frame.is_some() );
+        // eprintln!("decoders: {:?}, found_frame: {}", decoder_io_ids, decoded_frame.is_some() );
 
         let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
 
@@ -349,6 +377,10 @@ impl Encoder for GifEncoder {
             if let Some(r) = repeat {
                 //                    eprintln!("Writing repeat");
                 self.encoder
+                    .as_mut()
+                    .ok_or_else(|| {
+                        nerror!(ErrorKind::InternalError, "Gif encoder not initialized")
+                    })?
                     .write_extension(::gif::ExtensionData::Repetitions(r))
                     .map_err(|e| FlowError::from(e).at(here!()))?;
             } else {
@@ -362,7 +394,11 @@ impl Encoder for GifEncoder {
         // rect
         // transparency??
 
-        self.encoder.write_frame(&f).map_err(|e| FlowError::from(e).at(here!()))?;
+        self.encoder
+            .as_mut()
+            .ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?
+            .write_frame(&f)
+            .map_err(|e| FlowError::from(e).at(here!()))?;
 
         self.frame_ix += 1;
         Ok(s::EncodeResult {
@@ -372,10 +408,27 @@ impl Encoder for GifEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "gif".to_owned(),
             preferred_mime_type: "image/gif".to_owned(),
+            diagnostic_data: None, // For now.
         })
     }
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Ref(self.io_ref.borrow()))
+    }
+
+    fn into_io(mut self: Box<Self>) -> Result<IoProxy> {
+        // Finish the GIF encoding (write trailer, drop encoder, drop writer)
+        self.finish().map_err(|e| e.at(here!()))?;
+
+        // Extract the IoProxy from the Rc<RefCell<>>
+        // Try to take ownership if this is the only reference
+        match Rc::try_unwrap(self.io_ref) {
+            Ok(cell) => Ok(cell.into_inner()),
+            Err(_) => {
+                // If there are multiple references, this is an error
+                // This shouldn't happen in normal usage
+                Err(nerror!(ErrorKind::InternalError, "GifEncoder IoProxy has multiple references"))
+            }
+        }
     }
 }
 

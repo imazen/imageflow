@@ -123,15 +123,21 @@ impl<'a> Engine<'a> {
             if self.graph_fully_executed() {
                 break;
             }
+            if self.c.cancellation_requested() {
+                return Err(cancelled!("Cancelled within execute loop"));
+            }
 
             if passes >= self.c.max_calc_flatten_execute_passes {
                 {
                     self.notify_graph_complete()?;
                 }
-                eprintln!("{:#?}", self.g);
-                panic!("Maximum graph passes exceeded");
-                //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
-                //            return false;
+                return Err(nerror!(
+                    ErrorKind::InternalError,
+                    "Maximum graph passes exceeded ({}>{}). Graph:\n{:#?}",
+                    passes,
+                    self.c.max_calc_flatten_execute_passes,
+                    self.g
+                ));
             }
             self.request_decoder_commands()?;
 
@@ -182,7 +188,7 @@ impl<'a> Engine<'a> {
         perf.reverse();
 
         let total_node_ns = self.g.node_weights_mut().map(|n| n.cost.wall_ns).sum::<u64>();
-        let total_ns = precise_time_ns() - start;
+        let total_ns = precise_time_ns().saturating_sub(start);
         let wall_microseconds = (total_ns as f64 / 1000f64).round() as u64;
         let overhead_microseconds =
             ((total_ns as i64 - total_node_ns as i64) as f64 / 1000f64).round() as i64;
@@ -237,8 +243,10 @@ impl<'a> Engine<'a> {
     }
 
     fn notify_graph_changed(&mut self) -> Result<()> {
+        if self.c.cancellation_requested() {
+            return Err(cancelled!("Cancelled within notify_graph_changed"));
+        }
         self.assign_stable_ids()?;
-        return_if_cancelled!(&self.c);
 
         let info = GraphRecordingInfo {
             debug_job_id: self.c.debug_job_id,
@@ -337,7 +345,7 @@ impl<'a> Engine<'a> {
             Engine::validate_frame_size(v, &ctx.c.security)?;
         }
 
-        ctx.weight_mut(node_id).cost.wall_ns += precise_time_ns() - now;
+        ctx.weight_mut(node_id).cost.wall_ns += precise_time_ns().saturating_sub(now);
         result
     }
 
@@ -347,7 +355,8 @@ impl<'a> Engine<'a> {
         recurse_limit: i32,
     ) -> Result<FrameEstimate> {
         if recurse_limit < 0 {
-            panic!("Hit node estimation recursion limit");
+            // Previously a panic
+            return Err(nerror!(ErrorKind::InternalError, "Hit node estimation recursion limit"));
         }
         return_if_cancelled!(self.c);
 
@@ -495,10 +504,10 @@ impl<'a> Engine<'a> {
                     ));
                 }
             }
+            return_if_cancelled!(self.c);
             match next {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
-                    return_if_cancelled!(self.c);
                     let more_frames = {
                         let now = precise_time_ns();
                         let mut ctx = self.op_ctx_mut();
@@ -529,7 +538,8 @@ impl<'a> Engine<'a> {
                             }
                             ctx.weight_mut(next_ix).result = result;
                         }
-                        ctx.weight_mut(next_ix).cost.wall_ns += precise_time_ns() - now;
+                        ctx.weight_mut(next_ix).cost.wall_ns +=
+                            precise_time_ns().saturating_sub(now);
                         ctx.more_frames.get()
                     };
 

@@ -19,7 +19,9 @@ mod pngquant;
 pub use lode::write_png;
 
 mod auto;
+mod avif_encoder;
 mod color_transform_cache;
+mod diagnostic_collector;
 mod image_png_decoder;
 mod jpeg_decoder;
 mod libpng_decoder;
@@ -28,6 +30,9 @@ mod mozjpeg;
 mod mozjpeg_decoder;
 mod mozjpeg_decoder_helpers;
 mod webp;
+
+#[cfg(feature = "bad-avif-decoder")]
+mod avif_decoder;
 use crate::codecs::color_transform_cache::ColorTransformCache;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
 use crate::graphics::bitmaps::BitmapKey;
@@ -59,11 +64,14 @@ pub trait Encoder {
     ) -> Result<s::EncodeResult>;
 
     fn get_io(&self) -> Result<IoProxyRef<'_>>;
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy>;
 }
 
 enum CodecKind {
     EncoderPlaceholder,
     Encoder(Box<dyn Encoder>),
+    EncoderFinished,
     Decoder(Box<dyn Decoder>),
 }
 
@@ -76,6 +84,8 @@ pub enum NamedDecoders {
     LibPngRsDecoder,
     GifRsDecoder,
     WebPDecoder,
+    #[cfg(feature = "bad-avif-decoder")]
+    AvifDecoder,
 }
 impl NamedDecoders {
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
@@ -91,6 +101,11 @@ impl NamedDecoders {
             }
             NamedDecoders::WebPDecoder => {
                 bytes.starts_with(b"RIFF") && bytes[8..12].starts_with(b"WEBP")
+            }
+            #[cfg(feature = "bad-avif-decoder")]
+            NamedDecoders::AvifDecoder => {
+                // AVIF uses ISOBMFF container: check for 'ftyp' box and 'avif' brand
+                bytes.len() >= 12 && &bytes[4..8] == b"ftyp" && &bytes[8..12] == b"avif"
             }
         }
     }
@@ -115,6 +130,10 @@ impl NamedDecoders {
             NamedDecoders::WICJpegDecoder => {
                 panic!("WIC Jpeg Decoder not implemented"); //TODO, use actual error for this
             }
+            #[cfg(feature = "bad-avif-decoder")]
+            NamedDecoders::AvifDecoder => {
+                Ok(Box::new(avif_decoder::AvifDecoder::create(c, io, io_id)?))
+            }
         }
     }
 }
@@ -126,6 +145,7 @@ pub enum NamedEncoders {
     LodePngEncoder,
     WebPEncoder,
     LibPngRsEncoder,
+    AvifEncoder,
 }
 pub struct EnabledCodecs {
     pub decoders: ::smallvec::SmallVec<[NamedDecoders; 4]>,
@@ -148,6 +168,7 @@ impl Default for EnabledCodecs {
                 NamedEncoders::LodePngEncoder,
                 NamedEncoders::WebPEncoder,
                 NamedEncoders::LibPngRsEncoder,
+                NamedEncoders::AvifEncoder,
             ]),
         }
     }
@@ -160,6 +181,25 @@ impl EnabledCodecs {
     }
     pub fn disable_decoder(&mut self, decoder: NamedDecoders) {
         self.decoders.retain(|item| item != &decoder);
+    }
+    pub fn disable_encoder(&mut self, encoder: NamedEncoders) {
+        self.encoders.retain(|item| item != &encoder);
+    }
+    /// Enables the bad AVIF decoder for integration testing.
+    ///
+    /// # Safety Warning
+    /// DO NOT USE IN PRODUCTION. This decoder has significant limitations:
+    /// - No ICC color profile handling (colors will be wrong for images with embedded profiles)
+    /// - No CICP/NCLX color space conversion (colors may be incorrect)
+    /// - Increased attack surface from avif-decode/aom-decode dependencies
+    /// - Not audited for security vulnerabilities
+    ///
+    /// Only use this for verifying AVIF encoding roundtrips in integration tests.
+    #[cfg(feature = "bad-avif-decoder")]
+    pub fn enable_bad_avif_decoder(&mut self) {
+        if !self.decoders.contains(&NamedDecoders::AvifDecoder) {
+            self.decoders.push(NamedDecoders::AvifDecoder);
+        }
     }
     pub fn create_decoder_for_magic_bytes(
         &self,
@@ -244,30 +284,64 @@ impl CodecInstanceContainer {
             self.codec = CodecKind::Encoder(encoder);
         };
 
-        if let CodecKind::Encoder(ref mut e) = self.codec {
-            match e.write_frame(c, preset, bitmap_key, decoder_io_ids).map_err(|e| e.at(here!())){
-                 Err(e) => Err(e),
-                 Ok(result) => {
-                     match result.bytes{
-                         s::ResultBytes::Elsewhere => Ok(result),
-                         other => Err(nerror!(ErrorKind::InternalError, "Encoders must return s::ResultBytes::Elsewhere and write to their owned IO. Found {:?}", other))
-
-                     }
-                 }
-             }
-        } else {
-            Err(unimpl!())
-            //Err(FlowError::ErrNotImpl)
+        match self.codec {
+            CodecKind::Encoder(ref mut e) => {
+                match e.write_frame(c, preset, bitmap_key, decoder_io_ids).map_err(|e| e.at(here!())) {
+                    Err(e) => Err(e),
+                    Ok(result) => match result.bytes {
+                        s::ResultBytes::Elsewhere => Ok(result),
+                        other => Err(nerror!(
+                            ErrorKind::InternalError,
+                            "Encoders must return s::ResultBytes::Elsewhere and write to their owned IO. Found {:?}",
+                            other
+                        )),
+                    },
+                }
+            }
+            CodecKind::EncoderPlaceholder => Err(nerror!(
+                ErrorKind::InvalidState,
+                "Encoder {} wasn't created somehow",
+                self.io_id
+            )),
+            CodecKind::EncoderFinished => Err(nerror!(
+                ErrorKind::InvalidState,
+                "Encoder {} has already been finalized. Did you try to access the output buffer before the job was done?",
+                self.io_id
+            )),
+            CodecKind::Decoder(_) => Err(unimpl!()),
         }
     }
 
     pub fn get_encode_io(&self) -> Result<Option<IoProxyRef<'_>>> {
-        if let CodecKind::Encoder(ref e) = self.codec {
-            Ok(Some(e.get_io().map_err(|e| e.at(here!()))?))
-        } else if let Some(ref e) = self.encode_io {
-            Ok(Some(IoProxyRef::Borrow(e)))
-        } else {
-            Ok(None)
+        match self.codec {
+            CodecKind::Encoder(ref e) => Ok(Some(e.get_io().map_err(|e| e.at(here!()))?)),
+            CodecKind::EncoderFinished | CodecKind::EncoderPlaceholder => {
+                if let Some(ref e) = self.encode_io {
+                    Ok(Some(IoProxyRef::Borrow(e)))
+                } else {
+                    Ok(None)
+                }
+            }
+            CodecKind::Decoder(_) => Ok(None),
+        }
+    }
+
+    pub fn finalize_if_encoder(&mut self) -> Result<()> {
+        match self.codec {
+            CodecKind::EncoderPlaceholder | CodecKind::EncoderFinished | CodecKind::Decoder(_) => {
+                Ok(())
+            }
+            CodecKind::Encoder(_) => {
+                let encoder_variant =
+                    std::mem::replace(&mut self.codec, CodecKind::EncoderFinished);
+                if let CodecKind::Encoder(encoder) = encoder_variant {
+                    let io = encoder.into_io().map_err(|e| e.at(here!()))?;
+                    self.encode_io = Some(io);
+                    Ok(())
+                } else {
+                    unreachable!("Codec variant unexpectedly changed during finalize");
+                }
+            }
         }
     }
 }

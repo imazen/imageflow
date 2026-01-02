@@ -608,3 +608,9 @@ impl MzDec {
         info
     }
 }
+
+impl Drop for MozJpegDecoder {
+    fn drop(&mut self) {
+        self.decoder.dispose_codec();
+    }
+}

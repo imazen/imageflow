@@ -179,7 +179,8 @@ impl IoProxy {
     // This could actually live as long as the context, but this isn't on the context....
     // but if a constraint, we could add context as an input parameter
     /// Only valid as long as the life of the IoProxy is the same as the life of the Context, 'b
-    pub fn get_output_buffer_bytes<'b>(&self, c: &'b Context) -> Result<&'b [u8]> {
+    /// Make sure the encoder has been finalized
+    pub(crate) fn get_output_buffer_bytes<'b>(&self, c: &'b Context) -> Result<&'b [u8]> {
         match &self.backend {
             IoBackend::WriteVec(v) => Ok(unsafe { std::mem::transmute(v.get_ref().as_slice()) }),
             _ => Err(nerror!(

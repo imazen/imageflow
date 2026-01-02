@@ -91,16 +91,33 @@ impl Encoder for MozjpegEncoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
-        bitmap
-            .get_window_bgra32()
-            .unwrap()
-            .apply_matte(self.matte.clone().unwrap_or(imageflow_types::Color::Srgb(
-                imageflow_types::ColorSrgb::Hex("FFFFFFFF".to_owned()),
-            )))
-            .map_err(|e| e.at(here!()))?;
-        bitmap.set_alpha_meaningful(false);
+        let mut data =
+            crate::codecs::diagnostic_collector::DiagnosticCollector::new("mozjpeg.encoder.");
+
+        let had_alpha = bitmap.info().alpha_meaningful();
+        data.add("input.had_alpha", &had_alpha);
+        if self.matte.is_some() {
+            data.add("params.matte", &self.matte.clone().unwrap());
+            data.add("params.matte_is_opaque", &self.matte.clone().unwrap().is_opaque());
+            bitmap.apply_matte(self.matte.clone().unwrap())?;
+            bitmap.set_alpha_meaningful(false);
+            data.add("result.applied_custom_matte", &self.matte.clone().unwrap());
+        }
+        if bitmap.info().alpha_meaningful() {
+            let white = imageflow_types::Color::Srgb(imageflow_types::ColorSrgb::Hex(
+                "FFFFFFFF".to_owned(),
+            ));
+            bitmap.apply_matte(white.clone())?;
+            data.add("result.applied_white_matte", true);
+        }
+        data.add("input.has_alpha", bitmap.info().alpha_meaningful());
 
         let mut window = bitmap.get_window_u8().unwrap();
+
+        // mozjpeg Default quality is 75
+        let quality = self.quality.map(|q| u8::min(100, q as u8)).unwrap_or(DEFAULT_QUALITY);
+
+        data.add("params.quality", &quality);
 
         let in_color_space = match window.pixel_format() {
             PixelFormat::Bgra32 => mozjpeg::ColorSpace::JCS_EXT_BGRA,
@@ -109,27 +126,31 @@ impl Encoder for MozjpegEncoder {
             PixelFormat::Gray8 => mozjpeg::ColorSpace::JCS_GRAYSCALE,
         };
         let mut cinfo = mozjpeg::Compress::new(in_color_space);
+        data.add_debug("params.color_space", &in_color_space);
+
         cinfo.set_size(window.w() as usize, window.h() as usize);
+
         match self.defaults {
             Defaults::MozJPEG => {}
             Defaults::LibJPEGv6 => {
                 cinfo.set_fastest_defaults();
+                data.add("params.mimic_libjpeg_turbo", true);
             }
         }
-        if let Some(q) = self.quality {
-            cinfo.set_quality(u8::min(100, q).into());
-        }
+        cinfo.set_quality(quality.into());
+
         if let Some(p) = self.progressive {
             if p {
                 cinfo.set_progressive_mode();
             }
         }
+        data.add_debug("params.progressive", &self.progressive);
+        data.add_debug("params.optimize_coding", &self.optimize_coding);
         if let Some(o) = self.optimize_coding {
             cinfo.set_optimize_coding(o);
         }
 
-        let chroma_quality = self.quality.unwrap_or(DEFAULT_QUALITY) as f32; // Lower values allow blurrier color
-
+        let chroma_quality = quality as f32; // Lower values allow blurrier color
         let pixel_buffer = window.get_pixel_buffer().unwrap();
 
         let max_sampling = PixelSize { cb: (2, 2), cr: (2, 2) }; // Set to 1 to force higher res
@@ -147,6 +168,9 @@ impl Encoder for MozjpegEncoder {
                 evalchroma::adjust_sampling(buf, max_sampling, chroma_quality)
             }
         };
+        data.add_debug("result.evalchroma.pixel_size", &res.subsampling);
+        data.add_debug("result.evalchroma.chroma_quality", &res.chroma_quality);
+        data.add_debug("result.evalchroma.sharpness", &res.sharpness);
 
         // Translate chroma pixel size into JPEG's channel-relative samples per pixel
         let max_sampling_h = res.subsampling.cb.0.max(res.subsampling.cr.0);
@@ -155,6 +179,10 @@ impl Encoder for MozjpegEncoder {
         for (c, &(h, v)) in cinfo.components_mut().iter_mut().zip(px_sizes) {
             c.h_samp_factor = (max_sampling_h / h).into();
             c.v_samp_factor = (max_sampling_v / v).into();
+            data.add(
+                &format!("result.component[{}]", c.component_index),
+                format!("h={}, v={}", c.h_samp_factor, c.v_samp_factor),
+            );
         }
 
         let mut compressor = cinfo
@@ -189,10 +217,16 @@ impl Encoder for MozjpegEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "jpg".to_owned(),
             preferred_mime_type: "image/jpeg".to_owned(),
+            diagnostic_data: data.into_diagnostic_data(),
         })
     }
 
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Borrow(&self.io))
+    }
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy> {
+        // MozJPEG encoder calls finish() during write_frame, so no additional cleanup needed
+        Ok(self.io)
     }
 }

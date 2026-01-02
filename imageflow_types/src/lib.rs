@@ -338,7 +338,7 @@ pub struct EncoderHints {
     pub webp: Option<WebpEncoderHints>,
     pub jpeg: Option<JpegEncoderHints>,
     pub png: Option<PngEncoderHints>,
-    //pub avif: Option<AvifEncoderHints>,
+    pub avif: Option<AvifEncoderHints>,
     pub gif: Option<GifEncoderHints>,
 }
 
@@ -351,12 +351,15 @@ pub struct EncoderHints {
 //     pub distance: Option<f32>,
 // }
 
-// #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
-// #[serde(rename_all = "lowercase")]
-// pub struct AvifEncoderHints{
-//     pub quality: Option<f32>,
-//     pub speed: Option<u8>,
-// }
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "lowercase")]
+pub struct AvifEncoderHints {
+    pub quality: Option<f32>,
+    pub speed: Option<u8>,
+    pub alpha_quality: Option<f32>,
+}
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
@@ -472,6 +475,8 @@ impl AllowedFormats {
     fn or(a: Option<bool>, b: Option<bool>) -> Option<bool> {
         match (a, b) {
             (Some(a), Some(b)) => Some(a || b),
+            (Some(a), None) => Some(a),
+            (None, Some(b)) => Some(b),
             _ => None,
         }
     }
@@ -637,11 +642,12 @@ impl From<bool> for BoolKeep {
     }
 }
 impl BoolKeep {
-    pub fn resolve(self, default: bool) -> bool {
-        match self {
-            BoolKeep::Keep => default,
-            BoolKeep::True => true,
-            BoolKeep::False => false,
+    pub fn and_resolve(value: Option<BoolKeep>, keep_value: Option<bool>) -> Option<bool> {
+        match value {
+            Some(BoolKeep::Keep) => keep_value,
+            Some(BoolKeep::True) => Some(true),
+            Some(BoolKeep::False) => Some(false),
+            None => None,
         }
     }
 }
@@ -732,6 +738,7 @@ pub enum EncoderPreset {
     /// Requires a file format to be specified, and allows for specific encoder hints.
     /// Specific format features can be specified in 'allow', such as jxl_animation, avif_animation, etc.
     Format {
+        // Only honored if the format is allowed in 'allow'
         format: OutputImageFormat,
         /// A quality profile to use..
         quality_profile: Option<QualityProfile>,
@@ -816,6 +823,14 @@ pub enum ColorSrgb {
     Hex(String),
 }
 
+impl std::fmt::Display for ColorSrgb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ColorSrgb::Hex(hex) => write!(f, "#{}", hex),
+        }
+    }
+}
+
 /// Represents arbitrary colors (not color space specific)
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
@@ -827,6 +842,16 @@ pub enum Color {
     Black,
     #[serde(rename = "srgb")]
     Srgb(ColorSrgb),
+}
+
+impl std::fmt::Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Color::Transparent => write!(f, "transparent"),
+            Color::Black => write!(f, "black"),
+            Color::Srgb(srgb) => write!(f, "{}", srgb),
+        }
+    }
 }
 
 use imageflow_helpers::colors::*;
@@ -871,6 +896,16 @@ fn assert_eq_hex(a: u32, b: u32) {
     }
     assert_eq!(a, b);
 }
+
+#[test]
+fn test_is_opaque() {
+    assert!(!Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).is_opaque());
+    assert!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).is_opaque());
+    assert!(Color::Srgb(ColorSrgb::Hex("FFAAEEFF".to_owned())).is_opaque());
+    assert!(!Color::Srgb(ColorSrgb::Hex("FFAAEECC".to_owned())).is_opaque());
+    assert!(!Color::Srgb(ColorSrgb::Hex("FFAAEECC".to_owned())).is_opaque());
+}
+
 #[test]
 fn test_color() {
     assert_eq_hex(
@@ -1812,6 +1847,8 @@ pub struct EncodeResult {
     pub h: i32,
 
     pub bytes: ResultBytes,
+
+    pub diagnostic_data: Option<Box<std::collections::BTreeMap<String, String>>>,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
@@ -2097,6 +2134,7 @@ impl Response001 {
                     preferred_mime_type: mime.to_owned(),
                     preferred_extension: ext.to_owned(),
                     bytes: ResultBytes::Elsewhere,
+                    diagnostic_data: None,
                 }],
                 performance: Some(BuildPerformance { frames: vec![frame_perf] }),
             }),

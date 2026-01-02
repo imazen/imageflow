@@ -374,6 +374,42 @@ fn scenario_request_base64() -> BuildScenario {
     }
 }
 
+fn scenario_avif_encoding() -> BuildScenario {
+    let mut allowed = s::AllowedFormats::none();
+    allowed.avif = Some(true);
+
+    let preset = s::EncoderPreset::Auto {
+        quality_profile: s::QualityProfile::Percent(65.0),
+        quality_profile_dpr: None,
+        matte: None,
+        lossless: None,
+        allow: Some(allowed),
+    };
+
+    let framewise = fluent::fluently()
+        .decode(0)
+        .constrain_within(Some(800), Some(800), None)
+        .encode(1, preset)
+        .builder()
+        .to_framewise();
+
+    BuildScenario {
+        description: "Encode an image to AVIF format with quality 65",
+        slug: "encode_avif",
+        recipe: framewise.wrap_in_build_0_1(),
+        new_inputs: vec![ReplacementInput::File {
+            path: "waterhouse.jpg".to_owned(),
+            source: TestImageSource::Url(
+                "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg"
+                    .to_owned(),
+            ),
+        }],
+        new_outputs: vec![ReplacementOutput::file(1, "waterhouse_800.avif")],
+        json_out: Some("operation_result.json"),
+        expectations: Some(ScenarioExpectations { status_code: Some(0) }),
+    }
+}
+
 fn scenarios() -> Vec<BuildScenario> {
     vec![
         scenario_laundry_list(),
@@ -381,6 +417,7 @@ fn scenarios() -> Vec<BuildScenario> {
         scenario_pure_json(),
         scenario_response_stdout(),
         scenario_request_base64(),
+        scenario_avif_encoding(),
     ]
 }
 
