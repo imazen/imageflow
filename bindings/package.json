@@ -4,6 +4,6 @@
   "description": "Tooling for generating Imageflow language bindings.",
   "private": true,
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "^2.13.4"
+    "@openapitools/openapi-generator-cli": "^2.28.0"
   }
 }
