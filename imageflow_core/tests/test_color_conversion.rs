@@ -754,3 +754,234 @@ fn test_srgb_linear_roundtrip() {
 
     println!("\n✓ All 256 values roundtrip perfectly");
 }
+
+/// Build a minimal valid PNG file with RGBA pixels.
+/// Uses flate2 for deflate compression of the raw scanlines.
+fn build_rgba_png(w: u32, h: u32, pixels: &[u8]) -> Vec<u8> {
+    use flate2::write::ZlibEncoder;
+    use flate2::Compression;
+    use std::io::Write;
+
+    assert_eq!(pixels.len(), (w * h * 4) as usize);
+
+    let mut buf = Vec::new();
+    // PNG signature
+    buf.extend_from_slice(&[137, 80, 78, 71, 13, 10, 26, 10]);
+
+    // Helper to write a PNG chunk
+    fn write_chunk(buf: &mut Vec<u8>, chunk_type: &[u8; 4], data: &[u8]) {
+        buf.extend_from_slice(&(data.len() as u32).to_be_bytes());
+        buf.extend_from_slice(chunk_type);
+        buf.extend_from_slice(data);
+        let mut crc_data = Vec::with_capacity(4 + data.len());
+        crc_data.extend_from_slice(chunk_type);
+        crc_data.extend_from_slice(data);
+        let crc = png_crc32(&crc_data);
+        buf.extend_from_slice(&crc.to_be_bytes());
+    }
+
+    fn png_crc32(data: &[u8]) -> u32 {
+        let mut crc: u32 = 0xFFFFFFFF;
+        for &byte in data {
+            crc ^= byte as u32;
+            for _ in 0..8 {
+                if crc & 1 != 0 {
+                    crc = (crc >> 1) ^ 0xEDB88320;
+                } else {
+                    crc >>= 1;
+                }
+            }
+        }
+        crc ^ 0xFFFFFFFF
+    }
+
+    // IHDR: width, height, bit_depth=8, color_type=6 (RGBA), compression=0, filter=0, interlace=0
+    let mut ihdr = Vec::new();
+    ihdr.extend_from_slice(&w.to_be_bytes());
+    ihdr.extend_from_slice(&h.to_be_bytes());
+    ihdr.extend_from_slice(&[8, 6, 0, 0, 0]);
+    write_chunk(&mut buf, b"IHDR", &ihdr);
+
+    // IDAT: filtered scanlines (filter byte 0 = None for each row)
+    let mut raw_scanlines = Vec::new();
+    for y in 0..h as usize {
+        raw_scanlines.push(0u8); // filter byte: None
+        raw_scanlines.extend_from_slice(&pixels[y * w as usize * 4..(y + 1) * w as usize * 4]);
+    }
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+    encoder.write_all(&raw_scanlines).unwrap();
+    let compressed = encoder.finish().unwrap();
+    write_chunk(&mut buf, b"IDAT", &compressed);
+
+    // IEND
+    write_chunk(&mut buf, b"IEND", &[]);
+
+    buf
+}
+
+/// Test that matte compositing during scaling produces correct RGB values.
+///
+/// This exercises the blend_matte() path in scaling.rs by:
+/// 1. Creating a PNG with semi-transparent red pixels
+/// 2. Scaling it down with a white background color (triggers BlendWithMatte)
+/// 3. Verifying the output RGB values match the correct compositing formula
+///
+/// The bug: blend_matte() divides by final_alpha (producing straight alpha),
+/// then demultiply_alpha() divides by alpha again, making semi-transparent
+/// pixels too bright. The fix skips demultiply after blend_matte.
+#[test]
+fn test_matte_compositing_no_double_division() {
+    use imageflow_core::graphics::color::{ColorContext, WorkingFloatspace};
+    use imageflow_core::Context;
+
+    // Create a 10x10 RGBA image: solid red with alpha=128
+    let w = 10u32;
+    let h = 10u32;
+    let alpha = 128u8;
+    let mut pixels = Vec::with_capacity((w * h * 4) as usize);
+    for _ in 0..w * h {
+        pixels.extend_from_slice(&[255, 0, 0, alpha]); // RGBA: red, alpha=128
+    }
+    let png_bytes = build_rgba_png(w, h, &pixels);
+
+    // Resize to 5x5 with white matte — this triggers blend_matte in scaling.rs
+    let steps = vec![
+        imageflow_types::Node::Decode { io_id: 0, commands: None },
+        imageflow_types::Node::Resample2D {
+            w: 5,
+            h: 5,
+            hints: Some(imageflow_types::ResampleHints {
+                background_color: Some(imageflow_types::Color::Srgb(
+                    imageflow_types::ColorSrgb::Hex("FFFFFFFF".to_owned()),
+                )),
+                ..imageflow_types::ResampleHints::new()
+            }),
+        },
+        imageflow_types::Node::Encode {
+            io_id: 1,
+            preset: imageflow_types::EncoderPreset::Lodepng { maximum_deflate: None },
+        },
+    ];
+
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, png_bytes).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    let execute = imageflow_types::Execute001 {
+        graph_recording: None,
+        security: None,
+        framewise: imageflow_types::Framewise::Steps(steps),
+    };
+    ctx.execute_1(execute).unwrap();
+    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+
+    // Decode the output PNG and check pixel values
+    let mut ctx2 = Context::create().unwrap();
+    ctx2.add_input_vector(0, output_bytes.clone()).unwrap();
+    ctx2.add_output_buffer(1).unwrap();
+    let decode_steps = vec![
+        imageflow_types::Node::Decode { io_id: 0, commands: None },
+        imageflow_types::Node::Encode {
+            io_id: 1,
+            preset: imageflow_types::EncoderPreset::Lodepng { maximum_deflate: None },
+        },
+    ];
+    let execute2 = imageflow_types::Execute001 {
+        graph_recording: None,
+        security: None,
+        framewise: imageflow_types::Framewise::Steps(decode_steps),
+    };
+    ctx2.execute_1(execute2).unwrap();
+
+    // Use lodepng to decode raw pixels from the output
+    let result = lodepng::decode32(output_bytes.as_slice()).unwrap();
+    let out_w = result.width;
+    let out_h = result.height;
+    let out_pixels = result.buffer;
+
+    println!("\n=== Matte Compositing Test ({}x{} -> {}x{}) ===\n", w, h, out_w, out_h);
+
+    // Compute expected value:
+    // Input: premultiplied red at alpha=128/255 ≈ 0.502
+    // sRGB red=255 -> linear ≈ 1.0
+    // In premultiplied: pixel_R_linear = alpha_f * 1.0
+    // Matte: white -> linear = 1.0
+    // blend_matte formula (on premultiplied data):
+    //   pixel_a = alpha_f (from premul conversion)
+    //   a = (1 - pixel_a) * matte_a = (1 - 0.502) * 1.0 = 0.498
+    //   final_alpha = pixel_a + a = 0.502 + 0.498 = 1.0
+    //   result_R = (premul_R + linear_matte_R * a) / final_alpha
+    //            = (0.502 * 1.0 + 1.0 * 0.498) / 1.0 = 1.0  ... for opaque matte
+    //
+    // But that's only true if alpha_f is exactly 128/255. The key test is that
+    // the RGB values are correct, not washed out by double-division.
+    //
+    // With a white matte and any non-zero alpha, the result for a pure red pixel should be:
+    //   result_R_linear = (linear_red * alpha_f + 1.0 * (1-alpha_f)) / 1.0
+    //                   = alpha_f * linear_red + (1 - alpha_f)
+    //   result_G_linear = (0 * alpha_f + 1.0 * (1-alpha_f)) / 1.0 = (1 - alpha_f)
+    //   result_B_linear = same as G
+    //
+    // alpha_f = 128/255 ≈ 0.50196
+    // result_R_linear ≈ 0.50196 + 0.49804 = 1.0 → sRGB 255
+    // result_G_linear ≈ 0.49804 → sRGB ~186
+    // result_B_linear ≈ 0.49804 → sRGB ~186
+    //
+    // With the double-division bug, the values would be much brighter/whiter.
+
+    let cc = ColorContext::new(WorkingFloatspace::LinearRGB, 0.0);
+    let alpha_f = alpha as f32 / 255.0;
+    // Red channel: linear_red=1.0 (sRGB 255 -> linear 1.0)
+    let linear_red = cc.srgb_to_floatspace(255);
+    let expected_r_linear = alpha_f * linear_red + (1.0 - alpha_f) * 1.0; // matte is white=1.0
+    let expected_g_linear = alpha_f * 0.0 + (1.0 - alpha_f) * 1.0;
+    let expected_b_linear = expected_g_linear;
+
+    let expected_r = cc.floatspace_to_srgb(expected_r_linear);
+    let expected_g = cc.floatspace_to_srgb(expected_g_linear);
+    let expected_b = cc.floatspace_to_srgb(expected_b_linear);
+
+    println!(
+        "Expected (from correct compositing): R={}, G={}, B={}",
+        expected_r, expected_g, expected_b
+    );
+
+    let mut max_r_diff = 0i32;
+    let mut max_g_diff = 0i32;
+    let mut max_b_diff = 0i32;
+
+    for y in 0..out_h {
+        for x in 0..out_w {
+            let px = &out_pixels[y * out_w + x];
+            let r_diff = (px.r as i32 - expected_r as i32).abs();
+            let g_diff = (px.g as i32 - expected_g as i32).abs();
+            let b_diff = (px.b as i32 - expected_b as i32).abs();
+            max_r_diff = max_r_diff.max(r_diff);
+            max_g_diff = max_g_diff.max(g_diff);
+            max_b_diff = max_b_diff.max(b_diff);
+
+            if r_diff > 2 || g_diff > 2 || b_diff > 2 {
+                println!(
+                    "  Pixel ({},{}): R={} G={} B={} A={} (expected R={} G={} B={}, diff R={} G={} B={})",
+                    x, y, px.r, px.g, px.b, px.a,
+                    expected_r, expected_g, expected_b,
+                    r_diff, g_diff, b_diff
+                );
+            }
+        }
+    }
+
+    println!("Max diffs: R={}, G={}, B={}", max_r_diff, max_g_diff, max_b_diff);
+
+    // Allow ±2 tolerance for rounding through the pipeline
+    // (sRGB->linear->premul->scale->blend_matte->sRGB has multiple rounding steps)
+    assert!(
+        max_r_diff <= 2 && max_g_diff <= 2 && max_b_diff <= 2,
+        "Matte compositing produced wrong RGB values! Max diffs: R={}, G={}, B={}. \
+         This likely indicates double-division by alpha in blend_matte + demultiply_alpha.",
+        max_r_diff,
+        max_g_diff,
+        max_b_diff
+    );
+
+    println!("\n✓ Matte compositing produces correct RGB values");
+}
