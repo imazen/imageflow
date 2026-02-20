@@ -40,10 +40,18 @@ pub fn copy_rectangle(
         (canvas.info().pixel_layout(), canvas.info().alpha_meaningful());
     let (input_layout, input_alpha_used) =
         (input.info().pixel_layout(), input.info().alpha_meaningful());
-    let (canvas_fmt, input_fmt) = (
+    let (mut canvas_fmt, input_fmt) = (
         canvas.info().calculate_pixel_format().map_err(|e| e.at(here!()))?,
         input.info().calculate_pixel_format().map_err(|e| e.at(here!()))?,
     );
+    if canvas_fmt == PixelFormat::Bgr32 && input_fmt == PixelFormat::Bgra32 {
+        // Normalize alpha, make alpha meaningful
+        let mut window = canvas.get_window_u8().unwrap();
+        window.normalize_unused_alpha().map_err(|e| e.at(here!()))?;
+        canvas.set_alpha_meaningful(true);
+        // Then update the canvas fmt
+        canvas_fmt = canvas.info().calculate_pixel_format().map_err(|e| e.at(here!()))?;
+    }
     let canvas_stride = canvas.info().t_stride();
     let input_stride = input.info().t_stride();
     let (canvas_w, canvas_h) = canvas.size();
