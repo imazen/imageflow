@@ -337,6 +337,14 @@ fn test_animated_gif_roundtrip() {
     ctx.execute_1(execute).unwrap();
     let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
 
+    // Verify the GIF trailer byte (0x3B) is present at the end
+    assert_eq!(
+        output_bytes.last(),
+        Some(&0x3B),
+        "Animated GIF (3 frames) is missing the trailing 0x3B marker. Last bytes: {:02X?}",
+        &output_bytes[output_bytes.len().saturating_sub(4)..]
+    );
+
     // Verify the output is a valid GIF with 3 frames
     let mut decoder = gif::DecodeOptions::new();
     decoder.set_color_output(gif::ColorOutput::RGBA);
@@ -367,6 +375,14 @@ fn test_animated_gif_two_frames() {
     };
     ctx.execute_1(execute).unwrap();
     let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+
+    // Verify the GIF trailer byte (0x3B) is present at the end
+    assert_eq!(
+        output_bytes.last(),
+        Some(&0x3B),
+        "Animated GIF (2 frames) is missing the trailing 0x3B marker. Last bytes: {:02X?}",
+        &output_bytes[output_bytes.len().saturating_sub(4)..]
+    );
 
     // Verify 2 frames
     let mut decoder = gif::DecodeOptions::new();
@@ -400,6 +416,14 @@ fn test_gif_roundtrip() {
     };
     ctx1.execute_1(execute1).unwrap();
     let bytes = ctx1.get_output_buffer_slice(0).unwrap().to_vec();
+
+    // Verify the GIF trailer byte (0x3B) is present at the end
+    assert_eq!(
+        bytes.last(),
+        Some(&0x3B),
+        "Still GIF is missing the trailing 0x3B marker. Last bytes: {:02X?}",
+        &bytes[bytes.len().saturating_sub(4)..]
+    );
 
     let mut ctx2 = Context::create().unwrap();
     ctx2.add_input_vector(0, bytes.to_vec()).unwrap();
