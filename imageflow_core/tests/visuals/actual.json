@@ -43,6 +43,7 @@
   "TestOffSurfaceRegion": "09FA1A44E855DFBB0_01D9D2C49A4E782F9",
   "TestPartialRegion": "0C51C8FBFD7A960E5_0172196390B512E97",
   "TestPixelsRegion": "0B42E995F9EF3B17E_0AB6E6EE83BE6CCAF",
+  "TestTransparentCanvas": "03CC86CF60D13260F_02E47202DCF2CA919",
   "Test_Apply_Orientation_Cropped_Portrait_1.jpg": "062A1F06054C3DF0A_05B6C838D00A967A0",
   "Test_Apply_Orientation_Cropped_Portrait_2.jpg": "002E471E06BC07AEC_05B6C838D00A967A0",
   "Test_Apply_Orientation_Cropped_Portrait_3.jpg": "00A30FB780185F509_05B6C838D00A967A0",
@@ -106,7 +107,7 @@
   "test_rot_90_and_red_dot_command_string": "0C593CB334AB223B4_0AE4839D1D9B04C57",
   "test_round_corners_command_string": "028F07F09FEE83065_0BF80F0AE71CD9A63",
   "test_webp_to_webp_quality": "042C3C137D1AED4D0.webp",
-  "transparent_png_to_jpeg": "07DF581CAAC9C661E.jpg",
+  "transparent_png_to_jpeg": "04BA3FD20D016E645.jpg",
   "transparent_png_to_jpeg_constrained": "0D0E7AA9F6F8E4BF2.jpg",
   "transparent_png_to_png": "0A839287BD1939BE8.png",
   "transparent_png_to_png_round_corners": "09161C21C9425956D.png",
@@ -120,6 +121,5 @@
   "webp_lossless_alpha_decode_and_scale": "0DCE6166F46CF5A24_0172196390B512E97",
   "webp_lossy_alpha_decode_and_scale": "05EF3D9DAC72DD995_0172196390B512E97",
   "webp_lossy_opaque_decode_and_scale": "0A0E5B9130C80B541_0172196390B512E97",
-  "wrenches_decode": "0E680C080BE9CD3A9_01397E6B9AECAB9F4",
-  "TestTransparentCanvas": "03CC86CF60D13260F_02E47202DCF2CA919"
+  "wrenches_decode": "0E680C080BE9CD3A9_01397E6B9AECAB9F4"
 }
