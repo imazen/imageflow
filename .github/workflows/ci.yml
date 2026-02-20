@@ -67,9 +67,9 @@ jobs:
             max-glibc: '2.34'
             linux: 'true'
 
-          - name: osx-x64-13
+          - name: osx-x64-15
             package-suffix: osx-x86_64
-            os: macos-13
+            os: macos-15-intel
             target-cpu: haswell
             nuget-rid: osx-x64
             target: x86_64-apple-darwin
