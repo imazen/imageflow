@@ -286,6 +286,7 @@ fn summarize_corners(b: &BitmapWindowMut<f32>) -> String {
     format!("BL: {:?},{:?}, TR: {:?}, TL: {:?}", bottom_right2, bottom_right, top_right, top_left)
 }
 
+#[multiversion(targets("x86_64+avx2+fma", "x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 pub fn scale_row_bgra_f32(
     source: &[f32],
     source_width: usize,
@@ -378,13 +379,20 @@ pub fn scale_row_bgra_f32(
 
 //     Ok(())
 // }
-#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
+#[multiversion(targets("x86_64+avx2+fma", "x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 fn multiply_and_add_row_simple(mutate_row: &mut [f32], input_row: &[f32], coefficient: f32) {
     assert_eq!(mutate_row.len(), input_row.len(), "Mismatched row lengths");
 
     for (v, &input) in mutate_row.iter_mut().zip(input_row.iter()) {
         *v += input * coefficient;
     }
+}
+
+/// Public wrapper for multiply-accumulate row operation.
+/// Used in vertical scaling to blend rows with weighted coefficients.
+#[inline]
+pub fn multiply_and_add_row(mutate_row: &mut [f32], input_row: &[f32], coefficient: f32) {
+    multiply_and_add_row_simple(mutate_row, input_row, coefficient);
 }
 
 fn bitmap_window_srgba32_to_f32x4(

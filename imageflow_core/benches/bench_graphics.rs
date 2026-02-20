@@ -338,6 +338,36 @@ fn benchmark_color_conversion(ctx: &mut Criterion) {
     group.finish();
 }
 
+fn benchmark_row_operations(ctx: &mut Criterion) {
+    // Test multiply_and_add_row (already has multiversion)
+    let width = 2000usize;
+    let channels = 4usize;
+    let len = width * channels;
+
+    let input_row: Vec<f32> = (0..len).map(|i| (i % 256) as f32 / 255.0).collect();
+    let mut output_row: Vec<f32> = vec![0.0; len];
+
+    let mut group = ctx.benchmark_group("row_operations");
+    group.throughput(criterion::Throughput::Elements(len as u64));
+
+    group.bench_function("multiply_and_add_row", |b| {
+        b.iter(|| {
+            output_row.fill(0.0);
+            // Simulate typical vertical scaling: ~5-10 weighted row additions
+            for weight in [0.05f32, 0.15, 0.30, 0.30, 0.15, 0.05] {
+                imageflow_core::graphics::scaling::multiply_and_add_row(
+                    &mut output_row,
+                    &input_row,
+                    weight,
+                );
+            }
+            criterion::black_box(output_row[0])
+        })
+    });
+
+    group.finish();
+}
+
 fn benchmark_horizontal_scale(ctx: &mut Criterion) {
     use imageflow_core::graphics::weights::{Filter, InterpolationDetails, PixelRowWeights};
 
@@ -452,6 +482,7 @@ fn benchmark_full_scale_pipeline(ctx: &mut Criterion) {
 criterion_group!(
     benches,
     benchmark_color_conversion,
+    benchmark_row_operations,
     benchmark_horizontal_scale,
     benchmark_full_scale_pipeline,
     benchmark_scale_2d,
