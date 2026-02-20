@@ -318,7 +318,7 @@ impl CmdBuild {
                     })?;
                     max_frame_size = s::FrameSizeLimit { h: number, ..max_frame_size };
                 } else if arg.ends_with("mp") {
-                    let number = arg.split_at(arg.len() - 1).0.parse::<f32>().map_err(|_| {
+                    let number = arg.split_at(arg.len() - 2).0.parse::<f32>().map_err(|_| {
                         CmdError::BadArguments(format!(
                             "Invalid number in argument to --exit-if-larger-than: {}",
                             arg

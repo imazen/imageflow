@@ -125,7 +125,7 @@ pub fn main_with_exit_code() -> i32 {
                     .num_args(1..)
                     .required(false)
                     .value_names(["10000w", "10mp", "disabled", "10000px"])
-                    .help("Override the default limit of 100mp/10000w/10000h/10000px. Specify 'none' to disable the limit, or set the megapixels (100mp), width (10000w), height (10000h), or any dimension (10000px).")
+                    .help("Override the default limit of 100mp/10000w/10000h/10000px. Specify 'disabled' to disable the limit, or set the megapixels (100mp), width (10000w), height (10000h), or any dimension (10000px).")
             )
         )
         .subcommand(Command::new("v1/querystring").aliases(["v0.1/ir4","v1/ir4"])
@@ -167,7 +167,7 @@ pub fn main_with_exit_code() -> i32 {
                     .num_args(1..)
                     .required(false)
                     .value_names(["10000w", "10mp", "disabled", "10000px"])
-                    .help("Override the default limit of 100mp/10000w/10000h/10000px. Specify 'none' to disable the limit, or set the megapixels (100mp), width (10000w), height (10000h), or any dimension (10000px).")
+                    .help("Override the default limit of 100mp/10000w/10000h/10000px. Specify 'disabled' to disable the limit, or set the megapixels (100mp), width (10000w), height (10000h), or any dimension (10000px).")
             )
 
         );
