@@ -492,7 +492,7 @@ fn blend_matte(
             let alpha = slice[col * 4 + 3];
             let a: f32 = (1.0f32 - alpha) * matte_a;
             let final_alpha: f32 = alpha + a;
-            if alpha > 0_i32 as f32 {
+            if final_alpha > 0_i32 as f32 {
                 slice[col * 4] = (slice[col * 4] + b * a) / final_alpha;
                 slice[col * 4 + 1] = (slice[col * 4 + 1] + g * a) / final_alpha;
                 slice[col * 4 + 2] = (slice[col * 4 + 2] + r * a) / final_alpha;
