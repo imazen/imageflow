@@ -286,6 +286,7 @@ fn summarize_corners(b: &BitmapWindowMut<f32>) -> String {
     format!("BL: {:?},{:?}, TR: {:?}, TL: {:?}", bottom_right2, bottom_right, top_right, top_left)
 }
 
+#[multiversion(targets("x86_64+avx2+fma", "x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 pub fn scale_row_bgra_f32(
     source: &[f32],
     source_width: usize,
@@ -378,13 +379,20 @@ pub fn scale_row_bgra_f32(
 
 //     Ok(())
 // }
-#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
+#[multiversion(targets("x86_64+avx2+fma", "x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 fn multiply_and_add_row_simple(mutate_row: &mut [f32], input_row: &[f32], coefficient: f32) {
     assert_eq!(mutate_row.len(), input_row.len(), "Mismatched row lengths");
 
     for (v, &input) in mutate_row.iter_mut().zip(input_row.iter()) {
         *v += input * coefficient;
     }
+}
+
+/// Public wrapper for multiply-accumulate row operation.
+/// Used in vertical scaling to blend rows with weighted coefficients.
+#[inline]
+pub fn multiply_and_add_row(mutate_row: &mut [f32], input_row: &[f32], coefficient: f32) {
+    multiply_and_add_row_simple(mutate_row, input_row, coefficient);
 }
 
 fn bitmap_window_srgba32_to_f32x4(
@@ -447,6 +455,7 @@ fn composite_linear_over_srgb(
         compose_linear_over_srgb(cc, src, canvas);
     } else {
         if src.info().alpha_meaningful() {
+            let mut needs_demultiply = src.info().alpha_premultiplied();
             if let crate::graphics::bitmaps::BitmapCompositing::BlendWithMatte(color) =
                 canvas.info().compose()
             {
@@ -455,8 +464,9 @@ fn composite_linear_over_srgb(
                     .map(|bgra| [bgra.b, bgra.g, bgra.r, bgra.a])
                     .unwrap_or([0, 0, 0, 0]);
                 blend_matte(cc, src, matte).map_err(|e| e.at(here!()))?;
+                needs_demultiply = false;
             }
-            if src.info().alpha_premultiplied() {
+            if needs_demultiply {
                 demultiply_alpha(src).map_err(|e| e.at(here!()))?;
             }
         }
@@ -482,10 +492,11 @@ fn blend_matte(
             let alpha = slice[col * 4 + 3];
             let a: f32 = (1.0f32 - alpha) * matte_a;
             let final_alpha: f32 = alpha + a;
-            if alpha > 0_i32 as f32 {
+            if final_alpha > 0_i32 as f32 {
                 slice[col * 4] = (slice[col * 4] + b * a) / final_alpha;
                 slice[col * 4 + 1] = (slice[col * 4 + 1] + g * a) / final_alpha;
                 slice[col * 4 + 2] = (slice[col * 4 + 2] + r * a) / final_alpha;
+                slice[col * 4 + 3] = final_alpha;
             }
         }
     }

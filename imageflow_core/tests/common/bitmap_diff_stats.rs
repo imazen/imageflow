@@ -13,6 +13,8 @@ pub struct BitmapDiffStats {
     pub values_differing_by_more_than_1: i64,
     pub raw_unmultiplied_difference: i64,
     pub values_abs_delta_sum: f64,
+    /// Maximum absolute difference across any single channel byte
+    pub max_channel_delta: i64,
 }
 
 // impl add for BitmapDiffStats
@@ -32,6 +34,7 @@ impl std::ops::Add for BitmapDiffStats {
             raw_unmultiplied_difference: self.raw_unmultiplied_difference
                 + other.raw_unmultiplied_difference,
             values_abs_delta_sum: self.values_abs_delta_sum + other.values_abs_delta_sum,
+            max_channel_delta: self.max_channel_delta.max(other.max_channel_delta),
         }
     }
 }
@@ -47,6 +50,7 @@ impl BitmapDiffStats {
             values_differing_by_more_than_1: 0,
             raw_unmultiplied_difference: 0,
             values_abs_delta_sum: 0.0,
+            max_channel_delta: 0,
         }
     }
 
@@ -68,6 +72,7 @@ impl BitmapDiffStats {
                 for i in 0..4 {
                     let abs_diff_ch = (i64::from(a_pixel[i]) - i64::from(b_pixel[i])).abs();
                     stats.raw_unmultiplied_difference += abs_diff_ch;
+                    stats.max_channel_delta = stats.max_channel_delta.max(abs_diff_ch);
                     if abs_diff_ch > 1 {
                         stats.values_differing += 1;
                     }
@@ -127,14 +132,18 @@ impl BitmapDiffStats {
     }
 
     pub fn legacy_report(&self) -> String {
-        let premult_degree = self.values_abs_delta_sum as f64 / (self.values_differing * 4) as f64;
+        if self.pixels_differing == 0 {
+            return "no pixel differences".to_string();
+        }
         let abs_degree =
             self.raw_unmultiplied_difference as f64 / (self.pixels_differing * 4) as f64;
 
         let pixels_that_differ_percent = self.pixels_differing as f64 * 100f64 / self.pixels as f64;
 
-        format!("average premultiplied channel error of {} (total {}) on {} ({}% of {}) pixels. Absolute error avg {} (total {})",
-                            premult_degree, self.values_abs_delta_sum.round(), self.pixels_differing,
-                            pixels_that_differ_percent, self.pixels, abs_degree, self.raw_unmultiplied_difference)
+        format!("max channel delta {} | {} pixels differ ({:.3}% of {}) | avg abs err/channel {:.4} (total {})",
+                            self.max_channel_delta,
+                            self.pixels_differing,
+                            pixels_that_differ_percent, self.pixels,
+                            abs_degree, self.raw_unmultiplied_difference)
     }
 }

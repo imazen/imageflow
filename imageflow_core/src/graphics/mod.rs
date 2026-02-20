@@ -5,6 +5,7 @@ pub(crate) mod color_matrix;
 pub(crate) mod copy_rect;
 pub mod flip;
 pub(crate) mod histogram;
+pub mod lut;
 pub(crate) mod math;
 pub mod scaling;
 pub mod transpose;

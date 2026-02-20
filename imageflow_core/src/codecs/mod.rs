@@ -59,11 +59,14 @@ pub trait Encoder {
     ) -> Result<s::EncodeResult>;
 
     fn get_io(&self) -> Result<IoProxyRef<'_>>;
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy>;
 }
 
 enum CodecKind {
     EncoderPlaceholder,
     Encoder(Box<dyn Encoder>),
+    EncoderFinished,
     Decoder(Box<dyn Decoder>),
 }
 
@@ -244,27 +247,54 @@ impl CodecInstanceContainer {
             self.codec = CodecKind::Encoder(encoder);
         };
 
-        if let CodecKind::Encoder(ref mut e) = self.codec {
-            match e.write_frame(c, preset, bitmap_key, decoder_io_ids).map_err(|e| e.at(here!())){
-                 Err(e) => Err(e),
-                 Ok(result) => {
-                     match result.bytes{
-                         s::ResultBytes::Elsewhere => Ok(result),
-                         other => Err(nerror!(ErrorKind::InternalError, "Encoders must return s::ResultBytes::Elsewhere and write to their owned IO. Found {:?}", other))
-
-                     }
-                 }
-             }
-        } else {
-            Err(unimpl!())
-            //Err(FlowError::ErrNotImpl)
+        match self.codec {
+            CodecKind::Encoder(ref mut e) => {
+                match e
+                    .write_frame(c, preset, bitmap_key, decoder_io_ids)
+                    .map_err(|e| e.at(here!()))
+                {
+                    Err(e) => Err(e),
+                    Ok(result) => match result.bytes {
+                        s::ResultBytes::Elsewhere => Ok(result),
+                        other => Err(nerror!(
+                            ErrorKind::InternalError,
+                            "Encoders must return s::ResultBytes::Elsewhere and write to their owned IO. Found {:?}",
+                            other
+                        )),
+                    },
+                }
+            }
+            CodecKind::EncoderPlaceholder => Err(nerror!(
+                ErrorKind::InvalidState,
+                "Encoder {} wasn't created somehow",
+                self.io_id
+            )),
+            CodecKind::EncoderFinished => Err(nerror!(
+                ErrorKind::InvalidState,
+                "Encoder {} has already been finalized",
+                self.io_id
+            )),
+            CodecKind::Decoder(_) => Err(unimpl!()),
         }
     }
 
-    pub fn get_encode_io(&self) -> Result<Option<IoProxyRef<'_>>> {
-        if let CodecKind::Encoder(ref e) = self.codec {
-            Ok(Some(e.get_io().map_err(|e| e.at(here!()))?))
-        } else if let Some(ref e) = self.encode_io {
+    /// Finalize the encoder (if active) and return a reference to its IoProxy.
+    /// After this call, the encoder is consumed and no more frames can be written.
+    /// This must be called before reading the output buffer, since some encoders
+    /// (e.g., GIF) write trailing data when finalized.
+    pub fn get_encode_io(&mut self) -> Result<Option<IoProxyRef<'_>>> {
+        // Finalize: consume the encoder via into_io() to flush any trailing data,
+        // then store the reclaimed IoProxy in encode_io.
+        if matches!(self.codec, CodecKind::Encoder(_)) {
+            if let CodecKind::Encoder(encoder) =
+                std::mem::replace(&mut self.codec, CodecKind::EncoderFinished)
+            {
+                let io = encoder.into_io().map_err(|e| e.at(here!()))?;
+                self.encode_io = Some(io);
+            }
+        }
+
+        if let Some(ref e) = self.encode_io {
             Ok(Some(IoProxyRef::Borrow(e)))
         } else {
             Ok(None)

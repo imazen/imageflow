@@ -20,7 +20,7 @@ imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 chrono = "0.4"
 imgref = "1.10"
 rgb = "0.8"
-schemars = { version = "1.0.0-alpha.17", features = ["derive"], optional = true }
+schemars = { version = "1", features = ["derive"], optional = true }
 utoipa = { version = "5.3.1", features = [], optional = true }
 
 [build-dependencies]

@@ -844,7 +844,6 @@ impl Similarity {
             Similarity::AllowOffByOneBytesRatio(ratio) => (ratio * stats.values as f32) as i64,
             Similarity::AllowDssimMatch(..) => return None,
         };
-        eprintln!("{} {:?}", stats.legacy_report(), self);
 
         //TODO: This doesn't really work, since off-by-one errors are averaged and thus can hide +/- 4
         let bad_approx_of_differing_pixels = stats.values_abs_delta_sum as i64 / 4;
@@ -923,6 +922,9 @@ pub fn compare_bitmaps(
             actual_checksum: None,
         };
     }
+    // Always report pixel diff stats when pixels differ
+    eprintln!("{}", stats.legacy_report());
+
     if let Similarity::AllowDssimMatch(minval, maxval) = require {
         let actual_ref = get_imgref_bgra32(&mut actual);
         let expected_ref = get_imgref_bgra32(&mut expected);
@@ -932,6 +934,8 @@ pub fn compare_bitmaps(
         let expected_img = d.create_image(&expected_ref).unwrap();
 
         let (dssim, _) = d.compare(&expected_img, actual_img);
+
+        eprintln!("dssim = {} (allowed range [{}, {}])", dssim, minval, maxval);
 
         let failure = if dssim > maxval {
             Some(format!("The dssim {} is greater than the permitted value {}", dssim, maxval))
@@ -1040,6 +1044,7 @@ pub fn evaluate_result<'a>(
     if exact == ChecksumMatch::Match {
         true
     } else {
+        eprintln!("--- Checksum mismatch for '{}' ---", name);
         let (expected_context, expected_bitmap_key) = c.load_image(&trusted);
         let res = compare_bitmaps_result_to_expected(
             c,
@@ -1050,6 +1055,12 @@ pub fn evaluate_result<'a>(
             require.similarity,
             panic,
         );
+        if res.close_enough {
+            eprintln!(
+                "--- '{}': checksum mismatch within tolerance ({:?}) ---",
+                name, require.similarity
+            );
+        }
         res.close_enough
     }
 }

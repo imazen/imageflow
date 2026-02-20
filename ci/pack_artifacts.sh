@@ -156,19 +156,28 @@ verify_debug_symbols() {
         "macos")
             local symbol_path="${dest_dir}/${binary}.${symbol_ext}"
             if [ -d "$symbol_path" ]; then
-                echo "✓ Verified ${symbol_type} directory: $symbol_path"
+                echo "✓ Verified ${symbol_type} directory in staging: $symbol_path"
                 ls -R "$symbol_path"
             else
-                echo "✗ Missing ${symbol_type} directory for $binary"
+                echo "✗ Missing ${symbol_type} directory for $binary: $symbol_path not found"
             fi
             ;;
-        "linux"|"windows")
+        "windows")
             local symbol_path="${dest_dir}/${binary%.*}.${symbol_ext}"
             if [ -f "$symbol_path" ]; then
-                echo "✓ Verified ${symbol_type} file: $symbol_path"
+                echo "✓ Verified ${symbol_type} file in staging: $symbol_path"
                 ls -l "$symbol_path"
             else
-                echo "✗ Missing ${symbol_type} file for $binary"
+                echo "✗ Missing ${symbol_type} file for $binary: $symbol_path not found"
+            fi
+            ;;
+        "linux")
+            local symbol_path="${dest_dir}/${binary}.${symbol_ext}"
+            if [ -f "$symbol_path" ]; then
+                echo "✓ Verified ${symbol_type} file in staging: $symbol_path"
+                ls -l "$symbol_path"
+            else
+                echo "✗ Missing ${symbol_type} file for $binary: $symbol_path not found"
             fi
             ;;
     esac
@@ -225,9 +234,13 @@ TEMP_ARCHIVE_NAME="./artifacts/temp/archive.${EXTENSION}"
 "$ZIPIT_SCRIPT" "$TEMP_ARCHIVE_NAME" "./artifacts/staging" "."
 
 # ------------------------------------------------------------------------------
-# Create release archives
+# Making release archive copies
 # ------------------------------------------------------------------------------
+# Report pwd
+echo "Copying release archives. Current directory: $(pwd)"
+mkdir -p "$(dirname "./artifacts/github/${IMAGEFLOW_TAG_SHA_SUFFIX}.${EXTENSION}")"
 cp "${TEMP_ARCHIVE_NAME}" "./artifacts/github/${IMAGEFLOW_TAG_SHA_SUFFIX}.${EXTENSION}"
+mkdir -p "$(dirname "./artifacts/upload/releases/${GITHUB_REF_NAME}/${IMAGEFLOW_TAG_SHA_SUFFIX}.${EXTENSION}")"
 cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${IMAGEFLOW_TAG_SHA_SUFFIX}.${EXTENSION}"
 cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}/imageflow.${EXTENSION}"
 cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUFFIX}/imageflow.${EXTENSION}"
@@ -244,9 +257,11 @@ if [ -f "${TEMP_STATIC_LIB_PATH}" ]; then
 
     # Create static archive directories and copy files
     # Note: File name for copy includes 'staticlib-' prefix from FILE_NAME variable
+    mkdir -p "$(dirname "./artifacts/upload/releases/${GITHUB_REF_NAME}/staticlib-${TAG_SHA_SUFFIX}.${FILE_NAME}")"
     cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/staticlib-${TAG_SHA_SUFFIX}.${FILE_NAME}"
     cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
     cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
+    mkdir -p "$(dirname "./artifacts/github/staticlib-${TAG_SHA_SUFFIX}.${FILE_NAME}")"
     cp "${TEMP_STATIC_ARCHIVE}" "./artifacts/github/staticlib-${TAG_SHA_SUFFIX}.${FILE_NAME}"
 fi
 
@@ -262,9 +277,11 @@ if [ -f "${TEMP_TOOL_PATH}" ]; then
 
     # Create static archive directories and copy files
     # Note: File name for copy includes 'tool-' prefix
+    mkdir -p "$(dirname "./artifacts/upload/releases/${GITHUB_REF_NAME}/tool-${TAG_SHA_SUFFIX}.${FILE_NAME}")"
     cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/tool-${TAG_SHA_SUFFIX}.${FILE_NAME}"
     cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/upload/commits/${GITHUB_SHA}/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
     cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/upload/commits/latest/${MATRIX_COMMIT_SUFFIX}/${FILE_NAME}"
+    mkdir -p "$(dirname "./artifacts/github/tool-${TAG_SHA_SUFFIX}.${FILE_NAME}")"
     cp "${TEMP_TOOL_ARCHIVE}" "./artifacts/github/tool-${TAG_SHA_SUFFIX}.${FILE_NAME}"
 fi
 

@@ -553,6 +553,24 @@ fn test_off_surface_region() {
     assert!(matched);
 }
 #[test]
+fn test_transparent_canvas() {
+    let matched = compare(
+        None,
+        500,
+        "TestTransparentCanvas",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![Node::CreateCanvas {
+            w: 200,
+            h: 200,
+            format: PixelFormat::Bgra32,
+            color: Color::Srgb(ColorSrgb::Hex("00000000".to_owned())),
+        }],
+    );
+    assert!(matched);
+}
+
+#[test]
 fn test_partial_region() {
     let matched = compare(
         None,

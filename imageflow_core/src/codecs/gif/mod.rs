@@ -50,6 +50,38 @@ impl GifDecoder {
 
         let reader = options.read_info(io).map_err(|e| FlowError::from(e).at(here!()))?;
 
+        // Validate dimensions BEFORE allocating Screen buffer to prevent excessive memory use
+        let w = reader.width() as i32;
+        let h = reader.height() as i32;
+        let limit = c.security.max_decode_size.as_ref().or(c.security.max_frame_size.as_ref());
+        if let Some(limit) = limit {
+            if w > limit.w as i32 {
+                return Err(nerror!(
+                    ErrorKind::SizeLimitExceeded,
+                    "GIF width {} exceeds max_decode_size.w {}",
+                    w,
+                    limit.w
+                ));
+            }
+            if h > limit.h as i32 {
+                return Err(nerror!(
+                    ErrorKind::SizeLimitExceeded,
+                    "GIF height {} exceeds max_decode_size.h {}",
+                    h,
+                    limit.h
+                ));
+            }
+            let megapixels = w as f32 * h as f32 / 1_000_000f32;
+            if megapixels > limit.megapixels {
+                return Err(nerror!(
+                    ErrorKind::SizeLimitExceeded,
+                    "GIF megapixels {:.2} exceeds max_decode_size.megapixels {}",
+                    megapixels,
+                    limit.megapixels
+                ));
+            }
+        }
+
         let screen = Screen::new(&reader);
 
         Ok(GifDecoder { reader, screen, buffer: None, last_frame: None, next_frame: None })
@@ -246,10 +278,20 @@ where
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Ref(self.io_ref.borrow()))
     }
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy> {
+        match std::rc::Rc::try_unwrap(self.io_ref) {
+            Ok(cell) => Ok(cell.into_inner()),
+            Err(_) => Err(nerror!(
+                ErrorKind::InternalError,
+                "EncoderAdapter IoProxy has multiple references"
+            )),
+        }
+    }
 }
 pub struct GifEncoder {
     io_id: i32,
-    encoder: ::gif::Encoder<IoProxyProxy>,
+    encoder: Option<::gif::Encoder<IoProxyProxy>>,
     io_ref: Rc<RefCell<IoProxy>>,
     frame_ix: i32,
 }
@@ -277,13 +319,15 @@ impl GifEncoder {
             io_id,
             io_ref: io_ref.clone(),
             // Global color table??
-            encoder: ::gif::Encoder::new(
-                IoProxyProxy(io_ref),
-                bitmap.w() as u16,
-                bitmap.h() as u16,
-                &[],
-            )
-            .map_err(|e| FlowError::from(e).at(here!()))?,
+            encoder: Some(
+                ::gif::Encoder::new(
+                    IoProxyProxy(io_ref),
+                    bitmap.w() as u16,
+                    bitmap.h() as u16,
+                    &[],
+                )
+                .map_err(|e| FlowError::from(e).at(here!()))?,
+            ),
             frame_ix: 0,
         })
     }
@@ -349,6 +393,10 @@ impl Encoder for GifEncoder {
             if let Some(r) = repeat {
                 //                    eprintln!("Writing repeat");
                 self.encoder
+                    .as_mut()
+                    .ok_or_else(|| {
+                        nerror!(ErrorKind::InternalError, "Gif encoder not initialized")
+                    })?
                     .write_extension(::gif::ExtensionData::Repetitions(r))
                     .map_err(|e| FlowError::from(e).at(here!()))?;
             } else {
@@ -362,7 +410,11 @@ impl Encoder for GifEncoder {
         // rect
         // transparency??
 
-        self.encoder.write_frame(&f).map_err(|e| FlowError::from(e).at(here!()))?;
+        self.encoder
+            .as_mut()
+            .ok_or_else(|| nerror!(ErrorKind::InternalError, "Gif encoder not initialized"))?
+            .write_frame(&f)
+            .map_err(|e| FlowError::from(e).at(here!()))?;
 
         self.frame_ix += 1;
         Ok(s::EncodeResult {
@@ -376,6 +428,21 @@ impl Encoder for GifEncoder {
     }
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Ref(self.io_ref.borrow()))
+    }
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy> {
+        // Consume the encoder to write the GIF trailer before reclaiming the IoProxy.
+        // If the encoder was already consumed (shouldn't happen), skip this step.
+        if let Some(encoder) = self.encoder {
+            let _flushed_writer =
+                encoder.into_inner().map_err(|e| FlowError::from(e).at(here!()))?;
+        }
+        match std::rc::Rc::try_unwrap(self.io_ref) {
+            Ok(cell) => Ok(cell.into_inner()),
+            Err(_) => {
+                Err(nerror!(ErrorKind::InternalError, "GifEncoder IoProxy has multiple references"))
+            }
+        }
     }
 }
 

@@ -343,3 +343,4 @@ docker/imageflow_bench_ubuntu20/results/reference_2000x2000.png
 docker/imageflow_bench_ubuntu20/results/vips_2000x2000.jpg
 docker/imageflow_bench_ubuntu20/results/vips_2000x2000.png
 docker/imageflow_bench_ubuntu20/results/vips_reference_2000x2000.png
+external/

@@ -195,4 +195,8 @@ impl Encoder for MozjpegEncoder {
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Borrow(&self.io))
     }
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy> {
+        Ok(self.io)
+    }
 }

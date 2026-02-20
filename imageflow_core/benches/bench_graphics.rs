@@ -276,8 +276,215 @@ fn benchmark_downscaling(ctx: &mut Criterion) {
         });
     }
 }
+// Micro-benchmarks for optimization targets
+fn benchmark_color_conversion(ctx: &mut Criterion) {
+    use imageflow_core::graphics::color::{ColorContext, WorkingFloatspace};
+
+    let cc_linear = ColorContext::new(WorkingFloatspace::LinearRGB, 0.0);
+    let cc_srgb = ColorContext::new(WorkingFloatspace::StandardRGB, 0.0);
+
+    // Test data: 1000x1000 pixels worth of color values
+    let pixel_count = 1000 * 1000;
+    let u8_values: Vec<u8> = (0..pixel_count).map(|i| (i % 256) as u8).collect();
+    let f32_values: Vec<f32> = (0..pixel_count).map(|i| (i % 256) as f32 / 255.0).collect();
+
+    let mut group = ctx.benchmark_group("color_conversion");
+    group.throughput(criterion::Throughput::Elements(pixel_count as u64));
+
+    // sRGB u8 -> linear f32 (uses LUT)
+    group.bench_function("srgb_to_floatspace_linear", |b| {
+        b.iter(|| {
+            let mut sum = 0.0f32;
+            for &v in &u8_values {
+                sum += cc_linear.srgb_to_floatspace(v);
+            }
+            criterion::black_box(sum)
+        })
+    });
+
+    // sRGB u8 -> sRGB f32 (no conversion, uses LUT)
+    group.bench_function("srgb_to_floatspace_srgb", |b| {
+        b.iter(|| {
+            let mut sum = 0.0f32;
+            for &v in &u8_values {
+                sum += cc_srgb.srgb_to_floatspace(v);
+            }
+            criterion::black_box(sum)
+        })
+    });
+
+    // linear f32 -> sRGB u8 (uses fastpow - HOT PATH)
+    group.bench_function("floatspace_to_srgb_linear", |b| {
+        b.iter(|| {
+            let mut sum = 0u32;
+            for &v in &f32_values {
+                sum += cc_linear.floatspace_to_srgb(v) as u32;
+            }
+            criterion::black_box(sum)
+        })
+    });
+
+    // sRGB f32 -> sRGB u8 (no gamma, just scale)
+    group.bench_function("floatspace_to_srgb_srgb", |b| {
+        b.iter(|| {
+            let mut sum = 0u32;
+            for &v in &f32_values {
+                sum += cc_srgb.floatspace_to_srgb(v) as u32;
+            }
+            criterion::black_box(sum)
+        })
+    });
+
+    group.finish();
+}
+
+fn benchmark_row_operations(ctx: &mut Criterion) {
+    // Test multiply_and_add_row (already has multiversion)
+    let width = 2000usize;
+    let channels = 4usize;
+    let len = width * channels;
+
+    let input_row: Vec<f32> = (0..len).map(|i| (i % 256) as f32 / 255.0).collect();
+    let mut output_row: Vec<f32> = vec![0.0; len];
+
+    let mut group = ctx.benchmark_group("row_operations");
+    group.throughput(criterion::Throughput::Elements(len as u64));
+
+    group.bench_function("multiply_and_add_row", |b| {
+        b.iter(|| {
+            output_row.fill(0.0);
+            // Simulate typical vertical scaling: ~5-10 weighted row additions
+            for weight in [0.05f32, 0.15, 0.30, 0.30, 0.15, 0.05] {
+                imageflow_core::graphics::scaling::multiply_and_add_row(
+                    &mut output_row,
+                    &input_row,
+                    weight,
+                );
+            }
+            criterion::black_box(output_row[0])
+        })
+    });
+
+    group.finish();
+}
+
+fn benchmark_horizontal_scale(ctx: &mut Criterion) {
+    use imageflow_core::graphics::weights::{Filter, InterpolationDetails, PixelRowWeights};
+
+    // Simulate 2000px -> 800px horizontal downscale
+    let src_width = 2000usize;
+    let dst_width = 800usize;
+    let channels = 4usize;
+
+    let source: Vec<f32> = (0..src_width * channels).map(|i| (i % 256) as f32 / 255.0).collect();
+    let mut target: Vec<f32> = vec![0.0; dst_width * channels];
+
+    let details = InterpolationDetails::create(Filter::Robidoux);
+    let weights =
+        PixelRowWeights::create_for(&details, dst_width as u32, src_width as u32).unwrap();
+
+    let mut group = ctx.benchmark_group("horizontal_scale");
+    group.throughput(criterion::Throughput::Elements((dst_width * channels) as u64));
+
+    group.bench_function("scale_row_bgra_f32_2000_to_800", |b| {
+        b.iter(|| {
+            imageflow_core::graphics::scaling::scale_row_bgra_f32(
+                &source,
+                src_width,
+                &mut target,
+                dst_width,
+                &weights,
+                0,
+            );
+            criterion::black_box(target[0])
+        })
+    });
+
+    group.finish();
+}
+
+fn benchmark_full_scale_pipeline(ctx: &mut Criterion) {
+    // End-to-end benchmark with different sizes
+    let test_cases = [
+        (800, 600, 400, 300, "800x600_to_400x300"),
+        (1920, 1080, 640, 360, "1920x1080_to_640x360"),
+        (4000, 3000, 800, 600, "4000x3000_to_800x600"),
+    ];
+
+    for (src_w, src_h, dst_w, dst_h, name) in test_cases {
+        let mut src_bitmap = Bitmap::create_u8(
+            src_w,
+            src_h,
+            PixelLayout::BGRA,
+            true,
+            true,
+            ColorSpace::StandardRGB,
+            BitmapCompositing::ReplaceSelf,
+        )
+        .unwrap();
+
+        // Fill with gradient data
+        {
+            let mut window = src_bitmap.get_window_u8().unwrap();
+            for y in 0..src_h {
+                if let Some(row) = window.row_mut(y as usize) {
+                    for x in 0..src_w {
+                        let idx = (x * 4) as usize;
+                        row[idx] = (x % 256) as u8;
+                        row[idx + 1] = (y % 256) as u8;
+                        row[idx + 2] = ((x + y) % 256) as u8;
+                        row[idx + 3] = 255;
+                    }
+                }
+            }
+        }
+
+        let mut dst_bitmap = Bitmap::create_u8(
+            dst_w,
+            dst_h,
+            PixelLayout::BGRA,
+            true,
+            true,
+            ColorSpace::StandardRGB,
+            BitmapCompositing::ReplaceSelf,
+        )
+        .unwrap();
+
+        let params = ScaleAndRenderParams {
+            x: 0,
+            y: 0,
+            w: dst_w,
+            h: dst_h,
+            sharpen_percent_goal: 0.0,
+            interpolation_filter: imageflow_core::graphics::weights::Filter::Robidoux,
+            scale_in_colorspace: WorkingFloatspace::LinearRGB,
+        };
+
+        let mut group = ctx.benchmark_group("full_scale_pipeline");
+        group.throughput(criterion::Throughput::Elements((dst_w * dst_h) as u64));
+        group.measurement_time(Duration::from_secs(5));
+
+        group.bench_function(name, |b| {
+            b.iter(|| {
+                imageflow_core::graphics::scaling::scale_and_render(
+                    src_bitmap.get_window_u8().unwrap(),
+                    dst_bitmap.get_window_u8().unwrap(),
+                    &params,
+                )
+                .unwrap();
+            })
+        });
+
+        group.finish();
+    }
+}
+
 criterion_group!(
     benches,
+    benchmark_color_conversion,
+    benchmark_row_operations,
+    benchmark_horizontal_scale,
+    benchmark_full_scale_pipeline,
     benchmark_scale_2d,
     benchmark_transpose,
     benchmark_downscaling,

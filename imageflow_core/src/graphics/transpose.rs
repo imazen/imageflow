@@ -605,7 +605,6 @@ pub fn bitmap_window_transpose(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::Rng;
 
     #[test]
     fn test_transpose_u32_slices_square() {
@@ -666,8 +665,8 @@ mod tests {
     #[test]
     fn test_transpose_large_square_matrix() {
         let size = 256;
-        let mut rng = rand::rng();
-        let from: Vec<u32> = (0..size * size).map(|_| rng.random()).collect();
+
+        let from: Vec<u32> = (0..size * size).map(|_| rand::random::<u32>()).collect();
         let mut to = vec![0; size * size];
 
         transpose_u32_slices(&from, &mut to, size, size, size, size).unwrap();
@@ -683,8 +682,8 @@ mod tests {
     fn test_transpose_large_rectangular_matrix() {
         let width = 256;
         let height = 128;
-        let mut rng = rand::rng();
-        let from: Vec<u32> = (0..width * height).map(|_| rng.random()).collect();
+
+        let from: Vec<u32> = (0..width * height).map(|_| rand::random::<u32>()).collect();
         let mut to = vec![0; width * height];
 
         transpose_u32_slices(&from, &mut to, width, height, width, height).unwrap();
@@ -702,8 +701,8 @@ mod tests {
         let height = 100;
         let src_stride = 132;
         let dst_stride = 104;
-        let mut rng = rand::rng();
-        let from: Vec<u32> = (0..src_stride * height).map(|_| rng.random()).collect();
+
+        let from: Vec<u32> = (0..src_stride * height).map(|_| rand::random::<u32>()).collect();
         let mut to = vec![0; dst_stride * width];
 
         transpose_u32_slices(&from, &mut to, src_stride, dst_stride, width, height).unwrap();
@@ -720,8 +719,7 @@ mod tests {
         let sizes = vec![(4, 4), (8, 8), (16, 16), (32, 32), (64, 64)];
 
         for (width, height) in sizes {
-            let mut rng = rand::rng();
-            let from: Vec<u32> = (0..width * height).map(|_| rng.random()).collect();
+            let from: Vec<u32> = (0..width * height).map(|_| rand::random::<u32>()).collect();
             let mut to = vec![0; width * height];
 
             transpose_u32_slices(&from, &mut to, width, height, width, height).unwrap();

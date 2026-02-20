@@ -472,6 +472,8 @@ impl AllowedFormats {
     fn or(a: Option<bool>, b: Option<bool>) -> Option<bool> {
         match (a, b) {
             (Some(a), Some(b)) => Some(a || b),
+            (Some(a), None) => Some(a),
+            (None, Some(b)) => Some(b),
             _ => None,
         }
     }
@@ -732,6 +734,7 @@ pub enum EncoderPreset {
     /// Requires a file format to be specified, and allows for specific encoder hints.
     /// Specific format features can be specified in 'allow', such as jxl_animation, avif_animation, etc.
     Format {
+        // Only honored if the format is allowed in 'allow'
         format: OutputImageFormat,
         /// A quality profile to use..
         quality_profile: Option<QualityProfile>,
@@ -1138,7 +1141,9 @@ pub struct ExecutionSecurity {
 impl ExecutionSecurity {
     pub fn sane_defaults() -> Self {
         ExecutionSecurity {
-            max_decode_size: None,
+            // Set max_decode_size to reject oversized images early during decode
+            // Matches typical web image limits
+            max_decode_size: Some(FrameSizeLimit { w: 12000, h: 12000, megapixels: 100f32 }),
             max_frame_size: Some(FrameSizeLimit { w: 10000, h: 10000, megapixels: 100f32 }),
             max_encode_size: None,
         }

@@ -51,6 +51,14 @@ impl IoBackend {
             _ => None,
         }
     }
+    pub fn get_buf_read(&mut self) -> Option<&mut dyn io::BufRead> {
+        match self {
+            IoBackend::ReadSlice(w) => Some(w),
+            IoBackend::ReadVec(w) => Some(w),
+            IoBackend::ReadFile(w) => Some(w),
+            _ => None,
+        }
+    }
     pub fn get_seek(&mut self) -> Option<&mut dyn Seek> {
         match self {
             IoBackend::ReadSlice(w) => Some(w),
@@ -77,6 +85,14 @@ impl io::Read for IoProxy {
 impl io::Seek for IoProxy {
     fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
         self.backend.get_seek().expect("cannot read from writer").seek(pos)
+    }
+}
+impl io::BufRead for IoProxy {
+    fn fill_buf(&mut self) -> io::Result<&[u8]> {
+        self.backend.get_buf_read().expect("cannot read from writer").fill_buf()
+    }
+    fn consume(&mut self, amt: usize) {
+        self.backend.get_buf_read().expect("cannot read from writer").consume(amt)
     }
 }
 impl io::Write for IoProxy {

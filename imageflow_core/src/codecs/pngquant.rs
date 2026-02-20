@@ -41,9 +41,10 @@ impl PngquantEncoder {
         if let Some(speed) = speed {
             liq.set_speed(speed.clamp(1, 10).into()).unwrap();
         }
-        let min = minimum_quality.unwrap_or(0).clamp(0, 100);
-        let max = quality.unwrap_or(100).clamp(0, 100);
-        liq.set_quality(min, max).unwrap();
+        let target_quality = quality.unwrap_or(100).clamp(0, 100);
+        let min: u8 = minimum_quality.unwrap_or(0).clamp(0, target_quality);
+
+        liq.set_quality(min, target_quality).unwrap();
 
         Ok(PngquantEncoder { liq, io, maximum_deflate, matte })
     }
@@ -117,19 +118,39 @@ impl Encoder for PngquantEncoder {
         };
         match error {
             Some(imagequant::liq_error::QualityTooLow) => {
-                let (vec, w, h) = window.to_vec_rgba().map_err(|e| e.at(here!()))?;
+                if window.info().alpha_meaningful() {
+                    let (vec, w, h) = window.to_vec_rgba().map_err(|e| e.at(here!()))?;
 
-                let slice_as_u8 = bytemuck::cast_slice::<rgb::RGBA8, u8>(vec.as_slice());
+                    let slice_as_u8 = bytemuck::cast_slice::<rgb::RGBA8, u8>(vec.as_slice());
 
-                lode::LodepngEncoder::write_png_auto_slice(
-                    &mut self.io,
-                    slice_as_u8,
-                    w,
-                    h,
-                    lodepng::ColorType::RGBA,
-                    self.maximum_deflate,
-                )
-                .map_err(|e| e.at(here!()))?;
+                    lode::LodepngEncoder::write_png_auto_slice(
+                        &mut self.io,
+                        slice_as_u8,
+                        w,
+                        h,
+                        lodepng::ColorType::RGBA,
+                        self.maximum_deflate,
+                    )
+                    .map_err(|e| e.at(here!()))?;
+
+                    // data.add("result.format", "png32");
+                } else {
+                    let (vec, w, h) = window.to_vec_rgb().map_err(|e| e.at(here!()))?;
+
+                    let slice_as_u8 = bytemuck::cast_slice::<rgb::RGB8, u8>(vec.as_slice());
+
+                    lode::LodepngEncoder::write_png_auto_slice(
+                        &mut self.io,
+                        slice_as_u8,
+                        w,
+                        h,
+                        lodepng::ColorType::RGB,
+                        self.maximum_deflate,
+                    )
+                    .map_err(|e| e.at(here!()))?;
+
+                    // data.add("result.format", "png24");
+                }
             }
             Some(err) => return Err(err)?,
             None => {}
@@ -147,5 +168,9 @@ impl Encoder for PngquantEncoder {
 
     fn get_io(&self) -> Result<IoProxyRef<'_>> {
         Ok(IoProxyRef::Borrow(&self.io))
+    }
+
+    fn into_io(self: Box<Self>) -> Result<IoProxy> {
+        Ok(self.io)
     }
 }

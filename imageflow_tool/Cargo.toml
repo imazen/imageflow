@@ -23,7 +23,7 @@ serde = "1"
 serde_json = "1"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
-zip = { version = "2.3.0", default-features = false }
+zip = { version = "8", default-features = false }
 smallvec = "1"
 bytes = "1"
 utoipa = { version = "5.3.1", features = [], optional = true }
