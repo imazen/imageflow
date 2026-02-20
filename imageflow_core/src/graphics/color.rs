@@ -1,3 +1,4 @@
+use crate::graphics::lut::linear_to_srgb_lut;
 use crate::graphics::math::fastpow;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -65,7 +66,7 @@ impl ColorContext {
             return uchar_clamp_ff(self.apply_gamma(v) * 255.0f32);
         }
         if self.apply_srgb {
-            return uchar_clamp_ff(linear_to_srgb(v));
+            return linear_to_srgb_lut(v);
         }
         uchar_clamp_ff(255.0f32 * v)
     }
