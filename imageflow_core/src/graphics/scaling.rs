@@ -447,6 +447,7 @@ fn composite_linear_over_srgb(
         compose_linear_over_srgb(cc, src, canvas);
     } else {
         if src.info().alpha_meaningful() {
+            let mut needs_demultiply = src.info().alpha_premultiplied();
             if let crate::graphics::bitmaps::BitmapCompositing::BlendWithMatte(color) =
                 canvas.info().compose()
             {
@@ -455,8 +456,9 @@ fn composite_linear_over_srgb(
                     .map(|bgra| [bgra.b, bgra.g, bgra.r, bgra.a])
                     .unwrap_or([0, 0, 0, 0]);
                 blend_matte(cc, src, matte).map_err(|e| e.at(here!()))?;
+                needs_demultiply = false;
             }
-            if src.info().alpha_premultiplied() {
+            if needs_demultiply {
                 demultiply_alpha(src).map_err(|e| e.at(here!()))?;
             }
         }
@@ -486,6 +488,7 @@ fn blend_matte(
                 slice[col * 4] = (slice[col * 4] + b * a) / final_alpha;
                 slice[col * 4 + 1] = (slice[col * 4 + 1] + g * a) / final_alpha;
                 slice[col * 4 + 2] = (slice[col * 4 + 2] + r * a) / final_alpha;
+                slice[col * 4 + 3] = final_alpha;
             }
         }
     }
