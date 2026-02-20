@@ -1,7 +1,7 @@
 use crate::context::Context;
-use crate::json::JsonResponse;
 use crate::ffi;
 use crate::flow::definitions::FrameEstimate;
+use crate::json::JsonResponse;
 use imageflow_riapi::sizing::LayoutError;
 use num::FromPrimitive;
 use std;
@@ -302,9 +302,39 @@ impl From<::gif::DecodingError> for FlowError {
                 FlowError::without_location(ErrorKind::DecodingIoError, format!("{:?}", e))
             }
             //::gif::DecodingError::Internal(msg) => FlowError::without_location(ErrorKind::InternalError,format!("Internal error in gif decoder: {:?}",msg)),
-            ::gif::DecodingError::Format(msg) => {
-                FlowError::without_location(ErrorKind::GifDecodingError, format!("{:?}", msg))
-            }
+            ::gif::DecodingError::Format(msg) => FlowError::without_location(
+                ErrorKind::GifDecodingError,
+                format!("Gif decoder: {:?}", msg),
+            ),
+            ::gif::DecodingError::OutOfMemory => FlowError::without_location(
+                ErrorKind::GifDecodingError,
+                "Gif decoder: Out of memory".to_string(),
+            ),
+            ::gif::DecodingError::MemoryLimit => FlowError::without_location(
+                ErrorKind::GifDecodingError,
+                "Gif decoder: Memory limit exceeded".to_string(),
+            ),
+            ::gif::DecodingError::DecoderNotFound => FlowError::without_location(
+                ErrorKind::GifDecodingError,
+                "Gif decoder: Decoder not found".to_string(),
+            ),
+            ::gif::DecodingError::EndCodeNotFound => FlowError::without_location(
+                ErrorKind::GifDecodingError,
+                "Gif decoder: End code not found".to_string(),
+            ),
+            ::gif::DecodingError::UnexpectedEof => FlowError::without_location(
+                ErrorKind::GifDecodingError,
+                "Gif decoder: Unexpected end of file".to_string(),
+            ),
+            ::gif::DecodingError::LzwError(e) => FlowError::without_location(
+                ErrorKind::GifDecodingError,
+                format!("Gif decoder: LZW error: {}", e),
+            ),
+            other => FlowError::without_location(
+                ErrorKind::GifDecodingError,
+                format!("Gif decoder: {:?}", other),
+            ),
+            //_ => FlowError::without_location(ErrorKind::GifDecodingError, "Unknown gif decoding error".to_string())
         }
     }
 }
@@ -318,6 +348,11 @@ impl From<::gif::EncodingError> for FlowError {
             ::gif::EncodingError::Format(msg) => {
                 FlowError::without_location(ErrorKind::GifEncodingError, format!("{:?}", msg))
             }
+            other => FlowError::without_location(
+                ErrorKind::GifEncodingError,
+                format!("Gif encoding error: {:?}", other),
+            ),
+            //_ => FlowError::without_location(ErrorKind::GifEncodingError, "Unknown gif encoding error".to_string())
         }
     }
 }

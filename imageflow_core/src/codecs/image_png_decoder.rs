@@ -16,15 +16,44 @@ pub struct ImagePngDecoder {
 
 impl ImagePngDecoder {
     pub fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<ImagePngDecoder> {
-        // Wrap IoProxy in a Box<dyn Read>
-        //let read_io = Box::new(io) as Box<dyn Read>;
         let mut decoder = png::Decoder::new(io);
-        //decoder.set_transformations(png::Transformations::EXPAND);
         decoder.set_transformations(png::Transformations::normalize_to_color8());
 
         let reader = decoder.read_info().map_err(|e| FlowError::from_png_decoder(e).at(here!()))?;
 
         let info = reader.info().clone();
+
+        // Validate dimensions against security limits BEFORE any decode allocation
+        let w = info.width;
+        let h = info.height;
+        let limit = c.security.max_decode_size.as_ref().or(c.security.max_frame_size.as_ref());
+        if let Some(limit) = limit {
+            if w > limit.w {
+                return Err(nerror!(
+                    ErrorKind::SizeLimitExceeded,
+                    "PNG width {} exceeds max_decode_size.w {}",
+                    w,
+                    limit.w
+                ));
+            }
+            if h > limit.h {
+                return Err(nerror!(
+                    ErrorKind::SizeLimitExceeded,
+                    "PNG height {} exceeds max_decode_size.h {}",
+                    h,
+                    limit.h
+                ));
+            }
+            let megapixels = w as f32 * h as f32 / 1_000_000f32;
+            if megapixels > limit.megapixels {
+                return Err(nerror!(
+                    ErrorKind::SizeLimitExceeded,
+                    "PNG megapixels {:.2} exceeds max_decode_size.megapixels {}",
+                    megapixels,
+                    limit.megapixels
+                ));
+            }
+        }
 
         Ok(ImagePngDecoder { reader, info })
     }
@@ -59,6 +88,8 @@ impl Decoder for ImagePngDecoder {
     }
 
     fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
+        return_if_cancelled!(c);
+
         let mut bitmaps = c.borrow_bitmaps_mut().map_err(|e| e.at(here!()))?;
         let info = self.reader.info();
 
@@ -78,11 +109,18 @@ impl Decoder for ImagePngDecoder {
 
         let mut canvas = bitmap.get_window_u8().unwrap();
 
-        let mut buffer = vec![0; self.reader.output_buffer_size()];
+        return_if_cancelled!(c);
+
+        let buffer_size = self.reader.output_buffer_size().ok_or_else(|| {
+            nerror!(ErrorKind::ImageDecodingError, "PNG output buffer size unknown")
+        })?;
+        let mut buffer = vec![0; buffer_size];
         let output_info = self
             .reader
             .next_frame(&mut buffer)
             .map_err(|e| FlowError::from_png_decoder(e).at(here!()))?;
+
+        return_if_cancelled!(c);
 
         let h = output_info.height as usize;
         let stride = output_info.line_size;
@@ -125,9 +163,11 @@ impl Decoder for ImagePngDecoder {
                     let from = buffer.row_mut_gray8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
                     from.iter_mut().zip(to.iter_mut()).for_each(|(f, to)| {
-                        to.r = f.v;
-                        to.g = f.v;
-                        to.b = f.v;
+                        // TODO(rgb-0.8.91): Can simplify to f.v when Gray has named field
+                        let v = f.value();
+                        to.r = v;
+                        to.g = v;
+                        to.b = v;
                         to.a = 255;
                     });
                 }
@@ -137,6 +177,7 @@ impl Decoder for ImagePngDecoder {
                     let from = buffer.row_mut_grayalpha8(row_ix, stride).unwrap();
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
                     from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
+                        // GrayA/GrayAlpha uses .v and .a fields (via Deref)
                         to.r = from.v;
                         to.g = from.v;
                         to.b = from.v;
