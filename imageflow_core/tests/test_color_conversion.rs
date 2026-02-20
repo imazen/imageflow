@@ -488,6 +488,220 @@ fn test_lut_vs_fastpow_performance() {
     println!("\nSpeedup: {:.2}x", fastpow_time.as_secs_f64() / lut_time.as_secs_f64());
 }
 
+// ========== Fastpow reimplementation for testing ==========
+// Replicated from graphics/math.rs (pub(crate), not accessible from integration tests)
+
+#[repr(C)]
+union UnionU32F32 {
+    i: u32,
+    f: f32,
+}
+
+fn fastpow2(p: f32) -> f32 {
+    let offset: f32 = if p < 0.0 { 1.0 } else { 0.0 };
+    let clipp: f32 = if p < -126.0 { -126.0 } else { p };
+    let _w: i32 = clipp as i32;
+    let z: f32 = clipp - _w as f32 + offset;
+    let v = UnionU32F32 {
+        i: ((1_i32 << 23) as f32
+            * (clipp + 121.274_055_f32 + 27.728_024_f32 / (4.842_525_5_f32 - z)
+                - 1.490_129_1_f32 * z)) as u32,
+    };
+    unsafe { v.f }
+}
+
+fn fastlog2(x: f32) -> f32 {
+    unsafe {
+        let vx = UnionU32F32 { f: x };
+        let mx = UnionU32F32 { i: vx.i & 0x7fffff_u32 | 0x3f000000_u32 };
+        let mut y: f32 = vx.i as f32;
+        y *= 1.192_092_9e-7_f32;
+        y - 124.225_52_f32 - 1.498_030_3_f32 * mx.f - 1.725_88_f32 / (0.352_088_72_f32 + mx.f)
+    }
+}
+
+fn fastpow(x: f32, p: f32) -> f32 {
+    fastpow2(p * fastlog2(x))
+}
+
+fn linear_to_srgb_fastpow(clr: f32) -> u8 {
+    let v = if clr <= 0.0031308_f32 {
+        12.92_f32 * clr * 255.0_f32
+    } else {
+        1.055_f32 * 255.0_f32 * fastpow(clr, 0.41666666_f32) - 14.025_f32
+    };
+    // Replicate uchar_clamp_ff
+    let mut result = (v as f64 + 0.5) as i16 as u16;
+    if result as i32 > 255 {
+        result = if v < 0.0 { 0 } else { 255 } as u16;
+    }
+    result as u8
+}
+
+/// Brute-force comparison of fastpow vs LUT vs exact sRGB for all inputs.
+/// This tests the raw conversion delta, not lossy encoding amplification.
+#[test]
+fn test_fastpow_vs_lut_brute_force() {
+    println!("\n=== Fastpow vs LUT Brute Force Comparison ===\n");
+
+    let test_count = 10_000_000u32;
+    let mut max_delta_fastpow_lut: i32 = 0;
+    let mut max_delta_fastpow_exact: i32 = 0;
+    let mut max_delta_lut_exact: i32 = 0;
+    let mut fastpow_lut_disagree = 0u64;
+    let mut fastpow_wrong_vs_exact = 0u64;
+    let mut lut_wrong_vs_exact = 0u64;
+    let mut fastpow_lut_delta_sum = 0u64;
+
+    // Track worst cases
+    let mut worst_fastpow_lut: Vec<(f32, u8, u8, u8, i32)> = Vec::new(); // (linear, fastpow, lut, exact, delta)
+
+    for i in 0..=test_count {
+        let linear = i as f32 / test_count as f32;
+
+        let fp = linear_to_srgb_fastpow(linear);
+        let lut = linear_to_srgb_lut(linear);
+
+        // Exact reference (f64 precision)
+        let exact_f = if (linear as f64) <= 0.0031308 {
+            12.92 * linear as f64
+        } else {
+            1.055 * (linear as f64).powf(1.0 / 2.4) - 0.055
+        };
+        let exact = (exact_f * 255.0 + 0.5).clamp(0.0, 255.0) as u8;
+
+        let delta_fp_lut = (fp as i32 - lut as i32).abs();
+        let delta_fp_exact = (fp as i32 - exact as i32).abs();
+        let delta_lut_exact = (lut as i32 - exact as i32).abs();
+
+        fastpow_lut_delta_sum += delta_fp_lut as u64;
+
+        if delta_fp_lut > max_delta_fastpow_lut {
+            max_delta_fastpow_lut = delta_fp_lut;
+            worst_fastpow_lut.clear();
+        }
+        if delta_fp_lut == max_delta_fastpow_lut && delta_fp_lut > 0 && worst_fastpow_lut.len() < 20
+        {
+            worst_fastpow_lut.push((linear, fp, lut, exact, fp as i32 - lut as i32));
+        }
+
+        max_delta_fastpow_exact = max_delta_fastpow_exact.max(delta_fp_exact);
+        max_delta_lut_exact = max_delta_lut_exact.max(delta_lut_exact);
+
+        if delta_fp_lut > 0 {
+            fastpow_lut_disagree += 1;
+        }
+        if delta_fp_exact > 0 {
+            fastpow_wrong_vs_exact += 1;
+        }
+        if delta_lut_exact > 0 {
+            lut_wrong_vs_exact += 1;
+        }
+    }
+
+    let total = test_count as u64 + 1;
+    println!("Tested {} linear values in [0.0, 1.0]\n", total);
+
+    println!("Max delta (fastpow vs LUT):   {}", max_delta_fastpow_lut);
+    println!("Max delta (fastpow vs exact):  {}", max_delta_fastpow_exact);
+    println!("Max delta (LUT vs exact):      {}", max_delta_lut_exact);
+    println!();
+    println!(
+        "Fastpow disagrees with LUT:    {} ({:.4}%)",
+        fastpow_lut_disagree,
+        fastpow_lut_disagree as f64 / total as f64 * 100.0
+    );
+    println!(
+        "Fastpow wrong vs exact:        {} ({:.4}%)",
+        fastpow_wrong_vs_exact,
+        fastpow_wrong_vs_exact as f64 / total as f64 * 100.0
+    );
+    println!(
+        "LUT wrong vs exact:            {} ({:.4}%)",
+        lut_wrong_vs_exact,
+        lut_wrong_vs_exact as f64 / total as f64 * 100.0
+    );
+    println!("Mean |fastpow - LUT|:          {:.6}", fastpow_lut_delta_sum as f64 / total as f64);
+
+    if !worst_fastpow_lut.is_empty() {
+        println!("\nWorst fastpow vs LUT disagreements (max delta = {}):", max_delta_fastpow_lut);
+        println!(
+            "  {:>12}  {:>8}  {:>8}  {:>8}  {:>8}",
+            "linear", "fastpow", "LUT", "exact", "fp-lut"
+        );
+        for (linear, fp, lut, exact, delta) in &worst_fastpow_lut {
+            println!("  {:>12.10}  {:>8}  {:>8}  {:>8}  {:>+8}", linear, fp, lut, exact, delta);
+        }
+    }
+
+    // Distribution of deltas
+    println!("\nDelta distribution (fastpow vs exact):");
+    let mut fp_delta_counts = [0u64; 4];
+    let mut lut_delta_counts = [0u64; 4];
+    for i in 0..=test_count {
+        let linear = i as f32 / test_count as f32;
+        let fp = linear_to_srgb_fastpow(linear);
+        let lut = linear_to_srgb_lut(linear);
+        let exact_f = if (linear as f64) <= 0.0031308 {
+            12.92 * linear as f64
+        } else {
+            1.055 * (linear as f64).powf(1.0 / 2.4) - 0.055
+        };
+        let exact = (exact_f * 255.0 + 0.5).clamp(0.0, 255.0) as u8;
+
+        let d_fp = (fp as i32 - exact as i32).abs().min(3) as usize;
+        let d_lut = (lut as i32 - exact as i32).abs().min(3) as usize;
+        fp_delta_counts[d_fp] += 1;
+        lut_delta_counts[d_lut] += 1;
+    }
+    println!("  delta=0: fastpow={}, LUT={}", fp_delta_counts[0], lut_delta_counts[0]);
+    println!("  delta=1: fastpow={}, LUT={}", fp_delta_counts[1], lut_delta_counts[1]);
+    println!("  delta=2: fastpow={}, LUT={}", fp_delta_counts[2], lut_delta_counts[2]);
+    println!("  delta≥3: fastpow={}, LUT={}", fp_delta_counts[3], lut_delta_counts[3]);
+
+    // Now check: when fastpow and LUT disagree, who is closer to exact?
+    println!("\nWhen fastpow and LUT disagree, who is closer to exact?");
+    let mut fp_closer = 0u64;
+    let mut lut_closer = 0u64;
+    let mut both_same_dist = 0u64;
+    for i in 0..=test_count {
+        let linear = i as f32 / test_count as f32;
+        let fp = linear_to_srgb_fastpow(linear);
+        let lut = linear_to_srgb_lut(linear);
+        if fp != lut {
+            let exact_f = if (linear as f64) <= 0.0031308 {
+                12.92 * linear as f64
+            } else {
+                1.055 * (linear as f64).powf(1.0 / 2.4) - 0.055
+            };
+            let exact = (exact_f * 255.0 + 0.5).clamp(0.0, 255.0) as u8;
+            let d_fp = (fp as i32 - exact as i32).abs();
+            let d_lut = (lut as i32 - exact as i32).abs();
+            if d_fp < d_lut {
+                fp_closer += 1;
+            } else if d_lut < d_fp {
+                lut_closer += 1;
+            } else {
+                both_same_dist += 1;
+            }
+        }
+    }
+    println!("  Fastpow closer: {}", fp_closer);
+    println!("  LUT closer:     {}", lut_closer);
+    println!("  Same distance:  {}", both_same_dist);
+
+    assert!(
+        max_delta_fastpow_lut <= 1,
+        "fastpow vs LUT should differ by at most 1, got {}",
+        max_delta_fastpow_lut
+    );
+    assert!(
+        max_delta_lut_exact <= 1,
+        "LUT vs exact should differ by at most 1, got {}",
+        max_delta_lut_exact
+    );
+}
+
 /// Critical test: verify sRGB u8 -> linear f32 -> sRGB u8 roundtrips exactly
 ///
 /// This test ensures that converting from sRGB to linear and back produces
