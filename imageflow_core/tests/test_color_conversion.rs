@@ -985,3 +985,202 @@ fn test_matte_compositing_no_double_division() {
 
     println!("\n✓ Matte compositing produces correct RGB values");
 }
+
+/// Test that fully-transparent pixels become the matte color after compositing.
+///
+/// When alpha=0, the pixel is fully transparent — the matte should show through
+/// completely. The current blend_matte() has `if alpha > 0` which skips these
+/// pixels entirely, leaving them as black/transparent instead of the matte color.
+#[test]
+fn test_matte_compositing_fully_transparent_pixels() {
+    use imageflow_core::Context;
+
+    // Create a 4x4 RGBA image: fully transparent (alpha=0)
+    let w = 4u32;
+    let h = 4u32;
+    let mut pixels = Vec::with_capacity((w * h * 4) as usize);
+    for _ in 0..w * h {
+        pixels.extend_from_slice(&[0, 0, 0, 0]); // RGBA: transparent black
+    }
+    let png_bytes = build_rgba_png(w, h, &pixels);
+
+    // Resize to 2x2 with RED matte — transparent pixels should become red
+    let steps = vec![
+        imageflow_types::Node::Decode { io_id: 0, commands: None },
+        imageflow_types::Node::Resample2D {
+            w: 2,
+            h: 2,
+            hints: Some(imageflow_types::ResampleHints {
+                background_color: Some(imageflow_types::Color::Srgb(
+                    imageflow_types::ColorSrgb::Hex("FF0000FF".to_owned()),
+                )),
+                ..imageflow_types::ResampleHints::new()
+            }),
+        },
+        imageflow_types::Node::Encode {
+            io_id: 1,
+            preset: imageflow_types::EncoderPreset::Lodepng { maximum_deflate: None },
+        },
+    ];
+
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, png_bytes).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    let execute = imageflow_types::Execute001 {
+        graph_recording: None,
+        security: None,
+        framewise: imageflow_types::Framewise::Steps(steps),
+    };
+    ctx.execute_1(execute).unwrap();
+    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+
+    let result = lodepng::decode32(output_bytes.as_slice()).unwrap();
+    let out_w = result.width;
+    let out_h = result.height;
+    let out_pixels = result.buffer;
+
+    println!("\n=== Fully Transparent Matte Test ({}x{} -> {}x{}) ===\n", w, h, out_w, out_h);
+
+    // With a fully-transparent input and an opaque red matte:
+    // The result should be opaque red (255, 0, 0, 255)
+    let mut max_r_diff = 0i32;
+    let mut max_g_diff = 0i32;
+    let mut max_b_diff = 0i32;
+    let mut max_a_diff = 0i32;
+
+    for y in 0..out_h {
+        for x in 0..out_w {
+            let px = &out_pixels[y * out_w + x];
+            let r_diff = (px.r as i32 - 255).abs();
+            let g_diff = (px.g as i32 - 0).abs();
+            let b_diff = (px.b as i32 - 0).abs();
+            let a_diff = (px.a as i32 - 255).abs();
+            max_r_diff = max_r_diff.max(r_diff);
+            max_g_diff = max_g_diff.max(g_diff);
+            max_b_diff = max_b_diff.max(b_diff);
+            max_a_diff = max_a_diff.max(a_diff);
+
+            println!(
+                "  Pixel ({},{}): R={} G={} B={} A={} (expected R=255 G=0 B=0 A=255, diff R={} G={} B={} A={})",
+                x, y, px.r, px.g, px.b, px.a, r_diff, g_diff, b_diff, a_diff
+            );
+        }
+    }
+
+    println!("Max diffs: R={}, G={}, B={}, A={}", max_r_diff, max_g_diff, max_b_diff, max_a_diff);
+
+    assert!(
+        max_r_diff <= 2 && max_g_diff <= 2 && max_b_diff <= 2 && max_a_diff <= 2,
+        "Fully-transparent pixels should become the matte color! \
+         Max diffs: R={}, G={}, B={}, A={}. \
+         If alpha/RGB are near 0, blend_matte is skipping transparent pixels.",
+        max_r_diff, max_g_diff, max_b_diff, max_a_diff
+    );
+
+    println!("\n✓ Fully transparent pixels correctly become the matte color");
+}
+
+/// Test matte compositing with mixed alpha values in a single image.
+///
+/// Creates a 40x10 image with 4 vertical bands at alpha = [0, 85, 170, 255],
+/// all with green foreground, scales to 20x5 with a blue matte, and verifies
+/// that the center of each band matches the expected blend result.
+#[test]
+fn test_matte_compositing_mixed_alpha() {
+    use imageflow_core::graphics::color::{ColorContext, WorkingFloatspace};
+    use imageflow_core::Context;
+
+    // 40x10 image with 4 bands of 10px each, green pixels at varying alpha
+    let w = 40u32;
+    let h = 10u32;
+    let alphas: [u8; 4] = [0, 85, 170, 255];
+    let mut pixels = Vec::with_capacity((w * h * 4) as usize);
+    for _ in 0..h {
+        for x in 0..w {
+            let band = (x / 10) as usize;
+            let a = alphas[band];
+            pixels.extend_from_slice(&[0, 255, 0, a]); // RGBA: green at varying alpha
+        }
+    }
+    let png_bytes = build_rgba_png(w, h, &pixels);
+
+    // Scale to 20x5 with blue matte — triggers blend_matte in scaling.rs
+    let steps = vec![
+        imageflow_types::Node::Decode { io_id: 0, commands: None },
+        imageflow_types::Node::Resample2D {
+            w: 20,
+            h: 5,
+            hints: Some(imageflow_types::ResampleHints {
+                background_color: Some(imageflow_types::Color::Srgb(
+                    imageflow_types::ColorSrgb::Hex("0000FFFF".to_owned()),
+                )),
+                ..imageflow_types::ResampleHints::new()
+            }),
+        },
+        imageflow_types::Node::Encode {
+            io_id: 1,
+            preset: imageflow_types::EncoderPreset::Lodepng { maximum_deflate: None },
+        },
+    ];
+
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, png_bytes).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    let execute = imageflow_types::Execute001 {
+        graph_recording: None,
+        security: None,
+        framewise: imageflow_types::Framewise::Steps(steps),
+    };
+    ctx.execute_1(execute).unwrap();
+    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+
+    let result = lodepng::decode32(output_bytes.as_slice()).unwrap();
+    let out_w = result.width;
+    let out_pixels = result.buffer;
+
+    println!("\n=== Mixed Alpha Matte Test ({}x{} -> {}x{}) ===\n", w, h, out_w, result.height);
+
+    let cc = ColorContext::new(WorkingFloatspace::LinearRGB, 0.0);
+    let matte_b_linear = cc.srgb_to_floatspace(255u8); // blue matte: B=255
+    let fg_g_linear = cc.srgb_to_floatspace(255u8);    // green fg: G=255
+
+    let mut any_failed = false;
+
+    // Sample the center pixel of each band on the middle row
+    let mid_row = result.height / 2;
+    for (band, &alpha) in alphas.iter().enumerate() {
+        let center_x = band * 5 + 2; // center of each 5px band in the 20px output
+        let px = &out_pixels[mid_row * out_w + center_x];
+        let alpha_f = alpha as f32 / 255.0;
+
+        // Expected: straight-alpha composite over opaque matte
+        // result = fg * alpha_f + matte * (1 - alpha_f), final_alpha = 1.0
+        let exp_r = cc.floatspace_to_srgb(0.0); // both fg and matte have R=0
+        let exp_g = cc.floatspace_to_srgb(fg_g_linear * alpha_f);
+        let exp_b = cc.floatspace_to_srgb(matte_b_linear * (1.0 - alpha_f));
+
+        let r_diff = (px.r as i32 - exp_r as i32).abs();
+        let g_diff = (px.g as i32 - exp_g as i32).abs();
+        let b_diff = (px.b as i32 - exp_b as i32).abs();
+
+        let ok = r_diff <= 2 && g_diff <= 2 && b_diff <= 2 && px.a >= 253;
+        let marker = if ok { "ok" } else { "FAIL" };
+
+        println!(
+            "  [{}] alpha={:3}: got R={:3} G={:3} B={:3} A={:3}, expected R={:3} G={:3} B={:3} A=255 (diff R={} G={} B={})",
+            marker, alpha, px.r, px.g, px.b, px.a, exp_r, exp_g, exp_b, r_diff, g_diff, b_diff
+        );
+
+        if !ok {
+            any_failed = true;
+        }
+    }
+
+    assert!(
+        !any_failed,
+        "Matte compositing produced wrong values for some alpha levels. \
+         If alpha=0 pixels are black/transparent, blend_matte is skipping them."
+    );
+
+    println!("\n✓ All alpha levels composited correctly over matte");
+}
