@@ -34,13 +34,14 @@ imgref = "1.4.1"
 slotmap = "1"
 base64 = "0.22"
 hex = "0.4"
-gif = "0.13.1"
-png = "0.17.16"
-rgb = { version = "0.8.91", features = ["bytemuck"] }
+gif = "0.14"
+png = "0.18"
+# TODO(rgb-0.8.91): Change back to "0.8.91" when published to crates.io
+rgb = { version = "0.8.50", features = ["bytemuck"] }
 imagequant = "4"
 lodepng = "3"
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }
-libwebp-sys = { version = "0.13"}
+libwebp-sys = { version = "0.14.1"}
 libz-sys = { version="1", features = ["static"] }
 zune-bmp = "0.5.0-rc4"
 # zune-png = "0.5.0-rc1"
@@ -87,16 +88,20 @@ libpng-sys = { version = "1.1.9", features = ["static", "static-libz", "libz-sys
 
 
 
-schemars = { version = "1.0.0-alpha.17", features = ["derive"], optional = true }
+schemars = { version = "1", features = ["derive"], optional = true }
 
 [dev-dependencies]
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
 dssim = "3.3.4"
 load_image = "3.2.1"
-criterion = "0.5"
+criterion = "0.8"
 rand = "*"
 include_dir = { version = "0.7.4", features = ["glob"] }
 anyhow = "1.0"
+walkdir = "2"
+csv = "1"
+rayon = "1"
+colorutils-rs = "0.7"
 
 [features]
 default = []
