@@ -120,5 +120,6 @@
   "webp_lossless_alpha_decode_and_scale": "0DCE6166F46CF5A24_0172196390B512E97",
   "webp_lossy_alpha_decode_and_scale": "05EF3D9DAC72DD995_0172196390B512E97",
   "webp_lossy_opaque_decode_and_scale": "0A0E5B9130C80B541_0172196390B512E97",
-  "wrenches_decode": "0E680C080BE9CD3A9_01397E6B9AECAB9F4"
+  "wrenches_decode": "0E680C080BE9CD3A9_01397E6B9AECAB9F4",
+  "TestTransparentCanvas": "03CC86CF60D13260F_02E47202DCF2CA919"
 }

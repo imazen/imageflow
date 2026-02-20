@@ -11,7 +11,10 @@ pub mod common;
 use crate::common::*;
 
 use imageflow_core::Context;
-use s::{CommandStringKind, ResponsePayload};
+use s::{
+    Color, ColorSrgb, CommandStringKind, EncoderPreset, Execute001, Framewise, Node, PixelFormat,
+    ResponsePayload,
+};
 
 const DEBUG_GRAPH: bool = false;
 const FRYMIRE_URL: &'static str =
@@ -282,4 +285,129 @@ pub fn compare_encoded_to_source(
         require,
         true,
     )
+}
+
+/// Build a minimal animated GIF with the given frame colors (RGBA hex strings).
+/// Each frame is `w`x`h` pixels, solid color, with the given delay in centiseconds.
+fn build_animated_gif(w: u16, h: u16, colors: &[&str], delay: u16) -> Vec<u8> {
+    let mut buf = Vec::new();
+    {
+        let mut encoder = gif::Encoder::new(&mut buf, w, h, &[]).unwrap();
+        encoder.set_repeat(gif::Repeat::Infinite).unwrap();
+        for color_hex in colors {
+            let r = u8::from_str_radix(&color_hex[0..2], 16).unwrap();
+            let g = u8::from_str_radix(&color_hex[2..4], 16).unwrap();
+            let b = u8::from_str_radix(&color_hex[4..6], 16).unwrap();
+            let a = if color_hex.len() == 8 {
+                u8::from_str_radix(&color_hex[6..8], 16).unwrap()
+            } else {
+                255
+            };
+            let mut pixels = vec![[r, g, b, a]; (w as usize) * (h as usize)]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<u8>>();
+            let mut frame = gif::Frame::from_rgba(w, h, &mut pixels);
+            frame.delay = delay;
+            encoder.write_frame(&frame).unwrap();
+        }
+    } // encoder dropped here, writes trailer
+    buf
+}
+
+#[test]
+fn test_animated_gif_roundtrip() {
+    // Encode a 3-frame animated GIF (red, green, blue), decode+re-encode through imageflow,
+    // then decode the output and verify we get 3 frames back.
+    let input_gif = build_animated_gif(4, 4, &["FF0000", "00FF00", "0000FF"], 10);
+
+    // Decode + re-encode as GIF through imageflow
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Encode { io_id: 1, preset: EncoderPreset::Gif },
+    ];
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, input_gif).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    let execute = Execute001 {
+        graph_recording: default_graph_recording(DEBUG_GRAPH),
+        security: None,
+        framewise: Framewise::Steps(steps),
+    };
+    ctx.execute_1(execute).unwrap();
+    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+
+    // Verify the output is a valid GIF with 3 frames
+    let mut decoder = gif::DecodeOptions::new();
+    decoder.set_color_output(gif::ColorOutput::RGBA);
+    let mut reader = decoder.read_info(&output_bytes[..]).unwrap();
+    let mut frame_count = 0;
+    while reader.read_next_frame().unwrap().is_some() {
+        frame_count += 1;
+    }
+    assert_eq!(frame_count, 3, "Expected 3 frames in the re-encoded animated GIF");
+}
+
+#[test]
+fn test_animated_gif_two_frames() {
+    // Minimal test: 2-frame animated GIF to verify multi-frame encoding works
+    let input_gif = build_animated_gif(8, 8, &["FF0000", "0000FF"], 5);
+
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Encode { io_id: 1, preset: EncoderPreset::Gif },
+    ];
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, input_gif).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    let execute = Execute001 {
+        graph_recording: default_graph_recording(DEBUG_GRAPH),
+        security: None,
+        framewise: Framewise::Steps(steps),
+    };
+    ctx.execute_1(execute).unwrap();
+    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+
+    // Verify 2 frames
+    let mut decoder = gif::DecodeOptions::new();
+    decoder.set_color_output(gif::ColorOutput::RGBA);
+    let mut reader = decoder.read_info(&output_bytes[..]).unwrap();
+    let mut frame_count = 0;
+    while reader.read_next_frame().unwrap().is_some() {
+        frame_count += 1;
+    }
+    assert_eq!(frame_count, 2, "Expected 2 frames in the re-encoded animated GIF");
+}
+
+// test a job that generates a canvas, encodes to a gif,  then another job decodes it.
+#[test]
+fn test_gif_roundtrip() {
+    let steps = vec![
+        Node::CreateCanvas {
+            w: 8,
+            h: 8,
+            format: PixelFormat::Bgra32,
+            color: Color::Srgb(ColorSrgb::Hex("FF0000FF".to_owned())),
+        },
+        Node::Encode { io_id: 0, preset: EncoderPreset::Gif },
+    ];
+    let mut ctx1 = Context::create().unwrap();
+    ctx1.add_output_buffer(0).unwrap();
+    let execute1 = Execute001 {
+        graph_recording: default_graph_recording(DEBUG_GRAPH),
+        security: None,
+        framewise: Framewise::Steps(steps),
+    };
+    ctx1.execute_1(execute1).unwrap();
+    let bytes = ctx1.get_output_buffer_slice(0).unwrap().to_vec();
+
+    let mut ctx2 = Context::create().unwrap();
+    ctx2.add_input_vector(0, bytes.to_vec()).unwrap();
+    let execute2 = Execute001 {
+        graph_recording: default_graph_recording(DEBUG_GRAPH),
+        security: None,
+        framewise: Framewise::Steps(vec![Node::Decode { io_id: 0, commands: None }]),
+    };
+    ctx2.execute_1(execute2).unwrap();
+    // just a smoke test
 }
