@@ -518,7 +518,7 @@ impl PixelRowWeights {
         Ok(weights)
     }
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, bytemuck::Zeroable)]
 #[repr(C)]
 pub struct PixelWeightIndexes {
     /// index of weight for first input pixel
@@ -530,8 +530,6 @@ pub struct PixelWeightIndexes {
     /// index of last input pixel
     pub right_pixel: u32,
 }
-
-unsafe impl rgb::Zeroable for PixelWeightIndexes {}
 
 impl WeightContainer for PixelRowWeights {
     fn try_reserve(

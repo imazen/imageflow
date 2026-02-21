@@ -56,8 +56,7 @@ impl ColorContext {
 
     #[inline]
     pub fn srgb_to_floatspace(&self, value: u8) -> f32 {
-        // Safe because array length is larger than u8 max value
-        unsafe { *self.byte_to_float.get_unchecked(value as usize) }
+        self.byte_to_float[value as usize]
     }
     #[inline]
     pub fn floatspace_to_srgb(&self, space_value: f32) -> u8 {

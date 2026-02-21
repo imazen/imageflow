@@ -11,12 +11,9 @@ pub fn populate_histogram_from_window(
     let [r, g, b] = histograms;
     for line in window.scanlines() {
         for pixel in line.row() {
-            // Safe because histogram size is 256, which u8 cannot overflow
-            unsafe {
-                *r.get_unchecked_mut(pixel.r as usize) += 1;
-                *g.get_unchecked_mut(pixel.g as usize) += 1;
-                *b.get_unchecked_mut(pixel.b as usize) += 1;
-            }
+            r[pixel.r as usize] += 1;
+            g[pixel.g as usize] += 1;
+            b[pixel.b as usize] += 1;
         }
     }
     Ok(())
