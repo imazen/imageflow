@@ -213,12 +213,12 @@ fn avx2_transpose_8x8(
     x: usize,
     y: usize,
 ) {
-    use std::arch::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
-
-    // Loads/stores take raw pointers and remain unsafe even inside #[target_feature].
-    // The pointers are derived from valid slice references with bounds checked by the caller.
+    // safe_unaligned_simd takes &[f32; 8] — bounds checked before the unsafe block.
+    // unsafe is only for the #[target_feature] calling convention, not memory safety.
     let load_row = |row: usize| -> __m256 {
-        unsafe { _mm256_loadu_ps(src[(row * src_stride + x)..].as_ptr()) }
+        let off = row * src_stride + x;
+        let arr: &[f32; 8] = src[off..off + 8].try_into().unwrap();
+        unsafe { safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr) }
     };
 
     // Load 8 rows of 8 floats each
@@ -263,7 +263,9 @@ fn avx2_transpose_8x8(
 
     // Store transposed rows
     let mut store_row = |row: usize, v: __m256| {
-        unsafe { _mm256_storeu_ps(dst[(row * dst_stride + y)..].as_mut_ptr(), v) };
+        let off = row * dst_stride + y;
+        let arr: &mut [f32; 8] = (&mut dst[off..off + 8]).try_into().unwrap();
+        unsafe { safe_unaligned_simd::x86_64::_mm256_storeu_ps(arr, v) };
     };
     store_row(x, o0);
     store_row(x + 1, o1);
