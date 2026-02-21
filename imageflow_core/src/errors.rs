@@ -127,7 +127,7 @@ macro_rules! cancelled {
 #[macro_export]
 macro_rules! return_if_cancelled {
     ($context:expr) => {{
-        if $context.cancellation_requested() {
+        if $context.stop().should_stop() {
             return Err(cancelled!());
         }
     }};
@@ -415,6 +415,32 @@ impl From<::lodepng::Error> for FlowError {
     }
 }
 
+impl From<enough::StopReason> for FlowError {
+    fn from(reason: enough::StopReason) -> Self {
+        match reason {
+            enough::StopReason::Cancelled => FlowError {
+                kind: ErrorKind::OperationCancelled,
+                message: String::new(),
+                at: smallvec::SmallVec::new(),
+                node: None,
+            },
+            enough::StopReason::TimedOut => FlowError {
+                kind: ErrorKind::OperationCancelled,
+                message: "Operation timed out".to_string(),
+                at: smallvec::SmallVec::new(),
+                node: None,
+            },
+            _ => FlowError {
+                // StopReason is #[non_exhaustive]
+                kind: ErrorKind::OperationCancelled,
+                message: format!("Operation stopped: {}", reason),
+                at: smallvec::SmallVec::new(),
+                node: None,
+            },
+        }
+    }
+}
+
 impl FlowError {
     pub fn from_visualizer(e: ::std::io::Error) -> Self {
         FlowError::without_location(ErrorKind::VisualizerIoError, format!("{:?}", e))
@@ -446,6 +472,17 @@ impl FlowError {
             _ => FlowError::without_location(ErrorKind::ImageDecodingError, format!("{:?}", e)),
         }
     }
+}
+
+#[test]
+fn test_stop_reason_to_flow_error() {
+    let err: FlowError = enough::StopReason::Cancelled.into();
+    assert_eq!(err.kind, ErrorKind::OperationCancelled);
+    assert!(err.message.is_empty());
+
+    let err: FlowError = enough::StopReason::TimedOut.into();
+    assert_eq!(err.kind, ErrorKind::OperationCancelled);
+    assert!(err.message.contains("timed out"));
 }
 
 #[test]

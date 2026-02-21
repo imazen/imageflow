@@ -72,6 +72,7 @@ multiversion = "0.8"
 mozjpeg-sys = {version = "2", features = ["nasm_simd"]}
 
 evalchroma = "1"
+enough = { version = "0.4", features = ["std"] }
 
 # Used for schema generation if feature enabled
 utoipa = { version = "5.3.1", features = [], optional = true }

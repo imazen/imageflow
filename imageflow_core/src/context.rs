@@ -5,6 +5,7 @@ use crate::flow::definitions::Graph;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::io::IoProxy;
 use crate::{ErrorKind, FlowError, JsonResponse, Result};
+use enough::{Stop, StopReason};
 use imageflow_types::collections::AddRemoveSet;
 use std::any::Any;
 #[cfg(debug_assertions)]
@@ -109,6 +110,22 @@ impl Clone for CancellationToken {
             #[cfg(debug_assertions)]
             poll_countdown: self.poll_countdown.clone(),
         }
+    }
+}
+
+impl Stop for CancellationToken {
+    #[inline]
+    fn check(&self) -> std::result::Result<(), StopReason> {
+        if self.cancellation_requested() {
+            Err(StopReason::Cancelled)
+        } else {
+            Ok(())
+        }
+    }
+
+    #[inline]
+    fn should_stop(&self) -> bool {
+        self.cancellation_requested()
     }
 }
 
@@ -355,8 +372,8 @@ impl Context {
     }
 
     #[inline]
-    pub fn cancellation_requested(&self) -> bool {
-        self.cancellation_token.cancellation_requested()
+    pub fn stop(&self) -> &dyn Stop {
+        &self.cancellation_token
     }
 
     pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
@@ -763,4 +780,35 @@ fn test_calculate_context_heap_size() {
 
     assert!(context_allocs <= 6);
     assert!(thread_safe_bytes <= 1150);
+}
+
+#[test]
+fn test_cancellation_token_implements_stop() {
+    let token = CancellationToken::new();
+
+    // Before cancellation: check() returns Ok, should_stop() returns false
+    assert_eq!(token.check(), Ok(()));
+    assert!(!token.should_stop());
+
+    // After cancellation: check() returns Err(Cancelled), should_stop() returns true
+    token.cancel_internal();
+    assert_eq!(token.check(), Err(StopReason::Cancelled));
+    assert!(token.should_stop());
+}
+
+#[cfg(debug_assertions)]
+#[test]
+fn test_cancellation_token_stop_with_poll_countdown() {
+    let token = CancellationToken::new();
+
+    // fetch_sub returns the *previous* value, so countdown=2 means:
+    // poll 1: prev=2, now=1, 2 >= 1 → Ok
+    // poll 2: prev=1, now=0, 1 >= 1 → Ok
+    // poll 3: prev=0, now=-1, 0 < 1 → Cancelled
+    token.request_cancellation_after_n_polls(2);
+
+    assert_eq!(token.check(), Ok(()));
+    assert_eq!(token.check(), Ok(()));
+    assert_eq!(token.check(), Err(StopReason::Cancelled));
+    assert!(token.should_stop());
 }
