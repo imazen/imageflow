@@ -71,6 +71,7 @@ use std::borrow::Cow;
 use std::fmt;
 
 pub use crate::graphics::bitmaps::BitmapKey;
+pub use enough::{Stop, StopReason, Unstoppable};
 
 pub mod helpers {
     pub use crate::codecs::write_png;

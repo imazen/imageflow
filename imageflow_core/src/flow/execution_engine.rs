@@ -123,7 +123,7 @@ impl<'a> Engine<'a> {
             if self.graph_fully_executed() {
                 break;
             }
-            if self.c.cancellation_requested() {
+            if self.c.stop().should_stop() {
                 return Err(cancelled!("Cancelled within execute loop"));
             }
 
@@ -243,7 +243,7 @@ impl<'a> Engine<'a> {
     }
 
     fn notify_graph_changed(&mut self) -> Result<()> {
-        if self.c.cancellation_requested() {
+        if self.c.stop().should_stop() {
             return Err(cancelled!("Cancelled within notify_graph_changed"));
         }
         self.assign_stable_ids()?;

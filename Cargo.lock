@@ -622,6 +622,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
+name = "enough"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "177a59811828ea5dbc8927662d444ffee7b55a44696486f1b1a245ae9e652533"
+
+[[package]]
 name = "enum_derive"
 version = "0.1.7"
 source = "git+https://github.com/DanielKeep/rust-custom-derive.git#1252f258cdb9b7c9867f937c52c2f5c0e69a9c03"
@@ -1093,6 +1099,7 @@ dependencies = [
  "daggy",
  "dashmap",
  "dssim",
+ "enough",
  "evalchroma",
  "flate2",
  "fnv",
