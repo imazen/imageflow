@@ -23,20 +23,6 @@ mod prelude {
     pub(crate) use crate::ffi::BitmapCompositingMode;
     pub(crate) use crate::FlowError;
 
-    #[cfg(target_arch = "x86")]
-    pub(crate) use std::arch::x86::{
-        __m128, _mm_add_ps, _mm_loadu_ps, _mm_movehl_ps, _mm_movelh_ps, _mm_mul_ps, _mm_set1_ps,
-        _mm_setr_ps, _mm_setzero_ps, _mm_storeu_ps, _mm_unpackhi_ps, _mm_unpacklo_ps,
-    };
-    #[cfg(target_arch = "x86_64")]
-    pub(crate) use std::arch::x86_64::{
-        __m128, _mm_add_ps, _mm_loadu_ps, _mm_movehl_ps, _mm_movelh_ps, _mm_mul_ps, _mm_set1_ps,
-        _mm_setr_ps, _mm_setzero_ps, _mm_storeu_ps, _mm_unpackhi_ps, _mm_unpacklo_ps,
-    };
-
-    #[cfg(target_arch = "aarch64")]
-    pub(crate) use std::arch::aarch64::*;
-
     pub(crate) use crate::graphics::aligned_buffer::AlignedBuffer;
     pub(crate) use crate::graphics::bitmaps::{Bitmap, BitmapWindowMut, ColorSpace, PixelLayout};
     pub(crate) use crate::graphics::color::{
