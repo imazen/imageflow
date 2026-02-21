@@ -230,12 +230,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "byteorder"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
-
-[[package]]
 name = "bytes"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1126,7 +1120,6 @@ dependencies = [
  "archmage",
  "base64",
  "bytemuck",
- "byteorder",
  "colorutils-rs",
  "criterion",
  "csv",
@@ -1148,7 +1141,6 @@ dependencies = [
  "include_dir",
  "itertools 0.14.0",
  "jpeg-decoder",
- "lazy_static",
  "lcms2",
  "lcms2-sys",
  "libpng-sys",
@@ -1167,7 +1159,6 @@ dependencies = [
  "safe_unaligned_simd",
  "schemars",
  "serde",
- "serde_derive",
  "serde_json",
  "slotmap",
  "smallvec",

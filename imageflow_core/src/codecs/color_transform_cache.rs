@@ -5,6 +5,7 @@ use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::graphics::bitmaps::BitmapWindowMut;
 use imageflow_types::PixelLayout;
 use lcms2::*;
+use dashmap::DashMap;
 use std::cell::RefCell;
 use std::sync::*;
 use std::thread;
@@ -48,12 +49,10 @@ use std::thread;
 
 pub struct ColorTransformCache {}
 
-lazy_static! {
-    static ref PROFILE_TRANSFORMS: ::dashmap::DashMap<u64, Transform<u32, u32, ThreadContext, DisallowCache>> =
-        ::dashmap::DashMap::with_capacity(4);
-    static ref GAMA_TRANSFORMS: ::dashmap::DashMap<u64, Transform<u32, u32, ThreadContext, DisallowCache>> =
-        ::dashmap::DashMap::with_capacity(4);
-}
+static PROFILE_TRANSFORMS: LazyLock<DashMap<u64, Transform<u32, u32, ThreadContext, DisallowCache>>> =
+    LazyLock::new(|| DashMap::with_capacity(4));
+static GAMA_TRANSFORMS: LazyLock<DashMap<u64, Transform<u32, u32, ThreadContext, DisallowCache>>> =
+    LazyLock::new(|| DashMap::with_capacity(4));
 
 thread_local!(static LAST_PROFILE_ERROR_MESSAGE: RefCell<Option<String>> = const { RefCell::new(None) });
 

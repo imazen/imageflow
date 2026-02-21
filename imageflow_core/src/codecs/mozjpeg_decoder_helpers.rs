@@ -1,12 +1,10 @@
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 
 use super::*;
-extern crate byteorder;
 extern crate mozjpeg_sys;
-use byteorder::*;
 
 use ::mozjpeg_sys::*;
-use std::io::{Cursor, SeekFrom};
+use std::io::{Cursor, Read, SeekFrom};
 
 const ICC_OVERHEAD_LEN: u32 = 14; /* size of non-profile data in APP2 */
 
@@ -148,44 +146,48 @@ fn get_tiff_start(data: &[u8]) -> Option<(usize, Endian)> {
 pub fn get_exif_orientation(codec: &mozjpeg_sys::jpeg_decompress_struct) -> Option<i32> {
     if let Some(data) = get_exif_bytes(codec) {
         if let Some((tiff_index, endian)) = get_tiff_start(data) {
-            // Read the exif tags, ignoring errors
-            return match endian {
-                Endian::Little => {
-                    parse_exif::<LittleEndian>(&data[tiff_index + 4..]).unwrap_or(None)
-                }
-                Endian::Big => parse_exif::<BigEndian>(&data[tiff_index + 4..]).unwrap_or(None),
-            };
+            let little = matches!(endian, Endian::Little);
+            return parse_exif(&data[tiff_index + 4..], little).unwrap_or(None);
         }
     }
     None
 }
 
-fn parse_exif<T>(data: &[u8]) -> std::io::Result<Option<i32>>
-where
-    T: ByteOrder,
-{
+fn read_u16(cursor: &mut Cursor<&[u8]>, little: bool) -> std::io::Result<u16> {
+    let mut buf = [0u8; 2];
+    cursor.read_exact(&mut buf)?;
+    Ok(if little { u16::from_le_bytes(buf) } else { u16::from_be_bytes(buf) })
+}
+
+fn read_u32(cursor: &mut Cursor<&[u8]>, little: bool) -> std::io::Result<u32> {
+    let mut buf = [0u8; 4];
+    cursor.read_exact(&mut buf)?;
+    Ok(if little { u32::from_le_bytes(buf) } else { u32::from_be_bytes(buf) })
+}
+
+fn parse_exif(data: &[u8], little: bool) -> std::io::Result<Option<i32>> {
     let mut cursor = Cursor::new(data);
 
     // Read out the offset pointer to IFD0
-    let offset = cursor.read_u32::<T>()?;
+    let offset = read_u32(&mut cursor, little)?;
     cursor.set_position(u32::max(4, offset) as u64 - 4);
 
     //Find out how many tags we have in IFD0.
-    let tag_count = cursor.read_u16::<T>()?;
+    let tag_count = read_u16(&mut cursor, little)?;
 
     /* The tags are listed in consecutive 12-byte blocks. The tag ID, type, size, and
     a pointer to the actual value, are packed into these 12 byte entries. */
 
-    for tag_ix in 0..tag_count {
+    for _tag_ix in 0..tag_count {
         // Orientation is 0x112
-        let tag = cursor.read_u16::<T>()?;
+        let tag = read_u16(&mut cursor, little)?;
         if tag == 0x112 {
-            let tag_type = cursor.read_u16::<T>()?;
-            let count = cursor.read_u32::<T>()?;
+            let tag_type = read_u16(&mut cursor, little)?;
+            let count = read_u32(&mut cursor, little)?;
             if tag_type != 3 && count != 1 {
                 return Ok(None);
             } else {
-                let exif_orientation = cursor.read_u16::<T>()?;
+                let exif_orientation = read_u16(&mut cursor, little)?;
                 return if exif_orientation <= 8 {
                     Ok(Some(exif_orientation as i32))
                 } else {

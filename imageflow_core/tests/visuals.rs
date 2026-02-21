@@ -1,6 +1,4 @@
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate imageflow_core;
 extern crate imageflow_helpers as hlp;
 extern crate serde_json;

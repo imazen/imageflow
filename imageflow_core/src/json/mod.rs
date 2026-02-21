@@ -32,7 +32,6 @@ where
     }
 }
 
-#[cfg(feature = "schema-export")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "schema-export")]
 use utoipa::ToSchema;

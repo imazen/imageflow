@@ -31,7 +31,7 @@ use std::{self, panic};
 use imageflow_core::BitmapKey;
 use imageflow_types::{Node, ResponsePayload};
 use slotmap::Key;
-use std::sync::RwLock;
+use std::sync::{LazyLock, RwLock};
 use std::time::Duration;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -189,16 +189,12 @@ pub struct ChecksumCtx {
     url_base: &'static str,
 }
 
-lazy_static! {
-    static ref CHECKSUM_FILE: RwLock<BTreeMap<String, String>> = RwLock::new(BTreeMap::new());
-}
-lazy_static! {
-    static ref ALTERNATE_CHECKSUMS_FILE: RwLock<BTreeMap<String, Vec<String>>> =
-        RwLock::new(BTreeMap::new());
-}
-lazy_static! {
-    static ref ACTUAL_FILE: RwLock<BTreeMap<String, String>> = RwLock::new(BTreeMap::new());
-}
+static CHECKSUM_FILE: LazyLock<RwLock<BTreeMap<String, String>>> =
+    LazyLock::new(|| RwLock::new(BTreeMap::new()));
+static ALTERNATE_CHECKSUMS_FILE: LazyLock<RwLock<BTreeMap<String, Vec<String>>>> =
+    LazyLock::new(|| RwLock::new(BTreeMap::new()));
+static ACTUAL_FILE: LazyLock<RwLock<BTreeMap<String, String>>> =
+    LazyLock::new(|| RwLock::new(BTreeMap::new()));
 impl ChecksumCtx {
     /// A checksum context configured for tests/visuals/*
     pub fn visuals() -> ChecksumCtx {

@@ -11,10 +11,8 @@ doctest = false
 bench = false
 
 [dependencies]
-serde = "1"
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-serde_derive = "1"
-lazy_static = "1"
 twox-hash = "2"
 
 ## Crate-specific dependencies
@@ -47,8 +45,6 @@ jpeg-decoder ="0.3.1"
 lcms2 = "6"
 lcms2-sys = "4"
 dashmap = "6.1.0"
-
-byteorder="1"
 
 uuid = { version = "1", features = ["v4"] }
 
