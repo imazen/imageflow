@@ -1,17 +1,6 @@
 use crate::graphics::prelude::*;
 use crate::graphics::weights::*;
-use bytemuck::Zeroable;
-use itertools::max;
 use multiversion::multiversion;
-use rgb::alt::BGRA8;
-#[cfg(feature = "nightly")]
-use std::simd::Simd;
-
-#[cfg(feature = "nightly")]
-use std::simd::prelude::SimdUint;
-
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
 
 #[derive(Copy, Clone)]
 pub struct ScaleAndRenderParams {
@@ -24,7 +13,19 @@ pub struct ScaleAndRenderParams {
     pub scale_in_colorspace: WorkingFloatspace,
 }
 #[repr(C)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    bytemuck::Pod,
+    bytemuck::Zeroable,
+)]
 struct Bgra32 {
     /// Blue Component
     pub b: u8,
@@ -36,7 +37,7 @@ struct Bgra32 {
     pub a: u8,
 }
 #[repr(C)]
-#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, bytemuck::Pod, bytemuck::Zeroable)]
 struct Bgra128 {
     /// Blue Component
     pub b: f32,
@@ -47,11 +48,6 @@ struct Bgra128 {
     /// Alpha Component
     pub a: f32,
 }
-
-unsafe impl bytemuck::Pod for Bgra32 {}
-unsafe impl Zeroable for Bgra32 {}
-unsafe impl bytemuck::Pod for Bgra128 {}
-unsafe impl Zeroable for Bgra128 {}
 
 pub fn scale_and_render(
     mut input: BitmapWindowMut<u8>,
