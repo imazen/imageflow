@@ -1,245 +1,15 @@
-#![allow(non_snake_case)]
-// Consider using mit-licensed https://github.com/ejmahler/transpose/blob/master/src/out_of_place.rs
-// for recursive approach?
 use crate::graphics::prelude::*;
-use multiversion::multiversion;
+use archmage::incant;
+use archmage::prelude::*;
 
-#[cfg(feature = "nightly")]
-use std::simd::Simd;
+// We reinterpret u32 pixels as f32 for SIMD shuffles (no arithmetic, just lane permutation).
+// bytemuck::cast_slice handles the u8→u32 and u32→f32 conversions safely.
 
-#[cfg(feature = "nightly")]
-use std::simd::prelude::SimdUint;
+const BLOCK_SIZE: usize = 128;
 
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
-
-#[inline]
-#[allow(unused_assignments)]
-#[cfg(target_arch = "x86_64")]
-unsafe fn transpose4x4_sse(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
-    let mut row1: __m128 = _mm_loadu_ps(&*A.offset(0_isize));
-    let mut row2: __m128 = _mm_loadu_ps(&*A.offset(lda as isize));
-    let mut row3: __m128 = _mm_loadu_ps(&*A.offset((2_i32 * lda) as isize));
-    let mut row4: __m128 = _mm_loadu_ps(&*A.offset((3_i32 * lda) as isize));
-    let mut tmp3: __m128 = _mm_setzero_ps();
-    let mut tmp2: __m128 = _mm_setzero_ps();
-    let mut tmp1: __m128 = _mm_setzero_ps();
-    let mut tmp0: __m128 = _mm_setzero_ps();
-    tmp0 = _mm_unpacklo_ps(row1, row2);
-    tmp2 = _mm_unpacklo_ps(row3, row4);
-    tmp1 = _mm_unpackhi_ps(row1, row2);
-    tmp3 = _mm_unpackhi_ps(row3, row4);
-    row1 = _mm_movelh_ps(tmp0, tmp2);
-    row2 = _mm_movehl_ps(tmp2, tmp0);
-    row3 = _mm_movelh_ps(tmp1, tmp3);
-    row4 = _mm_movehl_ps(tmp3, tmp1);
-    _mm_storeu_ps(&mut *B.offset(0_isize), row1);
-    _mm_storeu_ps(&mut *B.offset(ldb as isize), row2);
-    _mm_storeu_ps(&mut *B.offset((2_i32 * ldb) as isize), row3);
-    _mm_storeu_ps(&mut *B.offset((3_i32 * ldb) as isize), row4);
-}
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "sse2")]
-unsafe fn transpose4x4_sse2(A: *const u32, B: *mut u32, stride_a: usize, stride_b: usize) {
-    let row1: __m128i = _mm_loadu_si128(A as *const __m128i);
-    let row2: __m128i = _mm_loadu_si128(A.add(stride_a) as *const __m128i);
-    let row3: __m128i = _mm_loadu_si128(A.add(stride_a * 2) as *const __m128i);
-    let row4: __m128i = _mm_loadu_si128(A.add(stride_a * 3) as *const __m128i);
-
-    let tmp0: __m128i = _mm_unpacklo_epi32(row1, row2);
-    let tmp1: __m128i = _mm_unpackhi_epi32(row1, row2);
-    let tmp2: __m128i = _mm_unpacklo_epi32(row3, row4);
-    let tmp3: __m128i = _mm_unpackhi_epi32(row3, row4);
-
-    let row1 = _mm_unpacklo_epi64(tmp0, tmp2);
-    let row2 = _mm_unpackhi_epi64(tmp0, tmp2);
-    let row3 = _mm_unpacklo_epi64(tmp1, tmp3);
-    let row4 = _mm_unpackhi_epi64(tmp1, tmp3);
-
-    _mm_storeu_si128(B as *mut __m128i, row1);
-    _mm_storeu_si128(B.add(stride_b) as *mut __m128i, row2);
-    _mm_storeu_si128(B.add(stride_b * 2) as *mut __m128i, row3);
-    _mm_storeu_si128(B.add(stride_b * 3) as *mut __m128i, row4);
-}
-
-#[target_feature(enable = "avx2")]
-#[cfg(target_arch = "x86_64")]
-unsafe fn transpose_8x8_avx2(src: *const u32, dst: *mut u32, src_stride: usize, dst_stride: usize) {
-    // Load 8 rows of 8 32-bit integers each
-    let row0 = _mm256_loadu_si256(src as *const __m256i);
-    let row1 = _mm256_loadu_si256(src.add(src_stride) as *const __m256i);
-    let row2 = _mm256_loadu_si256(src.add(src_stride * 2) as *const __m256i);
-    let row3 = _mm256_loadu_si256(src.add(src_stride * 3) as *const __m256i);
-    let row4 = _mm256_loadu_si256(src.add(src_stride * 4) as *const __m256i);
-    let row5 = _mm256_loadu_si256(src.add(src_stride * 5) as *const __m256i);
-    let row6 = _mm256_loadu_si256(src.add(src_stride * 6) as *const __m256i);
-    let row7 = _mm256_loadu_si256(src.add(src_stride * 7) as *const __m256i);
-
-    // Transpose 8x8 matrix
-    let tmp0 = _mm256_unpacklo_epi32(row0, row1);
-    let tmp1 = _mm256_unpackhi_epi32(row0, row1);
-    let tmp2 = _mm256_unpacklo_epi32(row2, row3);
-    let tmp3 = _mm256_unpackhi_epi32(row2, row3);
-    let tmp4 = _mm256_unpacklo_epi32(row4, row5);
-    let tmp5 = _mm256_unpackhi_epi32(row4, row5);
-    let tmp6 = _mm256_unpacklo_epi32(row6, row7);
-    let tmp7 = _mm256_unpackhi_epi32(row6, row7);
-
-    let tmp8 = _mm256_unpacklo_epi64(tmp0, tmp2);
-    let tmp9 = _mm256_unpackhi_epi64(tmp0, tmp2);
-    let tmp10 = _mm256_unpacklo_epi64(tmp1, tmp3);
-    let tmp11 = _mm256_unpackhi_epi64(tmp1, tmp3);
-    let tmp12 = _mm256_unpacklo_epi64(tmp4, tmp6);
-    let tmp13 = _mm256_unpackhi_epi64(tmp4, tmp6);
-    let tmp14 = _mm256_unpacklo_epi64(tmp5, tmp7);
-    let tmp15 = _mm256_unpackhi_epi64(tmp5, tmp7);
-
-    let row0 = _mm256_permute2x128_si256(tmp8, tmp12, 0x20);
-    let row1 = _mm256_permute2x128_si256(tmp9, tmp13, 0x20);
-    let row2 = _mm256_permute2x128_si256(tmp10, tmp14, 0x20);
-    let row3 = _mm256_permute2x128_si256(tmp11, tmp15, 0x20);
-    let row4 = _mm256_permute2x128_si256(tmp8, tmp12, 0x31);
-    let row5 = _mm256_permute2x128_si256(tmp9, tmp13, 0x31);
-    let row6 = _mm256_permute2x128_si256(tmp10, tmp14, 0x31);
-    let row7 = _mm256_permute2x128_si256(tmp11, tmp15, 0x31);
-
-    // Store the transposed rows
-    _mm256_storeu_si256(dst as *mut __m256i, row0);
-    _mm256_storeu_si256(dst.add(dst_stride) as *mut __m256i, row1);
-    _mm256_storeu_si256(dst.add(dst_stride * 2) as *mut __m256i, row2);
-    _mm256_storeu_si256(dst.add(dst_stride * 3) as *mut __m256i, row3);
-    _mm256_storeu_si256(dst.add(dst_stride * 4) as *mut __m256i, row4);
-    _mm256_storeu_si256(dst.add(dst_stride * 5) as *mut __m256i, row5);
-    _mm256_storeu_si256(dst.add(dst_stride * 6) as *mut __m256i, row6);
-    _mm256_storeu_si256(dst.add(dst_stride * 7) as *mut __m256i, row7);
-}
-
-#[inline]
-#[target_feature(enable = "neon")]
-#[cfg(target_arch = "aarch64")]
-unsafe fn transpose_4x4_neon(src: *const u32, dst: *mut u32, src_stride: usize, dst_stride: usize) {
-    let r0 = vld1q_f32(src as *const f32);
-    let r1 = vld1q_f32(src.add(src_stride) as *const f32);
-    let r2 = vld1q_f32(src.add(src_stride * 2) as *const f32);
-    let r3 = vld1q_f32(src.add(src_stride * 3) as *const f32);
-
-    let c0 = vzip1q_f32(r0, r1);
-    let c1 = vzip2q_f32(r0, r1);
-    let c2 = vzip1q_f32(r2, r3);
-    let c3 = vzip2q_f32(r2, r3);
-
-    let t0 = vcombine_f32(vget_low_f32(c0), vget_low_f32(c2));
-    let t1 = vcombine_f32(vget_high_f32(c0), vget_high_f32(c2));
-    let t2 = vcombine_f32(vget_low_f32(c1), vget_low_f32(c3));
-    let t3 = vcombine_f32(vget_high_f32(c1), vget_high_f32(c3));
-
-    vst1q_f32(dst as *mut f32, t0);
-    vst1q_f32(dst.add(dst_stride) as *mut f32, t1);
-    vst1q_f32(dst.add(dst_stride * 2) as *mut f32, t2);
-    vst1q_f32(dst.add(dst_stride * 3) as *mut f32, t3);
-}
-
-#[target_feature(enable = "neon")]
-#[cfg(target_arch = "aarch64")]
-pub unsafe fn transpose_8x8_neon(
-    src: *const u32,
-    dst: *mut u32,
-    src_stride: usize,
-    dst_stride: usize,
-) {
-    // Transpose top-left 4x4 quadrant
-    transpose_4x4_neon(src, dst, src_stride, dst_stride);
-
-    // Transpose top-right 4x4 quadrant
-    transpose_4x4_neon(src.add(4), dst.add(dst_stride * 4), src_stride, dst_stride);
-
-    // Transpose bottom-left 4x4 quadrant
-    transpose_4x4_neon(src.add(src_stride * 4), dst.add(4), src_stride, dst_stride);
-
-    // Transpose bottom-right 4x4 quadrant
-    transpose_4x4_neon(
-        src.add(src_stride * 4).add(4),
-        dst.add(dst_stride * 4).add(4),
-        src_stride,
-        dst_stride,
-    );
-}
-#[inline]
-unsafe fn transpose4x4_generic(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
-    for i in 0..4 {
-        for j in 0..4 {
-            *B.offset((j * ldb + i) as isize) = *A.offset((i * lda + j) as isize);
-        }
-    }
-}
-
-// #[inline]
-// unsafe fn transpose_block_4x4(
-//     A: *mut f32,
-//     B: *mut f32,
-//     n: i32,
-//     m: i32,
-//     lda: i32,
-//     ldb: i32,
-//     block_size: i32,
-// ) {
-//     //#pragma omp parallel for collapse(2)
-//     let mut i: i32 = 0 as i32;
-//     while i < n {
-//         let mut j: i32 = 0 as i32;
-//         while j < m {
-//             let max_i2: i32 = if i + block_size < n {
-//                 (i) + block_size
-//             } else {
-//                 n
-//             };
-//             let max_j2: i32 = if j + block_size < m {
-//                 (j) + block_size
-//             } else {
-//                 m
-//             };
-//             let mut i2: i32 = i;
-//             while i2 < max_i2 {
-//                 let mut j2: i32 = j;
-//                 while j2 < max_j2 {
-//                     #[cfg(target_arch = "x86_64")]
-//                     {
-//                         transpose4x4_sse(
-//                             &mut *A.offset((i2 * lda + j2) as isize),
-//                             &mut *B.offset((j2 * ldb + i2) as isize),
-//                             lda,
-//                             ldb,
-//                         );
-//                     }
-//                     #[cfg(target_arch = "aarch64")]
-//                     {
-//                         transpose4x4_neon(
-//                             &mut *A.offset((i2 * lda + j2) as isize),
-//                             &mut *B.offset((j2 * ldb + i2) as isize),
-//                             lda,
-//                             ldb,
-//                         );
-//                     }
-//                     #[cfg(all(not(target_arch = "aarch64"), not(target_arch = "x86_64")))]
-//                     {
-//                         transpose4x4_generic(
-//                             &mut *A.offset((i2 * lda + j2) as isize),
-//                             &mut *B.offset((j2 * ldb + i2) as isize),
-//                             lda,
-//                             ldb,
-//                         );
-//                     }
-//                     j2 += 4 as i32
-//                 }
-//                 i2 += 4 as i32
-//             }
-//             j += block_size
-//         }
-//         i += block_size
-//     }
-// }
-
-// Generic transposition function for [u32] slices
+/// Transpose a matrix of u32 values from `from` into `to`.
+/// The source has `width` columns, `height` rows, and `from_stride` elements per row.
+/// The destination has `height` columns, `width` rows, and `to_stride` elements per row.
 pub fn transpose_u32_slices(
     from: &[u32],
     to: &mut [u32],
@@ -256,7 +26,6 @@ pub fn transpose_u32_slices(
             height
         ));
     }
-    // Ensure we don't go out of bounds
     if from_stride * (height - 1) + width > from.len() {
         return Err(nerror!(ErrorKind::InvalidArgument,
             "Slice bounds exceeded: from_stride({}) * (height ({}) - 1) + width ({}) > from.len({})", from_stride, height, width, from.len()));
@@ -269,7 +38,6 @@ pub fn transpose_u32_slices(
             width
         ));
     }
-
     if to_stride * (width - 1) + height > to.len() {
         return Err(nerror!(
             ErrorKind::InvalidArgument,
@@ -281,293 +49,20 @@ pub fn transpose_u32_slices(
         ));
     }
 
-    let block_size = 128;
-    let cropped_h = (height / block_size) * block_size;
-    let cropped_w = (width / block_size) * block_size;
+    // Reinterpret u32 slices as f32 for SIMD shuffle operations.
+    // No arithmetic is performed — only lane permutation.
+    let src: &[f32] = bytemuck::cast_slice(from);
+    let dst: &mut [f32] = bytemuck::cast_slice_mut(to);
 
-    // Transpose the main part of the image
-    transpose_multiple_of_block_size_rectangle(
-        from,
-        to,
-        from_stride,
-        to_stride,
-        cropped_w,
-        cropped_h,
-        block_size,
+    incant!(
+        transpose_tiled(src, dst, from_stride, to_stride, width, height, BLOCK_SIZE),
+        [v3, arm_v2, wasm128, scalar]
     );
-
-    // Handle the remaining edges
-    transpose_edges(from, to, cropped_h, cropped_w, from_stride, to_stride, width, height);
 
     Ok(())
 }
 
-// transpose main cropped part of the image
-#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
-fn transpose_multiple_of_block_size_rectangle(
-    src: &[u32],
-    dst: &mut [u32],
-    src_stride: usize,
-    dst_stride: usize,
-    width: usize,
-    height: usize,
-    block_size: usize,
-) {
-    #[cfg(target_arch = "x86_64")]
-    let use8x8simd = is_x86_feature_detected!("avx2");
-
-    #[cfg(target_arch = "aarch64")]
-    let use8x8simd = std::arch::is_aarch64_feature_detected!("neon");
-
-    #[cfg(all(not(target_arch = "aarch64"), not(target_arch = "x86_64")))]
-    let use8x8simd = false;
-
-    #[cfg(target_arch = "x86_64")]
-    let use4x4simd = true;
-
-    #[cfg(not(target_arch = "x86_64"))]
-    let use4x4simd = false;
-
-    for y_block in (0..height).step_by(block_size) {
-        for x_block in (0..width).step_by(block_size) {
-            let max_y = (y_block + block_size).min(height);
-            let max_x = (x_block + block_size).min(width);
-
-            if use8x8simd {
-                for y in (y_block..max_y).step_by(8) {
-                    for x in (x_block..max_x).step_by(8) {
-                        #[cfg(target_arch = "x86_64")]
-                        unsafe {
-                            transpose_8x8_avx2(
-                                src.as_ptr().add(y * src_stride + x),
-                                dst.as_mut_ptr().add(x * dst_stride + y),
-                                src_stride,
-                                dst_stride,
-                            );
-                        }
-                        #[cfg(target_arch = "aarch64")]
-                        unsafe {
-                            transpose_8x8_neon(
-                                src.as_ptr().add(y * src_stride + x),
-                                dst.as_mut_ptr().add(x * dst_stride + y),
-                                src_stride,
-                                dst_stride,
-                            );
-                        }
-                    }
-                }
-            } else if use4x4simd {
-                #[cfg(target_arch = "x86_64")]
-                unsafe {
-                    for y in (y_block..max_y).step_by(4) {
-                        for x in (x_block..max_x).step_by(4) {
-                            transpose4x4_sse2(
-                                src.as_ptr().add(y * src_stride + x),
-                                dst.as_mut_ptr().add(x * dst_stride + y),
-                                src_stride,
-                                dst_stride,
-                            );
-                        }
-                    }
-                }
-            } else {
-                #[cfg(feature = "nightly")]
-                {
-                    transpose_in_blocks_of_8x8_simd(
-                        src, dst, src_stride, dst_stride, x_block, y_block, max_x, max_y,
-                    );
-                }
-                #[cfg(not(feature = "nightly"))]
-                {
-                    transpose_in_blocks_of_8x8_scalar(
-                        src, dst, src_stride, dst_stride, x_block, y_block, max_x, max_y,
-                    );
-                }
-            }
-        }
-    }
-}
-
-#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
-#[cfg(feature = "nightly")]
-fn transpose_in_blocks_of_8x8_simd(
-    src: &[u32],
-    dst: &mut [u32],
-    src_stride: usize,
-    dst_stride: usize,
-    x1: usize,
-    y1: usize,
-    x2: usize,
-    y2: usize,
-) {
-    for y in (y1..y2).step_by(8) {
-        let src_row = y * src_stride;
-        for x in (x1..x2).step_by(8) {
-            let block_x = src_row + x;
-            let block_y = x * dst_stride + y;
-
-            // Load 8x8 block from source
-            let input: [Simd<u32, 8>; 8] = [
-                Simd::from_slice(&src[block_x..]),
-                Simd::from_slice(&src[block_x + src_stride..]),
-                Simd::from_slice(&src[block_x + 2 * src_stride..]),
-                Simd::from_slice(&src[block_x + 3 * src_stride..]),
-                Simd::from_slice(&src[block_x + 4 * src_stride..]),
-                Simd::from_slice(&src[block_x + 5 * src_stride..]),
-                Simd::from_slice(&src[block_x + 6 * src_stride..]),
-                Simd::from_slice(&src[block_x + 7 * src_stride..]),
-            ];
-
-            // Transpose the block
-            let transposed = transpose_8x8_simd(input);
-
-            // Store the transposed block
-            for (i, row) in transposed.iter().enumerate() {
-                row.copy_to_slice(&mut dst[block_y + i * dst_stride..]);
-            }
-        }
-    }
-}
-
-#[cfg(feature = "nightly")]
-fn transpose_8x8_simd(input: [Simd<u32, 8>; 8]) -> [Simd<u32, 8>; 8] {
-    let [r0, r1, r2, r3, r4, r5, r6, r7] = input;
-
-    // Transpose pairs
-    let (r0, r1) = r0.interleave(r1);
-    let (r2, r3) = r2.interleave(r3);
-    let (r4, r5) = r4.interleave(r5);
-    let (r6, r7) = r6.interleave(r7);
-
-    // Transpose quads
-    let (r0, r2) = r0.interleave(r2);
-    let (r1, r3) = r1.interleave(r3);
-    let (r4, r6) = r4.interleave(r6);
-    let (r5, r7) = r5.interleave(r7);
-
-    // Final transpose
-    let (r0, r4) = r0.interleave(r4);
-    let (r1, r5) = r1.interleave(r5);
-    let (r2, r6) = r2.interleave(r6);
-    let (r3, r7) = r3.interleave(r7);
-
-    [r0, r1, r2, r3, r4, r5, r6, r7]
-}
-
-#[cfg(not(feature = "nightly"))]
-#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
-#[allow(clippy::too_many_arguments)]
-fn transpose_in_blocks_of_8x8_scalar(
-    src: &[u32],
-    dst: &mut [u32],
-    src_stride: usize,
-    dst_stride: usize,
-    x1: usize,
-    y1: usize,
-    x2: usize,
-    y2: usize,
-) {
-    for y in (y1..y2).step_by(8) {
-        let src_row = y * src_stride;
-        for x in (x1..x2).step_by(8) {
-            let block_x = src_row + x;
-            let block_y = x * dst_stride + y;
-
-            unsafe {
-                for i in 0..8 {
-                    for j in 0..8 {
-                        *dst.get_unchecked_mut(block_y + j * dst_stride + i) =
-                            *src.get_unchecked(block_x + i * src_stride + j);
-                    }
-                }
-            }
-        }
-    }
-}
-
-#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
-#[allow(clippy::too_many_arguments)]
-fn transpose_in_blocks_of_4x4(
-    src: &[u32],
-    dst: &mut [u32],
-    src_stride: usize,
-    dst_stride: usize,
-    x1: usize,
-    y1: usize,
-    x2: usize,
-    y2: usize,
-) {
-    unsafe {
-        for y in (y1..y2).step_by(4) {
-            let src_row = y * src_stride;
-            for x in (x1..x2).step_by(4) {
-                let block_x = src_row + x;
-                let block_y = x * dst_stride + y;
-                for i in 0..4 {
-                    for j in 0..4 {
-                        *dst.get_unchecked_mut(block_y + j * dst_stride + i) =
-                            *src.get_unchecked(block_x + i * src_stride + j);
-                    }
-                }
-            }
-        }
-    }
-}
-
-// #[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
-#[inline(always)]
-fn transpose_4x4(src: &[u32], dst: &mut [u32], src_stride: usize, dst_stride: usize) {
-    unsafe {
-        for i in 0..4 {
-            for j in 0..4 {
-                *dst.get_unchecked_mut(j * dst_stride + i) = *src.get_unchecked(i * src_stride + j);
-            }
-        }
-    }
-}
-
-// #[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
-#[inline(always)]
-fn transpose_8x8(src: &[u32], dst: &mut [u32], src_stride: usize, dst_stride: usize) {
-    unsafe {
-        for i in 0..8 {
-            for j in 0..8 {
-                *dst.get_unchecked_mut(j * dst_stride + i) = *src.get_unchecked(i * src_stride + j);
-            }
-        }
-    }
-}
-
-#[inline(always)]
-#[allow(clippy::too_many_arguments)]
-fn transpose_edges(
-    src: &[u32],
-    dst: &mut [u32],
-    cropped_height: usize,
-    cropped_width: usize,
-    src_stride: usize,
-    dst_stride: usize,
-    width: usize,
-    height: usize,
-) {
-    unsafe {
-        // Transpose the right edge
-        for x in cropped_width..width {
-            for y in 0..cropped_height {
-                *dst.get_unchecked_mut(x * dst_stride + y) = *src.get_unchecked(y * src_stride + x);
-            }
-        }
-
-        // Transpose the bottom edge
-        for y in cropped_height..height {
-            for x in 0..width {
-                *dst.get_unchecked_mut(x * dst_stride + y) = *src.get_unchecked(y * src_stride + x);
-            }
-        }
-    }
-}
-
-// Function for BitmapWindowMut
+/// Transpose a BitmapWindowMut from one orientation to another.
 pub fn bitmap_window_transpose(
     from: &mut BitmapWindowMut<u8>,
     to: &mut BitmapWindowMut<u8>,
@@ -583,27 +78,393 @@ pub fn bitmap_window_transpose(
         return Err(nerror!(ErrorKind::InvalidArgument, "Only BGRA layout is supported"));
     }
 
-    let from_slice = unsafe {
-        std::slice::from_raw_parts(
-            from.slice_mut().as_ptr() as *const u32,
-            from.slice_mut().len() / 4,
-        )
-    };
-    let to_slice = unsafe {
-        std::slice::from_raw_parts_mut(
-            to.slice_mut().as_mut_ptr() as *mut u32,
-            to.slice_mut().len() / 4,
-        )
-    };
-
     let from_stride = from.info().t_stride() as usize / 4;
     let to_stride = to.info().t_stride() as usize / 4;
     let width = from.w() as usize;
     let height = from.h() as usize;
 
+    let from_slice: &[u32] = bytemuck::cast_slice(from.get_slice());
+    let to_slice: &mut [u32] = bytemuck::cast_slice_mut(to.slice_mut());
+
     transpose_u32_slices(from_slice, to_slice, from_stride, to_stride, width, height)
         .map_err(|e| e.at(here!()))
 }
+
+// ---------------------------------------------------------------------------
+// Scalar fallback — always available, plain function (ScalarToken has no CPU features)
+// ---------------------------------------------------------------------------
+
+#[allow(clippy::too_many_arguments)]
+fn transpose_tiled_scalar(
+    _token: ScalarToken,
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    width: usize,
+    height: usize,
+    block_size: usize,
+) {
+    let cropped_h = (height / block_size) * block_size;
+    let cropped_w = (width / block_size) * block_size;
+
+    for y_block in (0..cropped_h).step_by(block_size) {
+        for x_block in (0..cropped_w).step_by(block_size) {
+            let max_y = y_block + block_size;
+            let max_x = x_block + block_size;
+            for y in (y_block..max_y).step_by(8) {
+                for x in (x_block..max_x).step_by(8) {
+                    scalar_transpose_8x8(src, dst, src_stride, dst_stride, x, y);
+                }
+            }
+        }
+    }
+
+    transpose_edges_scalar(src, dst, cropped_h, cropped_w, src_stride, dst_stride, width, height);
+}
+
+#[inline(always)]
+fn scalar_transpose_8x8(
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    x: usize,
+    y: usize,
+) {
+    for i in 0..8 {
+        for j in 0..8 {
+            dst[(x + j) * dst_stride + (y + i)] = src[(y + i) * src_stride + (x + j)];
+        }
+    }
+}
+
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn transpose_edges_scalar(
+    src: &[f32],
+    dst: &mut [f32],
+    cropped_height: usize,
+    cropped_width: usize,
+    src_stride: usize,
+    dst_stride: usize,
+    width: usize,
+    height: usize,
+) {
+    // Right edge
+    for x in cropped_width..width {
+        for y in 0..cropped_height {
+            dst[x * dst_stride + y] = src[y * src_stride + x];
+        }
+    }
+    // Bottom edge (full width)
+    for y in cropped_height..height {
+        for x in 0..width {
+            dst[x * dst_stride + y] = src[y * src_stride + x];
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// x86-64 AVX2 (V3 tier)
+// ---------------------------------------------------------------------------
+
+#[cfg(target_arch = "x86_64")]
+#[allow(clippy::too_many_arguments)]
+#[arcane]
+fn transpose_tiled_v3(
+    token: X64V3Token,
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    width: usize,
+    height: usize,
+    block_size: usize,
+) {
+    let cropped_h = (height / block_size) * block_size;
+    let cropped_w = (width / block_size) * block_size;
+
+    for y_block in (0..cropped_h).step_by(block_size) {
+        for x_block in (0..cropped_w).step_by(block_size) {
+            let max_y = y_block + block_size;
+            let max_x = x_block + block_size;
+            for y in (y_block..max_y).step_by(8) {
+                for x in (x_block..max_x).step_by(8) {
+                    avx2_transpose_8x8(token, src, dst, src_stride, dst_stride, x, y);
+                }
+            }
+        }
+    }
+
+    transpose_edges_scalar(src, dst, cropped_h, cropped_w, src_stride, dst_stride, width, height);
+}
+
+/// AVX2 8x8 transpose using f32 shuffle intrinsics (Highway-style 3-stage).
+/// Works on u32 data reinterpreted as f32 — no arithmetic, only lane permutation.
+#[cfg(target_arch = "x86_64")]
+#[rite]
+fn avx2_transpose_8x8(
+    _token: X64V3Token,
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    x: usize,
+    y: usize,
+) {
+    use std::arch::x86_64::{_mm256_loadu_ps, _mm256_storeu_ps};
+
+    // Loads/stores take raw pointers and remain unsafe even inside #[target_feature].
+    // The pointers are derived from valid slice references with bounds checked by the caller.
+    let load_row = |row: usize| -> __m256 {
+        unsafe { _mm256_loadu_ps(src[(row * src_stride + x)..].as_ptr()) }
+    };
+
+    // Load 8 rows of 8 floats each
+    let r0 = load_row(y);
+    let r1 = load_row(y + 1);
+    let r2 = load_row(y + 2);
+    let r3 = load_row(y + 3);
+    let r4 = load_row(y + 4);
+    let r5 = load_row(y + 5);
+    let r6 = load_row(y + 6);
+    let r7 = load_row(y + 7);
+
+    // Stage 1: interleave pairs within 128-bit lanes
+    let t0 = _mm256_unpacklo_ps(r0, r1);
+    let t1 = _mm256_unpackhi_ps(r0, r1);
+    let t2 = _mm256_unpacklo_ps(r2, r3);
+    let t3 = _mm256_unpackhi_ps(r2, r3);
+    let t4 = _mm256_unpacklo_ps(r4, r5);
+    let t5 = _mm256_unpackhi_ps(r4, r5);
+    let t6 = _mm256_unpacklo_ps(r6, r7);
+    let t7 = _mm256_unpackhi_ps(r6, r7);
+
+    // Stage 2: shuffle within 128-bit lanes
+    let s0 = _mm256_shuffle_ps::<0x44>(t0, t2);
+    let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2);
+    let s2 = _mm256_shuffle_ps::<0x44>(t1, t3);
+    let s3 = _mm256_shuffle_ps::<0xEE>(t1, t3);
+    let s4 = _mm256_shuffle_ps::<0x44>(t4, t6);
+    let s5 = _mm256_shuffle_ps::<0xEE>(t4, t6);
+    let s6 = _mm256_shuffle_ps::<0x44>(t5, t7);
+    let s7 = _mm256_shuffle_ps::<0xEE>(t5, t7);
+
+    // Stage 3: exchange 128-bit halves
+    let o0 = _mm256_permute2f128_ps::<0x20>(s0, s4);
+    let o1 = _mm256_permute2f128_ps::<0x20>(s1, s5);
+    let o2 = _mm256_permute2f128_ps::<0x20>(s2, s6);
+    let o3 = _mm256_permute2f128_ps::<0x20>(s3, s7);
+    let o4 = _mm256_permute2f128_ps::<0x31>(s0, s4);
+    let o5 = _mm256_permute2f128_ps::<0x31>(s1, s5);
+    let o6 = _mm256_permute2f128_ps::<0x31>(s2, s6);
+    let o7 = _mm256_permute2f128_ps::<0x31>(s3, s7);
+
+    // Store transposed rows
+    let mut store_row = |row: usize, v: __m256| {
+        unsafe { _mm256_storeu_ps(dst[(row * dst_stride + y)..].as_mut_ptr(), v) };
+    };
+    store_row(x, o0);
+    store_row(x + 1, o1);
+    store_row(x + 2, o2);
+    store_row(x + 3, o3);
+    store_row(x + 4, o4);
+    store_row(x + 5, o5);
+    store_row(x + 6, o6);
+    store_row(x + 7, o7);
+}
+
+// ---------------------------------------------------------------------------
+// ARM NEON (arm_v2 tier) — 4x4 composed into 8x8
+// ---------------------------------------------------------------------------
+
+#[cfg(target_arch = "aarch64")]
+#[allow(clippy::too_many_arguments)]
+#[arcane]
+fn transpose_tiled_arm_v2(
+    token: Arm64V2Token,
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    width: usize,
+    height: usize,
+    block_size: usize,
+) {
+    let cropped_h = (height / block_size) * block_size;
+    let cropped_w = (width / block_size) * block_size;
+
+    for y_block in (0..cropped_h).step_by(block_size) {
+        for x_block in (0..cropped_w).step_by(block_size) {
+            let max_y = y_block + block_size;
+            let max_x = x_block + block_size;
+            for y in (y_block..max_y).step_by(8) {
+                for x in (x_block..max_x).step_by(8) {
+                    neon_transpose_8x8(token, src, dst, src_stride, dst_stride, x, y);
+                }
+            }
+        }
+    }
+
+    transpose_edges_scalar(src, dst, cropped_h, cropped_w, src_stride, dst_stride, width, height);
+}
+
+/// NEON 4x4 transpose, composed 4 times for 8x8.
+#[cfg(target_arch = "aarch64")]
+#[rite]
+fn neon_transpose_8x8(
+    token: Arm64V2Token,
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    x: usize,
+    y: usize,
+) {
+    neon_transpose_4x4(token, src, dst, src_stride, dst_stride, x, y);
+    neon_transpose_4x4(token, src, dst, src_stride, dst_stride, x + 4, y);
+    neon_transpose_4x4(token, src, dst, src_stride, dst_stride, x, y + 4);
+    neon_transpose_4x4(token, src, dst, src_stride, dst_stride, x + 4, y + 4);
+}
+
+#[cfg(target_arch = "aarch64")]
+#[rite]
+fn neon_transpose_4x4(
+    _token: Arm64V2Token,
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    x: usize,
+    y: usize,
+) {
+    use std::arch::aarch64::{float32x4_t, vld1q_f32, vst1q_f32, vzip1q_f32, vzip2q_f32};
+
+    let load_row =
+        |row: usize| -> float32x4_t { vld1q_f32(src[(row * src_stride + x)..].as_ptr()) };
+
+    let r0 = load_row(y);
+    let r1 = load_row(y + 1);
+    let r2 = load_row(y + 2);
+    let r3 = load_row(y + 3);
+
+    let c0 = vzip1q_f32(r0, r2);
+    let c1 = vzip2q_f32(r0, r2);
+    let c2 = vzip1q_f32(r1, r3);
+    let c3 = vzip2q_f32(r1, r3);
+
+    let t0 = vzip1q_f32(c0, c2);
+    let t1 = vzip2q_f32(c0, c2);
+    let t2 = vzip1q_f32(c1, c3);
+    let t3 = vzip2q_f32(c1, c3);
+
+    let mut store_row = |row: usize, v: float32x4_t| {
+        vst1q_f32(dst[(row * dst_stride + y)..].as_mut_ptr(), v);
+    };
+    store_row(x, t0);
+    store_row(x + 1, t1);
+    store_row(x + 2, t2);
+    store_row(x + 3, t3);
+}
+
+// ---------------------------------------------------------------------------
+// WASM SIMD128 — 4x4 composed into 8x8
+// ---------------------------------------------------------------------------
+
+#[cfg(target_arch = "wasm32")]
+#[allow(clippy::too_many_arguments)]
+#[arcane]
+fn transpose_tiled_wasm128(
+    token: Wasm128Token,
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    width: usize,
+    height: usize,
+    block_size: usize,
+) {
+    let cropped_h = (height / block_size) * block_size;
+    let cropped_w = (width / block_size) * block_size;
+
+    for y_block in (0..cropped_h).step_by(block_size) {
+        for x_block in (0..cropped_w).step_by(block_size) {
+            let max_y = y_block + block_size;
+            let max_x = x_block + block_size;
+            for y in (y_block..max_y).step_by(8) {
+                for x in (x_block..max_x).step_by(8) {
+                    wasm_transpose_8x8(token, src, dst, src_stride, dst_stride, x, y);
+                }
+            }
+        }
+    }
+
+    transpose_edges_scalar(src, dst, cropped_h, cropped_w, src_stride, dst_stride, width, height);
+}
+
+#[cfg(target_arch = "wasm32")]
+#[rite]
+fn wasm_transpose_8x8(
+    token: Wasm128Token,
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    x: usize,
+    y: usize,
+) {
+    wasm_transpose_4x4(token, src, dst, src_stride, dst_stride, x, y);
+    wasm_transpose_4x4(token, src, dst, src_stride, dst_stride, x + 4, y);
+    wasm_transpose_4x4(token, src, dst, src_stride, dst_stride, x, y + 4);
+    wasm_transpose_4x4(token, src, dst, src_stride, dst_stride, x + 4, y + 4);
+}
+
+#[cfg(target_arch = "wasm32")]
+#[rite]
+fn wasm_transpose_4x4(
+    _token: Wasm128Token,
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    x: usize,
+    y: usize,
+) {
+    use std::arch::wasm32::{i32x4_shuffle, v128, v128_load, v128_store};
+
+    let load_row =
+        |row: usize| -> v128 { v128_load(src[(row * src_stride + x)..].as_ptr() as *const v128) };
+
+    let r0 = load_row(y);
+    let r1 = load_row(y + 1);
+    let r2 = load_row(y + 2);
+    let r3 = load_row(y + 3);
+
+    // First round: interleave
+    let s0 = i32x4_shuffle::<0, 4, 1, 5>(r0, r1);
+    let s1 = i32x4_shuffle::<2, 6, 3, 7>(r0, r1);
+    let s2 = i32x4_shuffle::<0, 4, 1, 5>(r2, r3);
+    let s3 = i32x4_shuffle::<2, 6, 3, 7>(r2, r3);
+
+    // Second round: final transpose
+    let t0 = i32x4_shuffle::<0, 1, 4, 5>(s0, s2);
+    let t1 = i32x4_shuffle::<2, 3, 6, 7>(s0, s2);
+    let t2 = i32x4_shuffle::<0, 1, 4, 5>(s1, s3);
+    let t3 = i32x4_shuffle::<2, 3, 6, 7>(s1, s3);
+
+    let mut store_row = |row: usize, v: v128| {
+        v128_store(dst[(row * dst_stride + y)..].as_mut_ptr() as *mut v128, v);
+    };
+    store_row(x, t0);
+    store_row(x + 1, t1);
+    store_row(x + 2, t2);
+    store_row(x + 3, t3);
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
@@ -668,7 +529,6 @@ mod tests {
     #[test]
     fn test_transpose_large_square_matrix() {
         let size = 256;
-
         let from: Vec<u32> = (0..size * size).map(|_| rand::random::<u32>()).collect();
         let mut to = vec![0; size * size];
 
@@ -685,7 +545,6 @@ mod tests {
     fn test_transpose_large_rectangular_matrix() {
         let width = 256;
         let height = 128;
-
         let from: Vec<u32> = (0..width * height).map(|_| rand::random::<u32>()).collect();
         let mut to = vec![0; width * height];
 
@@ -704,7 +563,6 @@ mod tests {
         let height = 100;
         let src_stride = 132;
         let dst_stride = 104;
-
         let from: Vec<u32> = (0..src_stride * height).map(|_| rand::random::<u32>()).collect();
         let mut to = vec![0; dst_stride * width];
 
@@ -720,7 +578,6 @@ mod tests {
     #[test]
     fn test_transpose_small_matrices() {
         let sizes = vec![(4, 4), (8, 8), (16, 16), (32, 32), (64, 64)];
-
         for (width, height) in sizes {
             let from: Vec<u32> = (0..width * height).map(|_| rand::random::<u32>()).collect();
             let mut to = vec![0; width * height];
@@ -737,19 +594,16 @@ mod tests {
 
     #[test]
     fn test_transpose_edge_cases() {
-        // Test 1x1 matrix
         let from = vec![42];
         let mut to = vec![0];
         transpose_u32_slices(&from, &mut to, 1, 1, 1, 1).unwrap();
         assert_eq!(to[0], 42);
 
-        // Test 1xN matrix
         let from = vec![1, 2, 3, 4, 5];
         let mut to = vec![0; 5];
         transpose_u32_slices(&from, &mut to, 5, 1, 5, 1).unwrap();
         assert_eq!(to, from);
 
-        // Test Nx1 matrix
         let from = vec![1, 2, 3, 4, 5];
         let mut to = vec![0; 5];
         transpose_u32_slices(&from, &mut to, 1, 5, 1, 5).unwrap();
@@ -761,72 +615,134 @@ mod tests {
         let from = vec![1, 2, 3, 4];
         let mut to = vec![0; 4];
 
-        // Test invalid from_stride
         assert!(transpose_u32_slices(&from, &mut to, 1, 2, 2, 2).is_err());
-
-        // Test invalid to_stride
         assert!(transpose_u32_slices(&from, &mut to, 2, 1, 2, 2).is_err());
-
-        // Test out of bounds access in from slice
         assert!(transpose_u32_slices(&from, &mut to, 3, 2, 3, 2).is_err());
-
-        // Test out of bounds access in to slice
         assert!(transpose_u32_slices(&from, &mut to, 2, 3, 2, 3).is_err());
     }
+
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_transpose_8x8_neon() {
-        // Create input matrix with obvious values
-        let input: [u32; 64] = [
-            0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 25, 26, 27,
-            30, 31, 32, 33, 34, 35, 36, 37, 40, 41, 42, 43, 44, 45, 46, 47, 50, 51, 52, 53, 54, 55,
-            56, 57, 60, 61, 62, 63, 64, 65, 66, 67, 70, 71, 72, 73, 74, 75, 76, 77,
+    fn test_transpose_all_dimensions() {
+        const TEST_DIMS: &[(usize, usize)] = &[
+            (1, 1),
+            (1, 2),
+            (2, 1),
+            (2, 2),
+            (3, 3),
+            (3, 5),
+            (5, 3),
+            (4, 4),
+            (7, 7),
+            (8, 8),
+            (16, 16),
+            (128, 128),
+            (7, 9),
+            (9, 7),
+            (15, 17),
+            (17, 15),
+            (127, 129),
+            (129, 127),
+            (13, 17),
+            (17, 13),
+            (127, 131),
+            (1, 128),
+            (128, 1),
+            (1, 255),
+            (255, 1),
+            (4, 100),
+            (100, 4),
+            (255, 255),
+            (256, 256),
+            (257, 257),
         ];
 
-        let mut output = [0u32; 64];
+        for &(w, h) in TEST_DIMS {
+            let from: Vec<u32> = (0..(w * h) as u32).collect();
+            let stride_src = w;
+            let stride_dst = h;
+            let mut to = vec![0u32; stride_dst * w];
 
-        unsafe {
-            transpose_8x8_neon(input.as_ptr(), output.as_mut_ptr(), 8, 8);
+            transpose_u32_slices(&from, &mut to, stride_src, stride_dst, w, h)
+                .unwrap_or_else(|e| panic!("Failed for ({w}, {h}): {e}"));
+
+            for y in 0..h {
+                for x in 0..w {
+                    assert_eq!(
+                        from[y * stride_src + x],
+                        to[x * stride_dst + y],
+                        "Mismatch at src[{y}][{x}] for dims ({w}, {h})"
+                    );
+                }
+            }
         }
-
-        // Expected transposed matrix
-        let expected: [u32; 64] = [
-            0, 10, 20, 30, 40, 50, 60, 70, 1, 11, 21, 31, 41, 51, 61, 71, 2, 12, 22, 32, 42, 52,
-            62, 72, 3, 13, 23, 33, 43, 53, 63, 73, 4, 14, 24, 34, 44, 54, 64, 74, 5, 15, 25, 35,
-            45, 55, 65, 75, 6, 16, 26, 36, 46, 56, 66, 76, 7, 17, 27, 37, 47, 57, 67, 77,
-        ];
-
-        assert_eq!(output, expected, "Transposed matrix does not match expected output");
     }
 
     #[test]
-    #[cfg(target_arch = "x86_64")]
-    fn test_transpose_8x8_avx2() {
-        if !is_x86_feature_detected!("avx2") {
-            println!("AVX2 not supported, skipping test");
-            return;
-        }
-
-        // Create input matrix with obvious values
-        let input: [u32; 64] = [
-            0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 25, 26, 27,
-            30, 31, 32, 33, 34, 35, 36, 37, 40, 41, 42, 43, 44, 45, 46, 47, 50, 51, 52, 53, 54, 55,
-            56, 57, 60, 61, 62, 63, 64, 65, 66, 67, 70, 71, 72, 73, 74, 75, 76, 77,
+    fn test_transpose_with_stride_padding() {
+        let dims: &[(usize, usize, usize, usize)] = &[
+            (8, 8, 10, 12),
+            (16, 16, 20, 24),
+            (13, 17, 15, 20),
+            (128, 128, 130, 132),
+            (129, 127, 132, 130),
         ];
 
-        let mut output = [0u32; 64];
+        for &(w, h, src_stride, dst_stride) in dims {
+            let from: Vec<u32> = (0..(src_stride * h) as u32).collect();
+            let mut to = vec![0u32; dst_stride * w];
 
-        unsafe {
-            transpose_8x8_avx2(input.as_ptr(), output.as_mut_ptr(), 8, 8);
+            transpose_u32_slices(&from, &mut to, src_stride, dst_stride, w, h).unwrap_or_else(
+                |e| panic!("Failed for ({w}, {h}, strides {src_stride},{dst_stride}): {e}"),
+            );
+
+            for y in 0..h {
+                for x in 0..w {
+                    assert_eq!(
+                        from[y * src_stride + x],
+                        to[x * dst_stride + y],
+                        "Mismatch at src[{y}][{x}] for dims ({w}, {h}), strides ({src_stride}, {dst_stride})"
+                    );
+                }
+            }
         }
+    }
 
-        // Expected transposed matrix
-        let expected: [u32; 64] = [
-            0, 10, 20, 30, 40, 50, 60, 70, 1, 11, 21, 31, 41, 51, 61, 71, 2, 12, 22, 32, 42, 52,
-            62, 72, 3, 13, 23, 33, 43, 53, 63, 73, 4, 14, 24, 34, 44, 54, 64, 74, 5, 15, 25, 35,
-            45, 55, 65, 75, 6, 16, 26, 36, 46, 56, 66, 76, 7, 17, 27, 37, 47, 57, 67, 77,
-        ];
+    #[test]
+    fn test_transpose_roundtrip() {
+        let dims: &[(usize, usize)] =
+            &[(1, 1), (7, 13), (8, 8), (16, 16), (128, 128), (255, 255), (129, 127)];
 
-        assert_eq!(output, expected, "Transposed matrix does not match expected output");
+        for &(w, h) in dims {
+            let original: Vec<u32> = (0..(w * h) as u32).collect();
+            let mut transposed = vec![0u32; w * h];
+            let mut roundtripped = vec![0u32; w * h];
+
+            transpose_u32_slices(&original, &mut transposed, w, h, w, h).unwrap();
+            transpose_u32_slices(&transposed, &mut roundtripped, h, w, h, w).unwrap();
+
+            assert_eq!(original, roundtripped, "Roundtrip failed for dims ({w}, {h})");
+        }
+    }
+
+    #[test]
+    fn test_transpose_preserves_values() {
+        let w = 131;
+        let h = 97;
+        let from: Vec<u32> = (0..(w * h) as u32).collect();
+        let mut to = vec![0u32; w * h];
+
+        transpose_u32_slices(&from, &mut to, w, h, w, h).unwrap();
+
+        for y in 0..h {
+            for x in 0..w {
+                let expected_val = (y * w + x) as u32;
+                assert_eq!(from[y * w + x], expected_val);
+                assert_eq!(
+                    to[x * h + y],
+                    expected_val,
+                    "Value {expected_val} not at expected position dst[{x}][{y}]"
+                );
+            }
+        }
     }
 }

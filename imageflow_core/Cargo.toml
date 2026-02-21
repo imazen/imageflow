@@ -68,6 +68,8 @@ imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 imageflow_c_components = { path = "../c_components" }
 mozjpeg = "0.10"
 multiversion = "0.8"
+archmage = { version = "0.8", features = ["macros", "safe_unaligned_simd"] }
+safe_unaligned_simd = "0.2"
 
 mozjpeg-sys = {version = "2", features = ["nasm_simd"]}
 
