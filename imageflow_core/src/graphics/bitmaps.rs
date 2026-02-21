@@ -1646,7 +1646,9 @@ impl<'a> BitmapWindowMut<'a, u8> {
 
                 // TODO: if alpha might be random, we should clear it if self.info.alpha_meaningful(){
 
-                for (y, stride_row) in self.slice.chunks(self.info().t_stride() as usize).enumerate() {
+                for (y, stride_row) in
+                    self.slice.chunks(self.info().t_stride() as usize).enumerate()
+                {
                     for x in 0..w {
                         v[y * w + x].b = stride_row[x * 4];
                         v[y * w + x].g = stride_row[x * 4 + 1];

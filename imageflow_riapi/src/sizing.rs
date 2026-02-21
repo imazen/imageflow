@@ -130,12 +130,10 @@ impl AspectRatio {
         let mut snap_amount = 1f64 - f64::EPSILON;
         if let Some(target) = potential_rounding_target {
             if !basis_is_width {
-                let loss_x =
-                    self.rounding_loss_based_on_target_width(target.w);
+                let loss_x = self.rounding_loss_based_on_target_width(target.w);
                 snap_amount = loss_x;
             } else {
-                let loss_y =
-                    self.rounding_loss_based_on_target_height(target.h);
+                let loss_y = self.rounding_loss_based_on_target_height(target.h);
                 snap_amount = loss_y;
             }
         }

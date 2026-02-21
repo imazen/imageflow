@@ -648,9 +648,8 @@ fn build_auto_encoder_details(
     let final_pixel_count =
         final_bitmap.info().width() as u64 * final_bitmap.info().height() as u64;
 
-    let source_mime_format = source_image_info
-        .as_ref()
-        .and_then(|i| OutputImageFormat::parse(&i.preferred_mime_type));
+    let source_mime_format =
+        source_image_info.as_ref().and_then(|i| OutputImageFormat::parse(&i.preferred_mime_type));
 
     let needs_animation = source_image_info.as_ref().map(|i| i.multiple_frames).unwrap_or(false);
 

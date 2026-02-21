@@ -198,7 +198,9 @@ impl IoProxy {
     /// Only valid as long as the life of the IoProxy is the same as the life of the Context, 'b
     pub fn get_output_buffer_bytes<'b>(&self, c: &'b Context) -> Result<&'b [u8]> {
         match &self.backend {
-            IoBackend::WriteVec(v) => Ok(unsafe { std::mem::transmute::<&[u8], &[u8]>(v.get_ref().as_slice()) }),
+            IoBackend::WriteVec(v) => {
+                Ok(unsafe { std::mem::transmute::<&[u8], &[u8]>(v.get_ref().as_slice()) })
+            }
             _ => Err(nerror!(
                 ErrorKind::InvalidOperation,
                 "get_output_buffer_bytes only works on output buffers"

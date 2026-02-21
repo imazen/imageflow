@@ -348,10 +348,8 @@ impl CmdBuild {
             });
         }
 
-        let builder_config = s::Build001Config {
-            security,
-            ..before.builder_config.clone().unwrap_or_default()
-        };
+        let builder_config =
+            s::Build001Config { security, ..before.builder_config.clone().unwrap_or_default() };
         Ok(s::Build001 { builder_config: Some(builder_config), ..before })
     }
     fn parse_maybe(
