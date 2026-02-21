@@ -316,24 +316,21 @@ pub fn zip_directory_non_recursive<P: AsRef<Path>>(
     )?;
     let entries = std::fs::read_dir(dir.as_ref()).unwrap();
 
-    for entry_maybe in entries {
-        if let Ok(entry) = entry_maybe {
-            let file_name = entry.file_name().into_string().unwrap();
-            if file_name.starts_with('.') {
-                //skipping
-            } else if entry.path().is_file() {
-                let mut file = File::open(entry.path()).unwrap();
-                let mut contents = Vec::new();
-                file.read_to_end(&mut contents).unwrap();
+    for entry in entries.flatten() {
+        let file_name = entry.file_name().into_string().unwrap();
+        if file_name.starts_with('.') {
+            //skipping
+        } else if entry.path().is_file() {
+            let mut file = File::open(entry.path()).unwrap();
+            let mut contents = Vec::new();
+            file.read_to_end(&mut contents).unwrap();
 
-                let options = zip::write::SimpleFileOptions::default()
-                    .compression_method(zip::CompressionMethod::Stored);
+            let options = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored);
 
-                zip.start_file(file_name, options)?;
-                zip.write_all(&contents)?;
-            }
+            zip.start_file(file_name, options)?;
+            zip.write_all(&contents)?;
         }
-        //println!("Name: {}", path.unwrap().path().display())
     }
 
     zip.finish()?;

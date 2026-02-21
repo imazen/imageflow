@@ -117,10 +117,8 @@ impl LibClient {
             if let s::Node::Encode { ref io_id, .. } = *node {
                 context.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
             }
-            if let s::Node::CommandString { ref encode, .. } = *node {
-                if let Some(io_id) = *encode {
-                    context.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
-                }
+            if let s::Node::CommandString { encode: Some(io_id), .. } = *node {
+                context.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
             }
         }
 
