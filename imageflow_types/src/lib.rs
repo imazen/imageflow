@@ -308,7 +308,7 @@ impl fmt::Display for OutputImageFormat {
 }
 
 impl OutputImageFormat {
-    pub fn from_str(s: &str) -> Option<OutputImageFormat> {
+    pub fn parse(s: &str) -> Option<OutputImageFormat> {
         // case insensitive
         match s {
             _ if s.eq_ignore_ascii_case("webp") => Some(OutputImageFormat::Webp),
@@ -681,7 +681,7 @@ impl fmt::Display for QualityProfile {
 
 impl QualityProfile {
     /// Returns the quality profile as a string, or None if it is not a valid quality profile
-    pub fn from_str(text: &str) -> Option<QualityProfile> {
+    pub fn parse(text: &str) -> Option<QualityProfile> {
         match text {
             _ if text.eq_ignore_ascii_case("lowest") => Some(QualityProfile::Lowest),
             _ if text.eq_ignore_ascii_case("low") => Some(QualityProfile::Low),
@@ -696,7 +696,7 @@ impl QualityProfile {
             _ if text.eq_ignore_ascii_case("lossless") => Some(QualityProfile::Lossless),
             v => {
                 if let Ok(v) = v.parse::<f32>() {
-                    return Some(QualityProfile::Percent(f32::min(100.0, f32::max(0.0, v))));
+                    return Some(QualityProfile::Percent(v.clamp(0.0, 100.0)));
                 }
                 None
             }
@@ -1452,19 +1452,13 @@ impl Build001GraphRecording {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct Build001Config {
     // pub process_all_gif_frames: Option<bool>,
     pub graph_recording: Option<Build001GraphRecording>,
     pub security: Option<ExecutionSecurity>,
-}
-
-impl Default for Build001Config {
-    fn default() -> Self {
-        Build001Config { graph_recording: None, security: None }
-    }
 }
 
 /// Represents a complete build job, combining IO objects with a framewise operation graph.

@@ -260,7 +260,7 @@ fn main() {
     .iter()
     {
         let value = results.get::<str>(name).unwrap().to_owned().unwrap();
-        let line = format!("pub static {}: &'static str = {:?};\n", name, &value);
+        let line = format!("pub static {}: &str = {:?};\n", name, &value);
         contents += &line;
     }
 
