@@ -239,7 +239,6 @@ pub enum ScalingColorspace {
 
 }
 #[rustfmt::skip]
-
 pub static IR4_KEYS: [&str;100] = [
     "mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
@@ -305,6 +304,7 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
         let k = key.to_lowercase(); //Trim whitespace?
         let v = value.into_owned();
 
+        #[allow(clippy::map_entry)]
         if map.contains_key(&k) {
             warnings.push(ParseWarning::DuplicateKey((k, v)));
         } else if !IR4_KEYS.contains(&k.as_str()) {
@@ -333,7 +333,7 @@ pub(crate) fn iter_all_eq<T: PartialEq>(iter: impl IntoIterator<Item = T>) -> Op
 }
 
 impl Instructions {
-    fn to_string_internal(&self) -> String {
+    fn to_string_internal(self) -> String {
         let mut s = String::with_capacity(100);
         let mut vec = Vec::new();
         for (k, v) in self.to_map() {
@@ -360,8 +360,8 @@ impl Instructions {
         where
             T: fmt::Display,
         {
-            if value.is_some() {
-                m.insert(key, format!("{}", value.unwrap()));
+            if let Some(v) = value {
+                m.insert(key, format!("{}", v));
             }
         }
         fn flip_str(f: Option<(bool, bool)>) -> Option<String> {
@@ -699,8 +699,8 @@ impl<'a> Parser<'a> {
 
     fn apply_srcset(&mut self, i: &mut Instructions) {
         if let Some(srcset) = self.remove("srcset").or_else(|| self.remove("short")) {
-            if self.w.is_some() {
-                apply_srcset_string(i, &srcset, self.w.as_mut().unwrap());
+            if let Some(w) = &mut self.w {
+                apply_srcset_string(i, &srcset, w);
             } else {
                 let mut w = Vec::new();
                 apply_srcset_string(i, &srcset, &mut w);
@@ -709,8 +709,8 @@ impl<'a> Parser<'a> {
     }
 
     fn warn(&mut self, warning: ParseWarning) {
-        if self.w.is_some() {
-            self.w.as_mut().unwrap().push(warning);
+        if let Some(w) = &mut self.w {
+            w.push(warning);
         }
     }
     fn warning_parse<F, T, E>(&mut self, key: &'static str, f: F) -> Option<T>
@@ -728,8 +728,8 @@ impl<'a> Parser<'a> {
                         (None, false) // We assume an error means the value wasn't supported
                     }
                     Ok((v, w, supported)) => {
-                        if w.is_some() {
-                            self.warn(w.unwrap());
+                        if let Some(w) = w {
+                            self.warn(w);
                         }
                         (Some(v), supported)
                     }
@@ -905,7 +905,7 @@ impl<'a> Parser<'a> {
             if value.eq_ignore_ascii_case("quality") {
                 return Ok(quality.map(|v| QualityProfile::Percent(v as f32)));
             }
-            match QualityProfile::from_str(value) {
+            match QualityProfile::parse(value) {
                 Some(v) => Ok(Some(v)),
                 None => Err(QualityProfile::HELP_TEXT),
             }
@@ -1057,11 +1057,11 @@ impl<'a> Parser<'a> {
         })
     }
     fn parse_format(&mut self, key: &'static str) -> Option<OutputFormat> {
-        self.parse(key, |value| OutputFormat::from_str(value))
+        self.parse(key, OutputFormat::from_str)
     }
 
     fn parse_color_srgb(&mut self, key: &'static str) -> Option<Color32> {
-        self.parse(key, |value| parse_color_hex_or_named(value))
+        self.parse(key, parse_color_hex_or_named)
     }
 
     fn parse_anchor(&mut self, key: &'static str) -> Option<(Anchor1D, Anchor1D)> {

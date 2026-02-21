@@ -128,14 +128,14 @@ impl AspectRatio {
 
         //eprintln!("proportional: self: {:?} basis: {:?} basis_is_width: {:?} potential_rounding_target: {:?}", self, basis, basis_is_width, potential_rounding_target);
         let mut snap_amount = 1f64 - f64::EPSILON;
-        if potential_rounding_target.is_some() {
+        if let Some(target) = potential_rounding_target {
             if !basis_is_width {
                 let loss_x =
-                    self.rounding_loss_based_on_target_width(potential_rounding_target.unwrap().w);
+                    self.rounding_loss_based_on_target_width(target.w);
                 snap_amount = loss_x;
             } else {
                 let loss_y =
-                    self.rounding_loss_based_on_target_height(potential_rounding_target.unwrap().h);
+                    self.rounding_loss_based_on_target_height(target.h);
                 snap_amount = loss_y;
             }
         }
@@ -143,11 +143,11 @@ impl AspectRatio {
         // full precision
         let ratio = self.ratio_f64();
         let snap_a = if basis_is_width { self.h } else { self.w };
-        let snap_b = if potential_rounding_target.is_some() {
+        let snap_b = if let Some(target) = potential_rounding_target {
             if basis_is_width {
-                potential_rounding_target.unwrap().h
+                target.h
             } else {
-                potential_rounding_target.unwrap().w
+                target.w
             }
         } else {
             snap_a
@@ -168,7 +168,7 @@ impl AspectRatio {
         } else {
             let rounded = float.round();
             // We replace 0 with 1.
-            if rounded <= f64::from(std::i32::MIN) || rounded >= f64::from(std::i32::MAX) {
+            if rounded <= f64::from(i32::MIN) || rounded >= f64::from(i32::MAX) {
                 Err(LayoutError::ValueScalingFailed { ratio, basis, invalid_result: rounded })
             } else {
                 Ok(rounded as i32)

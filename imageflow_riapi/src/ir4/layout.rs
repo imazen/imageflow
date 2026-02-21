@@ -671,7 +671,7 @@ impl Ir4Layout {
     }
 
     fn gravity1d(align_percentage: f32, inner: i32, outer: i32) -> std::result::Result<i32, ()> {
-        let ratio = f32::min(100f32, f32::max(0f32, align_percentage)) / 100f32;
+        let ratio = align_percentage.clamp(0f32, 100f32) / 100f32;
         if outer < inner && inner < 1 || outer < 1 {
             Err(())
         } else {
