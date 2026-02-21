@@ -1581,12 +1581,10 @@ impl<'a> BitmapWindowMut<'a, u8> {
         if self.info().t_per_pixel() != 4 || !self.slice.len().is_multiple_of(4) {
             return None;
         }
-        unsafe {
-            Some(core::slice::from_raw_parts_mut(
-                self.slice.as_mut_ptr() as *mut rgb::alt::BGRA8,
-                (self.slice.len() / 4).min(self.info.w as usize),
-            ))
-        }
+        let w = self.info.w as usize;
+        let pixels = bytemuck::cast_slice_mut::<u8, rgb::alt::BGRA8>(self.slice);
+        let len = pixels.len().min(w);
+        Some(&mut pixels[..len])
     }
 
     pub fn get_pixel_bgra8(&self, x: u32, y: u32) -> Option<rgb::alt::BGRA<u8>> {
@@ -1629,43 +1627,6 @@ where
     }
 }
 
-impl<'a> BitmapWindowMut<'a, u8> {
-    /// # Safety
-    /// The underlying bitmap must contain valid pixel data in BGRA layout.
-    pub unsafe fn to_vec_rgba(&self) -> Result<(Vec<rgb::RGBA8>, usize, usize), FlowError> {
-        let w = self.w() as usize;
-        let h = self.h() as usize;
-
-        match &self.info().compose() {
-            BitmapCompositing::ReplaceSelf | BitmapCompositing::BlendWithSelf => {
-                let mut v = vec![rgb::RGBA8::new(0, 0, 0, 255); w * h];
-
-                if self.info().t_per_pixel() != 4 || !self.slice.len().is_multiple_of(4) {
-                    return Err(unimpl!("Only Bgr(a)32 supported"));
-                }
-
-                // TODO: if alpha might be random, we should clear it if self.info.alpha_meaningful(){
-
-                for (y, stride_row) in
-                    self.slice.chunks(self.info().t_stride() as usize).enumerate()
-                {
-                    for x in 0..w {
-                        v[y * w + x].b = stride_row[x * 4];
-                        v[y * w + x].g = stride_row[x * 4 + 1];
-                        v[y * w + x].r = stride_row[x * 4 + 2];
-                        v[y * w + x].a = stride_row[x * 4 + 3];
-                    }
-                }
-
-                Ok((v, w, h))
-            }
-            BitmapCompositing::BlendWithMatte(c) => {
-                let matte = c.clone().to_color_32().unwrap().to_rgba8();
-                Ok((vec![matte; w * h], w, h))
-            }
-        }
-    }
-}
 pub trait BitmapRowAccess {
     fn row_bgra8(&self, row_ix: usize, stride: usize) -> Option<&[BGRA8]>;
     fn row_rgba8(&self, row_ix: usize, stride: usize) -> Option<&[RGBA8]>;
@@ -1716,9 +1677,8 @@ impl BitmapRowAccess for Vec<u8> {
     fn row_grayalpha8(&self, row_ix: usize, stride: usize) -> Option<&[GrayA<u8>]> {
         let start = row_ix.checked_mul(stride)?;
         let row = self.get(start..start.checked_add(stride)?)?;
-        // TODO(rgb-0.8.91): Change back to try_cast_slice(row).ok() when GrayA has Pod impl
-        // In rgb 0.8.52, GrayA doesn't implement Pod, so we use unsafe pointer casting.
-        // This is safe because GrayA<u8> is repr(C) and consists of two u8 values.
+        // TODO(rgb-0.8.91): replace with try_cast_slice(row).ok() when GrayA implements bytemuck::Pod
+        // GrayA<u8> is repr(C) with two u8 fields — safe to reinterpret from &[u8].
         if row.len() % 2 != 0 {
             return None;
         }
@@ -1758,9 +1718,8 @@ impl BitmapRowAccess for Vec<u8> {
     fn row_mut_grayalpha8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [GrayA<u8>]> {
         let start = row_ix.checked_mul(stride)?;
         let row = self.get_mut(start..start.checked_add(stride)?)?;
-        // TODO(rgb-0.8.91): Change back to try_cast_slice_mut(row).ok() when GrayA has Pod impl
-        // In rgb 0.8.52, GrayA doesn't implement Pod, so we use unsafe pointer casting.
-        // This is safe because GrayA<u8> is repr(C) and consists of two u8 values.
+        // TODO(rgb-0.8.91): replace with try_cast_slice_mut(row).ok() when GrayA implements bytemuck::Pod
+        // GrayA<u8> is repr(C) with two u8 fields — safe to reinterpret from &mut [u8].
         if row.len() % 2 != 0 {
             return None;
         }
