@@ -9,47 +9,90 @@ use itertools::Itertools;
 use std::time::Duration;
 
 fn benchmark_transpose(ctx: &mut Criterion) {
-    for w in (1000u32..3000u32).step_by(1373) {
-        for h in (1000u32..3000u32).step_by(1373) {
-            let mut a = Bitmap::create_u8(
-                w,
-                h,
-                PixelLayout::BGRA,
-                true,
-                true,
-                ColorSpace::StandardRGB,
-                BitmapCompositing::ReplaceSelf,
-            )
-            .unwrap();
-            let mut b = Bitmap::create_u8(
-                h,
-                w,
-                PixelLayout::BGRA,
-                true,
-                true,
-                ColorSpace::StandardRGB,
-                BitmapCompositing::ReplaceSelf,
-            )
-            .unwrap();
-            let mut a_window = a.get_window_u8().unwrap();
-            let mut b_window = b.get_window_u8().unwrap();
+    let sizes: &[(u32, u32)] = &[
+        (1000, 1000),
+        (1000, 2373),
+        (2373, 1000),
+        (2373, 2373),
+        (3840, 2160), // 4K
+        (7680, 4320), // 8K
+    ];
 
-            a_window
-                .fill_rect(0, 0, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string())))
+    for &(w, h) in sizes {
+        let mut a = Bitmap::create_u8(
+            w,
+            h,
+            PixelLayout::BGRA,
+            true,
+            true,
+            ColorSpace::StandardRGB,
+            BitmapCompositing::ReplaceSelf,
+        )
+        .unwrap();
+        let mut b = Bitmap::create_u8(
+            h,
+            w,
+            PixelLayout::BGRA,
+            true,
+            true,
+            ColorSpace::StandardRGB,
+            BitmapCompositing::ReplaceSelf,
+        )
+        .unwrap();
+        let mut a_window = a.get_window_u8().unwrap();
+        let mut b_window = b.get_window_u8().unwrap();
+
+        a_window
+            .fill_rect(0, 0, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string())))
+            .unwrap();
+
+        let mut group = ctx.benchmark_group(&format!("transpose w={} && h={}", w, h));
+        group.measurement_time(Duration::from_secs(3));
+
+        group.bench_function("Rust", |bencher| {
+            bencher.iter(|| {
+                imageflow_core::graphics::transpose::bitmap_window_transpose(
+                    &mut a_window,
+                    &mut b_window,
+                )
                 .unwrap();
+            })
+        });
 
-            let mut group = ctx.benchmark_group(&format!("transpose w={} && h={}", w, h));
+        group.finish();
+    }
+}
+
+/// Benchmark transpose with different cache tile block sizes to find the optimum.
+/// Not included in the default criterion group — run manually:
+///   cargo bench -p imageflow_core -- "transpose_blk"
+#[allow(dead_code)]
+fn benchmark_transpose_block_sizes(_ctx: &mut Criterion) {
+    {
+        use imageflow_core::graphics::transpose::transpose_u32_slices_with_block_size;
+
+        let sizes: &[(usize, usize)] = &[
+            (2373, 2373),
+            (3840, 2160), // 4K
+            (7680, 4320), // 8K
+        ];
+        let block_sizes: &[usize] = &[8, 16, 24, 32, 48, 64, 96, 128, 192, 256];
+
+        for &(w, h) in sizes {
+            let from: Vec<u32> = (0..(w * h) as u32).collect();
+            let mut to = vec![0u32; w * h];
+
+            let mut group = _ctx.benchmark_group(&format!("transpose_blk {w}x{h}"));
             group.measurement_time(Duration::from_secs(3));
 
-            group.bench_function("Rust", |bencher| {
-                bencher.iter(|| {
-                    imageflow_core::graphics::transpose::bitmap_window_transpose(
-                        &mut a_window,
-                        &mut b_window,
-                    )
-                    .unwrap();
-                })
-            });
+            for &bs in block_sizes {
+                group.bench_function(&format!("bs={bs}"), |bencher| {
+                    bencher.iter(|| {
+                        transpose_u32_slices_with_block_size(&from, &mut to, w, h, w, h, bs)
+                            .unwrap();
+                    })
+                });
+            }
 
             group.finish();
         }
