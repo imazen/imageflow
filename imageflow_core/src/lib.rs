@@ -88,7 +88,6 @@ mod internal_prelude {
         pub extern crate petgraph;
         pub extern crate serde;
         pub extern crate serde_json;
-        pub extern crate time;
     }
     #[doc(hidden)]
     pub mod imageflow_core_all {
