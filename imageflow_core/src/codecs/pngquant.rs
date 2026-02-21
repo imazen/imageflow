@@ -71,6 +71,8 @@ impl Encoder for PngquantEncoder {
         let (w, h) = window.size_usize();
 
         let error = {
+            // SAFETY: w and h match the bitmap dimensions, and the callback
+            // only reads from the valid window rows within those bounds.
             let mut img = unsafe {
                 imagequant::Image::new_fn(
                     &self.liq,
@@ -89,8 +91,8 @@ impl Encoder for PngquantEncoder {
                     h,
                     0.0,
                 )
-                .map_err(|e| crate::FlowError::from(e).at(here!()))?
-            };
+            }
+            .map_err(|e| crate::FlowError::from(e).at(here!()))?;
             match self.liq.quantize(&mut img) {
                 Ok(mut res) => {
                     res.set_dithering_level(1.).unwrap();

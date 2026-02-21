@@ -59,11 +59,9 @@ fn apply_mappings(
     }
     for mut line in bitmap.scanlines() {
         for pixel in line.row_mut() {
-            unsafe {
-                pixel.r = *map_red.get_unchecked(pixel.r as usize);
-                pixel.g = *map_green.get_unchecked(pixel.g as usize);
-                pixel.b = *map_blue.get_unchecked(pixel.b as usize);
-            }
+            pixel.r = map_red[pixel.r as usize];
+            pixel.g = map_green[pixel.g as usize];
+            pixel.b = map_blue[pixel.b as usize];
         }
     }
     Ok(())
