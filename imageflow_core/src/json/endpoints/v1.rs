@@ -684,38 +684,39 @@ fn test_handler() {
 
     let output_io = IoObject { io_id: 1, direction: IoDirection::Out, io: IoEnum::OutputBuffer };
 
-    let mut steps = vec![];
-    steps.push(Node::Decode { io_id: 0, commands: None });
-    steps.push(Node::Resample2D { w: 20, h: 30, hints: None });
-    steps.push(Node::FlipV);
-    steps.push(Node::FlipH);
-    steps.push(Node::Rotate90);
-    steps.push(Node::Rotate180);
-    steps.push(Node::Rotate270);
-    steps.push(Node::Transpose);
-    steps.push(Node::ExpandCanvas {
-        top: 2,
-        left: 3,
-        bottom: 4,
-        right: 5,
-        color: Color::Srgb(ColorSrgb::Hex("aeae22".to_owned())),
-    });
-    steps.push(Node::FillRect {
-        x1: 0,
-        x2: 10,
-        y1: 0,
-        y2: 10,
-        color: Color::Srgb(ColorSrgb::Hex("ffee00".to_owned())),
-    });
-    steps.push(Node::Encode {
-        io_id: 1,
-        preset: EncoderPreset::LibjpegTurbo {
-            quality: Some(90),
-            optimize_huffman_coding: None,
-            progressive: None,
-            matte: None,
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Resample2D { w: 20, h: 30, hints: None },
+        Node::FlipV,
+        Node::FlipH,
+        Node::Rotate90,
+        Node::Rotate180,
+        Node::Rotate270,
+        Node::Transpose,
+        Node::ExpandCanvas {
+            top: 2,
+            left: 3,
+            bottom: 4,
+            right: 5,
+            color: Color::Srgb(ColorSrgb::Hex("aeae22".to_owned())),
         },
-    });
+        Node::FillRect {
+            x1: 0,
+            x2: 10,
+            y1: 0,
+            y2: 10,
+            color: Color::Srgb(ColorSrgb::Hex("ffee00".to_owned())),
+        },
+        Node::Encode {
+            io_id: 1,
+            preset: EncoderPreset::LibjpegTurbo {
+                quality: Some(90),
+                optimize_huffman_coding: None,
+                progressive: None,
+                matte: None,
+            },
+        },
+    ];
 
     let build = Build001 {
         builder_config: Some(Build001Config {

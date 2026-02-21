@@ -110,6 +110,8 @@ pub(crate) fn uchar_clamp_ff(clr: f32) -> u8 {
 
 #[inline]
 #[allow(non_snake_case)]
+/// # Safety
+/// `bgr` must point to a valid, writable array of at least 3 f32 values (B, G, R).
 pub unsafe fn linear_to_luv(bgr: *mut f32) {
     let xn: f32 = 0.312713f32;
     let yn: f32 = 0.329016f32;
@@ -146,6 +148,8 @@ pub unsafe fn linear_to_luv(bgr: *mut f32) {
 }
 #[inline]
 #[allow(non_snake_case)]
+/// # Safety
+/// `luv` must point to a valid, writable array of at least 3 f32 values (L, U, V).
 pub unsafe fn luv_to_linear(luv: *mut f32) {
     let L: f32 = *luv.offset(0);
     let U: f32 = *luv.offset(1) - 100.0f32;

@@ -41,7 +41,7 @@ impl WatermarkDef {
             Some(imageflow_types::WatermarkConstraintBox::ImagePercentage { x1, y1, x2, y2 })
             | Some(imageflow_types::WatermarkConstraintBox::CanvasPercentage { x1, y1, x2, y2 }) => {
                 fn to_pixels(percent: f32, canvas: u32) -> i32 {
-                    let ratio = f32::min(100f32, f32::max(0f32, percent)) / 100f32;
+                    let ratio = percent.clamp(0f32, 100f32) / 100f32;
                     (ratio * canvas as f32).round() as i32
                 }
                 let x1 = to_pixels(x1, w);
@@ -57,7 +57,7 @@ impl WatermarkDef {
         }
     }
     fn gravity1d(align_percentage: f32, inner: i32, outer: i32) -> Result<i32> {
-        let ratio = f32::min(100f32, f32::max(0f32, align_percentage)) / 100f32;
+        let ratio = align_percentage.clamp(0f32, 100f32) / 100f32;
         if outer < inner && inner < 1 || outer < 1 {
             Err(nerror!(ErrorKind::InvalidNodeParams, "Watermark fit_box does not work"))
         } else {
@@ -163,7 +163,7 @@ impl NodeDefOneInputExpand for WatermarkDef {
                         }));
                     }
 
-                    let opacity = f32::max(0f32, f32::min(1f32, watermark.opacity.unwrap_or(1f32)));
+                    let opacity = watermark.opacity.unwrap_or(1f32).clamp(0f32, 1f32);
                     if opacity < 1f32 {
                         //ColorFilterSrgb pushes the EnableTransparency node if Alpha is used, so we don't need to do that here
                         b.push(Node::from(imageflow_types::Node::ColorFilterSrgb(

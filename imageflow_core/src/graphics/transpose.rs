@@ -456,6 +456,7 @@ fn transpose_8x8_simd(input: [Simd<u32, 8>; 8]) -> [Simd<u32, 8>; 8] {
 
 #[cfg(not(feature = "nightly"))]
 #[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
+#[allow(clippy::too_many_arguments)]
 fn transpose_in_blocks_of_8x8_scalar(
     src: &[u32],
     dst: &mut [u32],
@@ -485,6 +486,7 @@ fn transpose_in_blocks_of_8x8_scalar(
 }
 
 #[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
+#[allow(clippy::too_many_arguments)]
 fn transpose_in_blocks_of_4x4(
     src: &[u32],
     dst: &mut [u32],
@@ -537,6 +539,7 @@ fn transpose_8x8(src: &[u32], dst: &mut [u32], src_stride: usize, dst_stride: us
 }
 
 #[inline(always)]
+#[allow(clippy::too_many_arguments)]
 fn transpose_edges(
     src: &[u32],
     dst: &mut [u32],

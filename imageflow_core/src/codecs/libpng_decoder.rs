@@ -169,8 +169,8 @@ impl PngDec {
                 if err.kind() == ::std::io::ErrorKind::UnexpectedEof {
                     let len = decoder.io.try_get_length();
                     let pos = decoder.io.try_get_position();
-                    let remaining = if len.is_some() && pos.is_some() {
-                        Some(len.unwrap() as i64 - pos.unwrap() as i64)
+                    let remaining = if let (Some(len), Some(pos)) = (len, pos) {
+                        Some(len as i64 - pos as i64)
                     } else {
                         None
                     };

@@ -100,8 +100,8 @@ impl<T> AddRemoveSet<T> {
         IterAddRemoveSet { inner: self.inner.iter() }
     }
 
-    /// Ok(None) means it definitely doesn't exist in the set
-    /// Err() means we couldn't access all the items in
+    // Ok(None) means it definitely doesn't exist in the set
+    // Err() means we couldn't access all the items in
     //    pub fn get_reference(&self, ptr: *const T) -> Result<Option<&T>,BorrowMutError>{
     //        self.iter().find(|r| if let Ok(reference) = r { reference as *const T == ptr } else {false}).map(|v| Some(v)).unwrap_or(Ok(None))
     //    }

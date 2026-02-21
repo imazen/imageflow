@@ -9,6 +9,7 @@ use imageflow_types::{CompositingMode, PixelFormat, PixelLayout};
 
 use super::bitmaps::Bitmap;
 
+#[allow(clippy::too_many_arguments)]
 pub fn copy_rectangle(
     input: &mut Bitmap,
     canvas: &mut Bitmap,

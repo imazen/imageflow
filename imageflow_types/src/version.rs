@@ -72,11 +72,7 @@ pub fn one_line_version() -> String {
     //Create options for branch and release_tag
     let branch = benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_BRANCH").unwrap(); //still needs to be unwrapped
     let release_tag = if let Some(tag) = *benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_TAG").unwrap() {
-        if tag.starts_with('v') {
-            Some(&tag[1..])
-        } else {
-            None
-        }
+        tag.strip_prefix('v')
     } else {
         None
     };
@@ -94,8 +90,8 @@ pub fn one_line_version() -> String {
         other => other,
     };
 
-    if ci && profile_release && release_tag.is_some() {
-        format!("release {} {} {}", release_tag.unwrap(), one_line_suffix(), target_cpu)
+    if let Some(tag) = release_tag.filter(|_| ci && profile_release) {
+        format!("release {} {} {}", tag, one_line_suffix(), target_cpu)
     } else if ci && profile_release && branch == &Some("master") && !dirty() {
         format!(
             "nightly {} from master {} {}",

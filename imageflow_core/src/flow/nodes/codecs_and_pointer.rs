@@ -51,11 +51,11 @@ impl NodeDef for BitmapKeyDef {
         // TODO: make this faster by not calling try_borrow_mut which adds unnecessary error data
         let bitmap_maybe = bitmaps.try_borrow_mut(key);
 
-        if bitmap_maybe.is_err() {
+        if let Ok(bitmap) = bitmap_maybe {
+            Ok(FrameEstimate::Some(bitmap.frame_info()))
+        } else {
             let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
             Ok(input)
-        } else {
-            Ok(FrameEstimate::Some(bitmap_maybe.unwrap().frame_info()))
         }
     }
 

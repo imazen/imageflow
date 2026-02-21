@@ -122,6 +122,7 @@ impl NamedDecoders {
     }
 }
 #[derive(PartialEq, Copy, Clone)]
+#[allow(clippy::enum_variant_names)]
 pub enum NamedEncoders {
     GifEncoder,
     MozJpegEncoder,

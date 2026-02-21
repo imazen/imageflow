@@ -396,11 +396,7 @@ impl FrameEstimate {
         self == &FrameEstimate::None
     }
     pub fn is_some(&self) -> bool {
-        if let FrameEstimate::Some(_) = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, FrameEstimate::Some(_))
     }
     pub fn unwrap_some(self) -> FrameInfo {
         match self {
@@ -458,7 +454,6 @@ pub enum NodeResult {
 
     /// A frame result
     Frame(BitmapKey),
-    ///
     Encoded(s::EncodeResult),
 }
 #[derive(Clone, Debug, PartialEq)]

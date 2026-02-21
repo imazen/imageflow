@@ -131,7 +131,7 @@ impl FluentNode {
         self.to(s::Node::CropWhitespace { threshold, percent_padding })
     }
 
-    //#[cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
+    #[allow(clippy::too_many_arguments)]
     pub fn copy_rect_from(
         self,
         from: FluentNode,
@@ -157,7 +157,7 @@ impl PartialEq for FluentNode {
 
 #[derive(Default)]
 pub struct FluentGraphBuilder {
-    output_nodes: Vec<Box<FluentNode>>,
+    output_nodes: Vec<FluentNode>,
 }
 
 impl FluentGraphBuilder {
@@ -165,12 +165,12 @@ impl FluentGraphBuilder {
         FluentGraphBuilder { output_nodes: vec![] }
     }
     pub fn new_with(n: FluentNode) -> FluentGraphBuilder {
-        FluentGraphBuilder { output_nodes: vec![Box::new(n)] }
+        FluentGraphBuilder { output_nodes: vec![n] }
     }
 
     pub fn with(self, n: FluentNode) -> FluentGraphBuilder {
         let mut new_vec = self.output_nodes.clone();
-        new_vec.push(Box::new(n));
+        new_vec.push(n);
         FluentGraphBuilder { output_nodes: new_vec }
     }
 
@@ -178,7 +178,7 @@ impl FluentGraphBuilder {
         let mut set = HashSet::new();
         let mut todo = Vec::new();
         let mut unique = Vec::new();
-        for end in self.output_nodes.as_slice().iter() {
+        for end in &self.output_nodes {
             todo.push(end);
         }
 
@@ -189,7 +189,7 @@ impl FluentGraphBuilder {
             let next = todo.pop().unwrap();
             if !set.contains(&next.uid) {
                 set.insert(next.uid);
-                unique.push(next.as_ref());
+                unique.push(next);
                 if let Some(ref c) = next.canvas {
                     todo.push(c);
                 }

@@ -103,9 +103,9 @@ impl Ir4Translate {
             self.decode_id
         };
         // Add CropWhitespace
-        if r.parsed.trim_whitespace_threshold.is_some() {
+        if let Some(threshold) = r.parsed.trim_whitespace_threshold {
             b.add(s::Node::CropWhitespace {
-                threshold: cmp::max(0, r.parsed.trim_whitespace_threshold.unwrap()) as u32,
+                threshold: cmp::max(0, threshold) as u32,
                 percent_padding: r.parsed.trim_whitespace_padding_percent.unwrap_or(0f32),
             });
         }

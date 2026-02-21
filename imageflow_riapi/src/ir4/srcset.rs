@@ -32,6 +32,7 @@ fn srcset_syntax_message_for(format: OutputFormat) -> &'static str {
         _ => "srcset=[format]-[quality|lossless|keep|s[number]|q[number]|d[number]]",
     }
 }
+#[allow(clippy::manual_clamp)] // NaN from parse::<f32>() must not propagate; clamp preserves NaN
 fn parse_format_tuning(
     format: OutputFormat,
     lossless: Option<BoolKeep>,
@@ -65,7 +66,7 @@ fn parse_format_tuning(
             || arg.starts_with("q")
             || arg.starts_with("e")
         {
-            let substr = if arg.starts_with("mq") { &arg[2..] } else { &arg[1..] };
+            let substr = arg.strip_prefix("mq").unwrap_or(&arg[1..]);
             if let Ok(s) = substr.parse::<f32>() {
                 match arg.get(0..1).unwrap() {
                     "d" => {
@@ -257,11 +258,7 @@ pub fn apply_srcset_string(i: &mut Instructions, srcset: &str, warnings: &mut Ve
                         if arg1 == "dpr" || arg1 == "dppx" {
                             // dpr/dppx indicates the 3rd is a number, might have trailing x
                             if let Some(arg2) = args.next() {
-                                let number_text = if arg2.ends_with('x') {
-                                    &arg2[..arg2.len() - 1]
-                                } else {
-                                    arg2
-                                };
+                                let number_text = arg2.strip_suffix('x').unwrap_or(arg2);
                                 if let Ok(v) = number_text.parse::<f32>() {
                                     i.qp_dpr = Some(f32::max(0.0, v));
                                 } else {
@@ -273,7 +270,7 @@ pub fn apply_srcset_string(i: &mut Instructions, srcset: &str, warnings: &mut Ve
                                     format!("qp-dpr- must be followed by a number: {}", srcset),
                                 )));
                             }
-                        } else if let Some(profile) = QualityProfile::from_str(arg1) {
+                        } else if let Some(profile) = QualityProfile::parse(arg1) {
                             i.qp = Some(profile);
                         } else {
                             warnings.push(ParseWarning::ValueInvalid((
@@ -293,16 +290,14 @@ pub fn apply_srcset_string(i: &mut Instructions, srcset: &str, warnings: &mut Ve
                     let crop_y1 = args.next();
                     let crop_x2 = args.next();
                     let crop_y2 = args.next();
-                    if crop_x1.is_some()
-                        && crop_y1.is_some()
-                        && crop_x2.is_some()
-                        && crop_y2.is_some()
+                    if let (Some(cx1), Some(cy1), Some(cx2), Some(cy2)) =
+                        (crop_x1, crop_y1, crop_x2, crop_y2)
                     {
                         i.mode = Some(FitMode::Max);
-                        if let Ok(crop_x1) = crop_x1.unwrap().parse::<f64>() {
-                            if let Ok(crop_y1) = crop_y1.unwrap().parse::<f64>() {
-                                if let Ok(crop_x2) = crop_x2.unwrap().parse::<f64>() {
-                                    if let Ok(crop_y2) = crop_y2.unwrap().parse::<f64>() {
+                        if let Ok(crop_x1) = cx1.parse::<f64>() {
+                            if let Ok(crop_y1) = cy1.parse::<f64>() {
+                                if let Ok(crop_x2) = cx2.parse::<f64>() {
+                                    if let Ok(crop_y2) = cy2.parse::<f64>() {
                                         i.crop = Some([crop_x1, crop_y1, crop_x2, crop_y2]);
                                         i.cropxunits = Some(100.0);
                                         i.cropyunits = Some(100.0);
@@ -310,25 +305,25 @@ pub fn apply_srcset_string(i: &mut Instructions, srcset: &str, warnings: &mut Ve
                                     } else {
                                         warnings.push(ParseWarning::ValueInvalid((
                                             "srcset=crop-x1,y1,x2,[y2]",
-                                            crop_y2.unwrap().to_owned(),
+                                            cy2.to_owned(),
                                         )));
                                     }
                                 } else {
                                     warnings.push(ParseWarning::ValueInvalid((
                                         "srcset=crop-x1,y1,[x2],y2",
-                                        crop_x2.unwrap().to_string(),
+                                        cx2.to_string(),
                                     )));
                                 }
                             } else {
                                 warnings.push(ParseWarning::ValueInvalid((
                                     "srcset=crop-x1,[y1],x2,y2",
-                                    crop_y1.unwrap().to_string(),
+                                    cy1.to_string(),
                                 )));
                             }
                         } else {
                             warnings.push(ParseWarning::ValueInvalid((
                                 "srcset=crop-[x1],y1,x2,y2",
-                                crop_x1.unwrap().to_string(),
+                                cx1.to_string(),
                             )));
                         }
                     } else {

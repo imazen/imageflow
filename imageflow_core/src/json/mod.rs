@@ -105,12 +105,10 @@ impl JsonResponse {
     pub fn assert_ok(&self) {
         if !self.status_2xx() {
             if let Ok(s) = std::str::from_utf8(self.response_json.as_ref()) {
-                if let Ok(s::Response001 { message, .. }) =
+                if let Ok(s::Response001 { message: Some(message), .. }) =
                     serde_json::from_slice(self.response_json.as_ref())
                 {
-                    if let Some(message) = message {
-                        panic!("Json Status {}\n{}\n{}", self.status_code, &s, message);
-                    }
+                    panic!("Json Status {}\n{}\n{}", self.status_code, &s, message);
                 }
                 panic!("Json Status {}\n{}", self.status_code, &s);
             } else {

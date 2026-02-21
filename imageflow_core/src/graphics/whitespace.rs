@@ -182,9 +182,7 @@ struct Rect {
 }
 
 impl Rect {
-    fn to_corners_checked(&self) -> Option<RectCorners> {
-        let x2 = self.x.checked_add(self.w);
-        let y2 = self.y.checked_add(self.h);
+    fn to_corners_checked(self) -> Option<RectCorners> {
         if let Some(x2) = self.x.checked_add(self.w) {
             if let Some(y2) = self.y.checked_add(self.h) {
                 return Some(RectCorners { x1: self.x, y1: self.y, x2, y2 });
@@ -195,7 +193,6 @@ impl Rect {
 }
 
 /// Grayscale buffer for running sobel edge detection filters
-
 struct Buffer {
     pixels: [u8; 2048],
     x: u32,
@@ -286,7 +283,7 @@ impl WhitespaceSearch {
 }
 
 pub fn detect_content(b: &BitmapWindowMut<u8>, threshold: u32) -> Option<RectCorners> {
-    if b.w() > i32::max_value() as u32 || b.h() > i32::max_value() as u32 {
+    if b.w() > i32::MAX as u32 || b.h() > i32::MAX as u32 {
         panic!("Bitmap dimension overflow")
     }
     if b.w() < 3 || b.h() < 3 {

@@ -39,6 +39,7 @@ fn area_threshold(
     (low, high)
 }
 
+#[allow(clippy::manual_clamp)]
 fn create_byte_mapping(low: usize, high: usize) -> Vec<u8> {
     let scale = 255.0 / ((high - low) as f64);
 
