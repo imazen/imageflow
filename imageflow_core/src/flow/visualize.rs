@@ -71,14 +71,6 @@ pub fn render_dotfile_to_png(dotfile_path: &str) {
         .spawn();
     // .expect("dot command failed");
 }
-// pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: &mut Graph, graph_version: int32_t) -> bool
-// {
-//    let filename = format!("job_{}_graph_version_{}.dot", unsafe { (*job).debug_job_id }, graph_version);
-//    let mut file = File::create(&filename).unwrap();
-//    let _ = file.write_fmt(format_args!("{:?}", Dot::new(g.graph())));
-//
-//    return true;
-// }
 
 static INDENT: &str = "    ";
 
