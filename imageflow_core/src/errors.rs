@@ -714,23 +714,9 @@ pub enum ErrorCategory {
     /// A custom error defined by a third-party plugin
     Custom = 20,
     OperationCancelled = 21,
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // NOTE - safe use of transmute in from_i32 requires that there be no numbering gaps in this list
-    // Also keep ErrorCategory::last() up-to-date
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!
 }
 
 impl ErrorCategory {
-    pub fn last() -> ErrorCategory {
-        ErrorCategory::OperationCancelled
-    }
-    fn from_i32(v: i32) -> Option<ErrorCategory> {
-        if v >= 0 && v <= ErrorCategory::last() as i32 {
-            Some(unsafe { ::std::mem::transmute::<i32, ErrorCategory>(v) })
-        } else {
-            None
-        }
-    }
     fn to_i32(self) -> i32 {
         self as i32
     }
