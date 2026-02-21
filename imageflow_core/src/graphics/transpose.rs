@@ -231,9 +231,14 @@ fn scalar_transpose_8x8(
     x: usize,
     y: usize,
 ) {
+    // Sub-slice to reduce bounds checks: one check per block instead of per element
+    let src_base = y * src_stride + x;
+    let s = &src[src_base..src_base + 7 * src_stride + 8];
+    let dst_base = x * dst_stride + y;
+    let d = &mut dst[dst_base..dst_base + 7 * dst_stride + 8];
     for i in 0..8 {
         for j in 0..8 {
-            dst[(x + j) * dst_stride + (y + i)] = src[(y + i) * src_stride + (x + j)];
+            d[j * dst_stride + i] = s[i * src_stride + j];
         }
     }
 }
@@ -269,6 +274,9 @@ fn transpose_tiled_v3(
 
 /// AVX2 8x8 transpose using f32 shuffle intrinsics (Highway-style 3-stage).
 /// Works on u32 data reinterpreted as f32 — no arithmetic, only lane permutation.
+///
+/// Uses sub-slicing to reduce bounds checks: one check for all 8 source rows,
+/// one check for all 8 destination rows, instead of per-row checks.
 #[cfg(target_arch = "x86_64")]
 #[rite]
 fn avx2_transpose_8x8(
@@ -280,21 +288,24 @@ fn avx2_transpose_8x8(
     x: usize,
     y: usize,
 ) {
-    let load_row = |row: usize| -> __m256 {
-        let off = row * src_stride + x;
-        let arr: &[f32; 8] = src[off..off + 8].try_into().unwrap();
+    // Sub-slice source: one bounds check covers all 8 rows
+    let src_base = y * src_stride + x;
+    let s = &src[src_base..src_base + 7 * src_stride + 8];
+    let load_row = |i: usize| -> __m256 {
+        let off = i * src_stride;
+        let arr: &[f32; 8] = s[off..off + 8].try_into().unwrap();
         safe_unaligned_simd::x86_64::_mm256_loadu_ps(arr)
     };
 
     // Load 8 rows of 8 floats each
-    let r0 = load_row(y);
-    let r1 = load_row(y + 1);
-    let r2 = load_row(y + 2);
-    let r3 = load_row(y + 3);
-    let r4 = load_row(y + 4);
-    let r5 = load_row(y + 5);
-    let r6 = load_row(y + 6);
-    let r7 = load_row(y + 7);
+    let r0 = load_row(0);
+    let r1 = load_row(1);
+    let r2 = load_row(2);
+    let r3 = load_row(3);
+    let r4 = load_row(4);
+    let r5 = load_row(5);
+    let r6 = load_row(6);
+    let r7 = load_row(7);
 
     // Stage 1: interleave pairs within 128-bit lanes
     let t0 = _mm256_unpacklo_ps(r0, r1);
@@ -326,20 +337,22 @@ fn avx2_transpose_8x8(
     let o6 = _mm256_permute2f128_ps::<0x31>(s2, s6);
     let o7 = _mm256_permute2f128_ps::<0x31>(s3, s7);
 
-    // Store transposed rows
-    let mut store_row = |row: usize, v: __m256| {
-        let off = row * dst_stride + y;
-        let arr: &mut [f32; 8] = (&mut dst[off..off + 8]).try_into().unwrap();
+    // Sub-slice destination: one bounds check covers all 8 rows
+    let dst_base = x * dst_stride + y;
+    let d = &mut dst[dst_base..dst_base + 7 * dst_stride + 8];
+    let mut store_row = |i: usize, v: __m256| {
+        let off = i * dst_stride;
+        let arr: &mut [f32; 8] = (&mut d[off..off + 8]).try_into().unwrap();
         safe_unaligned_simd::x86_64::_mm256_storeu_ps(arr, v);
     };
-    store_row(x, o0);
-    store_row(x + 1, o1);
-    store_row(x + 2, o2);
-    store_row(x + 3, o3);
-    store_row(x + 4, o4);
-    store_row(x + 5, o5);
-    store_row(x + 6, o6);
-    store_row(x + 7, o7);
+    store_row(0, o0);
+    store_row(1, o1);
+    store_row(2, o2);
+    store_row(3, o3);
+    store_row(4, o4);
+    store_row(5, o5);
+    store_row(6, o6);
+    store_row(7, o7);
 }
 
 // ---------------------------------------------------------------------------
@@ -402,16 +415,19 @@ fn neon_transpose_4x4(
 ) {
     use std::arch::aarch64::{vzip1q_f32, vzip2q_f32};
 
-    let load_row = |row: usize| -> float32x4_t {
-        let off = row * src_stride + x;
-        let arr: &[f32; 4] = src[off..off + 4].try_into().unwrap();
+    // Sub-slice: one bounds check for all 4 source rows
+    let src_base = y * src_stride + x;
+    let s = &src[src_base..src_base + 3 * src_stride + 4];
+    let load_row = |i: usize| -> float32x4_t {
+        let off = i * src_stride;
+        let arr: &[f32; 4] = s[off..off + 4].try_into().unwrap();
         safe_unaligned_simd::aarch64::vld1q_f32(arr)
     };
 
-    let r0 = load_row(y);
-    let r1 = load_row(y + 1);
-    let r2 = load_row(y + 2);
-    let r3 = load_row(y + 3);
+    let r0 = load_row(0);
+    let r1 = load_row(1);
+    let r2 = load_row(2);
+    let r3 = load_row(3);
 
     let c0 = vzip1q_f32(r0, r2);
     let c1 = vzip2q_f32(r0, r2);
@@ -423,15 +439,18 @@ fn neon_transpose_4x4(
     let t2 = vzip1q_f32(c1, c3);
     let t3 = vzip2q_f32(c1, c3);
 
-    let mut store_row = |row: usize, v: float32x4_t| {
-        let off = row * dst_stride + y;
-        let arr: &mut [f32; 4] = (&mut dst[off..off + 4]).try_into().unwrap();
+    // Sub-slice: one bounds check for all 4 destination rows
+    let dst_base = x * dst_stride + y;
+    let d = &mut dst[dst_base..dst_base + 3 * dst_stride + 4];
+    let mut store_row = |i: usize, v: float32x4_t| {
+        let off = i * dst_stride;
+        let arr: &mut [f32; 4] = (&mut d[off..off + 4]).try_into().unwrap();
         safe_unaligned_simd::aarch64::vst1q_f32(arr, v);
     };
-    store_row(x, t0);
-    store_row(x + 1, t1);
-    store_row(x + 2, t2);
-    store_row(x + 3, t3);
+    store_row(0, t0);
+    store_row(1, t1);
+    store_row(2, t2);
+    store_row(3, t3);
 }
 
 // ---------------------------------------------------------------------------
@@ -493,16 +512,19 @@ fn wasm_transpose_4x4(
 ) {
     use std::arch::wasm32::i32x4_shuffle;
 
-    let load_row = |row: usize| -> v128 {
-        let off = row * src_stride + x;
-        let arr: &[f32; 4] = src[off..off + 4].try_into().unwrap();
+    // Sub-slice: one bounds check for all 4 source rows
+    let src_base = y * src_stride + x;
+    let s = &src[src_base..src_base + 3 * src_stride + 4];
+    let load_row = |i: usize| -> v128 {
+        let off = i * src_stride;
+        let arr: &[f32; 4] = s[off..off + 4].try_into().unwrap();
         safe_unaligned_simd::wasm32::v128_load(arr)
     };
 
-    let r0 = load_row(y);
-    let r1 = load_row(y + 1);
-    let r2 = load_row(y + 2);
-    let r3 = load_row(y + 3);
+    let r0 = load_row(0);
+    let r1 = load_row(1);
+    let r2 = load_row(2);
+    let r3 = load_row(3);
 
     // First round: interleave
     let s0 = i32x4_shuffle::<0, 4, 1, 5>(r0, r1);
@@ -516,15 +538,18 @@ fn wasm_transpose_4x4(
     let t2 = i32x4_shuffle::<0, 1, 4, 5>(s1, s3);
     let t3 = i32x4_shuffle::<2, 3, 6, 7>(s1, s3);
 
-    let mut store_row = |row: usize, v: v128| {
-        let off = row * dst_stride + y;
-        let arr: &mut [f32; 4] = (&mut dst[off..off + 4]).try_into().unwrap();
+    // Sub-slice: one bounds check for all 4 destination rows
+    let dst_base = x * dst_stride + y;
+    let d = &mut dst[dst_base..dst_base + 3 * dst_stride + 4];
+    let mut store_row = |i: usize, v: v128| {
+        let off = i * dst_stride;
+        let arr: &mut [f32; 4] = (&mut d[off..off + 4]).try_into().unwrap();
         safe_unaligned_simd::wasm32::v128_store(arr, v);
     };
-    store_row(x, t0);
-    store_row(x + 1, t1);
-    store_row(x + 2, t2);
-    store_row(x + 3, t3);
+    store_row(0, t0);
+    store_row(1, t1);
+    store_row(2, t2);
+    store_row(3, t3);
 }
 
 // ---------------------------------------------------------------------------
