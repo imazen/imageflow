@@ -32,6 +32,7 @@ fn srcset_syntax_message_for(format: OutputFormat) -> &'static str {
         _ => "srcset=[format]-[quality|lossless|keep|s[number]|q[number]|d[number]]",
     }
 }
+#[allow(clippy::manual_clamp)] // NaN from parse::<f32>() must not propagate; clamp preserves NaN
 fn parse_format_tuning(
     format: OutputFormat,
     lossless: Option<BoolKeep>,
@@ -80,7 +81,7 @@ fn parse_format_tuning(
                     }
                     "e" => {
                         if format == OutputFormat::Jxl {
-                            i.jxl_effort = Some(s.clamp(0.0, 255.0) as u8);
+                            i.jxl_effort = Some(f32::min(255.0, f32::max(0.0, s)) as u8);
                         } else {
                             warnings.push(ParseWarning::ValueInvalid((
                                 srcset_syntax_message_for(format),
@@ -90,7 +91,7 @@ fn parse_format_tuning(
                     }
                     "m" => {
                         if format == OutputFormat::Png {
-                            i.png_min_quality = Some(s.clamp(0.0, 100.0) as u8);
+                            i.png_min_quality = Some(f32::min(100.0, f32::max(0.0, s)) as u8);
                         } else {
                             warnings.push(ParseWarning::ValueInvalid((
                                 srcset_syntax_message_for(format),
@@ -100,7 +101,7 @@ fn parse_format_tuning(
                     }
                     "s" => {
                         if format == OutputFormat::Avif {
-                            i.avif_speed = Some(s.clamp(0.0, 255.0) as u8);
+                            i.avif_speed = Some(f32::min(255.0, f32::max(0.0, s)) as u8);
                         } else {
                             warnings.push(ParseWarning::ValueInvalid((
                                 srcset_syntax_message_for(format),

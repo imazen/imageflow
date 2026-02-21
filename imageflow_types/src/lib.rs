@@ -681,6 +681,7 @@ impl fmt::Display for QualityProfile {
 
 impl QualityProfile {
     /// Returns the quality profile as a string, or None if it is not a valid quality profile
+    #[allow(clippy::manual_clamp)] // NaN from parse::<f32>() must not propagate
     pub fn parse(text: &str) -> Option<QualityProfile> {
         match text {
             _ if text.eq_ignore_ascii_case("lowest") => Some(QualityProfile::Lowest),
@@ -696,7 +697,7 @@ impl QualityProfile {
             _ if text.eq_ignore_ascii_case("lossless") => Some(QualityProfile::Lossless),
             v => {
                 if let Ok(v) = v.parse::<f32>() {
-                    return Some(QualityProfile::Percent(v.clamp(0.0, 100.0)));
+                    return Some(QualityProfile::Percent(f32::min(100.0, f32::max(0.0, v))));
                 }
                 None
             }
