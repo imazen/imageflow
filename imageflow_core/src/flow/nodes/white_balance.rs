@@ -43,7 +43,7 @@ fn create_byte_mapping(low: usize, high: usize) -> Vec<u8> {
     let scale = 255.0 / ((high - low) as f64);
 
     (0..256usize)
-        .map(|v| (v.saturating_sub(low) as f64 * scale).round().min(255f64).max(0f64) as u8)
+        .map(|v| (v.saturating_sub(low) as f64 * scale).round().clamp(0f64, 255f64) as u8)
         .collect()
 }
 

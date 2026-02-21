@@ -93,6 +93,7 @@ impl BitmapsContainer {
         Ok(key)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn create_bitmap_u8(
         &mut self,
         w: u32,
@@ -699,7 +700,7 @@ impl Bitmap {
         if w == 0 || h == 0 {
             return Err(nerror!(ErrorKind::InvalidArgument, "Bitmap dimensions cannot be zero"));
         };
-        if w.saturating_mul(std::mem::size_of::<T>()) >= i32::max_value() as usize / h {
+        if w.saturating_mul(std::mem::size_of::<T>()) >= i32::MAX as usize / h {
             return Err(nerror!(
                 ErrorKind::InvalidArgument,
                 "Bitmap dimensions cannot be so large they would cause i32 overflow"
@@ -1611,7 +1612,7 @@ where
         ScanlineIterMut::new(self.slice, &self.info, true).unwrap()
     }
 
-    pub fn try_cast_imgref<K: Copy>(&self) -> Result<ImgRef<'_, K>, FlowError>
+    pub fn try_cast_imgref<K>(&self) -> Result<ImgRef<'_, K>, FlowError>
     where
         K: rgb::Pod,
     {
@@ -1629,6 +1630,8 @@ where
 }
 
 impl<'a> BitmapWindowMut<'a, u8> {
+    /// # Safety
+    /// The underlying bitmap must contain valid pixel data in BGRA layout.
     pub unsafe fn to_vec_rgba(&self) -> Result<(Vec<rgb::RGBA8>, usize, usize), FlowError> {
         let w = self.w() as usize;
         let h = self.h() as usize;
@@ -1643,15 +1646,13 @@ impl<'a> BitmapWindowMut<'a, u8> {
 
                 // TODO: if alpha might be random, we should clear it if self.info.alpha_meaningful(){
 
-                let mut y = 0;
-                for stride_row in self.slice.chunks(self.info().t_stride() as usize) {
+                for (y, stride_row) in self.slice.chunks(self.info().t_stride() as usize).enumerate() {
                     for x in 0..w {
                         v[y * w + x].b = stride_row[x * 4];
                         v[y * w + x].g = stride_row[x * 4 + 1];
                         v[y * w + x].r = stride_row[x * 4 + 2];
                         v[y * w + x].a = stride_row[x * 4 + 3];
                     }
-                    y += 1;
                 }
 
                 Ok((v, w, h))

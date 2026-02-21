@@ -289,7 +289,7 @@ impl<'a> Engine<'a> {
         };
         if let Some(frame_info) = info {
             let max_frame_size =
-                security.max_frame_size.clone().expect("Context.security.max_frame_size required");
+                security.max_frame_size.expect("Context.security.max_frame_size required");
             if max_frame_size.w.leading_zeros() == 0 || max_frame_size.h.leading_zeros() == 0 {
                 return Err(nerror!(
                     ErrorKind::SizeLimitExceeded,
@@ -369,9 +369,8 @@ impl<'a> Engine<'a> {
         let inputs_good = inputs_estimated(&self.g, node_id);
         if !inputs_good {
             // TODO: support UpperBound eventually; for now, use Impossible until all nodes implement
-            let give_up = inputs_estimates(&self.g, node_id).iter().any(|est| match *est {
-                FrameEstimate::Impossible | FrameEstimate::UpperBound(_) => true,
-                _ => false,
+            let give_up = inputs_estimates(&self.g, node_id).iter().any(|est| {
+                matches!(*est, FrameEstimate::Impossible | FrameEstimate::UpperBound(_))
             });
 
             // If it's possible, let's try to estimate parent nodes
@@ -467,12 +466,8 @@ impl<'a> Engine<'a> {
         })
     }
     fn parents_estimated(&self, ix: NodeIndex) -> bool {
-        self.g.parents(ix).iter(&self.g).all(|(ex, parent_ix)| {
-            if let FrameEstimate::Some(_) = self.g.node_weight(parent_ix).unwrap().frame_est {
-                true
-            } else {
-                false
-            }
+        self.g.parents(ix).iter(&self.g).all(|(_ex, parent_ix)| {
+            matches!(self.g.node_weight(parent_ix).unwrap().frame_est, FrameEstimate::Some(_))
         })
     }
 
@@ -640,18 +635,12 @@ use petgraph::visit::Walker;
 
 pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex) -> bool {
     g.node_weight(node_id)
-        .map(|node| match node.frame_est {
-            FrameEstimate::Some(_) => true,
-            _ => false,
-        })
+        .map(|node| matches!(node.frame_est, FrameEstimate::Some(_)))
         .unwrap_or(false)
 }
 
 pub fn inputs_estimated(g: &Graph, node_id: NodeIndex) -> bool {
-    inputs_estimates(g, node_id).iter().all(|est| match *est {
-        FrameEstimate::Some(_) => true,
-        _ => false,
-    })
+    inputs_estimates(g, node_id).iter().all(|est| matches!(*est, FrameEstimate::Some(_)))
 }
 
 // -> impl Iterator<Item = FrameEstimate> caused compiler panic

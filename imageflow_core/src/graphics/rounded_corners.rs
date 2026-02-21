@@ -6,26 +6,26 @@ fn get_radius(radius: RoundCornersMode, w: u32, h: u32) -> RoundCornersRadius {
     let smallest_dimension = w.min(h) as f32;
     match radius {
         RoundCornersMode::Percentage(p) => {
-            RoundCornersRadius::All(smallest_dimension * p.min(100f32).max(0f32) / 200f32)
+            RoundCornersRadius::All(smallest_dimension * p.clamp(0f32, 100f32) / 200f32)
         }
         RoundCornersMode::Pixels(p) => {
-            RoundCornersRadius::All(p.max(0f32).min(smallest_dimension / 2f32))
+            RoundCornersRadius::All(p.clamp(0f32, smallest_dimension / 2f32))
         }
         RoundCornersMode::Circle => RoundCornersRadius::Circle,
         RoundCornersMode::PercentageCustom { top_left, top_right, bottom_right, bottom_left } => {
             RoundCornersRadius::Custom([
-                smallest_dimension * top_left.min(100f32).max(0f32) / 200f32,
-                smallest_dimension * top_right.min(100f32).max(0f32) / 200f32,
-                smallest_dimension * bottom_left.min(100f32).max(0f32) / 200f32,
-                smallest_dimension * bottom_right.min(100f32).max(0f32) / 200f32,
+                smallest_dimension * top_left.clamp(0f32, 100f32) / 200f32,
+                smallest_dimension * top_right.clamp(0f32, 100f32) / 200f32,
+                smallest_dimension * bottom_left.clamp(0f32, 100f32) / 200f32,
+                smallest_dimension * bottom_right.clamp(0f32, 100f32) / 200f32,
             ])
         }
         RoundCornersMode::PixelsCustom { top_left, top_right, bottom_right, bottom_left } => {
             RoundCornersRadius::Custom([
-                top_left.max(0f32).min(smallest_dimension / 2f32),
-                top_right.max(0f32).min(smallest_dimension / 2f32),
-                bottom_left.max(0f32).min(smallest_dimension / 2f32),
-                bottom_right.max(0f32).min(smallest_dimension / 2f32),
+                top_left.clamp(0f32, smallest_dimension / 2f32),
+                top_right.clamp(0f32, smallest_dimension / 2f32),
+                bottom_left.clamp(0f32, smallest_dimension / 2f32),
+                bottom_right.clamp(0f32, smallest_dimension / 2f32),
             ])
         }
     }
@@ -302,6 +302,7 @@ pub fn flow_bitmap_bgra_clear_around_rounded_corners(
                 (edge_solid_x2, edge_influence_x2)
             };
 
+            #[allow(clippy::needless_range_loop)]
             for x in alias_from..alias_to {
                 let xf = x as f32 + 0.5;
                 let diff_x = quadrant.center_x - xf;

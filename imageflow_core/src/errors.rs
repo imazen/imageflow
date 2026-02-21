@@ -726,13 +726,13 @@ impl ErrorCategory {
     }
     fn from_i32(v: i32) -> Option<ErrorCategory> {
         if v >= 0 && v <= ErrorCategory::last() as i32 {
-            Some(unsafe { ::std::mem::transmute(v) })
+            Some(unsafe { ::std::mem::transmute::<i32, ErrorCategory>(v) })
         } else {
             None
         }
     }
-    fn to_i32(&self) -> i32 {
-        *self as i32
+    fn to_i32(self) -> i32 {
+        self as i32
     }
     /// Used by the C abi, unfortunately.
     pub fn to_outward_error_code(&self) -> i32 {
@@ -942,11 +942,7 @@ pub mod writing_to_slices {
             }
         }
         pub fn is_ok(&self) -> bool {
-            if let WriteResult::AllWritten(_) = *self {
-                true
-            } else {
-                false
-            }
+            matches!(*self, WriteResult::AllWritten(_))
         }
     }
 
@@ -977,6 +973,8 @@ pub mod writing_to_slices {
     where
         T: std::fmt::Display,
     {
+        /// # Safety
+        /// `buffer` must point to a valid, writable allocation of at least `buffer_length` bytes.
         pub unsafe fn write_and_write_errors_to_cstring(
             &self,
             buffer: *mut u8,

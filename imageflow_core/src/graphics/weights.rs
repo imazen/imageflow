@@ -7,8 +7,6 @@
  */
 
 use std::f64;
-use std::i32;
-use std::u32;
 
 use crate::graphics::aligned_buffer::AlignedBuffer;
 use serde::{Deserialize, Serialize};
@@ -662,8 +660,8 @@ pub fn populate_weights<T: WeightContainer>(
 
     let filter_func = details.filter;
 
-    let mut negative_area: f64 = 0f64;
-    let mut positive_area: f64 = 0f64;
+    let mut _negative_area: f64 = 0f64;
+    let mut _positive_area: f64 = 0f64;
 
     let mut weights: Vec<f32> = Vec::with_capacity(allocated_window_size as usize); //Allocation!
     for u in 0..output_line_size {
@@ -727,10 +725,10 @@ pub fn populate_weights<T: WeightContainer>(
         for v in weights.iter_mut() {
             if *v < 0f32 {
                 *v *= neg_factor;
-                negative_area -= *v as f64;
+                _negative_area -= *v as f64;
             } else {
                 *v *= pos_factor;
-                positive_area += *v as f64;
+                _positive_area += *v as f64;
             }
         }
 

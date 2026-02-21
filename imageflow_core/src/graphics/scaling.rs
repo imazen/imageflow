@@ -260,7 +260,7 @@ fn get_pixel(b: &BitmapWindowMut<f32>, x: i32, y: i32) -> [f32; 4] {
     [pixel[0], pixel[1], pixel[2], pixel[3]]
 }
 fn get_brightness(pixel: &[f32; 4]) -> f32 {
-    (pixel[0] + pixel[1] + pixel[2]) / 3.0 * pixel[3].max(0.0).min(1.0)
+    (pixel[0] + pixel[1] + pixel[2]) / 3.0 * pixel[3].clamp(0.0, 1.0)
 }
 fn summarize_corners(b: &BitmapWindowMut<f32>) -> String {
     // check if entire window is zeros

@@ -49,10 +49,10 @@ impl NodeDefOneInputExpand for ConstrainDef {
 
             // Override background_color with canvas_color
             let merged_hints = if constraint.canvas_color.is_some() {
-                if constraint.hints.is_some() {
+                if let Some(hints) = &constraint.hints {
                     Some(imageflow_types::ResampleHints {
                         background_color: constraint.canvas_color.clone(),
-                        ..constraint.hints.unwrap().clone()
+                        ..hints.clone()
                     })
                 } else {
                     Some(imageflow_types::ResampleHints {

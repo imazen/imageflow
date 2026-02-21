@@ -224,7 +224,9 @@ impl ThreadSafeContext {
             context_allocs,
         )
     }
-    /// mem_calloc should not panic
+    /// # Safety
+    /// `filename` must be null or a valid C string pointer. The caller must ensure
+    /// the returned pointer is eventually freed via `mem_free`.
     pub unsafe fn mem_calloc(
         &self,
         bytes: usize,
@@ -270,7 +272,8 @@ impl ThreadSafeContext {
         Ok(result)
     }
 
-    /// mem_calloc should not panic
+    /// # Safety
+    /// `ptr` must have been previously allocated by `mem_calloc` on this context.
     pub unsafe fn mem_free(&self, ptr: *const u8) -> bool {
         self.allocations.lock().map(|mut list| list.free(ptr)).unwrap_or(false)
     }

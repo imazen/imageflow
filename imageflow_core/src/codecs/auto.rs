@@ -613,6 +613,7 @@ struct AutoEncoderDetails {
     source_image_info: Option<ImageInfo>,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_auto_encoder_details(
     ctx: &Context,
     preset: &s::EncoderPreset,
@@ -649,7 +650,7 @@ fn build_auto_encoder_details(
 
     let source_mime_format = source_image_info
         .as_ref()
-        .and_then(|i| OutputImageFormat::from_str(&i.preferred_mime_type));
+        .and_then(|i| OutputImageFormat::parse(&i.preferred_mime_type));
 
     let needs_animation = source_image_info.as_ref().map(|i| i.multiple_frames).unwrap_or(false);
 

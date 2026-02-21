@@ -177,7 +177,8 @@ impl IoProxy {
         }
     }
 
-    /// Only valid as long as the life of the IoProxy does not exceed the life of the Context, 'a
+    /// # Safety
+    /// The IoProxy must not outlive the Context or the backing `bytes` slice.
     pub unsafe fn read_slice<'a>(
         context: &'a Context,
         io_id: i32,
@@ -188,7 +189,7 @@ impl IoProxy {
         Ok(IoProxy {
             path: None,
             io_id,
-            backend: IoBackend::ReadSlice(Cursor::new(std::mem::transmute(bytes))),
+            backend: IoBackend::ReadSlice(Cursor::new(std::mem::transmute::<&[u8], &[u8]>(bytes))),
         })
     }
 
@@ -197,7 +198,7 @@ impl IoProxy {
     /// Only valid as long as the life of the IoProxy is the same as the life of the Context, 'b
     pub fn get_output_buffer_bytes<'b>(&self, c: &'b Context) -> Result<&'b [u8]> {
         match &self.backend {
-            IoBackend::WriteVec(v) => Ok(unsafe { std::mem::transmute(v.get_ref().as_slice()) }),
+            IoBackend::WriteVec(v) => Ok(unsafe { std::mem::transmute::<&[u8], &[u8]>(v.get_ref().as_slice()) }),
             _ => Err(nerror!(
                 ErrorKind::InvalidOperation,
                 "get_output_buffer_bytes only works on output buffers"
@@ -243,6 +244,7 @@ impl IoProxy {
                 let file = OpenOptions::new()
                     .write(true)
                     .create(true)
+                    .truncate(true)
                     .open(path.as_ref())
                     .map_err(FlowError::from_encoder)?;
                 IoBackend::WriteFile(BufWriter::new(file))
