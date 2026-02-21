@@ -18,6 +18,32 @@ pub fn transpose_u32_slices(
     width: usize,
     height: usize,
 ) -> Result<(), FlowError> {
+    transpose_u32_slices_with_block_size(
+        from,
+        to,
+        from_stride,
+        to_stride,
+        width,
+        height,
+        BLOCK_SIZE,
+    )
+}
+
+/// Same as `transpose_u32_slices` but with a configurable cache tile size.
+/// Block size must be a multiple of 8 and at least 8.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn transpose_u32_slices_with_block_size(
+    from: &[u32],
+    to: &mut [u32],
+    from_stride: usize,
+    to_stride: usize,
+    width: usize,
+    height: usize,
+    block_size: usize,
+) -> Result<(), FlowError> {
+    debug_assert!(block_size >= 8 && block_size.is_multiple_of(8), "block_size must be a multiple of 8");
+
     if to_stride < height {
         return Err(nerror!(
             ErrorKind::InvalidArgument,
@@ -55,7 +81,7 @@ pub fn transpose_u32_slices(
     let dst: &mut [f32] = bytemuck::cast_slice_mut(to);
 
     incant!(
-        transpose_tiled(src, dst, from_stride, to_stride, width, height, BLOCK_SIZE),
+        transpose_tiled(src, dst, from_stride, to_stride, width, height, block_size),
         [v3, arm_v2, wasm128, scalar]
     );
 
@@ -707,6 +733,14 @@ mod tests {
         (1000, 1000),
         (1920, 1080),
         (1080, 1920),
+        // 4K
+        (3840, 2160),
+        (2160, 3840),
+        // 8K
+        (7680, 4320),
+        (4320, 7680),
+        // 8K with odd remainder (nothing aligns to 128 or 8)
+        (7681, 4321),
         // Highly asymmetric, large
         (7, 1024),
         (1024, 7),
