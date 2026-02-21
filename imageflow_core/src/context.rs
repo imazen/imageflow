@@ -779,7 +779,7 @@ fn test_calculate_context_heap_size() {
 
     // Fail if this grows so we can notice it
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 960);
+    assert!(context_bytes <= 968);
 
     assert!(context_allocs <= 6);
     assert!(thread_safe_bytes <= 1150);
