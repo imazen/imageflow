@@ -11,11 +11,8 @@ pub mod scaling;
 pub mod transpose;
 pub mod weights;
 pub mod whitespace;
-//pub(crate) mod convolve;
 pub(crate) mod blend;
 pub(crate) mod rounded_corners;
-
-//pub mod faces;
 
 #[doc(hidden)]
 mod prelude {
