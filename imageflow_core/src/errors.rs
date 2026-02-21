@@ -3,7 +3,6 @@ use crate::ffi;
 use crate::flow::definitions::FrameEstimate;
 use crate::json::JsonResponse;
 use imageflow_riapi::sizing::LayoutError;
-use num::FromPrimitive;
 use std;
 use std::any::Any;
 use std::borrow::Cow;
@@ -897,7 +896,6 @@ impl<'a> std::fmt::Display for PanicFormatter<'a> {
 }
 
 pub mod writing_to_slices {
-    use ::num::FromPrimitive;
     use ::std;
     use ::std::any::Any;
     use ::std::cmp;
@@ -1044,7 +1042,7 @@ pub mod writing_to_slices {
         }
         pub fn position(&self) -> usize {
             cmp::min(
-                usize::from_u64(self.pos).expect("Error serialization cursor has exceeded 2GB"),
+                usize::try_from(self.pos).expect("Error serialization cursor has exceeded 2GB"),
                 self.inner.len(),
             )
         }

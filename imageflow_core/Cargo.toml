@@ -12,7 +12,6 @@ bench = false
 
 [dependencies]
 libc = "0.2"
-num = "0.4"
 time = "0.3" #
 chrono =  "0.4"
 serde = "1"

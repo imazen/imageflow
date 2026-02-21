@@ -3,7 +3,6 @@ use ::std::option::Option;
 
 use ::std::cmp;
 use ::std::option::Option::*;
-use num::Integer;
 
 use imageflow_types::{CompositingMode, PixelFormat, PixelLayout};
 
