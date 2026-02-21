@@ -480,144 +480,149 @@ fn wasm_transpose_4x4(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_transpose_u32_slices_square() {
-        let from = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        let mut to = vec![0; 9];
-        transpose_u32_slices(&from, &mut to, 3, 3, 3, 3).unwrap();
-        assert_eq!(to, vec![1, 4, 7, 2, 5, 8, 3, 6, 9]);
-    }
+    const SENTINEL: u32 = 0xDEAD_BEEF;
 
-    #[test]
-    fn test_transpose_u32_slices_rectangle_wide() {
-        let from = vec![1, 2, 3, 4, 5, 6];
-        let mut to = vec![0; 6];
-        transpose_u32_slices(&from, &mut to, 6, 1, 6, 1).unwrap();
-        assert_eq!(to, vec![1, 2, 3, 4, 5, 6]);
-    }
+    /// Verify transpose correctness with sentinel-filled destination.
+    /// Uses unique sequential values offset by 1 (so no cell has value 0 or SENTINEL).
+    /// Checks every active cell AND verifies stride padding is untouched.
+    fn verify_transpose(w: usize, h: usize, src_stride: usize, dst_stride: usize) {
+        // Source: sequential values 1..=w*h in active region, SENTINEL in padding
+        let mut from = vec![SENTINEL; src_stride * h];
+        for y in 0..h {
+            for x in 0..w {
+                from[y * src_stride + x] = (y * w + x + 1) as u32;
+            }
+        }
 
-    #[test]
-    fn test_transpose_u32_slices_rectangle_tall() {
-        let from = vec![1, 2, 3, 4, 5, 6];
-        let mut to = vec![0; 6];
-        transpose_u32_slices(&from, &mut to, 1, 6, 1, 6).unwrap();
-        assert_eq!(to, vec![1, 2, 3, 4, 5, 6]);
-    }
+        // Destination: all SENTINEL — any correctly transposed cell overwrites it
+        let mut to = vec![SENTINEL; dst_stride * w];
 
-    #[test]
-    fn test_transpose_u32_slices_small_rectangle() {
-        let from = vec![1, 2, 3, 4, 5, 6];
-        let mut to = vec![0; 6];
-        transpose_u32_slices(&from, &mut to, 3, 2, 3, 2).unwrap();
-        assert_eq!(to, vec![1, 4, 2, 5, 3, 6]);
-    }
+        transpose_u32_slices(&from, &mut to, src_stride, dst_stride, w, h).unwrap_or_else(|e| {
+            panic!("transpose failed for {w}x{h} (strides {src_stride},{dst_stride}): {e}")
+        });
 
-    #[test]
-    fn test_transpose_u32_slices_with_stride() {
-        let from = vec![1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0];
-        let mut to = vec![0; 9];
-        transpose_u32_slices(&from, &mut to, 4, 3, 3, 3).unwrap();
-        assert_eq!(to, vec![1, 4, 7, 2, 5, 8, 3, 6, 9]);
-    }
+        // Verify every active cell was written correctly
+        for y in 0..h {
+            for x in 0..w {
+                let expected = (y * w + x + 1) as u32;
+                let actual = to[x * dst_stride + y];
+                assert_eq!(
+                    actual, expected,
+                    "wrong value at dst[{x}][{y}] for {w}x{h} (strides {src_stride},{dst_stride}): \
+                     got {actual:#X}, expected {expected:#X}"
+                );
+            }
+        }
 
-    #[test]
-    fn test_transpose_u32_slices_partial_fill() {
-        let from = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        let mut to = vec![0; 12];
-        transpose_u32_slices(&from, &mut to, 3, 4, 3, 3).unwrap();
-        assert_eq!(to, vec![1, 4, 7, 0, 2, 5, 8, 0, 3, 6, 9, 0]);
-    }
-
-    #[test]
-    fn test_transpose_u32_slices_error_dimensions_mismatch() {
-        let from = vec![1, 2, 3, 4];
-        let mut to = vec![0; 4];
-        let result = transpose_u32_slices(&from, &mut to, 2, 2, 3, 2);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_transpose_large_square_matrix() {
-        let size = 256;
-        let from: Vec<u32> = (0..size * size).map(|_| rand::random::<u32>()).collect();
-        let mut to = vec![0; size * size];
-
-        transpose_u32_slices(&from, &mut to, size, size, size, size).unwrap();
-
-        for i in 0..size {
-            for j in 0..size {
-                assert_eq!(from[i * size + j], to[j * size + i]);
+        // Verify stride padding in destination is untouched
+        for dst_row in 0..w {
+            for col in h..dst_stride {
+                let actual = to[dst_row * dst_stride + col];
+                assert_eq!(
+                    actual, SENTINEL,
+                    "padding corrupted at dst row {dst_row} col {col} for {w}x{h} \
+                     (strides {src_stride},{dst_stride}): got {actual:#X}, expected SENTINEL"
+                );
             }
         }
     }
 
+    // Dimensions chosen to systematically hit every code path:
+    //
+    //   BLOCK_SIZE = 128, SIMD block = 8x8
+    //
+    //   Category                  | What it exercises
+    //   --------------------------+------------------------------------------
+    //   < 8 in both dims          | pure scalar edges (no SIMD blocks at all)
+    //   < 128 multiples of 8      | SIMD blocks inside one tile, no tile edges
+    //   < 128 non-multiples of 8  | SIMD blocks + scalar remainder within tile
+    //   exact 128                  | one full tile, no tile edges
+    //   128 + remainder < 8       | full tile + pure scalar right/bottom edge
+    //   128 + remainder = 8k      | full tile + SIMD edge blocks
+    //   128 + remainder = 8k+r    | full tile + SIMD edge blocks + scalar edge
+    //   256+                       | multiple tiles
+    //   asymmetric                 | right edge only, bottom edge only, or both
+
+    const TEST_DIMS: &[(usize, usize)] = &[
+        // --- Tiny (pure scalar, no SIMD blocks) ---
+        (1, 1),
+        (1, 2),
+        (2, 1),
+        (3, 5),
+        (5, 3),
+        (7, 7),
+        // --- Sub-128, exact multiples of 8 (SIMD blocks, no remainder) ---
+        (8, 8),
+        (16, 8),
+        (8, 16),
+        (16, 16),
+        (64, 64),
+        (120, 120),
+        // --- Sub-128, 8k+r remainder within tile ---
+        (9, 9),
+        (15, 17),
+        (17, 15),
+        (33, 65),
+        (65, 33),
+        (127, 127),
+        // --- Exact block boundary ---
+        (128, 128),
+        // --- 128 + small remainder (< 8, pure scalar edge) ---
+        (129, 128),
+        (128, 129),
+        (129, 129),
+        (131, 133),
+        // --- 128 + remainder = 8k (SIMD edge blocks, no scalar remainder) ---
+        (136, 128),
+        (128, 136),
+        (136, 136),
+        // --- 128 + remainder = 8k+r (SIMD edge blocks + scalar remainder) ---
+        (137, 128),
+        (128, 137),
+        (137, 139),
+        // --- Multiple full tiles ---
+        (256, 256),
+        (257, 257),
+        (255, 255),
+        // --- Highly asymmetric (one dim all-edge) ---
+        (1, 128),
+        (128, 1),
+        (1, 257),
+        (257, 1),
+        (3, 256),
+        (256, 3),
+        (7, 129),
+        (129, 7),
+    ];
+
     #[test]
-    fn test_transpose_large_rectangular_matrix() {
-        let width = 256;
-        let height = 128;
-        let from: Vec<u32> = (0..width * height).map(|_| rand::random::<u32>()).collect();
-        let mut to = vec![0; width * height];
-
-        transpose_u32_slices(&from, &mut to, width, height, width, height).unwrap();
-
-        for i in 0..height {
-            for j in 0..width {
-                assert_eq!(from[i * width + j], to[j * height + i]);
-            }
+    fn test_transpose_all_dims_no_padding() {
+        for &(w, h) in TEST_DIMS {
+            verify_transpose(w, h, w, h);
         }
     }
 
     #[test]
-    fn test_transpose_with_padding() {
-        let width = 130;
-        let height = 100;
-        let src_stride = 132;
-        let dst_stride = 104;
-        let from: Vec<u32> = (0..src_stride * height).map(|_| rand::random::<u32>()).collect();
-        let mut to = vec![0; dst_stride * width];
-
-        transpose_u32_slices(&from, &mut to, src_stride, dst_stride, width, height).unwrap();
-
-        for i in 0..height {
-            for j in 0..width {
-                assert_eq!(from[i * src_stride + j], to[j * dst_stride + i]);
-            }
+    fn test_transpose_all_dims_with_stride_padding() {
+        for &(w, h) in TEST_DIMS {
+            // Add 1..3 elements of padding per row
+            verify_transpose(w, h, w + 1, h + 2);
+            verify_transpose(w, h, w + 3, h + 1);
         }
     }
 
     #[test]
-    fn test_transpose_small_matrices() {
-        let sizes = vec![(4, 4), (8, 8), (16, 16), (32, 32), (64, 64)];
-        for (width, height) in sizes {
-            let from: Vec<u32> = (0..width * height).map(|_| rand::random::<u32>()).collect();
-            let mut to = vec![0; width * height];
+    fn test_transpose_roundtrip() {
+        for &(w, h) in TEST_DIMS {
+            let original: Vec<u32> = (1..=(w * h) as u32).collect();
+            let mut transposed = vec![SENTINEL; w * h];
+            let mut roundtripped = vec![SENTINEL; w * h];
 
-            transpose_u32_slices(&from, &mut to, width, height, width, height).unwrap();
+            transpose_u32_slices(&original, &mut transposed, w, h, w, h).unwrap();
+            transpose_u32_slices(&transposed, &mut roundtripped, h, w, h, w).unwrap();
 
-            for i in 0..height {
-                for j in 0..width {
-                    assert_eq!(from[i * width + j], to[j * height + i]);
-                }
-            }
+            assert_eq!(original, roundtripped, "roundtrip failed for {w}x{h}");
         }
-    }
-
-    #[test]
-    fn test_transpose_edge_cases() {
-        let from = vec![42];
-        let mut to = vec![0];
-        transpose_u32_slices(&from, &mut to, 1, 1, 1, 1).unwrap();
-        assert_eq!(to[0], 42);
-
-        let from = vec![1, 2, 3, 4, 5];
-        let mut to = vec![0; 5];
-        transpose_u32_slices(&from, &mut to, 5, 1, 5, 1).unwrap();
-        assert_eq!(to, from);
-
-        let from = vec![1, 2, 3, 4, 5];
-        let mut to = vec![0; 5];
-        transpose_u32_slices(&from, &mut to, 1, 5, 1, 5).unwrap();
-        assert_eq!(to, from);
     }
 
     #[test]
@@ -625,134 +630,30 @@ mod tests {
         let from = vec![1, 2, 3, 4];
         let mut to = vec![0; 4];
 
-        assert!(transpose_u32_slices(&from, &mut to, 1, 2, 2, 2).is_err());
-        assert!(transpose_u32_slices(&from, &mut to, 2, 1, 2, 2).is_err());
-        assert!(transpose_u32_slices(&from, &mut to, 3, 2, 3, 2).is_err());
-        assert!(transpose_u32_slices(&from, &mut to, 2, 3, 2, 3).is_err());
+        assert!(transpose_u32_slices(&from, &mut to, 1, 2, 2, 2).is_err()); // from_stride < width
+        assert!(transpose_u32_slices(&from, &mut to, 2, 1, 2, 2).is_err()); // to_stride < height
+        assert!(transpose_u32_slices(&from, &mut to, 3, 2, 3, 2).is_err()); // from OOB
+        assert!(transpose_u32_slices(&from, &mut to, 2, 3, 2, 3).is_err()); // to OOB
     }
 
     #[test]
-    fn test_transpose_all_dimensions() {
-        const TEST_DIMS: &[(usize, usize)] = &[
-            (1, 1),
-            (1, 2),
-            (2, 1),
-            (2, 2),
-            (3, 3),
-            (3, 5),
-            (5, 3),
-            (4, 4),
-            (7, 7),
-            (8, 8),
-            (16, 16),
-            (128, 128),
-            (7, 9),
-            (9, 7),
-            (15, 17),
-            (17, 15),
-            (127, 129),
-            (129, 127),
-            (13, 17),
-            (17, 13),
-            (127, 131),
-            (1, 128),
-            (128, 1),
-            (1, 255),
-            (255, 1),
-            (4, 100),
-            (100, 4),
-            (255, 255),
-            (256, 256),
-            (257, 257),
-        ];
+    fn test_transpose_known_small() {
+        // 3x3 with known expected output
+        let from = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let mut to = vec![SENTINEL; 9];
+        transpose_u32_slices(&from, &mut to, 3, 3, 3, 3).unwrap();
+        assert_eq!(to, vec![1, 4, 7, 2, 5, 8, 3, 6, 9]);
 
-        for &(w, h) in TEST_DIMS {
-            let from: Vec<u32> = (0..(w * h) as u32).collect();
-            let stride_src = w;
-            let stride_dst = h;
-            let mut to = vec![0u32; stride_dst * w];
+        // 3x2 → 2x3
+        let from = vec![1, 2, 3, 4, 5, 6];
+        let mut to = vec![SENTINEL; 6];
+        transpose_u32_slices(&from, &mut to, 3, 2, 3, 2).unwrap();
+        assert_eq!(to, vec![1, 4, 2, 5, 3, 6]);
 
-            transpose_u32_slices(&from, &mut to, stride_src, stride_dst, w, h)
-                .unwrap_or_else(|e| panic!("Failed for ({w}, {h}): {e}"));
-
-            for y in 0..h {
-                for x in 0..w {
-                    assert_eq!(
-                        from[y * stride_src + x],
-                        to[x * stride_dst + y],
-                        "Mismatch at src[{y}][{x}] for dims ({w}, {h})"
-                    );
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_transpose_with_stride_padding() {
-        let dims: &[(usize, usize, usize, usize)] = &[
-            (8, 8, 10, 12),
-            (16, 16, 20, 24),
-            (13, 17, 15, 20),
-            (128, 128, 130, 132),
-            (129, 127, 132, 130),
-        ];
-
-        for &(w, h, src_stride, dst_stride) in dims {
-            let from: Vec<u32> = (0..(src_stride * h) as u32).collect();
-            let mut to = vec![0u32; dst_stride * w];
-
-            transpose_u32_slices(&from, &mut to, src_stride, dst_stride, w, h).unwrap_or_else(
-                |e| panic!("Failed for ({w}, {h}, strides {src_stride},{dst_stride}): {e}"),
-            );
-
-            for y in 0..h {
-                for x in 0..w {
-                    assert_eq!(
-                        from[y * src_stride + x],
-                        to[x * dst_stride + y],
-                        "Mismatch at src[{y}][{x}] for dims ({w}, {h}), strides ({src_stride}, {dst_stride})"
-                    );
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_transpose_roundtrip() {
-        let dims: &[(usize, usize)] =
-            &[(1, 1), (7, 13), (8, 8), (16, 16), (128, 128), (255, 255), (129, 127)];
-
-        for &(w, h) in dims {
-            let original: Vec<u32> = (0..(w * h) as u32).collect();
-            let mut transposed = vec![0u32; w * h];
-            let mut roundtripped = vec![0u32; w * h];
-
-            transpose_u32_slices(&original, &mut transposed, w, h, w, h).unwrap();
-            transpose_u32_slices(&transposed, &mut roundtripped, h, w, h, w).unwrap();
-
-            assert_eq!(original, roundtripped, "Roundtrip failed for dims ({w}, {h})");
-        }
-    }
-
-    #[test]
-    fn test_transpose_preserves_values() {
-        let w = 131;
-        let h = 97;
-        let from: Vec<u32> = (0..(w * h) as u32).collect();
-        let mut to = vec![0u32; w * h];
-
-        transpose_u32_slices(&from, &mut to, w, h, w, h).unwrap();
-
-        for y in 0..h {
-            for x in 0..w {
-                let expected_val = (y * w + x) as u32;
-                assert_eq!(from[y * w + x], expected_val);
-                assert_eq!(
-                    to[x * h + y],
-                    expected_val,
-                    "Value {expected_val} not at expected position dst[{x}][{y}]"
-                );
-            }
-        }
+        // With source stride padding
+        let from = vec![1, 2, 3, 0xFF, 4, 5, 6, 0xFF, 7, 8, 9, 0xFF];
+        let mut to = vec![SENTINEL; 9];
+        transpose_u32_slices(&from, &mut to, 4, 3, 3, 3).unwrap();
+        assert_eq!(to, vec![1, 4, 7, 2, 5, 8, 3, 6, 9]);
     }
 }
