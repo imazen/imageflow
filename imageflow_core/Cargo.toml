@@ -47,7 +47,7 @@ zune-bmp = "0.5.0-rc4"
 # zune-png = "0.5.0-rc1"
 
 
-bytemuck = "1"
+bytemuck = { version = "1", features = ["derive"] }
 
 jpeg-decoder ="0.3.1"
 

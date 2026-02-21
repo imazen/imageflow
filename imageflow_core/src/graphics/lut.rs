@@ -4,8 +4,7 @@
 pub fn linear_to_srgb_lut(linear: f32) -> u8 {
     // Clamp and scale to LUT index
     let idx = (linear * 16383.0).clamp(0.0, 16383.0) as usize;
-    // Safety: idx is clamped to valid range
-    unsafe { *LINEAR_TO_SRGB_LUT.get_unchecked(idx) }
+    LINEAR_TO_SRGB_LUT[idx]
 }
 
 /// Precomputed linear→sRGB LUT (16384 entries)
