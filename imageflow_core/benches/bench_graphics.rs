@@ -64,9 +64,10 @@ fn benchmark_transpose(ctx: &mut Criterion) {
 }
 
 /// Benchmark transpose with different cache tile block sizes to find the optimum.
+/// Not included in the default criterion group — run manually:
+///   cargo bench -p imageflow_core -- "transpose_blk"
+#[allow(dead_code)]
 fn benchmark_transpose_block_sizes(_ctx: &mut Criterion) {
-    // Requires the archmage-based transpose code (transpose_u32_slices_with_block_size).
-    // Skipped when benchmarking original code.
     {
         use imageflow_core::graphics::transpose::transpose_u32_slices_with_block_size;
 
@@ -529,7 +530,6 @@ criterion_group!(
     benchmark_full_scale_pipeline,
     benchmark_scale_2d,
     benchmark_transpose,
-    benchmark_transpose_block_sizes,
     benchmark_downscaling,
     benchmark_flip_h,
     benchmark_flip_v

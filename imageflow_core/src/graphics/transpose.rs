@@ -42,7 +42,10 @@ pub fn transpose_u32_slices_with_block_size(
     height: usize,
     block_size: usize,
 ) -> Result<(), FlowError> {
-    debug_assert!(block_size >= 8 && block_size.is_multiple_of(8), "block_size must be a multiple of 8");
+    debug_assert!(
+        block_size >= 8 && block_size.is_multiple_of(8),
+        "block_size must be a multiple of 8"
+    );
 
     if to_stride < height {
         return Err(nerror!(
