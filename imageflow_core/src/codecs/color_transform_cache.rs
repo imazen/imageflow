@@ -3,9 +3,9 @@ use crate::ffi;
 use crate::ffi::DecoderColorInfo;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::graphics::bitmaps::BitmapWindowMut;
+use dashmap::DashMap;
 use imageflow_types::PixelLayout;
 use lcms2::*;
-use dashmap::DashMap;
 use std::cell::RefCell;
 use std::sync::*;
 use std::thread;
@@ -49,8 +49,9 @@ use std::thread;
 
 pub struct ColorTransformCache {}
 
-static PROFILE_TRANSFORMS: LazyLock<DashMap<u64, Transform<u32, u32, ThreadContext, DisallowCache>>> =
-    LazyLock::new(|| DashMap::with_capacity(4));
+static PROFILE_TRANSFORMS: LazyLock<
+    DashMap<u64, Transform<u32, u32, ThreadContext, DisallowCache>>,
+> = LazyLock::new(|| DashMap::with_capacity(4));
 static GAMA_TRANSFORMS: LazyLock<DashMap<u64, Transform<u32, u32, ThreadContext, DisallowCache>>> =
     LazyLock::new(|| DashMap::with_capacity(4));
 

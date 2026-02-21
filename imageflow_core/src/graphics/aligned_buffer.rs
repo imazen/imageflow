@@ -18,9 +18,8 @@ impl<T: bytemuck::Zeroable + Clone> AlignedBuffer<T> {
     /// * alignment must be a power of two
     pub fn new(size: usize, alignment: usize) -> Result<Self, AlignedBufferError> {
         let element_bytes = std::mem::size_of::<T>();
-        let length_bytes = size
-            .checked_mul(element_bytes)
-            .ok_or(AlignedBufferError::SizeOverflow)?;
+        let length_bytes =
+            size.checked_mul(element_bytes).ok_or(AlignedBufferError::SizeOverflow)?;
         if alignment < 2 || !alignment.is_power_of_two() {
             return Err(AlignedBufferError::InvalidAlignment);
         }
@@ -35,9 +34,8 @@ impl<T: bytemuck::Zeroable + Clone> AlignedBuffer<T> {
         // (alignment - 1) extra bytes = (alignment - 1) / element_bytes + 1 extra elements.
         // Since element_bytes >= 1, padding_elements <= alignment - 1.
         let padding_elements = alignment.div_ceil(element_bytes);
-        let total = capacity
-            .checked_add(padding_elements)
-            .ok_or(AlignedBufferError::SizeOverflow)?;
+        let total =
+            capacity.checked_add(padding_elements).ok_or(AlignedBufferError::SizeOverflow)?;
 
         let mut storage = Vec::new();
         storage.try_reserve_exact(total).map_err(|_| AlignedBufferError::AllocationFailed)?;
