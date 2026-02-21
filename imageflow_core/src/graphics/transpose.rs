@@ -339,10 +339,13 @@ fn neon_transpose_4x4(
     x: usize,
     y: usize,
 ) {
-    use std::arch::aarch64::{float32x4_t, vld1q_f32, vst1q_f32, vzip1q_f32, vzip2q_f32};
+    use std::arch::aarch64::{vzip1q_f32, vzip2q_f32};
 
-    let load_row =
-        |row: usize| -> float32x4_t { vld1q_f32(src[(row * src_stride + x)..].as_ptr()) };
+    let load_row = |row: usize| -> float32x4_t {
+        let off = row * src_stride + x;
+        let arr: &[f32; 4] = src[off..off + 4].try_into().unwrap();
+        safe_unaligned_simd::aarch64::vld1q_f32(arr)
+    };
 
     let r0 = load_row(y);
     let r1 = load_row(y + 1);
@@ -360,7 +363,9 @@ fn neon_transpose_4x4(
     let t3 = vzip2q_f32(c1, c3);
 
     let mut store_row = |row: usize, v: float32x4_t| {
-        vst1q_f32(dst[(row * dst_stride + y)..].as_mut_ptr(), v);
+        let off = row * dst_stride + y;
+        let arr: &mut [f32; 4] = (&mut dst[off..off + 4]).try_into().unwrap();
+        safe_unaligned_simd::aarch64::vst1q_f32(arr, v);
     };
     store_row(x, t0);
     store_row(x + 1, t1);
@@ -431,10 +436,13 @@ fn wasm_transpose_4x4(
     x: usize,
     y: usize,
 ) {
-    use std::arch::wasm32::{i32x4_shuffle, v128, v128_load, v128_store};
+    use std::arch::wasm32::i32x4_shuffle;
 
-    let load_row =
-        |row: usize| -> v128 { v128_load(src[(row * src_stride + x)..].as_ptr() as *const v128) };
+    let load_row = |row: usize| -> v128 {
+        let off = row * src_stride + x;
+        let arr: &[f32; 4] = src[off..off + 4].try_into().unwrap();
+        safe_unaligned_simd::wasm32::v128_load(arr)
+    };
 
     let r0 = load_row(y);
     let r1 = load_row(y + 1);
@@ -454,7 +462,9 @@ fn wasm_transpose_4x4(
     let t3 = i32x4_shuffle::<2, 3, 6, 7>(s1, s3);
 
     let mut store_row = |row: usize, v: v128| {
-        v128_store(dst[(row * dst_stride + y)..].as_mut_ptr() as *mut v128, v);
+        let off = row * dst_stride + y;
+        let arr: &mut [f32; 4] = (&mut dst[off..off + 4]).try_into().unwrap();
+        safe_unaligned_simd::wasm32::v128_store(arr, v);
     };
     store_row(x, t0);
     store_row(x + 1, t1);
