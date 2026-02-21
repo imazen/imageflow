@@ -559,6 +559,7 @@ fn wasm_transpose_4x4(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use archmage::testing::{for_each_token_permutation, CompileTimePolicy};
 
     const SENTINEL: u32 = 0xDEAD_BEEF;
 
@@ -685,6 +686,34 @@ mod tests {
         (256, 31),
     ];
 
+    /// Large dimensions for multi-tier permutation testing.
+    /// These exercise multiple 128×128 tiles with varied edge conditions.
+    const LARGE_DIMS: &[(usize, usize)] = &[
+        // Multiple tiles, exact boundaries
+        (512, 512),
+        (384, 256),
+        (256, 384),
+        // Multiple tiles + remainder < 8 (scalar edge only)
+        (513, 385),
+        (385, 513),
+        // Multiple tiles + remainder crossing 8×8 sub-blocks
+        (519, 391), // 512+7 × 384+7: 4/3 tiles + 7px edge (no SIMD edge blocks)
+        (527, 399), // 512+15 × 384+15: SIMD edge blocks + scalar remainder
+        (537, 409), // 512+25 × 384+25: 3 SIMD edge blocks + 1px scalar
+        // Primes — nothing aligns
+        (521, 397),
+        (397, 521),
+        // Realistic image sizes
+        (1000, 1000),
+        (1920, 1080),
+        (1080, 1920),
+        // Highly asymmetric, large
+        (7, 1024),
+        (1024, 7),
+        (31, 513),
+        (513, 31),
+    ];
+
     #[test]
     fn test_transpose_all_dims_no_padding() {
         for &(w, h) in TEST_DIMS {
@@ -745,5 +774,124 @@ mod tests {
         let mut to = vec![SENTINEL; 9];
         transpose_u32_slices(&from, &mut to, 4, 3, 3, 3).unwrap();
         assert_eq!(to, vec![1, 4, 7, 2, 5, 8, 3, 6, 9]);
+    }
+
+    // =========================================================================
+    // Multi-tier permutation tests
+    // =========================================================================
+    //
+    // for_each_token_permutation disables SIMD tokens in every combination,
+    // so incant! falls through to different tiers (AVX2, scalar, etc.) each
+    // iteration. We verify that ALL tiers produce identical correct results
+    // using sentinel-filled destinations and sequential source values.
+    //
+    // Must run with --test-threads=1 (process-wide mutex for token disabling).
+
+    /// Build source data with sequential values and sentinel padding,
+    /// transpose, and verify every cell + padding integrity.
+    fn verify_transpose_strict(
+        w: usize,
+        h: usize,
+        src_stride: usize,
+        dst_stride: usize,
+        label: &str,
+    ) {
+        let mut from = vec![SENTINEL; src_stride * h];
+        for y in 0..h {
+            for x in 0..w {
+                from[y * src_stride + x] = (y * w + x + 1) as u32;
+            }
+        }
+
+        let mut to = vec![SENTINEL; dst_stride * w];
+
+        transpose_u32_slices(&from, &mut to, src_stride, dst_stride, w, h).unwrap_or_else(|e| {
+            panic!(
+                "transpose failed for {w}x{h} (strides {src_stride},{dst_stride}) at {label}: {e}"
+            )
+        });
+
+        // Verify every active cell
+        for y in 0..h {
+            for x in 0..w {
+                let expected = (y * w + x + 1) as u32;
+                let actual = to[x * dst_stride + y];
+                if actual != expected {
+                    panic!(
+                        "wrong value at dst[{x}][{y}] for {w}x{h} (strides {src_stride},{dst_stride}) \
+                         at {label}: got {actual:#X}, expected {expected:#X}"
+                    );
+                }
+            }
+        }
+
+        // Verify stride padding untouched
+        for dst_row in 0..w {
+            for col in h..dst_stride {
+                let actual = to[dst_row * dst_stride + col];
+                if actual != SENTINEL {
+                    panic!(
+                        "padding corrupted at dst row {dst_row} col {col} for {w}x{h} \
+                         (strides {src_stride},{dst_stride}) at {label}: got {actual:#X}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_transpose_all_tiers_small() {
+        let report = for_each_token_permutation(CompileTimePolicy::WarnStderr, |perm| {
+            for &(w, h) in TEST_DIMS {
+                verify_transpose_strict(w, h, w, h, &perm.label);
+                // With stride padding
+                verify_transpose_strict(w, h, w + 3, h + 1, &perm.label);
+            }
+        });
+        eprintln!("all_tiers_small: {report}");
+    }
+
+    #[test]
+    fn test_transpose_all_tiers_large() {
+        let report = for_each_token_permutation(CompileTimePolicy::WarnStderr, |perm| {
+            for &(w, h) in LARGE_DIMS {
+                verify_transpose_strict(w, h, w, h, &perm.label);
+            }
+        });
+        eprintln!("all_tiers_large: {report}");
+    }
+
+    #[test]
+    fn test_transpose_all_tiers_large_with_stride() {
+        let report = for_each_token_permutation(CompileTimePolicy::WarnStderr, |perm| {
+            for &(w, h) in LARGE_DIMS {
+                // Stride padding of 5 elements — odd, not aligned to any block size
+                verify_transpose_strict(w, h, w + 5, h + 5, &perm.label);
+            }
+        });
+        eprintln!("all_tiers_large_with_stride: {report}");
+    }
+
+    #[test]
+    fn test_transpose_all_tiers_roundtrip() {
+        let report = for_each_token_permutation(CompileTimePolicy::WarnStderr, |perm| {
+            // Roundtrip a selection of large and tricky sizes
+            let dims = [(521, 397), (1000, 1000), (263, 271), (31, 513), (513, 31)];
+            for (w, h) in dims {
+                let original: Vec<u32> = (1..=(w * h) as u32).collect();
+                let mut transposed = vec![SENTINEL; w * h];
+                let mut roundtripped = vec![SENTINEL; w * h];
+
+                transpose_u32_slices(&original, &mut transposed, w, h, w, h).unwrap();
+                transpose_u32_slices(&transposed, &mut roundtripped, h, w, h, w).unwrap();
+
+                assert_eq!(
+                    original, roundtripped,
+                    "roundtrip failed for {w}x{h} at {}",
+                    perm.label
+                );
+            }
+        });
+        eprintln!("all_tiers_roundtrip: {report}");
     }
 }
