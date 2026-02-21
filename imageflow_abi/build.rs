@@ -142,7 +142,7 @@ struct EnumModification {
     member_style: Style,
 }
 
-fn filter_enums<'a, 'b>(s: String, names: &'a [&'a str], how: EnumModification) -> String {
+fn filter_enums<'a>(s: String, names: &'a [&'a str], how: EnumModification) -> String {
     let mut temp = s;
     for n in names {
         let new_name = format!("{}{}", how.name_prefix, n);
@@ -253,25 +253,28 @@ fn generate(target: Target) -> String {
 
     let no_preprocessor_directives = target == Target::Lua || target == Target::SignaturesOnly;
 
-    let mut config = cbindgen::Config::default();
-    config.language = cbindgen::Language::C;
-    config.header = Some(header);
-    config.trailer = Some(footer);
-    config.cpp_compat = !no_preprocessor_directives;
-    config.include_guard = None;
-    config.documentation = allow_comments;
-    config.documentation_style = cbindgen::DocumentationStyle::C99;
-    config.style = cbindgen::Style::Both;
-    config.sort_by = cbindgen::SortKey::Name;
+    let mut config = cbindgen::Config {
+        language: cbindgen::Language::C,
+        header: Some(header),
+        trailer: Some(footer),
+        cpp_compat: !no_preprocessor_directives,
+        include_guard: None,
+        documentation: allow_comments,
+        documentation_style: cbindgen::DocumentationStyle::C99,
+        style: cbindgen::Style::Both,
+        sort_by: cbindgen::SortKey::Name,
+        ..Default::default()
+    };
 
     if target == Target::Raw {
         let builder = cbindgen::Builder::new().with_config(config).with_crate(crate_dir);
         generate_to_string(builder)
     } else if let Target::Other { structs, enums } = target_flatten(target) {
-        let mut enum_config = cbindgen::EnumConfig::default();
-        enum_config.rename_variants = cbindgen::RenameRule::SnakeCase;
-        enum_config.prefix_with_name = true;
-        config.enumeration = enum_config;
+        config.enumeration = cbindgen::EnumConfig {
+            rename_variants: cbindgen::RenameRule::SnakeCase,
+            prefix_with_name: true,
+            ..Default::default()
+        };
 
         let builder = cbindgen::Builder::new().with_config(config).with_crate(crate_dir);
         let s = generate_to_string(builder);
