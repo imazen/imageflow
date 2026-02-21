@@ -61,7 +61,6 @@ byteorder="1"
 url = "2"
 uuid = { version = "1", features = ["v4"] }
 
-rustface = { git = "https://github.com/atomashpolskiy/rustface" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
