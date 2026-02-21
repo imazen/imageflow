@@ -1,6 +1,5 @@
 use daggy::{Dag, EdgeIndex, NodeIndex, Walker};
 
-use libc::size_t;
 use petgraph::visit::EdgeRef;
 use petgraph::EdgeDirection;
 use std::error::Error;

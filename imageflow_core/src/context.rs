@@ -231,7 +231,7 @@ impl ThreadSafeContext {
         &self,
         bytes: usize,
         alignment: usize,
-        filename: *const libc::c_char,
+        filename: *const core::ffi::c_char,
         line: i32,
     ) -> Result<*mut u8> {
         let mut allocations = self.allocations.lock().map_err(|e| {

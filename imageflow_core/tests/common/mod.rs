@@ -1,7 +1,6 @@
 extern crate dssim;
 extern crate imageflow_helpers as hlp;
 extern crate imageflow_types as s;
-extern crate libc;
 extern crate rgb;
 extern crate serde_json;
 

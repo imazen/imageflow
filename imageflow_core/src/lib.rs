@@ -29,7 +29,6 @@ extern crate gif;
 extern crate imagequant;
 extern crate imgref;
 extern crate lcms2;
-extern crate libc;
 extern crate libwebp_sys;
 extern crate lodepng;
 extern crate mozjpeg;
@@ -83,10 +82,9 @@ mod internal_prelude {
 
         pub use daggy::{Dag, EdgeIndex, NodeIndex};
         pub use imageflow_helpers::preludes::from_std::*;
-        pub use libc::{c_float, c_void, size_t};
+        pub use core::ffi::{c_float, c_void};
         pub extern crate daggy;
         pub extern crate imageflow_types as s;
-        pub extern crate libc;
         pub extern crate petgraph;
         pub extern crate serde;
         pub extern crate serde_json;

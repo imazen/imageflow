@@ -68,7 +68,7 @@ impl ColorTransformCache {
     unsafe extern "C" fn error_logger(
         context_id: lcms2_sys::Context,
         error_code: u32,
-        text: *const libc::c_char,
+        text: *const core::ffi::c_char,
     ) {
         let text_str = CStr::from_ptr(text).to_str().unwrap_or("LCMS error message not valid UTF8");
         let message = format!("Error {}: {}", error_code, text_str);

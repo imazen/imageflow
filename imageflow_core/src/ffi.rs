@@ -41,7 +41,7 @@ use mozjpeg_sys::{c_long, c_void};
 pub struct ImageflowJsonResponse {
     pub status_code: i64,
     pub buffer_utf8_no_nulls: *const u8,
-    pub buffer_size: libc::size_t,
+    pub buffer_size: usize,
 }
 
 #[repr(C)]
@@ -128,7 +128,6 @@ pub enum JpegMarker {
 
 mod long_term {
     use super::*;
-    use ::libc;
     extern "C" {
 
         pub fn wrap_jpeg_error_state_bytes() -> usize;

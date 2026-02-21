@@ -1155,7 +1155,6 @@ dependencies = [
  "lazy_static",
  "lcms2",
  "lcms2-sys",
- "libc",
  "libpng-sys",
  "libwebp-sys",
  "libz-sys",

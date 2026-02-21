@@ -313,7 +313,7 @@ impl Encoder for WebPEncoder {
                 let bytes = slice::from_raw_parts(output, output_len);
                 let result =
                     self.io.write_all(bytes).map_err(|e| FlowError::from_encoder(e).at(here!()));
-                WebPFree(output as *mut libc::c_void);
+                WebPFree(output as *mut core::ffi::c_void);
                 result?
             }
         }
