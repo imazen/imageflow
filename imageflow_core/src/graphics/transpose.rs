@@ -91,6 +91,111 @@ pub fn bitmap_window_transpose(
 }
 
 // ---------------------------------------------------------------------------
+// Shared tiling logic
+// ---------------------------------------------------------------------------
+// Two-level tiling: BLOCK_SIZE tiles for cache locality, 8×8 sub-blocks for SIMD.
+// The transpose_fn callback handles one 8×8 sub-block. After the tiled region,
+// remaining rows/columns are also processed in 8×8 blocks where they fit, with
+// element-by-element scalar only for the final < 8 remainder.
+
+/// Process a rectangular region in 8×8 blocks, calling `f` for each block.
+/// Only full 8×8 blocks are processed — caller handles the remainder.
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn process_8x8_blocks(
+    x_start: usize,
+    x_end: usize,
+    y_start: usize,
+    y_end: usize,
+    mut f: impl FnMut(usize, usize),
+) {
+    let x_limit = x_start + ((x_end - x_start) / 8) * 8;
+    let y_limit = y_start + ((y_end - y_start) / 8) * 8;
+    for y in (y_start..y_limit).step_by(8) {
+        for x in (x_start..x_limit).step_by(8) {
+            f(x, y);
+        }
+    }
+}
+
+/// Scalar element-by-element transpose for regions smaller than 8×8.
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn scalar_remainder(
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    x_start: usize,
+    x_end: usize,
+    y_start: usize,
+    y_end: usize,
+) {
+    for y in y_start..y_end {
+        for x in x_start..x_end {
+            dst[x * dst_stride + y] = src[y * src_stride + x];
+        }
+    }
+}
+
+/// Two-level tiled transpose with a callback for each 8×8 sub-block.
+/// Handles all regions: full tiles, edge tiles, and scalar remainders.
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn transpose_tiled_impl(
+    src: &[f32],
+    dst: &mut [f32],
+    src_stride: usize,
+    dst_stride: usize,
+    width: usize,
+    height: usize,
+    block_size: usize,
+    mut transpose_8x8: impl FnMut(&[f32], &mut [f32], usize, usize, usize, usize),
+) {
+    let tile_h = (height / block_size) * block_size;
+    let tile_w = (width / block_size) * block_size;
+    let blk_h = (height / 8) * 8;
+    let blk_w = (width / 8) * 8;
+
+    // 1. Full tiles: process in BLOCK_SIZE×BLOCK_SIZE tiles for cache locality
+    for y_tile in (0..tile_h).step_by(block_size) {
+        for x_tile in (0..tile_w).step_by(block_size) {
+            for y in (y_tile..y_tile + block_size).step_by(8) {
+                for x in (x_tile..x_tile + block_size).step_by(8) {
+                    transpose_8x8(src, dst, src_stride, dst_stride, x, y);
+                }
+            }
+        }
+    }
+
+    // 2. Right edge strip (columns tile_w..blk_w, rows 0..tile_h) — 8×8 blocks
+    if tile_w < blk_w {
+        for y_tile in (0..tile_h).step_by(block_size) {
+            process_8x8_blocks(tile_w, blk_w, y_tile, y_tile + block_size, |x, y| {
+                transpose_8x8(src, dst, src_stride, dst_stride, x, y);
+            });
+        }
+    }
+
+    // 3. Bottom edge strip (rows tile_h..blk_h, columns 0..blk_w) — 8×8 blocks
+    if tile_h < blk_h {
+        process_8x8_blocks(0, blk_w, tile_h, blk_h, |x, y| {
+            transpose_8x8(src, dst, src_stride, dst_stride, x, y);
+        });
+    }
+
+    // 4. Scalar remainders (< 8 pixels) — right column strip
+    if blk_w < width {
+        scalar_remainder(src, dst, src_stride, dst_stride, blk_w, width, 0, blk_h);
+    }
+
+    // 5. Scalar remainders — bottom row strip (full width, including corner)
+    if blk_h < height {
+        scalar_remainder(src, dst, src_stride, dst_stride, 0, width, blk_h, height);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Scalar fallback — always available, plain function (ScalarToken has no CPU features)
 // ---------------------------------------------------------------------------
 
@@ -105,22 +210,16 @@ fn transpose_tiled_scalar(
     height: usize,
     block_size: usize,
 ) {
-    let cropped_h = (height / block_size) * block_size;
-    let cropped_w = (width / block_size) * block_size;
-
-    for y_block in (0..cropped_h).step_by(block_size) {
-        for x_block in (0..cropped_w).step_by(block_size) {
-            let max_y = y_block + block_size;
-            let max_x = x_block + block_size;
-            for y in (y_block..max_y).step_by(8) {
-                for x in (x_block..max_x).step_by(8) {
-                    scalar_transpose_8x8(src, dst, src_stride, dst_stride, x, y);
-                }
-            }
-        }
-    }
-
-    transpose_edges_scalar(src, dst, cropped_h, cropped_w, src_stride, dst_stride, width, height);
+    transpose_tiled_impl(
+        src,
+        dst,
+        src_stride,
+        dst_stride,
+        width,
+        height,
+        block_size,
+        scalar_transpose_8x8,
+    );
 }
 
 #[inline(always)]
@@ -135,32 +234,6 @@ fn scalar_transpose_8x8(
     for i in 0..8 {
         for j in 0..8 {
             dst[(x + j) * dst_stride + (y + i)] = src[(y + i) * src_stride + (x + j)];
-        }
-    }
-}
-
-#[inline(always)]
-#[allow(clippy::too_many_arguments)]
-fn transpose_edges_scalar(
-    src: &[f32],
-    dst: &mut [f32],
-    cropped_height: usize,
-    cropped_width: usize,
-    src_stride: usize,
-    dst_stride: usize,
-    width: usize,
-    height: usize,
-) {
-    // Right edge
-    for x in cropped_width..width {
-        for y in 0..cropped_height {
-            dst[x * dst_stride + y] = src[y * src_stride + x];
-        }
-    }
-    // Bottom edge (full width)
-    for y in cropped_height..height {
-        for x in 0..width {
-            dst[x * dst_stride + y] = src[y * src_stride + x];
         }
     }
 }
@@ -182,22 +255,16 @@ fn transpose_tiled_v3(
     height: usize,
     block_size: usize,
 ) {
-    let cropped_h = (height / block_size) * block_size;
-    let cropped_w = (width / block_size) * block_size;
-
-    for y_block in (0..cropped_h).step_by(block_size) {
-        for x_block in (0..cropped_w).step_by(block_size) {
-            let max_y = y_block + block_size;
-            let max_x = x_block + block_size;
-            for y in (y_block..max_y).step_by(8) {
-                for x in (x_block..max_x).step_by(8) {
-                    avx2_transpose_8x8(token, src, dst, src_stride, dst_stride, x, y);
-                }
-            }
-        }
-    }
-
-    transpose_edges_scalar(src, dst, cropped_h, cropped_w, src_stride, dst_stride, width, height);
+    transpose_tiled_impl(
+        src,
+        dst,
+        src_stride,
+        dst_stride,
+        width,
+        height,
+        block_size,
+        |src, dst, ss, ds, x, y| avx2_transpose_8x8(token, src, dst, ss, ds, x, y),
+    );
 }
 
 /// AVX2 8x8 transpose using f32 shuffle intrinsics (Highway-style 3-stage).
@@ -292,22 +359,16 @@ fn transpose_tiled_arm_v2(
     height: usize,
     block_size: usize,
 ) {
-    let cropped_h = (height / block_size) * block_size;
-    let cropped_w = (width / block_size) * block_size;
-
-    for y_block in (0..cropped_h).step_by(block_size) {
-        for x_block in (0..cropped_w).step_by(block_size) {
-            let max_y = y_block + block_size;
-            let max_x = x_block + block_size;
-            for y in (y_block..max_y).step_by(8) {
-                for x in (x_block..max_x).step_by(8) {
-                    neon_transpose_8x8(token, src, dst, src_stride, dst_stride, x, y);
-                }
-            }
-        }
-    }
-
-    transpose_edges_scalar(src, dst, cropped_h, cropped_w, src_stride, dst_stride, width, height);
+    transpose_tiled_impl(
+        src,
+        dst,
+        src_stride,
+        dst_stride,
+        width,
+        height,
+        block_size,
+        |src, dst, ss, ds, x, y| neon_transpose_8x8(token, src, dst, ss, ds, x, y),
+    );
 }
 
 /// NEON 4x4 transpose, composed 4 times for 8x8.
@@ -390,22 +451,16 @@ fn transpose_tiled_wasm128(
     height: usize,
     block_size: usize,
 ) {
-    let cropped_h = (height / block_size) * block_size;
-    let cropped_w = (width / block_size) * block_size;
-
-    for y_block in (0..cropped_h).step_by(block_size) {
-        for x_block in (0..cropped_w).step_by(block_size) {
-            let max_y = y_block + block_size;
-            let max_x = x_block + block_size;
-            for y in (y_block..max_y).step_by(8) {
-                for x in (x_block..max_x).step_by(8) {
-                    wasm_transpose_8x8(token, src, dst, src_stride, dst_stride, x, y);
-                }
-            }
-        }
-    }
-
-    transpose_edges_scalar(src, dst, cropped_h, cropped_w, src_stride, dst_stride, width, height);
+    transpose_tiled_impl(
+        src,
+        dst,
+        src_stride,
+        dst_stride,
+        width,
+        height,
+        block_size,
+        |src, dst, ss, ds, x, y| wasm_transpose_8x8(token, src, dst, ss, ds, x, y),
+    );
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -558,32 +613,40 @@ mod tests {
         (16, 16),
         (64, 64),
         (120, 120),
-        // --- Sub-128, 8k+r remainder within tile ---
-        (9, 9),
-        (15, 17),
-        (17, 15),
-        (33, 65),
-        (65, 33),
-        (127, 127),
+        // --- Sub-128, crossing multiple 8×8 sub-blocks with remainder ---
+        (9, 9),     // 1 block + 1 remainder in each dim
+        (15, 17),   // 1+7 × 2+1
+        (17, 15),   // 2+1 × 1+7
+        (31, 17),   // 3+7 × 2+1 — many blocks, large remainder
+        (17, 31),   // 2+1 × 3+7
+        (25, 13),   // 3+1 × 1+5
+        (47, 33),   // 5+7 × 4+1
+        (33, 65),   // 4+1 × 8+1
+        (65, 33),   // 8+1 × 4+1
+        (100, 67),  // 12+4 × 8+3
+        (127, 127), // 15+7 × 15+7, one pixel short of tile
         // --- Exact block boundary ---
         (128, 128),
-        // --- 128 + small remainder (< 8, pure scalar edge) ---
+        // --- 128 + small remainder (< 8, pure scalar edge tile) ---
         (129, 128),
         (128, 129),
         (129, 129),
         (131, 133),
-        // --- 128 + remainder = 8k (SIMD edge blocks, no scalar remainder) ---
-        (136, 128),
-        (128, 136),
+        // --- 128 + remainder crossing 8×8 sub-blocks in the edge ---
+        (136, 128), // 8-wide edge, exact sub-block
+        (128, 136), // 8-tall edge, exact sub-block
         (136, 136),
-        // --- 128 + remainder = 8k+r (SIMD edge blocks + scalar remainder) ---
-        (137, 128),
-        (128, 137),
+        (137, 128), // 9-wide edge: 1 sub-block + 1 remainder
+        (128, 137), // 9-tall edge: 1 sub-block + 1 remainder
         (137, 139),
+        (145, 153), // 17-wide × 25-tall edge: 2+1 × 3+1 sub-blocks in edge
+        (153, 145),
         // --- Multiple full tiles ---
         (256, 256),
         (257, 257),
         (255, 255),
+        // --- Multiple tiles + non-trivial edge ---
+        (263, 271), // 256+7 × 256+15: 2 tiles + crossing sub-blocks in edge
         // --- Highly asymmetric (one dim all-edge) ---
         (1, 128),
         (128, 1),
@@ -593,6 +656,8 @@ mod tests {
         (256, 3),
         (7, 129),
         (129, 7),
+        (31, 256), // many sub-blocks in narrow dim, full tiles in wide dim
+        (256, 31),
     ];
 
     #[test]
