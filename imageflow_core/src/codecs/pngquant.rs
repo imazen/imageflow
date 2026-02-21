@@ -49,12 +49,6 @@ impl PngquantEncoder {
         Ok(PngquantEncoder { liq, io, maximum_deflate, matte })
     }
 }
-impl PngquantEncoder {
-    unsafe fn raw_byte_access(rgba: &[rgb::RGBA8]) -> &[u8] {
-        use std::slice;
-        slice::from_raw_parts(rgba.as_ptr() as *const u8, rgba.len() * 4)
-    }
-}
 impl Encoder for PngquantEncoder {
     fn write_frame(
         &mut self,
