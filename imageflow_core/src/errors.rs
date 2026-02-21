@@ -957,18 +957,6 @@ pub mod writing_to_slices {
     where
         T: std::fmt::Display,
     {
-        /// # Safety
-        /// `buffer` must point to a valid, writable allocation of at least `buffer_length` bytes.
-        pub unsafe fn write_and_write_errors_to_cstring(
-            &self,
-            buffer: *mut u8,
-            buffer_length: usize,
-            append_when_truncated: Option<&str>,
-        ) -> WriteResult {
-            let slice = ::std::slice::from_raw_parts_mut(buffer, buffer_length);
-            self.write_and_write_errors_to_cstring_slice(slice, append_when_truncated)
-        }
-
         pub fn write_to_slice(&self, buffer: &mut [u8]) -> WriteResult {
             let mut cursor = NonAllocatingCursor::new(buffer);
             let result = write!(&mut cursor, "{}", self.0);

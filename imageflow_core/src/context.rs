@@ -224,24 +224,18 @@ impl ThreadSafeContext {
             context_allocs,
         )
     }
-    /// # Safety
-    /// `filename` must be null or a valid C string pointer. The caller must ensure
+    /// Allocates zeroed memory tracked by this context. The caller must ensure
     /// the returned pointer is eventually freed via `mem_free`.
-    pub unsafe fn mem_calloc(
+    pub fn mem_calloc(
         &self,
         bytes: usize,
         alignment: usize,
-        filename: *const core::ffi::c_char,
+        filename: Option<&str>,
         line: i32,
     ) -> Result<*mut u8> {
-        let mut allocations = self.allocations.lock().map_err(|e| {
-            let filename_str = if filename.is_null() {
-                "[no filename provided]"
-            } else {
-                let c_filename = CStr::from_ptr(filename);
-                c_filename.to_str().unwrap_or("[non UTF-8 filename]")
-            };
+        let filename_str = filename.unwrap_or("[no filename provided]");
 
+        let mut allocations = self.allocations.lock().map_err(|e| {
             nerror!(
                 ErrorKind::FailedBorrow,
                 "Cannot allocate due to a previous allocation failure on this Context - make a new Context and drop this one: {:?}\n{}:{}",
@@ -252,13 +246,6 @@ impl ThreadSafeContext {
         })?;
 
         let result = allocations.allocate(bytes, alignment).map_err(|e| {
-            let filename_str = if filename.is_null() {
-                "[no filename provided]"
-            } else {
-                let c_filename = CStr::from_ptr(filename);
-                c_filename.to_str().unwrap_or("[non UTF-8 filename]")
-            };
-
             nerror!(
                 ErrorKind::AllocationFailed,
                 "Failed to allocate {} bytes with alignment {}: {:?}\n{}:{}",
@@ -272,9 +259,9 @@ impl ThreadSafeContext {
         Ok(result)
     }
 
-    /// # Safety
-    /// `ptr` must have been previously allocated by `mem_calloc` on this context.
-    pub unsafe fn mem_free(&self, ptr: *const u8) -> bool {
+    /// Frees memory previously allocated by `mem_calloc` on this context.
+    /// Returns true if the pointer was found and freed.
+    pub fn mem_free(&self, ptr: *const u8) -> bool {
         self.allocations.lock().map(|mut list| list.free(ptr)).unwrap_or(false)
     }
 }

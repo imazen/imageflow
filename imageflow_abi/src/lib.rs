@@ -700,13 +700,11 @@ pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(
             return false;
         }
 
-        let result = unsafe {
-            c.outward_error().get_buffer_writer().write_and_write_errors_to_cstring(
-                buffer as *mut u8,
-                buffer_length,
-                Some("\n[truncated]\n"),
-            )
-        };
+        let slice = unsafe { std::slice::from_raw_parts_mut(buffer as *mut u8, buffer_length) };
+        let result = c
+            .outward_error()
+            .get_buffer_writer()
+            .write_and_write_errors_to_cstring_slice(slice, Some("\n[truncated]\n"));
         if !bytes_written.is_null() {
             unsafe {
                 *bytes_written = result.bytes_written();
@@ -1033,7 +1031,7 @@ pub fn create_abi_json_response(
             return ptr::null();
         }
 
-        let pointer = match c.mem_calloc(alloc_size, 16, ptr::null(), -1) {
+        let pointer = match c.mem_calloc(alloc_size, 16, None, -1) {
             Err(e) => {
                 c.outward_error_mut().try_set_error(e);
                 return ptr::null();
@@ -1342,7 +1340,16 @@ pub unsafe extern "C" fn imageflow_context_memory_allocate(
         c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `bytes` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
         return ptr::null_mut();
     }
-    let pointer = match unsafe { c.mem_calloc(bytes, 16, filename, line) } {
+    let filename_str = if filename.is_null() {
+        None
+    } else {
+        Some(
+            unsafe { std::ffi::CStr::from_ptr(filename) }
+                .to_str()
+                .unwrap_or("[non UTF-8 filename]"),
+        )
+    };
+    let pointer = match c.mem_calloc(bytes, 16, filename_str, line) {
         Err(e) => {
             c.outward_error_mut().try_set_error(e);
             return ptr::null_mut();
@@ -1386,7 +1393,7 @@ pub unsafe extern "C" fn imageflow_context_memory_free(
 ) -> bool {
     let c = context!(context); // We must be able to free in an errored state
     if !pointer.is_null() {
-        unsafe { c.mem_free(pointer as *const u8) }
+        c.mem_free(pointer as *const u8)
     } else {
         true
     }
