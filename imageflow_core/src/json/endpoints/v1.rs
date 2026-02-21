@@ -707,16 +707,16 @@ fn test_handler() {
             y2: 10,
             color: Color::Srgb(ColorSrgb::Hex("ffee00".to_owned())),
         },
-    ];
-    steps.push(Node::Encode {
-        io_id: 1,
-        preset: EncoderPreset::LibjpegTurbo {
-            quality: Some(90),
-            optimize_huffman_coding: None,
-            progressive: None,
-            matte: None,
+        Node::Encode {
+            io_id: 1,
+            preset: EncoderPreset::LibjpegTurbo {
+                quality: Some(90),
+                optimize_huffman_coding: None,
+                progressive: None,
+                matte: None,
+            },
         },
-    });
+    ];
 
     let build = Build001 {
         builder_config: Some(Build001Config {
