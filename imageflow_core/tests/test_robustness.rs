@@ -412,10 +412,7 @@ fn test_webp_oversized_riff_claim() {
     let result = ctx.get_unscaled_unrotated_image_info(0);
     match result {
         Ok(i) => {
-            println!(
-                "WebP with 256MB RIFF claim accepted as {}x{}",
-                i.image_width, i.image_height
-            );
+            println!("WebP with 256MB RIFF claim accepted as {}x{}", i.image_width, i.image_height);
         }
         Err(e) => {
             println!("WebP rejected: {:?}", e);

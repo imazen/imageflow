@@ -1074,7 +1074,10 @@ fn test_matte_compositing_fully_transparent_pixels() {
         "Fully-transparent pixels should become the matte color! \
          Max diffs: R={}, G={}, B={}, A={}. \
          If alpha/RGB are near 0, blend_matte is skipping transparent pixels.",
-        max_r_diff, max_g_diff, max_b_diff, max_a_diff
+        max_r_diff,
+        max_g_diff,
+        max_b_diff,
+        max_a_diff
     );
 
     println!("\n✓ Fully transparent pixels correctly become the matte color");
@@ -1142,7 +1145,7 @@ fn test_matte_compositing_mixed_alpha() {
 
     let cc = ColorContext::new(WorkingFloatspace::LinearRGB, 0.0);
     let matte_b_linear = cc.srgb_to_floatspace(255u8); // blue matte: B=255
-    let fg_g_linear = cc.srgb_to_floatspace(255u8);    // green fg: G=255
+    let fg_g_linear = cc.srgb_to_floatspace(255u8); // green fg: G=255
 
     let mut any_failed = false;
 

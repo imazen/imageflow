@@ -87,11 +87,7 @@ fn read_encoder_hints(i: &Instructions) -> s::EncoderHints {
             min_quality: i.png_min_quality.map(|v| v as f32),
             quantization_speed: i.png_quantization_speed,
             hint_max_deflate: i.png_max_deflate,
-            mimic: if i.png_libpng == Some(true) {
-                Some(PngEncoderStyle::Libpng)
-            } else {
-                None
-            },
+            mimic: if i.png_libpng == Some(true) { Some(PngEncoderStyle::Libpng) } else { None },
         }),
         webp: Some(s::WebpEncoderHints {
             lossless: i.webp_lossless,
