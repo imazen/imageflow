@@ -426,11 +426,25 @@ impl Context {
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
 
-    pub fn add_input_bytes<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
+    /// Zero-copy: borrows `bytes` without copying. Use `add_copied_input_buffer`
+    /// or `add_input_vector` for a safe alternative that owns the data.
+    ///
+    /// # Safety
+    /// `bytes` must remain valid and unchanged for the lifetime of this `Context`.
+    /// The borrow checker cannot enforce this — the `'b` lifetime only constrains
+    /// the call, not the `Context`'s actual use of the data.
+    pub unsafe fn add_input_bytes<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
         self.add_input_buffer(io_id, bytes)
     }
-    pub fn add_input_buffer<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
-        let io = unsafe { IoProxy::read_slice(self, io_id, bytes) }.map_err(|e| e.at(here!()))?;
+    /// Zero-copy: borrows `bytes` without copying. Use `add_copied_input_buffer`
+    /// or `add_input_vector` for a safe alternative that owns the data.
+    ///
+    /// # Safety
+    /// `bytes` must remain valid and unchanged for the lifetime of this `Context`.
+    /// The borrow checker cannot enforce this — the `'b` lifetime only constrains
+    /// the call, not the `Context`'s actual use of the data.
+    pub unsafe fn add_input_buffer<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
+        let io = IoProxy::read_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
 
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
@@ -713,7 +727,8 @@ impl Context {
 #[cfg(test)]
 fn test_get_output_buffer_slice_wrong_type_error() {
     let mut context = Context::create().unwrap();
-    context.add_input_bytes(0, b"abcdef").unwrap();
+    // SAFETY: string literal is 'static
+    unsafe { context.add_input_bytes(0, b"abcdef") }.unwrap();
 
     assert_eq!(ErrorKind::InvalidArgument, context.get_output_buffer_slice(0).err().unwrap().kind);
 }

@@ -178,7 +178,9 @@ impl IoProxy {
     }
 
     /// # Safety
-    /// The IoProxy must not outlive the Context or the backing `bytes` slice.
+    /// The caller must ensure `bytes` remains valid for the lifetime of the returned
+    /// `IoProxy` (and any `Context` it is added to). The `'static` bound on the internal
+    /// `Cursor` is a lie — the real lifetime is erased via transmute.
     pub unsafe fn read_slice<'a>(
         context: &'a Context,
         io_id: i32,

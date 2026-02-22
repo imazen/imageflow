@@ -1073,7 +1073,8 @@ pub fn compare_bitmaps_result_to_expected<'a>(
     let (actual_context, actual_bitmap_key) = match result {
         ResultKind::Bitmap { context, key } => (context, key),
         ResultKind::Bytes(actual_bytes) => {
-            image_context.add_input_bytes(0, actual_bytes).unwrap();
+            // SAFETY: `actual_bytes` is a parameter that outlives local `image_context`
+            unsafe { image_context.add_input_bytes(0, actual_bytes) }.unwrap();
             let key = decode_image(&mut image_context, 0);
             (image_context.as_ref(), key)
         }

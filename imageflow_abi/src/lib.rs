@@ -1169,7 +1169,9 @@ pub unsafe extern "C" fn imageflow_context_add_input_buffer(
                     .add_copied_input_buffer(io_id, bytes)
                     .map_err(|e| e.at(here!()))?;
             } else {
-                inner_context_guard.add_input_buffer(io_id, bytes).map_err(|e| e.at(here!()))?;
+                // SAFETY: C caller guarantees buffer outlives context (Lifetime::OutlivesContext)
+                unsafe { inner_context_guard.add_input_buffer(io_id, bytes) }
+                    .map_err(|e| e.at(here!()))?;
             }
             Ok(true)
         }))
