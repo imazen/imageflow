@@ -1,73 +1,7 @@
 use ::chrono::{DateTime, Utc};
 use ::std;
 use ::std::any::Any;
-use ::std::borrow::Borrow;
 use ::std::fmt;
-use ::std::hash::{Hash, Hasher};
-use ref_cast::RefCast;
-
-#[repr(transparent)]
-#[derive(Copy, Clone, Debug, RefCast)]
-pub struct AsciiFolding<S: ?Sized>(S);
-
-impl<S> AsciiFolding<S> {
-    pub fn new(s: S) -> Self {
-        AsciiFolding(s)
-    }
-}
-
-impl<S: AsRef<str>> AsRef<str> for AsciiFolding<S> {
-    #[inline]
-    fn as_ref(&self) -> &str {
-        self.0.as_ref()
-    }
-}
-
-impl<S: fmt::Display> fmt::Display for AsciiFolding<S> {
-    #[inline]
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.0, fmt)
-    }
-}
-
-impl<S: ?Sized> AsciiFolding<S> {
-    pub fn borrowed(s: &S) -> &Self {
-        AsciiFolding::ref_cast(s)
-    }
-}
-
-impl Borrow<AsciiFolding<str>> for AsciiFolding<String> {
-    #[inline]
-    fn borrow(&self) -> &AsciiFolding<str> {
-        AsciiFolding::borrowed(self.0.borrow())
-    }
-}
-
-impl<S: Borrow<str> + ?Sized> PartialEq for AsciiFolding<S> {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        self.0.borrow().eq_ignore_ascii_case(other.0.borrow())
-    }
-}
-
-impl<S: Borrow<str> + ?Sized> Eq for AsciiFolding<S> {}
-
-impl<S: Borrow<str> + ?Sized> Hash for AsciiFolding<S> {
-    #[inline]
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        for byte in self.0.borrow().bytes().map(|b| b.to_ascii_lowercase()) {
-            hasher.write_u8(byte);
-        }
-    }
-}
-
-#[test]
-fn test_hashmap_key() {
-    let mut m = std::collections::HashMap::new();
-    m.insert(AsciiFolding("v".to_owned()), "value");
-
-    m.get(AsciiFolding::borrowed("v")).unwrap();
-}
 
 /// Debounce filter with interval adjustment and prediction (not Sync/Send)
 pub struct Debounce {

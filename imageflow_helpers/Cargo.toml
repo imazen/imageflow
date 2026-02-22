@@ -38,8 +38,6 @@ rand = "*"
 rgb = "0.8"
 
 base64 = "0.22"
-ref-cast = "1"
-
 
 
 unicase = "2"
