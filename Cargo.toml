@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "append_only_set",
     "imageflow_helpers",
     "imageflow_http_helpers",
     "imageflow_types",
