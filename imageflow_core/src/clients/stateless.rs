@@ -140,9 +140,9 @@ impl LibClient {
             Vec<s::EncodeResult>,
             Option<s::BuildPerformance>,
         ) = match payload {
-            s::ResponsePayload::JobResult(s::JobResult { decodes, encodes, performance }) => {
-                (decodes, encodes, performance)
-            }
+            s::ResponsePayload::JobResult(s::JobResult {
+                decodes, encodes, performance, ..
+            }) => (decodes, encodes, performance),
             _ => {
                 unreachable!()
             }

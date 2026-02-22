@@ -598,6 +598,7 @@ impl Context {
         Ok(s::JobResult {
             decodes,
             encodes: engine.collect_augmented_encode_results(&parsed.io),
+            analyses: engine.collect_analyze_results(),
             performance: Some(perf),
         })
     }
@@ -648,6 +649,7 @@ impl Context {
         Ok(s::JobResult {
             decodes,
             encodes: engine.collect_encode_results(),
+            analyses: engine.collect_analyze_results(),
             performance: Some(perf),
         })
     }

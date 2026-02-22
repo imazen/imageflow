@@ -590,6 +590,16 @@ impl<'a> Engine<'a> {
         encodes
     }
 
+    pub fn collect_analyze_results(&self) -> Vec<s::AnalyzeResult> {
+        let mut analyses = Vec::new();
+        for node in self.g.raw_nodes() {
+            if let crate::flow::definitions::NodeResult::Analyzed(ref r) = node.weight.result {
+                analyses.push((*r).clone());
+            }
+        }
+        analyses
+    }
+
     pub fn collect_augmented_encode_results(&self, io: &[s::IoObject]) -> Vec<s::EncodeResult> {
         self.collect_encode_results()
             .into_iter()

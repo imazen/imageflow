@@ -455,6 +455,8 @@ pub enum NodeResult {
     /// A frame result
     Frame(BitmapKey),
     Encoded(s::EncodeResult),
+    /// Analysis result (focus regions, saliency maps, etc.)
+    Analyzed(s::AnalyzeResult),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub enum NodeParamsInternal {
@@ -558,7 +560,7 @@ impl From<s::Node> for Node {
             }
             s::Node::Watermark(_) => Node::n(&nodes::WATERMARK, NodeParams::Json(node)),
             s::Node::WatermarkRedDot => Node::n(&nodes::WATERMARK_RED_DOT, NodeParams::Json(node)),
-            s::Node::Analyze { .. } => Node::n(&nodes::CONSTRAIN, NodeParams::Json(node)), // TODO: Wire to proper analyze node
+            s::Node::Analyze { .. } => Node::n(&nodes::ANALYZE, NodeParams::Json(node)),
         }
     }
 }

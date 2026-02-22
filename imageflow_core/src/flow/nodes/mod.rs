@@ -5,6 +5,7 @@ use petgraph::EdgeDirection;
 use std::error::Error;
 use std::fmt;
 
+mod analyze;
 mod clone_crop_fill_expand;
 mod codecs_and_pointer;
 mod color;
@@ -60,6 +61,7 @@ pub use self::scale_render::DRAW_IMAGE_EXACT;
 pub use self::scale_render::SCALE;
 //pub use self::scale_render::SCALE_1D;
 //pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
+pub use self::analyze::ANALYZE;
 pub use self::color::COLOR_FILTER_SRGB;
 pub use self::color::COLOR_MATRIX_SRGB;
 pub use self::color::COLOR_MATRIX_SRGB_MUTATE;

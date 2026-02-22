@@ -1985,6 +1985,9 @@ pub struct FramePerformance {
 pub struct JobResult {
     pub encodes: Vec<EncodeResult>,
     pub decodes: Vec<DecodeResult>,
+    /// Results from any Analyze nodes in the pipeline
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub analyses: Vec<AnalyzeResult>,
     pub performance: Option<BuildPerformance>,
 }
 
@@ -2225,6 +2228,7 @@ impl Response001 {
                     preferred_extension: ext.to_owned(),
                     bytes: ResultBytes::Elsewhere,
                 }],
+                analyses: vec![],
                 performance: Some(BuildPerformance { frames: vec![frame_perf] }),
             }),
         }
