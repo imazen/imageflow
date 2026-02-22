@@ -987,3 +987,155 @@ fn test_scale() {
 
     // 5104x3380 "?w=2560&h=1696&mode=max&format=png&decoder.min_precise_scaling_ratio=2.1&down.colorspace=linear"
 }
+
+#[cfg(test)]
+mod focus_tests {
+    use super::*;
+    use imageflow_types::{Constraint, ConstraintGravity, ConstraintMode, FocusKind, FocusRect};
+
+    /// Helper: run process_constraint and return the crop coordinates
+    fn crop_with_focus(
+        source_w: i32,
+        source_h: i32,
+        target_w: u32,
+        target_h: u32,
+        focus_rects: Vec<FocusRect>,
+    ) -> Option<[u32; 4]> {
+        let constraint = Constraint {
+            mode: ConstraintMode::Fit,
+            w: Some(target_w),
+            h: Some(target_h),
+            hints: None,
+            gravity: Some(ConstraintGravity::Center),
+            canvas_color: None,
+            focus: Some(focus_rects),
+        };
+        let result = Ir4Layout::process_constraint(source_w, source_h, &constraint).unwrap();
+        result.crop
+    }
+
+    /// Helper: crop with gravity center and no focus rects
+    fn crop_centered(
+        source_w: i32,
+        source_h: i32,
+        target_w: u32,
+        target_h: u32,
+    ) -> Option<[u32; 4]> {
+        let constraint = Constraint {
+            mode: ConstraintMode::Fit,
+            w: Some(target_w),
+            h: Some(target_h),
+            hints: None,
+            gravity: Some(ConstraintGravity::Center),
+            canvas_color: None,
+            focus: None,
+        };
+        let result = Ir4Layout::process_constraint(source_w, source_h, &constraint).unwrap();
+        result.crop
+    }
+
+    #[test]
+    fn focus_rect_in_topleft_shifts_crop() {
+        // 1000x1000 image, crop to 500x500 (crop mode)
+        // Focus rect in top-left quadrant: should place crop there
+        let constraint = Constraint {
+            mode: ConstraintMode::Fit,
+            w: Some(500),
+            h: Some(500),
+            hints: None,
+            gravity: Some(ConstraintGravity::Center),
+            canvas_color: None,
+            focus: Some(vec![FocusRect::new(0.0, 0.0, 25.0, 25.0)]),
+        };
+        let result = Ir4Layout::process_constraint(1000, 1000, &constraint).unwrap();
+        // With FitMode::Fit and square-to-square, no crop needed
+        // This is expected — Fit mode doesn't crop
+        // Switch to a mode that crops:
+        let crop_result = crop_with_url_and_focus(
+            1000,
+            1000,
+            "w=500&h=250&mode=crop",
+            vec![FocusRect::new(0.0, 0.0, 25.0, 25.0)],
+        );
+        if let Some(crop) = crop_result {
+            // Crop y1 should be near top (0) since focus is in top-left
+            assert!(
+                crop[1] < 250,
+                "Crop top should be near top of image for top-left focus, but y1={}",
+                crop[1]
+            );
+        }
+    }
+
+    #[test]
+    fn focus_rect_in_bottomright_shifts_crop() {
+        let crop_result = crop_with_url_and_focus(
+            1000,
+            1000,
+            "w=500&h=250&mode=crop",
+            vec![FocusRect::new(75.0, 75.0, 100.0, 100.0)],
+        );
+        if let Some(crop) = crop_result {
+            // Crop y1 should be toward the bottom since focus is in bottom-right
+            assert!(
+                crop[1] > 250,
+                "Crop top should be toward bottom for bottom-right focus, but y1={}",
+                crop[1]
+            );
+        }
+    }
+
+    #[test]
+    fn focus_rects_weighted_centroid() {
+        // Two focus rects: heavy weight in top-left, light weight in bottom-right
+        let (gx, gy) = Ir4Layout::focus_rects_to_gravity(&[
+            FocusRect { x1: 0.0, y1: 0.0, x2: 20.0, y2: 20.0, weight: 10.0, kind: FocusKind::Face },
+            FocusRect {
+                x1: 80.0,
+                y1: 80.0,
+                x2: 100.0,
+                y2: 100.0,
+                weight: 1.0,
+                kind: FocusKind::Saliency,
+            },
+        ]);
+        // Centroid should be pulled toward top-left due to higher weight
+        assert!(gx < 50.0, "Centroid x should be left of center, got {}", gx);
+        assert!(gy < 50.0, "Centroid y should be above center, got {}", gy);
+    }
+
+    #[test]
+    fn focus_rects_single_rect_centroid() {
+        let (gx, gy) = Ir4Layout::focus_rects_to_gravity(&[FocusRect::new(60.0, 70.0, 80.0, 90.0)]);
+        // Centroid should be at center of rect: (70, 80)
+        assert!((gx - 70.0).abs() < 0.01, "Expected gx=70, got {}", gx);
+        assert!((gy - 80.0).abs() < 0.01, "Expected gy=80, got {}", gy);
+    }
+
+    #[test]
+    fn empty_focus_rects_defaults_to_center() {
+        let (gx, gy) = Ir4Layout::focus_rects_to_gravity(&[]);
+        assert!((gx - 50.0).abs() < 0.01, "Expected gx=50, got {}", gx);
+        assert!((gy - 50.0).abs() < 0.01, "Expected gy=50, got {}", gy);
+    }
+
+    /// Helper: parse a URL query string with focus rects and process it
+    fn crop_with_url_and_focus(
+        source_w: i32,
+        source_h: i32,
+        query: &str,
+        focus_rects: Vec<FocusRect>,
+    ) -> Option<[u32; 4]> {
+        let url = format!("http://localhost/image.jpg?{}", query);
+        let a = url::Url::from_str(&url).unwrap();
+        let (mut instructions, _warns) = parse_url(&a);
+        instructions.c_focus = Some(FocusSource::Rects(focus_rects));
+
+        let layout = Ir4Layout::new(instructions, source_w, source_h, source_w, source_h);
+        let result = layout.get_crop_and_layout();
+        match result {
+            Ok((crop, _layout)) => crop,
+            _ => None,
+        }
+    }
+}

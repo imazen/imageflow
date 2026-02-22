@@ -15,6 +15,14 @@ impl NodeDef for AnalyzeDef {
         Ok((EdgesIn::OneInput, EdgesOut::Any))
     }
 
+    fn validate_params(&self, p: &NodeParams) -> Result<()> {
+        if matches!(p, NodeParams::Json(s::Node::Analyze { .. })) {
+            Ok(())
+        } else {
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Analyze, got {:?}", p))
+        }
+    }
+
     fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
         // Pass through the input estimate — analyze doesn't change frame dimensions
         ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))

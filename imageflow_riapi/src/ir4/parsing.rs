@@ -1703,6 +1703,21 @@ fn test_url_parsing() {
 
     t("c.gravity=89,101",  Instructions{c_gravity: Some([89.0,101.0]), ..Default::default()}, vec![]);
 
+    // Focus rects
+    t("c.focus=20,30,80,90",  Instructions{c_focus: Some(s::FocusSource::Rects(vec![s::FocusRect::new(20.0, 30.0, 80.0, 90.0)])), ..Default::default()}, vec![]);
+    t("c.focus=auto",  Instructions{c_focus: Some(s::FocusSource::Auto), ..Default::default()}, vec![]);
+    t("c.focus=faces",  Instructions{c_focus: Some(s::FocusSource::Faces), ..Default::default()}, vec![]);
+    // Multiple focus rects separated by semicolons
+    t("c.focus=10,20,30,40;50,60,70,80",  Instructions{c_focus: Some(s::FocusSource::Rects(vec![
+        s::FocusRect::new(10.0, 20.0, 30.0, 40.0),
+        s::FocusRect::new(50.0, 60.0, 70.0, 80.0),
+    ])), ..Default::default()}, vec![]);
+    // Analyze mode
+    t("analyze=saliency",  Instructions{analyze: Some(s::AnalyzeMode::Saliency), ..Default::default()}, vec![]);
+    t("analyze=faces",  Instructions{analyze: Some(s::AnalyzeMode::Faces), ..Default::default()}, vec![]);
+    t("analyze=all",  Instructions{analyze: Some(s::AnalyzeMode::All), ..Default::default()}, vec![]);
+    t("analyze=focus",  Instructions{analyze: Some(s::AnalyzeMode::Focus), ..Default::default()}, vec![]);
+
     t("watermark_red_dot=true",  Instructions{watermark_red_dot: Some(true), ..Default::default()}, vec![]);
 
     let srcset_default = Instructions{mode: Some(FitMode::Max), ..Default::default()};

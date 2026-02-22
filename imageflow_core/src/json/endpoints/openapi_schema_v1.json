@@ -567,6 +567,53 @@
           }
         }
       },
+      "AnalyzeMode": {
+        "type": "string",
+        "description": "What kind of analysis to perform",
+        "enum": [
+          "all",
+          "focus",
+          "saliency",
+          "faces"
+        ]
+      },
+      "AnalyzeResult": {
+        "type": "object",
+        "description": "Result of image analysis for focus/saliency detection",
+        "required": [
+          "focus_regions",
+          "image_width",
+          "image_height",
+          "analysis_ms"
+        ],
+        "properties": {
+          "analysis_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Analysis time in milliseconds",
+            "minimum": 0
+          },
+          "focus_regions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FocusRect"
+            },
+            "description": "Detected focus regions"
+          },
+          "image_height": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Source image height in pixels",
+            "minimum": 0
+          },
+          "image_width": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Source image width in pixels",
+            "minimum": 0
+          }
+        }
+      },
       "BoolKeep": {
         "type": "string",
         "enum": [
@@ -853,6 +900,16 @@
                 "$ref": "#/components/schemas/Color"
               }
             ]
+          },
+          "focus": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/FocusRect"
+            },
+            "description": "Focus rectangles for smart cropping. When present and mode involves\ncropping, the crop window is positioned to maximize coverage of these regions."
           },
           "gravity": {
             "oneOf": [
@@ -1618,6 +1675,57 @@
           "n_cubic_sharp"
         ]
       },
+      "FocusKind": {
+        "type": "string",
+        "description": "How a focus rect was produced",
+        "enum": [
+          "user",
+          "face",
+          "saliency",
+          "edge"
+        ]
+      },
+      "FocusRect": {
+        "type": "object",
+        "description": "A region of interest, in percentage coordinates (0-100).\nUsed for focus-aware cropping: the crop window will be positioned\nto maximize coverage of these regions.",
+        "required": [
+          "x1",
+          "y1",
+          "x2",
+          "y2"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/FocusKind",
+            "description": "How this focus rect was produced"
+          },
+          "weight": {
+            "type": "number",
+            "format": "float",
+            "description": "Priority weight: higher = more important. Default 1.0"
+          },
+          "x1": {
+            "type": "number",
+            "format": "float",
+            "description": "Left edge as percentage of image width (0-100)"
+          },
+          "x2": {
+            "type": "number",
+            "format": "float",
+            "description": "Right edge as percentage of image width (0-100)"
+          },
+          "y1": {
+            "type": "number",
+            "format": "float",
+            "description": "Top edge as percentage of image height (0-100)"
+          },
+          "y2": {
+            "type": "number",
+            "format": "float",
+            "description": "Bottom edge as percentage of image height (0-100)"
+          }
+        }
+      },
       "FramePerformance": {
         "type": "object",
         "required": [
@@ -1938,6 +2046,13 @@
           "decodes"
         ],
         "properties": {
+          "analyses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnalyzeResult"
+            },
+            "description": "Results from any Analyze nodes in the pipeline"
+          },
           "decodes": {
             "type": "array",
             "items": {
@@ -3165,6 +3280,28 @@
                   "ptr_to_bitmap_key": {
                     "type": "integer",
                     "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Analyze the image and return focus regions as JSON (no image output)",
+            "required": [
+              "analyze"
+            ],
+            "properties": {
+              "analyze": {
+                "type": "object",
+                "description": "Analyze the image and return focus regions as JSON (no image output)",
+                "required": [
+                  "mode"
+                ],
+                "properties": {
+                  "mode": {
+                    "$ref": "#/components/schemas/AnalyzeMode",
+                    "description": "Which detectors to run"
                   }
                 }
               }
