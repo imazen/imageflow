@@ -1222,6 +1222,7 @@ version = "0.1.0"
 dependencies = [
  "criterion 0.5.1",
  "imageflow_types",
+ "multiversed",
  "multiversion",
  "rustface",
 ]
@@ -1641,6 +1642,17 @@ dependencies = [
  "dunce",
  "libc",
  "nasm-rs",
+]
+
+[[package]]
+name = "multiversed"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9dabf9b113e96ba60fa3958fdaf4aba3d8ed9f9b67c14fbcb1b0e99708715ca8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
