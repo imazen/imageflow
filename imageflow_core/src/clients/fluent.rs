@@ -74,6 +74,7 @@ impl FluentNode {
             hints: resampling_hints,
             gravity: None,
             canvas_color: None,
+            focus: None,
         }))
     }
 

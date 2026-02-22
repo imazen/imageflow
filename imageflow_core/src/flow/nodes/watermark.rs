@@ -121,6 +121,7 @@ impl NodeDefOneInputExpand for WatermarkDef {
                         hints: None,
                         gravity: watermark.gravity,
                         canvas_color: None,
+                        focus: None,
                     };
 
                     let watermark_info = ctx

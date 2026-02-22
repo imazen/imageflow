@@ -1071,6 +1071,120 @@ pub enum ConstraintGravity {
     #[serde(rename = "percentage")]
     Percentage { x: f32, y: f32 },
 }
+
+fn default_focus_weight() -> f32 {
+    1.0
+}
+
+/// A region of interest, in percentage coordinates (0-100).
+/// Used for focus-aware cropping: the crop window will be positioned
+/// to maximize coverage of these regions.
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct FocusRect {
+    /// Left edge as percentage of image width (0-100)
+    pub x1: f32,
+    /// Top edge as percentage of image height (0-100)
+    pub y1: f32,
+    /// Right edge as percentage of image width (0-100)
+    pub x2: f32,
+    /// Bottom edge as percentage of image height (0-100)
+    pub y2: f32,
+    /// Priority weight: higher = more important. Default 1.0
+    #[serde(default = "default_focus_weight")]
+    pub weight: f32,
+    /// How this focus rect was produced
+    #[serde(default)]
+    pub kind: FocusKind,
+}
+
+impl FocusRect {
+    /// Create a new focus rect with default weight and User kind
+    pub fn new(x1: f32, y1: f32, x2: f32, y2: f32) -> Self {
+        Self { x1, y1, x2, y2, weight: 1.0, kind: FocusKind::User }
+    }
+
+    /// Clamp coordinates to valid 0-100 range, ensuring x2 > x1 and y2 > y1
+    pub fn clamped(&self) -> Self {
+        let x1 = self.x1.clamp(0.0, 100.0);
+        let y1 = self.y1.clamp(0.0, 100.0);
+        let x2 = self.x2.clamp(0.0, 100.0);
+        let y2 = self.y2.clamp(0.0, 100.0);
+        // Ensure x2 > x1 and y2 > y1 (swap if needed)
+        let (x1, x2) = if x1 < x2 { (x1, x2) } else { (x2, x1) };
+        let (y1, y2) = if y1 < y2 { (y1, y2) } else { (y2, y1) };
+        Self { x1, y1, x2, y2, weight: self.weight.max(0.0), kind: self.kind }
+    }
+
+    /// Compute the center point as (x%, y%)
+    pub fn center(&self) -> (f32, f32) {
+        ((self.x1 + self.x2) / 2.0, (self.y1 + self.y2) / 2.0)
+    }
+}
+
+/// How a focus rect was produced
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, Default)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "lowercase")]
+pub enum FocusKind {
+    /// Manually specified by the user
+    #[default]
+    User,
+    /// Detected face
+    Face,
+    /// Saliency analysis result
+    Saliency,
+    /// Edge/detail density region
+    Edge,
+}
+
+/// Where focus rects come from in a URL request
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "lowercase")]
+pub enum FocusSource {
+    /// Explicit focus rectangles
+    Rects(Vec<FocusRect>),
+    /// Run saliency + face analysis automatically
+    Auto,
+    /// Run face detection only
+    Faces,
+}
+
+/// Result of image analysis for focus/saliency detection
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct AnalyzeResult {
+    /// Detected focus regions
+    pub focus_regions: Vec<FocusRect>,
+    /// Source image width in pixels
+    pub image_width: u32,
+    /// Source image height in pixels
+    pub image_height: u32,
+    /// Analysis time in milliseconds
+    pub analysis_ms: u64,
+}
+
+/// What kind of analysis to perform
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "lowercase")]
+pub enum AnalyzeMode {
+    /// Run all available detectors
+    All,
+    /// Focus regions (saliency + faces)
+    Focus,
+    /// Saliency only
+    Saliency,
+    /// Face detection only
+    Faces,
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -1081,6 +1195,10 @@ pub struct Constraint {
     pub hints: Option<ResampleHints>,
     pub gravity: Option<ConstraintGravity>,
     pub canvas_color: Option<Color>,
+    /// Focus rectangles for smart cropping. When present and mode involves
+    /// cropping, the crop window is positioned to maximize coverage of these regions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus: Option<Vec<FocusRect>>,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
@@ -1258,6 +1376,12 @@ pub enum Node {
     FlowBitmapKeyPtr {
         //TODO: Rename this
         ptr_to_bitmap_key: usize,
+    },
+    /// Analyze the image and return focus regions as JSON (no image output)
+    #[serde(rename = "analyze")]
+    Analyze {
+        /// Which detectors to run
+        mode: AnalyzeMode,
     },
 }
 
