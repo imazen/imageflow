@@ -5,6 +5,7 @@ members = [
     "imageflow_http_helpers",
     "imageflow_types",
     "imageflow_riapi",
+    "imageflow_focus",
     "imageflow_core",
     "imageflow_abi",
     "imageflow",

@@ -1,0 +1,15 @@
+[package]
+name = "imageflow_focus"
+version = "0.1.0"
+edition = "2024"
+description = "Composite saliency and face detection for smart cropping"
+license = "AGPL-3.0-or-later"
+
+[features]
+default = ["saliency"]
+saliency = []
+faces = ["rustface"]
+
+[dependencies]
+imageflow_types = { path = "../imageflow_types" }
+rustface = { version = "0.1", optional = true }

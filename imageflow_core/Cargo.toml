@@ -51,6 +51,7 @@ uuid = { version = "1", features = ["v4"] }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
+imageflow_focus = { path = "../imageflow_focus" }
 imageflow_c_components = { path = "../c_components" }
 mozjpeg = "0.10"
 multiversion = "0.8"
