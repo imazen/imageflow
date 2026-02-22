@@ -1,6 +1,5 @@
 use crate::errors::{ErrorCategory, ErrorKind, FlowError, Result};
 use crate::ffi;
-use crate::ffi::DecoderColorInfo;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::graphics::bitmaps::BitmapWindowMut;
 use dashmap::DashMap;
@@ -166,13 +165,26 @@ impl ColorTransformCache {
         match color.source {
             ffi::ColorProfileSource::Null | ffi::ColorProfileSource::sRGB => None,
             ffi::ColorProfileSource::GAMA_CHRM => {
-                let struct_bytes = unsafe {
-                    slice::from_raw_parts(
-                        color as *const DecoderColorInfo as *const u8,
-                        mem::size_of::<DecoderColorInfo>(),
-                    )
-                };
-                Some(imageflow_helpers::hashing::hash_64(struct_bytes) ^ format_hash)
+                use std::hash::Hasher;
+                let mut h = twox_hash::XxHash64::with_seed(0x8ed1_2ad9_483d_28a0);
+                for v in [
+                    color.white_point.x,
+                    color.white_point.y,
+                    color.white_point.Y,
+                    color.primaries.Red.x,
+                    color.primaries.Red.y,
+                    color.primaries.Red.Y,
+                    color.primaries.Green.x,
+                    color.primaries.Green.y,
+                    color.primaries.Green.Y,
+                    color.primaries.Blue.x,
+                    color.primaries.Blue.y,
+                    color.primaries.Blue.Y,
+                    color.gamma,
+                ] {
+                    h.write(&v.to_ne_bytes());
+                }
+                Some(h.finish() ^ format_hash)
             }
             ffi::ColorProfileSource::ICCP | ffi::ColorProfileSource::ICCP_GRAY => {
                 if !color.profile_buffer.is_null() && color.buffer_length > 0 {
