@@ -393,6 +393,121 @@ fn test_animated_gif_two_frames() {
     assert_eq!(frame_count, 2, "Expected 2 frames in the re-encoded animated GIF");
 }
 
+#[test]
+fn test_gif_select_frame() {
+    // Create a 3-frame animated GIF (red, green, blue), then decode with SelectFrame(1)
+    // to extract only the second frame (green). Encode as PNG to get a single static image.
+    let input_gif = build_animated_gif(4, 4, &["FF0000", "00FF00", "0000FF"], 10);
+
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: Some(vec![s::DecoderCommand::SelectFrame(1)]) },
+        Node::Encode { io_id: 1, preset: EncoderPreset::Lodepng { maximum_deflate: None } },
+    ];
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, input_gif).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    let execute = Execute001 {
+        graph_recording: default_graph_recording(DEBUG_GRAPH),
+        security: None,
+        framewise: Framewise::Steps(steps),
+    };
+    ctx.execute_1(execute).unwrap();
+
+    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+
+    // Verify it's a valid PNG (starts with PNG signature)
+    assert_eq!(&output_bytes[1..4], b"PNG", "Output should be a PNG");
+
+    // Decode the PNG and verify the pixel color is green (the second frame)
+    let decoder = lodepng::decode32(&output_bytes).unwrap();
+    assert_eq!(decoder.width, 4);
+    assert_eq!(decoder.height, 4);
+    // Check first pixel — should be green (from frame index 1)
+    let pixel = &decoder.buffer[0];
+    // GIF quantization may slightly alter values, but green channel should dominate
+    assert!(
+        pixel.g > 200 && pixel.r < 50 && pixel.b < 50,
+        "Expected green pixel from frame 1, got r={} g={} b={} a={}",
+        pixel.r,
+        pixel.g,
+        pixel.b,
+        pixel.a
+    );
+}
+
+#[test]
+fn test_gif_select_frame_0() {
+    // Verify frame=0 extracts just the first frame from an animated GIF
+    let input_gif = build_animated_gif(4, 4, &["FF0000", "00FF00", "0000FF"], 10);
+
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: Some(vec![s::DecoderCommand::SelectFrame(0)]) },
+        Node::Encode { io_id: 1, preset: EncoderPreset::Lodepng { maximum_deflate: None } },
+    ];
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, input_gif).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    let execute = Execute001 {
+        graph_recording: default_graph_recording(DEBUG_GRAPH),
+        security: None,
+        framewise: Framewise::Steps(steps),
+    };
+    ctx.execute_1(execute).unwrap();
+
+    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+    assert_eq!(&output_bytes[1..4], b"PNG", "Output should be a PNG");
+
+    let decoder = lodepng::decode32(&output_bytes).unwrap();
+    let pixel = &decoder.buffer[0];
+    // First frame is red
+    assert!(
+        pixel.r > 200 && pixel.g < 50 && pixel.b < 50,
+        "Expected red pixel from frame 0, got r={} g={} b={} a={}",
+        pixel.r,
+        pixel.g,
+        pixel.b,
+        pixel.a
+    );
+}
+
+#[test]
+fn test_gif_select_frame_via_querystring() {
+    // Test that &frame=1 works through the CommandString (querystring) API
+    let input_gif = build_animated_gif(4, 4, &["FF0000", "00FF00", "0000FF"], 10);
+
+    let steps = vec![Node::CommandString {
+        kind: CommandStringKind::ImageResizer4,
+        value: "frame=1&format=png".to_owned(),
+        decode: Some(0),
+        encode: Some(1),
+        watermarks: None,
+    }];
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, input_gif).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    let execute = Execute001 {
+        graph_recording: default_graph_recording(DEBUG_GRAPH),
+        security: None,
+        framewise: Framewise::Steps(steps),
+    };
+    ctx.execute_1(execute).unwrap();
+
+    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+    assert_eq!(&output_bytes[1..4], b"PNG", "Output should be a PNG");
+
+    let decoder = lodepng::decode32(&output_bytes).unwrap();
+    let pixel = &decoder.buffer[0];
+    // Second frame is green
+    assert!(
+        pixel.g > 200 && pixel.r < 50 && pixel.b < 50,
+        "Expected green pixel from frame 1 via querystring, got r={} g={} b={} a={}",
+        pixel.r,
+        pixel.g,
+        pixel.b,
+        pixel.a
+    );
+}
+
 // test a job that generates a canvas, encodes to a gif,  then another job decodes it.
 #[test]
 fn test_gif_roundtrip() {

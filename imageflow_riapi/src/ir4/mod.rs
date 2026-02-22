@@ -197,6 +197,10 @@ impl Ir4Expand {
                 }));
             }
         }
+        if let Some(frame) = i.frame {
+            vec.push(s::DecoderCommand::SelectFrame(frame));
+        }
+
         if vec.is_empty() {
             Ok(None)
         } else {

@@ -96,6 +96,7 @@ impl Decoder for MozJpegDecoder {
                 self.decoder.ignore_color_profile_errors = true;
                 Ok(())
             }
+            _ => Ok(()),
         }
     }
 
