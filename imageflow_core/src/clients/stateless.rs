@@ -77,7 +77,8 @@ impl LibClient {
         context: &mut Context,
         bytes: &[u8],
     ) -> std::result::Result<s::ImageInfo, FlowError> {
-        context.add_input_bytes(0, bytes).map_err(|e| e.at(here!()))?;
+        // SAFETY: `bytes` is a parameter that outlives local `context`
+        unsafe { context.add_input_bytes(0, bytes) }.map_err(|e| e.at(here!()))?;
         context.get_unscaled_rotated_image_info(0).map_err(|e| e.at(here!()))
     }
     pub fn get_image_info(
@@ -109,7 +110,9 @@ impl LibClient {
         task: BuildRequest,
     ) -> std::result::Result<BuildSuccess, FlowError> {
         for input in task.inputs {
-            context.add_input_buffer(input.io_id, input.bytes).map_err(|e| e.at(here!()))?;
+            // SAFETY: `task` is passed by value and outlives local `context`
+            unsafe { context.add_input_buffer(input.io_id, input.bytes) }
+                .map_err(|e| e.at(here!()))?;
         }
 
         // Assume output ids only come from nodes

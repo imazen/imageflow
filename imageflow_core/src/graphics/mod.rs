@@ -1,5 +1,6 @@
 pub(crate) mod aligned_buffer;
 pub mod bitmaps;
+pub(crate) mod blend;
 pub mod color;
 pub(crate) mod color_matrix;
 pub(crate) mod copy_rect;
@@ -7,12 +8,11 @@ pub mod flip;
 pub(crate) mod histogram;
 pub mod lut;
 pub(crate) mod math;
+pub(crate) mod rounded_corners;
 pub mod scaling;
 pub mod transpose;
 pub mod weights;
 pub mod whitespace;
-pub(crate) mod blend;
-pub(crate) mod rounded_corners;
 
 #[doc(hidden)]
 mod prelude {

@@ -3,17 +3,40 @@ use super::Encoder;
 use crate::io::IoProxy;
 
 use crate::codecs::lode;
-use crate::graphics::bitmaps::BitmapKey;
+use crate::graphics::bitmaps::{BitmapKey, BitmapWindowMut};
 use crate::io::IoProxyRef;
 use crate::{Context, ErrorKind, Result};
 use imageflow_types::{Color, PixelFormat};
-use rgb::ComponentSlice;
-use std::cell::RefCell;
+use rgb::Bgra;
 use std::mem::MaybeUninit;
-use std::os::raw::c_int;
-use std::rc::Rc;
-use std::result::Result as StdResult;
-use std::slice;
+
+/// Creates an imagequant Image by reading BGRA rows on demand, converting to RGBA.
+/// Avoids allocating a contiguous RGBA copy of the entire image.
+fn image_from_bgra_window<'a>(
+    attr: &'a imagequant::Attributes,
+    window: &'a BitmapWindowMut<'a, Bgra<u8, u8>>,
+) -> Result<imagequant::Image<'a>> {
+    let (w, h) = window.size_usize();
+    // SAFETY: The closure initializes every MaybeUninit element. window.row()
+    // returns exactly `w` pixels, and zip pairs each with one MaybeUninit,
+    // so write() is called on every element in the row.
+    unsafe {
+        imagequant::Image::new_fn(
+            attr,
+            |row: &mut [MaybeUninit<imagequant::RGBA>], row_index: usize| {
+                let from = window.row(row_index).unwrap();
+                from.iter().zip(row).for_each(|(from, to)| {
+                    to.write(imagequant::RGBA { r: from.r, g: from.g, b: from.b, a: from.a });
+                });
+            },
+            w,
+            h,
+            0.0,
+        )
+    }
+    .map_err(|e| crate::FlowError::from(e).at(here!()))
+}
+
 pub struct PngquantEncoder {
     liq: imagequant::Attributes,
     io: IoProxy,
@@ -71,28 +94,7 @@ impl Encoder for PngquantEncoder {
         let (w, h) = window.size_usize();
 
         let error = {
-            // SAFETY: w and h match the bitmap dimensions, and the callback
-            // only reads from the valid window rows within those bounds.
-            let mut img = unsafe {
-                imagequant::Image::new_fn(
-                    &self.liq,
-                    |row: &mut [MaybeUninit<imagequant::RGBA>], row_index: usize| {
-                        let from = window.row(row_index).unwrap();
-                        from.iter().zip(row).for_each(|(from, to)| {
-                            to.write(imagequant::RGBA {
-                                r: from.r,
-                                g: from.g,
-                                b: from.b,
-                                a: from.a,
-                            });
-                        });
-                    },
-                    w,
-                    h,
-                    0.0,
-                )
-            }
-            .map_err(|e| crate::FlowError::from(e).at(here!()))?;
+            let mut img = image_from_bgra_window(&self.liq, &window).map_err(|e| e.at(here!()))?;
             match self.liq.quantize(&mut img) {
                 Ok(mut res) => {
                     res.set_dithering_level(1.).unwrap();
