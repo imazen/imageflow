@@ -12,4 +12,5 @@ faces = ["rustface"]
 
 [dependencies]
 imageflow_types = { path = "../imageflow_types" }
+multiversion = "0.8"
 rustface = { version = "0.1", optional = true }

@@ -11,6 +11,7 @@
 
 use crate::AnalysisConfig;
 use imageflow_types::{FocusKind, FocusRect};
+use multiversion::multiversion;
 
 /// Pre-allocated work buffers to avoid per-call allocations.
 struct WorkBuffers {
@@ -181,6 +182,7 @@ fn compute_mean_chroma(pixels: &[u8], count: usize) -> (f32, f32) {
 ///
 /// This replaces 3 separate passes (compute_luminance + compute_skin_map +
 /// compute_saturation_map + score combination), halving memory traffic.
+#[multiversion(targets("x86_64+avx2+fma", "x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 fn compute_all_signals(
     pixels: &[u8],
     lum_out: &mut [f32],
@@ -264,6 +266,7 @@ fn compute_all_signals(
 
 /// Pass 2: Edge detection using 3x3 Laplacian kernel on luminance.
 /// Adds edge_weight * edge_strength to the existing score buffer.
+#[multiversion(targets("x86_64+avx2+fma", "x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 fn compute_edge_map(luminance: &[f32], score: &mut [f32], w: usize, h: usize, edge_weight: f32) {
     if edge_weight <= 0.0 {
         return;
@@ -307,6 +310,7 @@ fn prefix_sum_blur(
 }
 
 /// Horizontal prefix-sum blur pass.
+#[multiversion(targets("x86_64+avx2+fma", "x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 fn prefix_sum_blur_h(
     input: &[f32],
     output: &mut [f32],
@@ -335,6 +339,7 @@ fn prefix_sum_blur_h(
 }
 
 /// Vertical prefix-sum blur pass (in-place).
+#[multiversion(targets("x86_64+avx2+fma", "x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
 fn prefix_sum_blur_v(
     data: &mut [f32],
     prefix: &mut [f64],
