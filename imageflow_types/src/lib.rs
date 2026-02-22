@@ -1749,6 +1749,8 @@ pub enum DecoderCommand {
     DiscardColorProfile,
     #[serde(rename = "ignore_color_profile_errors")]
     IgnoreColorProfileErrors,
+    #[serde(rename = "select_frame")]
+    SelectFrame(i32),
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]

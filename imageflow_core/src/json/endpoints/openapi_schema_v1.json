@@ -1009,6 +1009,18 @@
             "enum": [
               "ignore_color_profile_errors"
             ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "select_frame"
+            ],
+            "properties": {
+              "select_frame": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
           }
         ]
       },

@@ -26,6 +26,8 @@ pub struct GifDecoder {
     buffer: Option<Vec<u8>>,
     last_frame: Option<Frame<'static>>,
     next_frame: Option<Frame<'static>>,
+    target_frame: Option<i32>,
+    current_frame: i32,
 }
 
 impl GifDecoder {
@@ -84,7 +86,15 @@ impl GifDecoder {
 
         let screen = Screen::new(&reader);
 
-        Ok(GifDecoder { reader, screen, buffer: None, last_frame: None, next_frame: None })
+        Ok(GifDecoder {
+            reader,
+            screen,
+            buffer: None,
+            last_frame: None,
+            next_frame: None,
+            target_frame: None,
+            current_frame: 0,
+        })
     }
 
     fn read_next_frame_info(&mut self) -> Result<()> {
@@ -163,6 +173,9 @@ impl Decoder for GifDecoder {
     }
 
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()> {
+        if let s::DecoderCommand::SelectFrame(frame) = tell {
+            self.target_frame = Some(frame);
+        }
         Ok(())
     }
 
@@ -170,6 +183,33 @@ impl Decoder for GifDecoder {
         // Ensure next_frame is present (only called for first frame)
         if self.next_frame.is_none() {
             self.read_next_frame_info().map_err(|e| e.at(here!()))?;
+        }
+
+        // If a target frame is set, skip (decode + composite) frames until we reach it.
+        // We must composite each intermediate frame for correct disposal handling.
+        if let Some(target) = self.target_frame {
+            while self.current_frame < target {
+                let frame = self.next_frame.as_ref().ok_or_else(|| {
+                    nerror!(
+                        ErrorKind::InvalidArgument,
+                        "frame={} requested but GIF only has {} frames",
+                        target,
+                        self.current_frame
+                    )
+                })?;
+
+                let buf_size = self.reader.width() as usize * self.reader.height() as usize;
+                let buf_mut = self.buffer.get_or_insert_with(|| vec![0; buf_size]);
+                let slice = &mut buf_mut[..self.reader.buffer_size()];
+                slice.fill(0);
+                self.reader.read_into_buffer(slice).map_err(|e| FlowError::from(e).at(here!()))?;
+                self.screen
+                    .blit(frame, slice)
+                    .map_err(|e| nerror!(ErrorKind::GifDecodingError, "{:?}", e))?;
+
+                self.current_frame += 1;
+                self.read_next_frame_info().map_err(|e| e.at(here!()))?;
+            }
         }
 
         {
@@ -189,7 +229,6 @@ impl Decoder for GifDecoder {
 
             slice.fill(0);
             //Read into that buffer
-            //Read into that buffer
             self.reader.read_into_buffer(slice).map_err(|e| FlowError::from(e).at(here!()))?;
 
             // Render / apply disposal
@@ -198,12 +237,24 @@ impl Decoder for GifDecoder {
                 .blit(frame, slice)
                 .map_err(|e| nerror!(ErrorKind::GifDecodingError, "{:?}", e))?; //Missing palette?
         }
-        // Try to read the next frame;
-        self.read_next_frame_info().map_err(|e| e.at(here!()))?;
+
+        self.current_frame += 1;
+
+        // If we have a target frame, don't pre-fetch next frame (signals single-frame output)
+        if self.target_frame.is_none() {
+            self.read_next_frame_info().map_err(|e| e.at(here!()))?;
+        } else {
+            // Move next_frame to last_frame without fetching another
+            self.last_frame = self.next_frame.take();
+        }
 
         self.create_bitmap_from_screen(c)
     }
     fn has_more_frames(&mut self) -> Result<bool> {
+        // If a target frame was set, we only produce one frame
+        if self.target_frame.is_some() {
+            return Ok(false);
+        }
         Ok(self.next_frame.is_some())
     }
     fn as_any(&self) -> &dyn Any {

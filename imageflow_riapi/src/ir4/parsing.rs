@@ -473,6 +473,7 @@ impl Instructions {
         add(&mut m, "accept.avif", self.accept_avif);
         add(&mut m, "accept.jxl", self.accept_jxl);
         add(&mut m, "accept.color_profiles", self.accept_color_profiles);
+        add(&mut m, "frame", self.frame);
         m
     }
 
@@ -625,6 +626,8 @@ impl Instructions {
         i.qp_dpr = p.parse_qp_dpr("qp.dpr", i.zoom).or(p.parse_qp_dpr("qp.dppx", i.zoom));
 
         i.watermark_red_dot = p.parse_bool("watermark_red_dot");
+
+        i.frame = p.parse_i32("frame").or_else(|| p.parse_i32("page"));
 
         p.apply_srcset(&mut i);
 
@@ -1320,6 +1323,8 @@ pub struct Instructions {
 
     pub avif_quality: Option<f32>,
     pub avif_speed: Option<u8>, // 3..10, 1 and 2 are blocked for being too slow.
+
+    pub frame: Option<i32>,
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Anchor1D {
@@ -1542,6 +1547,8 @@ fn test_url_parsing() {
     t("jxl.effort=4", Instructions { jxl_effort: Some(4), ..Default::default() }, vec![]);
     t("jxl.lossless=keep", Instructions { jxl_lossless: Some(BoolKeep::Keep), ..Default::default() }, vec![]);
 
+    t("frame=2", Instructions { frame: Some(2), ..Default::default() }, vec![]);
+    t("page=5", Instructions { frame: Some(5), ..Default::default() }, vec![]);
 
     t("zoom=0.02", Instructions { zoom: Some(0.02f32), ..Default::default() }, vec![]);
     t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f32), ..Default::default() }, vec![]);
@@ -1757,6 +1764,7 @@ fn test_tostr(){
     t("ignoreicc=true", Instructions { ignoreicc: Some(true), ..Default::default() });
     t("ignore_icc_errors=true", Instructions { ignore_icc_errors: Some(true), ..Default::default() });
     t("watermark_red_dot=true",  Instructions{watermark_red_dot: Some(true), ..Default::default()});
+    t("frame=3", Instructions { frame: Some(3), ..Default::default() });
 
     // Add missing cases from test_url_parsing
     t("accept.webp=true", Instructions { accept_webp: Some(true), ..Default::default() });

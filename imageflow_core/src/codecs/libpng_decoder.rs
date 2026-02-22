@@ -68,6 +68,7 @@ impl Decoder for LibPngDecoder {
                 self.decoder.ignore_color_profile_errors = true;
                 Ok(())
             }
+            _ => Ok(()),
         }
     }
 
