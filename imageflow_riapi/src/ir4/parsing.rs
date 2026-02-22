@@ -239,7 +239,7 @@ pub enum ScalingColorspace {
 
 }
 #[rustfmt::skip]
-pub static IR4_KEYS: [&str;100] = [
+pub static IR4_KEYS: [&str;102] = [
     "mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
@@ -255,7 +255,8 @@ pub static IR4_KEYS: [&str;100] = [
     "png.quality","png.min_quality", "png.quantization_speed", "png.libpng", "png.max_deflate",
     "png.lossless", "up.filter", "down.filter", "dpr", "dppx", "up.colorspace", "srcset", "short","accept.webp",
     "accept.avif","accept.jxl", "accept.color_profiles", "c", "c.gravity", "qp", "qp.dpr", "qp.dppx",
-    "avif.speed", "avif.quality", "jxl.effort", "jxl.distance", "jxl.quality", "jxl.lossless", "jpeg.li", "lossless"];
+    "avif.speed", "avif.quality", "jxl.effort", "jxl.distance", "jxl.quality", "jxl.lossless", "jpeg.li", "lossless",
+    "c.focus", "analyze"];
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ParseWarning {
@@ -322,7 +323,7 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
 
 impl fmt::Display for Instructions {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", &self.to_string_internal())
+        write!(f, "{}", &self.clone().to_string_internal())
     }
 }
 
@@ -454,6 +455,17 @@ impl Instructions {
 
         add(&mut m, "anchor", self.anchor_string());
         add(&mut m, "c.gravity", self.gravity_string());
+        add(&mut m, "c.focus", self.focus_string());
+        add(
+            &mut m,
+            "analyze",
+            self.analyze.map(|v| match v {
+                s::AnalyzeMode::All => "all".to_owned(),
+                s::AnalyzeMode::Focus => "focus".to_owned(),
+                s::AnalyzeMode::Saliency => "saliency".to_owned(),
+                s::AnalyzeMode::Faces => "faces".to_owned(),
+            }),
+        );
         add(&mut m, "qp.dpr", self.qp_dpr);
         add(&mut m, "qp", self.qp);
 
@@ -549,8 +561,12 @@ impl Instructions {
         }
         // crop gravity
         i.c_gravity = p.parse_gravity("c.gravity");
+        // focus rects for smart cropping
+        i.c_focus = p.parse_focus_source("c.focus");
         // anchor for either crop or pad
         i.anchor = p.parse_anchor("anchor");
+        // analyze mode
+        i.analyze = p.parse_analyze_mode("analyze");
 
         // Effects
         i.s_round_corners = p.parse_round_corners("s.roundcorners");
@@ -677,6 +693,18 @@ impl Instructions {
             Some(format!("{:.2},{:.2}", x, y))
         } else {
             None
+        }
+    }
+    fn focus_string(&self) -> Option<String> {
+        match &self.c_focus {
+            Some(s::FocusSource::Auto) => Some("auto".to_owned()),
+            Some(s::FocusSource::Faces) => Some("faces".to_owned()),
+            Some(s::FocusSource::Rects(rects)) => {
+                let parts: Vec<String> =
+                    rects.iter().map(|r| format!("{},{},{},{}", r.x1, r.y1, r.x2, r.y2)).collect();
+                Some(parts.join(";"))
+            }
+            None => None,
         }
     }
 
@@ -895,6 +923,61 @@ impl<'a> Parser<'a> {
                 Ok(v) => Ok((v, None, true)),
                 Err(e) => Err(e),
             }
+        })
+    }
+
+    /// Parse `c.focus` value: "auto", "faces", or "x1,y1,x2,y2" / "x1,y1,x2,y2;x3,y3,x4,y4"
+    fn parse_focus_source(&mut self, key: &'static str) -> Option<s::FocusSource> {
+        self.warning_parse(key, |s| {
+            let lower = s.to_lowercase();
+            match lower.as_str() {
+                "auto" => Ok((s::FocusSource::Auto, None, true)),
+                "faces" => Ok((s::FocusSource::Faces, None, true)),
+                _ => {
+                    // Parse as semicolon-separated rects: "x1,y1,x2,y2;x3,y3,x4,y4"
+                    let mut rects = Vec::new();
+                    for rect_str in s.split(';') {
+                        let rect_str = rect_str.trim();
+                        if rect_str.is_empty() {
+                            continue;
+                        }
+                        let values: Vec<f32> = rect_str
+                            .split(',')
+                            .map(|v| v.trim().parse::<f32>())
+                            .collect::<std::result::Result<Vec<f32>, _>>()
+                            .map_err(|_| ())?;
+                        if values.len() != 4 {
+                            return Err(());
+                        }
+                        rects.push(
+                            s::FocusRect {
+                                x1: values[0],
+                                y1: values[1],
+                                x2: values[2],
+                                y2: values[3],
+                                weight: 1.0,
+                                kind: s::FocusKind::User,
+                            }
+                            .clamped(),
+                        );
+                    }
+                    if rects.is_empty() {
+                        Err(())
+                    } else {
+                        Ok((s::FocusSource::Rects(rects), None, true))
+                    }
+                }
+            }
+        })
+    }
+
+    fn parse_analyze_mode(&mut self, key: &'static str) -> Option<s::AnalyzeMode> {
+        self.parse(key, |s| match s.to_lowercase().as_str() {
+            "all" => Ok(s::AnalyzeMode::All),
+            "focus" => Ok(s::AnalyzeMode::Focus),
+            "saliency" => Ok(s::AnalyzeMode::Saliency),
+            "faces" => Ok(s::AnalyzeMode::Faces),
+            _ => Err(()),
         })
     }
 
@@ -1223,7 +1306,7 @@ pub enum FitMode {
 }
 
 //TODO, consider using f32 instead of f64 (26x) to halve the struct weight
-#[derive(Default, Debug, Clone, Copy, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub struct Instructions {
     pub w: Option<i32>,
     pub h: Option<i32>,
@@ -1325,6 +1408,11 @@ pub struct Instructions {
     pub avif_speed: Option<u8>, // 3..10, 1 and 2 are blocked for being too slow.
 
     pub frame: Option<i32>,
+
+    /// Focus source for smart cropping: explicit rects, auto-analysis, or face detection
+    pub c_focus: Option<s::FocusSource>,
+    /// Analysis mode for the analyze endpoint
+    pub analyze: Option<s::AnalyzeMode>,
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Anchor1D {

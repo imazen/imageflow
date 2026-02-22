@@ -56,7 +56,7 @@ impl Ir4Command {
                 &::url::Url::from_str(url)
                     .expect("ImageResizer4 Url cannot be parsed into instructions: invalid URI"),
             ),
-            Ir4Command::Instructions(ref i) => (**i, vec![]),
+            Ir4Command::Instructions(ref i) => ((**i).clone(), vec![]),
             Ir4Command::QueryString(ref s) => {
                 let url = ::url::Url::from_str(&format!("https://fakeurl/img.jpg?{}", s))
                     .expect("Must be a valid querystring, excluding ?");
@@ -111,7 +111,7 @@ impl Ir4Translate {
         }
 
         //delete whitespace from instructions
-        let mut without_trimming: Instructions = r.parsed;
+        let mut without_trimming: Instructions = r.parsed.clone();
         without_trimming.trim_whitespace_padding_percent = None;
         without_trimming.trim_whitespace_threshold = None;
 
@@ -219,7 +219,7 @@ impl Ir4Expand {
             return Err(sizing::LayoutError::ContentDependent);
         }
         Ok(layout::Ir4Layout::new(
-            *i,
+            i.clone(),
             self.source.w,
             self.source.h,
             self.reference_width,
