@@ -91,7 +91,8 @@ jobs:
           - name: win-x86-2022
             package-suffix: win-x86
             os: windows-2022
-            # target-cpu: generic # any target-cpu causes the build to fail
+            target-cpu: generic
+            target-feature: +sse,+sse2 # i686 MSVC ABI requires SSE2 for f64 (rust-lang/rust#116344)
             nuget-rid: win-x86
             target: i686-pc-windows-msvc
 
