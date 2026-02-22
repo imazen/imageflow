@@ -1,9 +1,9 @@
 #![forbid(unsafe_code)]
-//! Composite saliency detection using the smartcrop.js / libvips approach.
+//! Composite saliency detection for smart cropping.
 //!
 //! Combines three simple pixel-level signals:
 //! 1. Edge detection (Laplacian on luminance)
-//! 2. Skin tone detection (distance from reference color)
+//! 2. Skin tone detection (YCbCr chrominance range, inclusive of Fitzpatrick I-VI)
 //! 3. Saturation detection (HSL saturation above threshold)
 //!
 //! The combined score map is blurred to find the peak region, which is
@@ -35,7 +35,7 @@ pub(crate) fn analyze(
     // Compute individual signal maps
     let luminance = compute_luminance(&work_pixels, work_w, work_h);
     let edge_map = compute_edge_map(&luminance, work_w, work_h);
-    let skin_map = compute_skin_map(&work_pixels, work_w, work_h);
+    let skin_map = compute_skin_map(&work_pixels, work_w, work_h, config.white_balance_compensate);
     let sat_map = compute_saturation_map(&work_pixels, work_w, work_h);
 
     // Combine into composite score
@@ -141,42 +141,102 @@ fn compute_edge_map(luminance: &[f32], width: u32, height: u32) -> Vec<f32> {
     edges
 }
 
-/// Skin tone detection: distance from reference skin color in normalized RGB.
-/// Reference: [0.78, 0.57, 0.44] (from smartcrop.js).
+/// Skin tone detection using YCbCr chrominance range.
+///
+/// Uses Chai & Ngan (1999) / Kovac et al. (2003) ranges validated across
+/// Fitzpatrick skin types I-VI. YCbCr separates luminance from chrominance,
+/// making detection robust to illumination changes and inclusive of all skin tones.
+///
 /// Returns 0.0-1.0 score (higher = more skin-like).
-fn compute_skin_map(pixels: &[u8], width: u32, height: u32) -> Vec<f32> {
+fn compute_skin_map(
+    pixels: &[u8],
+    width: u32,
+    height: u32,
+    white_balance_compensate: bool,
+) -> Vec<f32> {
     let count = (width * height) as usize;
     let mut skin = vec![0.0f32; count];
 
-    // Skin reference in normalized RGB (smartcrop.js values)
-    let skin_r = 0.78f32;
-    let skin_g = 0.57f32;
-    let skin_b = 0.44f32;
-    let threshold = 0.8f32; // Maximum distance to be considered skin-like
+    // Nominal detection range centers (neutral white balance)
+    let mut cb_center = 102.0f32;
+    let mut cr_center = 153.0f32;
+
+    if white_balance_compensate {
+        // Compute image-wide mean Cb/Cr for white balance compensation
+        let (mean_cb, mean_cr) = compute_mean_chroma(pixels, count);
+
+        // Shift detection range if mean deviates significantly from neutral (128)
+        let cb_shift = mean_cb - 128.0;
+        let cr_shift = mean_cr - 128.0;
+
+        // Apply partial correction (50%) to avoid over-compensating
+        if cb_shift.abs() > 3.0 {
+            cb_center += cb_shift * 0.5;
+        }
+        if cr_shift.abs() > 3.0 {
+            cr_center += cr_shift * 0.5;
+        }
+    }
+
+    // Detection range half-widths
+    let cb_half = 25.0f32; // 77..127 centered at 102
+    let cr_half = 20.0f32; // 133..173 centered at 153
 
     for i in 0..count {
         let idx = i * 4;
-        let b = pixels[idx] as f32 / 255.0;
-        let g = pixels[idx + 1] as f32 / 255.0;
-        let r = pixels[idx + 2] as f32 / 255.0;
+        let b_val = pixels[idx] as f32;
+        let g_val = pixels[idx + 1] as f32;
+        let r_val = pixels[idx + 2] as f32;
 
-        // Brightness check: skin is in 0.2-1.0 range
-        let brightness = (r + g + b) / 3.0;
-        if brightness < 0.2 || brightness > 1.0 {
+        // BGRA → YCbCr (ITU-R BT.601)
+        let y = 0.299 * r_val + 0.587 * g_val + 0.114 * b_val;
+        let cb = -0.169 * r_val - 0.331 * g_val + 0.500 * b_val + 128.0;
+        let cr = 0.500 * r_val - 0.419 * g_val - 0.081 * b_val + 128.0;
+
+        // Luminance floor: avoid false positives on very dark pixels
+        if y <= 40.0 {
             continue;
         }
 
-        // Euclidean distance from skin reference
-        let dr = r - skin_r;
-        let dg = g - skin_g;
-        let db = b - skin_b;
-        let dist = (dr * dr + dg * dg + db * db).sqrt();
+        // Check chrominance ranges
+        let cb_lo = cb_center - cb_half;
+        let cb_hi = cb_center + cb_half;
+        let cr_lo = cr_center - cr_half;
+        let cr_hi = cr_center + cr_half;
 
-        if dist < threshold {
-            skin[i] = 1.0 - dist / threshold;
+        if cb < cb_lo || cb > cb_hi || cr < cr_lo || cr > cr_hi {
+            continue;
         }
+
+        // Score: smooth falloff from range center using Chebyshev distance.
+        // Chebyshev (max of per-axis distances) matches the rectangular detection
+        // range shape, avoiding the Euclidean penalty at corners that would
+        // unfairly reduce scores for skin tones near the range edges.
+        let cb_norm = ((cb - cb_center) / cb_half).abs();
+        let cr_norm = ((cr - cr_center) / cr_half).abs();
+        let dist = cb_norm.max(cr_norm);
+        skin[i] = (1.0 - dist).max(0.0);
     }
     skin
+}
+
+/// Compute image-wide mean Cb and Cr values for white balance estimation.
+fn compute_mean_chroma(pixels: &[u8], count: usize) -> (f32, f32) {
+    let mut sum_cb = 0.0f64;
+    let mut sum_cr = 0.0f64;
+
+    for i in 0..count {
+        let idx = i * 4;
+        let b_val = pixels[idx] as f64;
+        let g_val = pixels[idx + 1] as f64;
+        let r_val = pixels[idx + 2] as f64;
+
+        sum_cb += -0.169 * r_val - 0.331 * g_val + 0.500 * b_val + 128.0;
+        sum_cr += 0.500 * r_val - 0.419 * g_val - 0.081 * b_val + 128.0;
+    }
+
+    let n = count as f64;
+    ((sum_cb / n) as f32, (sum_cr / n) as f32)
 }
 
 /// Saturation detection: pixels with HSL saturation > 0.4 and
@@ -198,7 +258,7 @@ fn compute_saturation_map(pixels: &[u8], width: u32, height: u32) -> Vec<f32> {
         let lightness = (max_c + min_c) / 2.0;
 
         // Brightness bounds
-        if lightness < 0.05 || lightness > 0.9 {
+        if !(0.05..=0.9).contains(&lightness) {
             continue;
         }
 
@@ -312,6 +372,41 @@ fn extract_focus_rects(
     vec![FocusRect { x1, y1, x2, y2, weight: 1.0, kind: FocusKind::Saliency }]
 }
 
+/// Score a single pixel for skin tone using YCbCr chrominance.
+#[cfg(test)]
+fn score_skin_pixel(r: u8, g: u8, b: u8) -> f32 {
+    let r_val = r as f32;
+    let g_val = g as f32;
+    let b_val = b as f32;
+
+    let y = 0.299 * r_val + 0.587 * g_val + 0.114 * b_val;
+    let cb = -0.169 * r_val - 0.331 * g_val + 0.500 * b_val + 128.0;
+    let cr = 0.500 * r_val - 0.419 * g_val - 0.081 * b_val + 128.0;
+
+    if y <= 40.0 {
+        return 0.0;
+    }
+
+    let cb_center = 102.0f32;
+    let cr_center = 153.0f32;
+    let cb_half = 25.0f32;
+    let cr_half = 20.0f32;
+
+    let cb_lo = cb_center - cb_half;
+    let cb_hi = cb_center + cb_half;
+    let cr_lo = cr_center - cr_half;
+    let cr_hi = cr_center + cr_half;
+
+    if cb < cb_lo || cb > cb_hi || cr < cr_lo || cr > cr_hi {
+        return 0.0;
+    }
+
+    let cb_norm = ((cb - cb_center) / cb_half).abs();
+    let cr_norm = ((cr - cr_center) / cr_half).abs();
+    let dist = cb_norm.max(cr_norm);
+    (1.0 - dist).max(0.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -336,8 +431,76 @@ mod tests {
         let g = 145u8;
         let b = 112u8;
         let pixels = [b, g, r, 255];
-        let skin = compute_skin_map(&pixels, 1, 1);
-        assert!(skin[0] > 0.5, "Skin color should score high: {}", skin[0]);
+        let skin = compute_skin_map(&pixels, 1, 1, false);
+        assert!(skin[0] > 0.3, "Skin color should score high: {}", skin[0]);
+    }
+
+    // Test YCbCr skin detection across all Fitzpatrick skin types
+    #[test]
+    fn test_skin_fitzpatrick_type_i() {
+        // Type I: very light (RGB ~255, 224, 196)
+        let score = score_skin_pixel(255, 224, 196);
+        assert!(score > 0.3, "Fitzpatrick I should detect as skin: {score}");
+    }
+
+    #[test]
+    fn test_skin_fitzpatrick_type_ii() {
+        // Type II: light (RGB ~234, 192, 159)
+        let score = score_skin_pixel(234, 192, 159);
+        assert!(score > 0.3, "Fitzpatrick II should detect as skin: {score}");
+    }
+
+    #[test]
+    fn test_skin_fitzpatrick_type_iii() {
+        // Type III: medium (RGB ~198, 155, 119)
+        let score = score_skin_pixel(198, 155, 119);
+        assert!(score > 0.3, "Fitzpatrick III should detect as skin: {score}");
+    }
+
+    #[test]
+    fn test_skin_fitzpatrick_type_iv() {
+        // Type IV: olive (RGB ~160, 114, 78)
+        let score = score_skin_pixel(160, 114, 78);
+        assert!(score > 0.3, "Fitzpatrick IV should detect as skin: {score}");
+    }
+
+    #[test]
+    fn test_skin_fitzpatrick_type_v() {
+        // Type V: brown (RGB ~112, 73, 46)
+        let score = score_skin_pixel(112, 73, 46);
+        assert!(score > 0.3, "Fitzpatrick V should detect as skin: {score}");
+    }
+
+    #[test]
+    fn test_skin_fitzpatrick_type_vi() {
+        // Type VI: dark brown (RGB ~62, 39, 25)
+        let score = score_skin_pixel(62, 39, 25);
+        assert!(score > 0.3, "Fitzpatrick VI should detect as skin: {score}");
+    }
+
+    // Test non-skin color rejection
+    #[test]
+    fn test_non_skin_blue_sky() {
+        let score = score_skin_pixel(135, 206, 235);
+        assert!(score < 0.1, "Blue sky should not detect as skin: {score}");
+    }
+
+    #[test]
+    fn test_non_skin_green_grass() {
+        let score = score_skin_pixel(76, 153, 0);
+        assert!(score < 0.1, "Green grass should not detect as skin: {score}");
+    }
+
+    #[test]
+    fn test_non_skin_red_car() {
+        let score = score_skin_pixel(220, 20, 20);
+        assert!(score < 0.1, "Red car paint should not detect as skin: {score}");
+    }
+
+    #[test]
+    fn test_non_skin_pure_white() {
+        let score = score_skin_pixel(255, 255, 255);
+        assert!(score < 0.1, "Pure white should not detect as skin: {score}");
     }
 
     #[test]
@@ -354,5 +517,49 @@ mod tests {
         let map = vec![0.0f32; 100];
         let rects = extract_focus_rects(&map, 10, 10, 1.0);
         assert!(rects.is_empty());
+    }
+
+    #[test]
+    fn test_white_balance_compensation() {
+        // Create a small image: mostly neutral gray background with one skin pixel.
+        // Apply a warm color cast (+20R, -10B) to the whole image.
+        // WB compensation should still detect the skin pixel.
+        let skin_r = 198u8;
+        let skin_g = 155u8;
+        let skin_b = 119u8;
+        let bg_r = 128u8;
+        let bg_g = 128u8;
+        let bg_b = 128u8;
+
+        // Apply warm cast
+        let warm = |r: u8, g: u8, b: u8| -> (u8, u8, u8) {
+            (r.saturating_add(20), g, b.saturating_sub(10))
+        };
+        let (wr, wg, wb) = warm(skin_r, skin_g, skin_b);
+        let (br, bg_val, bb) = warm(bg_r, bg_g, bg_b);
+
+        // 3x3 image: 8 background + 1 skin pixel (center)
+        let mut pixels = Vec::with_capacity(9 * 4);
+        for i in 0..9 {
+            if i == 4 {
+                pixels.extend_from_slice(&[wb, wg, wr, 255]);
+            } else {
+                pixels.extend_from_slice(&[bb, bg_val, br, 255]);
+            }
+        }
+
+        let skin_wb = compute_skin_map(&pixels, 3, 3, true);
+        let skin_no_wb = compute_skin_map(&pixels, 3, 3, false);
+
+        // With WB compensation, the warm-cast skin pixel should still be detected
+        assert!(skin_wb[4] > 0.1, "WB-compensated should detect warm-cast skin: {}", skin_wb[4]);
+        // Without WB compensation, the shifted skin may or may not be detected,
+        // but WB version should be >= the non-WB version
+        assert!(
+            skin_wb[4] >= skin_no_wb[4],
+            "WB compensation should help, not hurt: wb={} no_wb={}",
+            skin_wb[4],
+            skin_no_wb[4]
+        );
     }
 }

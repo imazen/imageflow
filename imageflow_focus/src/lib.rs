@@ -29,6 +29,10 @@ pub struct AnalysisConfig {
     pub edge_weight: f32,
     /// Weight for saturation signal
     pub saturation_weight: f32,
+    /// Compensate for white balance shifts in skin detection.
+    /// When true, shifts the YCbCr detection range center based on image-wide
+    /// mean chrominance to handle warm/cool color casts.
+    pub white_balance_compensate: bool,
 }
 
 impl Default for AnalysisConfig {
@@ -39,6 +43,7 @@ impl Default for AnalysisConfig {
             skin_weight: 1.8,
             edge_weight: 0.2,
             saturation_weight: 0.1,
+            white_balance_compensate: true,
         }
     }
 }
