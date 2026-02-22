@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! # `imageflow_types`
 //!
 //! Responsible for the schema of the JSON API, as well as for providing types used internally.

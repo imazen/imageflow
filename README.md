@@ -1,6 +1,6 @@
 ## ![imageflow](https://www.imageflow.io/images/imageflow.svg) optimal images at incredible speeds
 
-[![tests](https://github.com/imazen/imageflow/workflows/Test/badge.svg?branch=main)](https://github.com/imazen/imageflow/actions?query=workflow%3ATest)  [![state: release candidate](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
+[![tests](https://github.com/imazen/imageflow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imazen/imageflow/actions/workflows/ci.yml)  [![state: release candidate](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/imazen/imageflow_tool.svg)](https://hub.docker.com/r/imazen/imageflow_tool/)
 [![view releases](https://img.shields.io/badge/-download%20binaries%20for%20windows,%20mac,%20or%20linux-green.svg)](https://github.com/imazen/imageflow/releases) [![license: Choose AGPLv3 or Commercial](https://img.shields.io/badge/license-Choose%20AGPLv3%20or%20Commercial-green.svg)](https://imageresizing.net/pricing)

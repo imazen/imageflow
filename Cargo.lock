@@ -107,6 +107,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
+name = "append_only_set"
+version = "0.1.0"
+
+[[package]]
 name = "archmage"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1245,6 +1249,7 @@ dependencies = [
 name = "imageflow_types"
 version = "0.1.0"
 dependencies = [
+ "append_only_set",
  "chrono",
  "imageflow_helpers",
  "imgref",

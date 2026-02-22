@@ -17,6 +17,7 @@ serde_derive = "1"
 lazy_static = "1"
 regex-lite = { version = "0.1.6" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
+append_only_set = { path = "../append_only_set" }
 chrono = "0.4"
 imgref = "1.10"
 rgb = "0.8"

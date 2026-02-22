@@ -1,0 +1,8 @@
+[package]
+name = "append_only_set"
+version = "0.1.0"
+authors = ["Lilith River <lilith@imazen.io>"]
+workspace = "../"
+edition = "2021"
+
+[dependencies]

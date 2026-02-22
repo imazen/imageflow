@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 extern crate imageflow_helpers;
 
 use std::fmt;

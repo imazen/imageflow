@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 #[macro_use]
 extern crate macro_attr;
 #[macro_use]
