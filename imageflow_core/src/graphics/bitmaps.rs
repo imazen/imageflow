@@ -6,10 +6,10 @@ use bytemuck::{try_cast_slice, try_cast_slice_mut, Pod};
 use imageflow_helpers::colors::Color32;
 use imageflow_types::{CompositingMode, PixelBuffer};
 use imgref::ImgRef;
-// TODO(rgb-0.8.91): Change back to: use rgb::{Bgra, GrayA, Gray_v09 as Gray, BGR8, BGRA8, RGB8, RGBA8};
+// TODO(rgb-0.8.91): Change back to: use rgb::{Bgra, Gray_v09 as Gray, BGR8, BGRA8, RGB8, RGBA8};
 // In rgb 0.8.91+, BGR8/BGRA8/RGB8/RGBA8 are exported at root level and Gray_v09 exists for compat
 use rgb::alt::{BGR8, BGRA8};
-use rgb::{Bgra, Gray, GrayA, RGB8, RGBA8};
+use rgb::{Bgra, Gray, RGB8, RGBA8};
 use slotmap::*;
 use std;
 use std::cell::{RefCell, RefMut};
@@ -1633,14 +1633,12 @@ pub trait BitmapRowAccess {
     fn row_bgr8(&self, row_ix: usize, stride: usize) -> Option<&[BGR8]>;
     fn row_rgb8(&self, row_ix: usize, stride: usize) -> Option<&[RGB8]>;
     fn row_gray8(&self, row_ix: usize, stride: usize) -> Option<&[Gray<u8>]>;
-    fn row_grayalpha8(&self, row_ix: usize, stride: usize) -> Option<&[GrayA<u8>]>;
 
     fn row_mut_bgra8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [BGRA8]>;
     fn row_mut_rgba8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [RGBA8]>;
     fn row_mut_bgr8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [BGR8]>;
     fn row_mut_rgb8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [RGB8]>;
     fn row_mut_gray8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [Gray<u8>]>;
-    fn row_mut_grayalpha8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [GrayA<u8>]>;
 }
 
 impl BitmapRowAccess for Vec<u8> {
@@ -1674,17 +1672,6 @@ impl BitmapRowAccess for Vec<u8> {
         try_cast_slice(row).ok()
     }
 
-    fn row_grayalpha8(&self, row_ix: usize, stride: usize) -> Option<&[GrayA<u8>]> {
-        let start = row_ix.checked_mul(stride)?;
-        let row = self.get(start..start.checked_add(stride)?)?;
-        // TODO(rgb-0.8.91): replace with try_cast_slice(row).ok() when GrayA implements bytemuck::Pod
-        // GrayA<u8> is repr(C) with two u8 fields — safe to reinterpret from &[u8].
-        if row.len() % 2 != 0 {
-            return None;
-        }
-        Some(unsafe { std::slice::from_raw_parts(row.as_ptr() as *const GrayA<u8>, row.len() / 2) })
-    }
-
     fn row_mut_bgra8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [BGRA8]> {
         let start = row_ix.checked_mul(stride)?;
         let row = self.get_mut(start..start.checked_add(stride)?)?;
@@ -1713,19 +1700,6 @@ impl BitmapRowAccess for Vec<u8> {
         let start = row_ix.checked_mul(stride)?;
         let row = self.get_mut(start..start.checked_add(stride)?)?;
         try_cast_slice_mut(row).ok()
-    }
-
-    fn row_mut_grayalpha8(&mut self, row_ix: usize, stride: usize) -> Option<&mut [GrayA<u8>]> {
-        let start = row_ix.checked_mul(stride)?;
-        let row = self.get_mut(start..start.checked_add(stride)?)?;
-        // TODO(rgb-0.8.91): replace with try_cast_slice_mut(row).ok() when GrayA implements bytemuck::Pod
-        // GrayA<u8> is repr(C) with two u8 fields — safe to reinterpret from &mut [u8].
-        if row.len() % 2 != 0 {
-            return None;
-        }
-        Some(unsafe {
-            std::slice::from_raw_parts_mut(row.as_mut_ptr() as *mut GrayA<u8>, row.len() / 2)
-        })
     }
 }
 #[test]

@@ -174,14 +174,14 @@ impl Decoder for ImagePngDecoder {
             }
             png::ColorType::GrayscaleAlpha => {
                 for row_ix in 0..h {
-                    let from = buffer.row_mut_grayalpha8(row_ix, stride).unwrap();
+                    let start = row_ix * stride;
+                    let row = &buffer[start..start + stride];
                     let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
-                    from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
-                        // GrayA/GrayAlpha uses .v and .a fields (via Deref)
-                        to.r = from.v;
-                        to.g = from.v;
-                        to.b = from.v;
-                        to.a = from.a;
+                    row.chunks_exact(2).zip(to.iter_mut()).for_each(|(ga, to)| {
+                        to.r = ga[0];
+                        to.g = ga[0];
+                        to.b = ga[0];
+                        to.a = ga[1];
                     });
                 }
             }
