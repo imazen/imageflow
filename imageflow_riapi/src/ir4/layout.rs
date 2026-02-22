@@ -4,7 +4,8 @@ use crate::sizing::prelude::*;
 use imageflow_helpers::preludes::from_std::*;
 use imageflow_types as s;
 use imageflow_types::{
-    ConstraintGravity, ConstraintMode, RoundCornersMode, WatermarkConstraintBox,
+    ConstraintGravity, ConstraintMode, FocusRect, FocusSource, RoundCornersMode,
+    WatermarkConstraintBox,
 };
 use std;
 
@@ -348,27 +349,33 @@ impl Ir4Layout {
 
         let constraints = ir_layout.build_constraints();
 
-        //We would change this for face or ROI support
         let cropper = sizing::IdentityCropProvider::new();
 
         // ======== This is where we do the sizing and constraint evaluation \/
         let layout =
             sizing::Layout::create(initial_size, target).execute_all(&constraints, &cropper)?;
 
-        //println!("executed constraints {:?} to get layout {:?} from target {:?}", &constraints, &layout, &target);
         let new_crop = layout.get_source_crop();
 
+        // Determine effective gravity: focus rects > explicit gravity > center
+        let effective_gravity = if let Some(ref focus_rects) = constraint.focus {
+            if !focus_rects.is_empty() {
+                let (gx, gy) = Self::focus_rects_to_gravity(focus_rects);
+                ConstraintGravity::Percentage { x: gx, y: gy }
+            } else {
+                constraint.gravity.unwrap_or(ConstraintGravity::Center)
+            }
+        } else {
+            constraint.gravity.unwrap_or(ConstraintGravity::Center)
+        };
+
         //align crop
-        let (inner_crop_x1, inner_crop_y1) = Ir4Layout::align_gravity(
-            constraint.gravity.unwrap_or(ConstraintGravity::Center),
-            new_crop,
-            initial_size,
-        )
-        .expect("Outer box should never be smaller than inner box. All values must > 0");
+        let (inner_crop_x1, inner_crop_y1) =
+            Ir4Layout::align_gravity(effective_gravity, new_crop, initial_size)
+                .expect("Outer box should never be smaller than inner box. All values must > 0");
         //add manual crop offset
         let (crop_x1, crop_y1) = ((inner_crop_x1) as u32, (inner_crop_y1) as u32);
 
-        //println!("Crop initial={:?}, new: {:?}, x1: {}, y1: {}", &initial_crop, &new_crop, crop_x1, crop_y1);
         let final_crop = if crop_x1 > 0
             || crop_y1 > 0
             || initial_size.width() != new_crop.width()
@@ -387,12 +394,8 @@ impl Ir4Layout {
         //Align padding
         let final_canvas = layout.get_box(BoxTarget::CurrentCanvas);
         let scale_to = layout.get_box(BoxTarget::CurrentImage);
-        let (left, top) = Ir4Layout::align_gravity(
-            constraint.gravity.unwrap_or(ConstraintGravity::Center),
-            scale_to,
-            final_canvas,
-        )
-        .expect("Outer box should never be smaller than inner box. All values must > 0");
+        let (left, top) = Ir4Layout::align_gravity(effective_gravity, scale_to, final_canvas)
+            .expect("Outer box should never be smaller than inner box. All values must > 0");
 
         let (right, bottom) = (
             final_canvas.width() - scale_to.width() - left,
@@ -428,21 +431,23 @@ impl Ir4Layout {
 
         let constraints = self.build_constraints();
 
-        //We would change this for face or ROI support
         let cropper = sizing::IdentityCropProvider::new();
 
         // ======== This is where we do the sizing and constraint evaluation \/
         let layout =
             sizing::Layout::create(initial_size, target).execute_all(&constraints, &cropper)?;
 
-        //println!("executed constraints {:?} to get layout {:?} from target {:?}", &constraints, &layout, &target);
         let new_crop = layout.get_source_crop();
 
+        // Priority: c.focus > c.gravity > anchor > center
         let crop_align = self
-            .i
-            .c_gravity
-            .map(|[x, y]| (Anchor1D::Percent(x as f32), Anchor1D::Percent(y as f32)))
-            .or(self.i.anchor)
+            .focus_to_anchor()
+            .or_else(|| {
+                self.i
+                    .c_gravity
+                    .map(|[x, y]| (Anchor1D::Percent(x as f32), Anchor1D::Percent(y as f32)))
+            })
+            .or(self.i.anchor.clone())
             .unwrap_or((Anchor1D::Center, Anchor1D::Center));
         //align crop
         let (inner_crop_x1, inner_crop_y1) = Self::align(crop_align, new_crop, initial_size)
@@ -451,7 +456,6 @@ impl Ir4Layout {
         let (crop_x1, crop_y1) =
             ((initial_crop[0] + inner_crop_x1) as u32, (initial_crop[1] + inner_crop_y1) as u32);
 
-        //println!("Crop initial={:?}, new: {:?}, x1: {}, y1: {}", &initial_crop, &new_crop, crop_x1, crop_y1);
         let final_crop = if crop_x1 > 0
             || crop_y1 > 0
             || precrop_w != new_crop.width()
@@ -467,6 +471,18 @@ impl Ir4Layout {
             None
         };
         Ok((final_crop, layout))
+    }
+
+    /// Convert c_focus rects (if present and explicit) to anchor percentages.
+    /// Returns None if no explicit focus rects are set.
+    fn focus_to_anchor(&self) -> Option<(Anchor1D, Anchor1D)> {
+        match &self.i.c_focus {
+            Some(FocusSource::Rects(rects)) if !rects.is_empty() => {
+                let (gx, gy) = Self::focus_rects_to_gravity(rects);
+                Some((Anchor1D::Percent(gx), Anchor1D::Percent(gy)))
+            }
+            _ => None,
+        }
     }
 
     /// Does not add trimwhitespace or decode/encode
@@ -644,6 +660,30 @@ impl Ir4Layout {
         }
 
         Ok(Ir4LayoutInfo { canvas })
+    }
+
+    /// Compute effective gravity percentages (x%, y%) from focus rects.
+    /// The centroid is weighted by each rect's weight * area.
+    fn focus_rects_to_gravity(rects: &[FocusRect]) -> (f32, f32) {
+        if rects.is_empty() {
+            return (50.0, 50.0);
+        }
+        let mut total_weight = 0.0f64;
+        let mut cx = 0.0f64;
+        let mut cy = 0.0f64;
+        for r in rects {
+            let r = r.clamped();
+            let area = ((r.x2 - r.x1) * (r.y2 - r.y1)).max(0.01) as f64;
+            let w = r.weight.max(0.0) as f64 * area;
+            let (rx, ry) = r.center();
+            cx += rx as f64 * w;
+            cy += ry as f64 * w;
+            total_weight += w;
+        }
+        if total_weight <= 0.0 {
+            return (50.0, 50.0);
+        }
+        ((cx / total_weight) as f32, (cy / total_weight) as f32)
     }
 
     fn align1d(a: Anchor1D, inner: i32, outer: i32) -> std::result::Result<i32, ()> {
