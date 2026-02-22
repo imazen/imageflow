@@ -34,14 +34,7 @@ pub mod version;
 extern crate serde_derive;
 
 #[macro_use]
-extern crate lazy_static; //Used by build_env_info.rs
-
-extern crate chrono;
-extern crate imageflow_helpers;
-extern crate imgref;
-extern crate rgb;
-extern crate serde;
-extern crate serde_json;
+extern crate lazy_static;
 
 use std::fmt;
 

@@ -13,10 +13,10 @@ mod screen;
 mod subimage;
 use self::bgra::BGRA8;
 use self::screen::Screen;
-use crate::gif::Frame;
 use crate::graphics::bitmaps::{BitmapCompositing, BitmapKey, ColorSpace};
 use crate::io::IoProxyProxy;
 use crate::io::IoProxyRef;
+use ::gif::Frame;
 use lcms2_sys::cmsAllocProfileSequenceDescription;
 use std::rc::Rc;
 

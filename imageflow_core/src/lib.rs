@@ -1,38 +1,10 @@
-// intellij-rust flags this anyway
-// #![feature(field_init_shorthand)]
-
-#![allow(unused_features)]
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![cfg_attr(feature = "nightly", feature(portable_simd))]
 
-extern crate daggy;
+// Required to link C symbols — the crate has no Rust API, only provides C object files
 extern crate imageflow_c_components;
-extern crate imageflow_helpers;
-extern crate imageflow_riapi;
-extern crate imageflow_types;
-extern crate petgraph;
-
-// for testing
-#[cfg(test)]
-extern crate rand;
-
-extern crate dashmap;
-extern crate evalchroma;
-extern crate gif;
-extern crate imagequant;
-extern crate imgref;
-extern crate lcms2;
-extern crate libwebp_sys;
-extern crate lodepng;
-extern crate mozjpeg;
-extern crate mozjpeg_sys;
-extern crate rgb;
-extern crate serde_json;
-extern crate smallvec;
-extern crate twox_hash;
-extern crate uuid;
 
 #[macro_use]
 pub mod errors;
@@ -48,11 +20,10 @@ pub mod json;
 pub use crate::codecs::NamedDecoders;
 pub use crate::context::Context;
 pub use crate::context::ThreadSafeContext;
-pub use crate::ffi::IoDirection;
 pub use crate::flow::definitions::Graph;
 pub use crate::io::IoProxy;
 pub use crate::json::JsonResponse;
-// use std::ops::DerefMut;
+pub use imageflow_types::IoDirection;
 mod allocation_container;
 pub mod clients;
 pub mod ffi;
