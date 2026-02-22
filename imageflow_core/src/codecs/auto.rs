@@ -582,21 +582,6 @@ fn create_png_auto(
             }
         }
     }
-
-    // OutputFormat::Png if !png_lossless => s::EncoderPreset::Pngquant {
-    //     quality: Some(i.png_quality.unwrap_or(100)),
-    //     minimum_quality: Some(i.png_min_quality.unwrap_or(0)),
-    //     speed: i.png_quantization_speed,
-    //     maximum_deflate: i.png_max_deflate
-    // },
-    // OutputFormat::Png if i.png_libpng == Some(true) => s::EncoderPreset::Libpng {
-    //     depth: Some(if i.bgcolor_srgb.is_some() { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 }),
-    //     zlib_compression: if i.png_max_deflate == Some(true) { Some(9) } else { None },
-    //     matte: i.bgcolor_srgb.map(|sr| s::Color::Srgb(s::ColorSrgb::Hex(sr.to_rrggbbaa_string())))
-    // },
-    // OutputFormat::Png => s::EncoderPreset::Lodepng{
-    //     maximum_deflate: i.png_max_deflate
-    // },
 }
 #[derive(Debug, Clone)]
 struct AutoEncoderDetails {

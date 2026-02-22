@@ -73,7 +73,6 @@ enum CodecKind {
 #[derive(PartialEq, Copy, Clone)]
 pub enum NamedDecoders {
     MozJpegRsDecoder,
-    WICJpegDecoder,
     ImageRsJpegDecoder,
     ImageRsPngDecoder,
     LibPngRsDecoder,
@@ -83,9 +82,9 @@ pub enum NamedDecoders {
 impl NamedDecoders {
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
         match self {
-            NamedDecoders::WICJpegDecoder
-            | NamedDecoders::ImageRsJpegDecoder
-            | NamedDecoders::MozJpegRsDecoder => bytes.starts_with(b"\xFF\xD8\xFF"),
+            NamedDecoders::ImageRsJpegDecoder | NamedDecoders::MozJpegRsDecoder => {
+                bytes.starts_with(b"\xFF\xD8\xFF")
+            }
             NamedDecoders::GifRsDecoder => {
                 bytes.starts_with(b"GIF89a") || bytes.starts_with(b"GIF87a")
             }
@@ -115,9 +114,6 @@ impl NamedDecoders {
                 Ok(Box::new(image_png_decoder::ImagePngDecoder::create(c, io, io_id)?))
             }
             NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
-            NamedDecoders::WICJpegDecoder => {
-                panic!("WIC Jpeg Decoder not implemented"); //TODO, use actual error for this
-            }
         }
     }
 }
