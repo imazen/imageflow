@@ -4,9 +4,10 @@ use ::std::any::Any;
 use ::std::borrow::Borrow;
 use ::std::fmt;
 use ::std::hash::{Hash, Hasher};
+use ref_cast::RefCast;
 
 #[repr(transparent)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, RefCast)]
 pub struct AsciiFolding<S: ?Sized>(S);
 
 impl<S> AsciiFolding<S> {
@@ -31,7 +32,7 @@ impl<S: fmt::Display> fmt::Display for AsciiFolding<S> {
 
 impl<S: ?Sized> AsciiFolding<S> {
     pub fn borrowed(s: &S) -> &Self {
-        unsafe { &*(s as *const S as *const AsciiFolding<S>) }
+        AsciiFolding::ref_cast(s)
     }
 }
 
