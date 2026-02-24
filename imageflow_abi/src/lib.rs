@@ -1620,7 +1620,7 @@ fn test_job_with_cancellation_at_every_point() {
                     assert!(
                         false,
                         "Expected no error since there were polls remaining, but got error {}",
-                        ctx.outward_error().to_string()
+                        ctx.outward_error()
                     );
                 }
 
@@ -1641,7 +1641,7 @@ fn test_job_with_cancellation_at_every_point() {
                     eprintln!(
                         "Expected cancellation, but {} polls reamined, and got error {}",
                         cancel_on_poll,
-                        ctx.outward_error().to_string()
+                        ctx.outward_error()
                     );
                     imageflow_context_print_and_exit_if_error(c);
                 }

@@ -3,7 +3,6 @@ use crate::sizing::{
     steps, AspectRatio, BoxKind, BoxParam, BoxTarget, Cond, Layout, LayoutError, Step,
 };
 use imageflow_helpers::preludes::from_std::*;
-use std;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum Strategy {
@@ -296,16 +295,14 @@ fn next_prime(v: i32, kind: NumberKind) -> Option<i32> {
             } else {
                 Some(cur)
             }
-        } else {
-            if ix == 0 {
-                if cur == v {
-                    None
-                } else {
-                    Some(cur)
-                }
+        } else if ix == 0 {
+            if cur == v {
+                None
             } else {
-                Some(SMALL_PRIMES[ix - 1])
+                Some(cur)
             }
+        } else {
+            Some(SMALL_PRIMES[ix - 1])
         }
     }
 }
@@ -591,16 +588,10 @@ impl Expect {
             Expect::SourceAgainstTarget(cond) => {
                 SimplifiedExpect::Source { against: c.target, expect: cond }
             }
-            Expect::Canvas { against, expect } => {
-                SimplifiedExpect::Canvas { against: against, expect: expect }
-            }
-            Expect::Image { against, expect } => {
-                SimplifiedExpect::Image { against: against, expect: expect }
-            }
-            Expect::Source { against, expect } => {
-                SimplifiedExpect::Source { against: against, expect: expect }
-            }
-            Expect::That { a, is, b } => SimplifiedExpect::That { a: a, is: is, b: b },
+            Expect::Canvas { against, expect } => SimplifiedExpect::Canvas { against, expect },
+            Expect::Image { against, expect } => SimplifiedExpect::Image { against, expect },
+            Expect::Source { against, expect } => SimplifiedExpect::Source { against, expect },
+            Expect::That { a, is, b } => SimplifiedExpect::That { a, is, b },
         }
     }
 
@@ -657,7 +648,7 @@ impl Kit {
 
     pub fn mut_last<F>(mut self, c: F) -> Self
     where
-        F: Fn(&mut Expectation) -> (),
+        F: Fn(&mut Expectation),
     {
         let last = self.expectations.pop().map(|mut e| {
             c(&mut e);
@@ -675,7 +666,7 @@ impl Kit {
         self.mut_last(|e| e.action = ViolationAction::Panic)
     }
     pub fn peek(&self) -> Option<Expectation> {
-        if self.expectations.len() > 0 {
+        if !self.expectations.is_empty() {
             Some(self.expectations[self.expectations.len() - 1])
         } else {
             None
@@ -687,7 +678,7 @@ impl Kit {
         } else {
             self.add(Expectation {
                 when: When::Placeholder,
-                expect: expect,
+                expect,
                 action: ViolationAction::FailTest,
             })
         }
@@ -697,7 +688,7 @@ impl Kit {
             self.mut_last(|e| e.when = when)
         } else {
             self.add(Expectation {
-                when: when,
+                when,
                 expect: Expect::Placeholder,
                 action: ViolationAction::FailTest,
             })
@@ -866,7 +857,7 @@ fn test_shrink_within(
     if failed {
         return Some((canvas, image, crop));
     }
-    return None;
+    None
 }
 
 // skipping, takes minutes.
@@ -1000,12 +991,12 @@ fn test_steps() {
             let mut target_header_printed = false;
 
             //We want to filter into 9 groups, lt,eq,gt x w,h.
-            source_sizes.sort_by_key(|a| a.cmp_size(&target));
+            source_sizes.sort_by_key(|a| a.cmp_size(target));
 
             current.invalidate();
 
             for source in source_sizes.iter() {
-                let group = source.cmp_size(&target);
+                let group = source.cmp_size(target);
                 if !current.valid_for(group) {
                     current.end_report(&kit, &mut target_header_printed);
                     current = current.reset(group, *target, source_sizes.len());
@@ -1082,12 +1073,12 @@ where
     fn new(value: T, target: AspectRatio, sources_for_all_groups: usize) -> GroupData<T> {
         let mut s = format!("{:?}", value);
         for _ in s.len()..20 {
-            s.push_str(" ");
+            s.push(' ');
         }
         GroupData {
             name: value,
             padded_name: s,
-            target: target,
+            target,
             count: 0,
             identity_count: 0,
             target_count: 0,
@@ -1099,7 +1090,7 @@ where
             truncate_unique: 16,
             truncate_failures: 64,
             invalidated: false,
-            sources_for_all_groups: sources_for_all_groups,
+            sources_for_all_groups,
         }
     }
 
@@ -1172,7 +1163,7 @@ where
                 w!("kept size - ({})\n", self.count);
             } else if self.different_count == self.count {
                 w!("{}{} unique of {}\n", self.unique.len(), &unique_truncated, self.count);
-            } else if self.failures.len() > 0 {
+            } else if !self.failures.is_empty() {
                 w!("{}{} failures, {}{} unique of {} different, {} met target, {} maintained canvas size\n", self.failures.len(), failures_truncated, self.unique.len(), &unique_truncated, self.different_count, self.target_count, self.identity_count);
             } else {
                 w!(
@@ -1263,7 +1254,7 @@ where
         // Unused rules for a group
 
         //Evaluate rules and panic right away as requested
-        let ctx = EvaluationContext { result: result, target: self.target, source: source };
+        let ctx = EvaluationContext { result, target: self.target, source };
 
         let mut failed_test = false;
         let mut fail_panic = false;

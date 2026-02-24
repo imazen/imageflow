@@ -138,9 +138,9 @@ fn test_color32() {
         let actual = parse_color_hex_or_named(value).unwrap();
 
         if actual != expected {
-            let _ = write!(
+            let _ = writeln!(
                 ::std::io::stderr(),
-                "Expected {}, actual={}\n",
+                "Expected {}, actual={}",
                 expected.to_aarrggbb_string(),
                 actual.to_aarrggbb_string()
             );

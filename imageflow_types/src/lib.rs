@@ -2162,7 +2162,7 @@ fn decode_graph() {
         ]
     }"#;
 
-    let obj: Graph = serde_json::from_str(&text).unwrap();
+    let obj: Graph = serde_json::from_str(text).unwrap();
     let expected = Graph {
         nodes: hashmap![ "0".to_owned() => Node::Decode{ io_id: 1, commands: None},
                          "1".to_owned() => Node::Rotate90

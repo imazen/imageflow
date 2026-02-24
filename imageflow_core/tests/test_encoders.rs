@@ -15,7 +15,7 @@ use s::{
 };
 
 const DEBUG_GRAPH: bool = false;
-const FRYMIRE_URL: &'static str =
+const FRYMIRE_URL: &str =
     "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png";
 
 #[test]
@@ -239,20 +239,17 @@ pub fn compare_encoded_to_source(
 
     let response = context.execute_1(execute).unwrap();
 
-    match response {
-        ResponsePayload::JobResult(r) => {
-            assert_eq!(r.decodes.len(), 1);
-            assert!(r.decodes[0].preferred_mime_type.len() > 0);
-            assert!(r.decodes[0].preferred_extension.len() > 0);
-            assert!(r.decodes[0].w > 0);
-            assert!(r.decodes[0].h > 0);
-            assert_eq!(r.encodes.len(), 1);
-            assert!(r.encodes[0].preferred_mime_type.len() > 0);
-            assert!(r.encodes[0].preferred_extension.len() > 0);
-            assert!(r.encodes[0].w > 0);
-            assert!(r.encodes[0].h > 0);
-        }
-        _ => {}
+    if let ResponsePayload::JobResult(r) = response {
+        assert_eq!(r.decodes.len(), 1);
+        assert!(!r.decodes[0].preferred_mime_type.is_empty());
+        assert!(!r.decodes[0].preferred_extension.is_empty());
+        assert!(r.decodes[0].w > 0);
+        assert!(r.decodes[0].h > 0);
+        assert_eq!(r.encodes.len(), 1);
+        assert!(!r.encodes[0].preferred_mime_type.is_empty());
+        assert!(!r.encodes[0].preferred_extension.is_empty());
+        assert!(r.encodes[0].w > 0);
+        assert!(r.encodes[0].h > 0);
     }
 
     let bytes = context.get_output_buffer_slice(1).unwrap();

@@ -162,8 +162,8 @@ fn test_handler() {
 fn test_get_version_info() {
     let response = Context::create().unwrap().get_version_info().unwrap();
 
-    assert!(response.build_date.len() > 0);
-    assert!(response.git_describe_always.len() > 0);
-    assert!(response.last_git_commit.len() > 0);
-    assert!(response.long_version_string.len() > 0);
+    assert!(!response.build_date.is_empty());
+    assert!(!response.git_describe_always.is_empty());
+    assert!(!response.last_git_commit.is_empty());
+    assert!(!response.long_version_string.is_empty());
 }

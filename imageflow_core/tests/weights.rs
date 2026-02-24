@@ -140,10 +140,7 @@ fn test_filter(
             );
         }
     } else {
-        assert_eq!(
-            function_bounded_bi!(&details, expected_near0, expected_end, 0.05, -0.0001, 500.0),
-            true
-        );
+        assert!(function_bounded_bi!(&details, expected_near0, expected_end, 0.05, -0.0001, 500.0));
     }
 }
 
@@ -387,12 +384,11 @@ fn test_output_weight_symmetric() {
                 {
                     let opposite_weights = &w.weights()[opposite_output_pixel.left_weight as usize
                         ..=opposite_output_pixel.right_weight as usize];
-                    assert_eq!(
+                    assert!(
                         (weight - opposite_weights[opposite_weights.len() - 1 - w_index]).abs()
-                            < 1e-5,
-                        true
+                            < 1e-5
                     );
-                    assert_eq!(weight < 5f32, true)
+                    assert!(weight < 5f32)
                 }
             }
         }

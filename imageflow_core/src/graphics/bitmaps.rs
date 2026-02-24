@@ -1721,7 +1721,7 @@ fn test_scanline_for_1x1() {
     window.fill_rectangle(Color32(0xFF0000FF), 0, 0, 1, 1).unwrap();
     let mut row_count = 0;
     for scanline in window.scanlines() {
-        assert_eq!(scanline.row.len(), scanline.w as usize * scanline.t_per_pixel() as usize);
+        assert_eq!(scanline.row.len(), scanline.w * scanline.t_per_pixel());
         eprintln!("{}\n{:?}", &scanline, &scanline.row);
         assert_eq!(scanline.row[0], 0xFF);
         row_count += 1;
@@ -1758,24 +1758,24 @@ fn test_scanline_iterator_bgra32() {
     // }
     // Test u8 scanlines
     for scanline in window.scanlines() {
-        assert_eq!(scanline.row.len(), scanline.w as usize * scanline.t_per_pixel() as usize);
+        assert_eq!(scanline.row.len(), scanline.w * scanline.t_per_pixel());
         println!("{}\n{:?}", &scanline, &scanline.row);
-        for x in (0..scanline.w as usize).step_by(4) {
+        for x in (0..scanline.w).step_by(4) {
             assert_eq!(scanline.row[x..x + 4], [0, scanline.y as u8, (x / 4) as u8, 255]);
         }
     }
     let mut row_count = 0;
     for scanline in window.scanlines_bgra().unwrap() {
-        assert_eq!(scanline.row.len(), scanline.w as usize);
+        assert_eq!(scanline.row.len(), scanline.w);
         row_count += 1;
     }
     assert_eq!(row_count, window.info().height() as usize);
     // Test BGRA scanlines
     for scanline in window.scanlines_bgra().unwrap() {
-        assert_eq!(scanline.row.len(), scanline.w as usize);
+        assert_eq!(scanline.row.len(), scanline.w);
         // Each item is one BGRA pixel
         println!("{}\n{:?}", &scanline, &scanline.row);
-        for x in 0..scanline.w as usize {
+        for x in 0..scanline.w {
             print!("{} ", scanline.row[x]);
             assert_eq!(
                 scanline.row[x],
@@ -1796,9 +1796,9 @@ fn test_scanline_iterator_f32_reverse() {
     let mut window = bitmap.get_window_f32().unwrap();
 
     for scanline in window.scanlines_reverse() {
-        assert_eq!(scanline.row.len(), scanline.w as usize * scanline.t_per_pixel() as usize);
+        assert_eq!(scanline.row.len(), scanline.w * scanline.t_per_pixel());
     }
     for scanline in window.scanlines() {
-        assert_eq!(scanline.row.len(), scanline.w as usize * scanline.t_per_pixel() as usize);
+        assert_eq!(scanline.row.len(), scanline.w * scanline.t_per_pixel());
     }
 }

@@ -275,9 +275,9 @@ mod tests {
         let child = g.add_child_get_cell();
         child.borrow_mut().as_mut().unwrap().do_a_thing(&g);
         assert_eq!(g.objects.get_reference(child as *const RefCell<Option<Child>>), Some(child));
-        assert!(g.objects.contains(&*child));
+        assert!(g.objects.contains(child));
         let mut c2 = g.add_child_get_ref();
-        assert!(g.objects.contains(&*child));
+        assert!(g.objects.contains(child));
         c2.as_mut().unwrap().do_a_thing(&g);
 
         let c3_ptr;

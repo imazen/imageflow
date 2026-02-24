@@ -54,7 +54,7 @@ fn find_integral_weights(
                         }
                     }
                     if all_divisible {
-                        *divisor /= new_divisor as u32;
+                        *divisor /= new_divisor;
                         for i in 0usize..8usize {
                             eight[i] /= new_divisor as i8;
                         }
@@ -76,7 +76,7 @@ fn find_integral_weights(
                 });
         }
     }
-    return Err(format!("Failed to find integral weights: {}", fail_reason));
+    Err(format!("Failed to find integral weights: {}", fail_reason))
 }
 
 fn linear_to_srgb(clr: f32) -> f32 {
@@ -88,14 +88,14 @@ fn linear_to_srgb(clr: f32) -> f32 {
     }
 
     // a = 0.055; ret ((1+a) * s**(1/2.4) - a) * 255
-    return 1.055f32 * 255.0f32 * (f32::powf(clr, 0.41666666f32)) - 14.025f32;
+    1.055f32 * 255.0f32 * (f32::powf(clr, 0.41666666f32)) - 14.025f32
 }
 
 fn srgb_to_linear(s: f32) -> f32 {
     if s <= 0.04045f32 {
         return s / 12.92f32;
     }
-    return f32::powf((s + 0.055f32) / (1f32 + 0.055f32), 2.4f32);
+    f32::powf((s + 0.055f32) / (1f32 + 0.055f32), 2.4f32)
 }
 
 fn print_scale_header(scale_size: i32, linear: bool, end: &str) -> String {
@@ -128,7 +128,7 @@ fn print_short_luts() -> String {
             reverse_lut[index] = v as u32;
             output.push_str(&format!("{}, ", v as u32));
         }
-        output.push_str("\n");
+        output.push('\n');
     }
     output.push_str("};\n\n");
 
@@ -148,7 +148,7 @@ fn print_short_luts() -> String {
             assert_eq!(roundtrip, index as u32);
             output.push_str(&format!("{}, ", lut[index] as u32));
         }
-        output.push_str("\n");
+        output.push('\n');
     }
     output.push_str("};\n\n");
     output
@@ -176,25 +176,25 @@ fn get_max_window_size(matrix: &[i8; 64], rows: i32) -> i32 {
             max_window_size = window;
         }
     }
-    max_window_size as i32
+    max_window_size
 }
 
 fn index_of_first_nonzero(arr: &[i8]) -> i32 {
-    for (i, &value) in arr.into_iter().enumerate() {
+    for (i, &value) in arr.iter().enumerate() {
         if value != 0 {
             return i as i32;
         }
     }
-    return -1;
+    -1
 }
 
 fn index_of_last_nonzero(arr: &[i8]) -> i32 {
-    for (i, &value) in arr.into_iter().rev().enumerate() {
+    for (i, &value) in arr.iter().rev().enumerate() {
         if value != 0 {
-            return (arr.len() as i32 - i as i32 - 1) as i32;
+            return (arr.len() as i32 - i as i32 - 1);
         }
     }
-    return -1;
+    -1
 }
 
 fn print_function(scale_size: i32, contribs: PixelRowWeightsSimple, linear: bool) -> String {
@@ -290,7 +290,7 @@ fn print_function(scale_size: i32, contribs: PixelRowWeightsSimple, linear: bool
 
             // Sum values
 
-            let divisor_sum = divisors[row as usize] * divisors[col as usize]; // Add the rounding offset first
+            let divisor_sum = divisors[row] * divisors[col]; // Add the rounding offset first
             output.push_str(&format!("    sum = {};\n", divisor_sum / 2));
             output.push_str(&format!(
                 "    for (i = 0; i < {}; i++) sum += temp[{} + i];\n",

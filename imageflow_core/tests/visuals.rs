@@ -9,7 +9,6 @@ use crate::common::*;
 
 use imageflow_core::graphics::bitmaps::{BitmapCompositing, ColorSpace};
 use imageflow_core::{Context, ErrorKind};
-use imageflow_types;
 use imageflow_types::{
     Color, ColorSrgb, CommandStringKind, Constraint, ConstraintMode, EncoderPreset, Filter, Node,
     PixelFormat, PixelLayout, PngBitDepth, ResampleHints, RoundCornersMode,

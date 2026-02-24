@@ -418,7 +418,7 @@ fn test_linear_to_srgb_lut_function() {
 
     // Test mid-range value (linear 0.5 -> sRGB ~186)
     let mid = linear_to_srgb_lut(0.5);
-    assert!(mid >= 185 && mid <= 188, "linear 0.5 should be around 186, got {}", mid);
+    assert!((185..=188).contains(&mid), "linear 0.5 should be around 186, got {}", mid);
 
     // Verify against exact calculation for several values
     let test_values = [0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0];
@@ -1043,8 +1043,8 @@ fn test_matte_compositing_fully_transparent_pixels() {
         for x in 0..out_w {
             let px = &out_pixels[y * out_w + x];
             let r_diff = (px.r as i32 - 255).abs();
-            let g_diff = (px.g as i32 - 0).abs();
-            let b_diff = (px.b as i32 - 0).abs();
+            let g_diff = (px.g as i32).abs();
+            let b_diff = (px.b as i32).abs();
             let a_diff = (px.a as i32 - 255).abs();
             max_r_diff = max_r_diff.max(r_diff);
             max_g_diff = max_g_diff.max(g_diff);
