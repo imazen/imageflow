@@ -6,6 +6,10 @@
 
 For explicit SIMD intrinsics, use `archmage` (already in use for `transpose.rs`).
 
+## f32/f64 Clamping
+
+**Do NOT replace `min(max(...))` patterns with `.clamp()` on floats.** `f32::clamp()` propagates NaN, while `min(max(...))` suppresses it. In image processing pipelines, NaN propagation turns a single bad pixel into a full-image corruption. The `min(max(...))` pattern is intentional NaN defense.
+
 ## Git Workflow
 
 Always commit `cargo fmt` changes as a separate commit from code changes.
