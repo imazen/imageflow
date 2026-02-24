@@ -1,6 +1,5 @@
 use crate::preludes::from_std::*;
-use rgb;
-use std;
+use lazy_static::lazy_static;
 
 fn parse_rgba_slices(
     r: &str,

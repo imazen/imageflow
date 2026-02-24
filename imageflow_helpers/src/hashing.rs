@@ -1,7 +1,7 @@
 use crate::preludes::from_std::*;
 use blake2_rfc::blake2b::blake2b;
+use lazy_static::lazy_static;
 use regex_lite::{Captures, Regex};
-use std;
 use std::hash::Hasher;
 use std::path::MAIN_SEPARATOR;
 use twox_hash::XxHash64;

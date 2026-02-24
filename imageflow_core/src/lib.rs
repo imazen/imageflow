@@ -3,7 +3,9 @@
 #![allow(unused_variables)]
 #![cfg_attr(feature = "nightly", feature(portable_simd))]
 
-// Required to link C symbols — the crate has no Rust API, only provides C object files
+// Required to force linkage of native C library — the crate has no Rust API,
+// only provides C object files. `extern crate` is needed to prevent the linker
+// from stripping the unused (from Rust's perspective) native library.
 extern crate imageflow_c_components;
 
 #[macro_use]

@@ -1,9 +1,5 @@
-#[macro_use]
-extern crate imageflow_core;
-extern crate imageflow_helpers as hlp;
-extern crate imageflow_types as s;
-extern crate serde_json;
-extern crate smallvec;
+use imageflow_core::here;
+use imageflow_types as s;
 
 pub mod common;
 use crate::common::*;

@@ -243,12 +243,8 @@
 // These functions are not for use from Rust, so marking them unsafe just reduces compile-time verification and safety
 //#![cfg_attr(feature = "cargo-clippy", allow(not_unsafe_ptr_arg_deref))]
 
-#[macro_use]
-extern crate imageflow_core as c;
-
-extern crate backtrace;
-extern crate libc;
-extern crate smallvec;
+use imageflow_core as c;
+use imageflow_core::{here, nerror};
 
 pub use crate::c::ffi::ImageflowJsonResponse as JsonResponse;
 pub use crate::c::{Context, ErrorCategory, FlowError, ThreadSafeContext};
@@ -303,7 +299,6 @@ macro_rules! static_char {
 }
 
 fn type_name_of<T>(_: T) -> &'static str {
-    extern crate core;
     std::any::type_name::<T>()
 }
 
@@ -1467,9 +1462,6 @@ fn test_allocate_free() {
         //imageflow_context_destroy(c);
     }
 }
-
-#[cfg(test)]
-extern crate base64;
 
 #[test]
 fn test_job_with_buffers() {

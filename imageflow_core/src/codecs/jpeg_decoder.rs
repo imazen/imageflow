@@ -14,7 +14,7 @@ use std::any::Any;
 use std::rc::Rc;
 use uuid::Uuid;
 
-extern crate jpeg_decoder as jpeg;
+use ::jpeg_decoder as jpeg;
 
 pub struct JpegDecoder {
     decoder: jpeg::Decoder<IoProxy>,

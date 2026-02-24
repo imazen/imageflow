@@ -30,11 +30,7 @@
 pub mod build_env_info;
 pub mod version;
 
-#[macro_use]
-extern crate serde_derive;
-
-#[macro_use]
-extern crate lazy_static;
+use serde_derive::{Deserialize, Serialize};
 
 use std::fmt;
 
@@ -1891,6 +1887,7 @@ pub enum ResponsePayload {
 /// Contains the types that are exclusively used in the JSON endpoints
 /// To prevent name collisions with other types
 pub mod json_messages {
+    use serde_derive::{Deserialize, Serialize};
 
     #[cfg(feature = "schema-export")]
     use utoipa::ToSchema;

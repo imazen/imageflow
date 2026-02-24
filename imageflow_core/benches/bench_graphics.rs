@@ -1,5 +1,3 @@
-extern crate imageflow_core;
-
 use criterion::{criterion_group, criterion_main, Criterion};
 use imageflow_core::graphics::bitmaps::*;
 use imageflow_core::graphics::color::WorkingFloatspace;

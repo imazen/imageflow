@@ -29,8 +29,6 @@ mod internal_prelude {
     pub use crate::{Context, FlowError, Result};
     pub use petgraph::EdgeDirection;
 }
-use crate::{Context, FlowError, Result};
-extern crate imageflow_types as s;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;
 pub use self::clone_crop_fill_expand::CROP;
@@ -58,6 +56,8 @@ pub use self::rotate_flip_transpose::TRANSPOSE;
 pub use self::round_corners::ROUND_IMAGE_CORNERS;
 pub use self::scale_render::DRAW_IMAGE_EXACT;
 pub use self::scale_render::SCALE;
+use crate::{Context, FlowError, Result};
+use imageflow_types as s;
 //pub use self::scale_render::SCALE_1D;
 //pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
 pub use self::color::COLOR_FILTER_SRGB;

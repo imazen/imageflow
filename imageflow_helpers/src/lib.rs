@@ -33,30 +33,6 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-//#[macro_use]
-//extern crate error_chain;
-
-#[macro_use]
-extern crate lazy_static;
-
-extern crate rand;
-
-extern crate blake2_rfc;
-extern crate chrono;
-extern crate regex_lite;
-extern crate twox_hash;
-//extern crate serde;
-//extern crate serde_json;
-extern crate backtrace;
-extern crate base64;
-extern crate sha2;
-extern crate unicase;
-
-extern crate smallvec;
-extern crate time;
-extern crate uuid;
-
-extern crate digest;
 pub mod colors;
 pub mod debug;
 pub mod filesystem;

@@ -1,12 +1,6 @@
-extern crate dssim;
-extern crate imageflow_helpers as hlp;
-extern crate imageflow_types as s;
-extern crate rgb;
-extern crate serde_json;
-
-extern crate imgref;
-extern crate itertools;
-extern crate twox_hash;
+use imageflow_core::{here, nerror};
+use imageflow_helpers as hlp;
+use imageflow_types as s;
 
 pub mod bitmap_diff_stats;
 use bitmap_diff_stats::*;
@@ -218,7 +212,7 @@ impl ChecksumCtx {
 
     fn write_url_list(&self, checksum_values: Vec<String>) -> Result<(), ()> {
         let mut f = ::std::fs::File::create(&self.url_list_file).unwrap();
-        use self::itertools::Itertools;
+        use itertools::Itertools;
         let list_contents = checksum_values.iter().map(|key| self.image_url(key)).join("\n");
         f.write_all(list_contents.as_bytes()).unwrap();
         f.sync_all().unwrap();
@@ -453,7 +447,7 @@ impl ChecksumCtx {
         }
 
         let mut f = ::std::fs::File::create(path).unwrap();
-        use self::itertools::Itertools;
+        use itertools::Itertools;
         let list_contents = lines.iter().join("\n");
         f.write_all(list_contents.as_bytes()).unwrap();
         // write final newline
@@ -862,7 +856,7 @@ impl<'a> ResultKind<'a> {
 }
 
 fn get_imgref_bgra32(b: &mut BitmapWindowMut<u8>) -> imgref::ImgVec<rgb::Rgba<f32>> {
-    use self::dssim::*;
+    use dssim::*;
 
     b.normalize_unused_alpha().unwrap();
     if b.info().pixel_layout() != PixelLayout::BGRA {

@@ -1,5 +1,3 @@
-extern crate imageflow_core;
-
 use imageflow_core::graphics::weights::*;
 
 static REVERSE_LUT_SIZE_SHORT: u32 = 256 * 16;

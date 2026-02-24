@@ -1,7 +1,5 @@
-extern crate std;
+use imageflow_core as fc;
 use fc::for_other_imageflow_crates::preludes::default::*;
-extern crate imageflow_core as fc;
-extern crate imageflow_types;
 
 //
 

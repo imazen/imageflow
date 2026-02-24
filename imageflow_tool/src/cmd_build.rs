@@ -1,6 +1,5 @@
 use crate::fc;
 use crate::s;
-extern crate serde;
 
 use crate::fc::errors::CategorizedError;
 use crate::fc::{ErrorCategory, JsonResponse};

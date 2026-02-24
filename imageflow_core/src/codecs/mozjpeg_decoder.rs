@@ -4,21 +4,20 @@ use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::{Context, JsonResponse, Result};
 
 use super::*;
+use crate::graphics::bitmaps::{Bitmap, BitmapCompositing, BitmapKey, ColorSpace};
 use crate::io::IoProxy;
 use crate::io::IoProxyProxy;
 use crate::io::IoProxyRef;
+use ::mozjpeg_sys::*;
+use imageflow_helpers::preludes::from_std::ptr::{null, null_mut, slice_from_raw_parts};
 use imageflow_types::collections::AddRemoveSet;
+use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
 use imageflow_types::{IoDirection, PixelLayout};
+use mozjpeg_sys::c_void;
 use rgb::alt::BGRA8;
 use std::any::Any;
 use std::rc::Rc;
 use uuid::Uuid;
-extern crate mozjpeg_sys;
-use crate::graphics::bitmaps::{Bitmap, BitmapCompositing, BitmapKey, ColorSpace};
-use ::mozjpeg_sys::*;
-use imageflow_helpers::preludes::from_std::ptr::{null, null_mut, slice_from_raw_parts};
-use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
-use mozjpeg_sys::c_void;
 
 static CMYK_PROFILE: &[u8] = include_bytes!("cmyk.icc");
 

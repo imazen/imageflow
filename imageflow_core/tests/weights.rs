@@ -1,7 +1,3 @@
-extern crate imageflow_core;
-extern crate imageflow_helpers as hlp;
-extern crate imageflow_types as s;
-
 use imageflow_core::graphics::weights::InterpolationDetails;
 
 // extern "C" {

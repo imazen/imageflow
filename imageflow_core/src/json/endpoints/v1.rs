@@ -19,9 +19,6 @@ use twox_hash::xxhash3_128;
 #[cfg(feature = "json-schema")]
 use schemars::{schema_for, JsonSchema};
 
-#[cfg(test)]
-extern crate include_dir;
-
 #[cfg(feature = "schema-export")]
 use utoipa::{Modify, OpenApi, ToSchema};
 
