@@ -19,9 +19,6 @@ use twox_hash::xxhash3_128;
 #[cfg(feature = "json-schema")]
 use schemars::{schema_for, JsonSchema};
 
-#[cfg(test)]
-extern crate include_dir;
-
 #[cfg(feature = "schema-export")]
 use utoipa::{Modify, OpenApi, ToSchema};
 
@@ -736,10 +733,10 @@ fn test_handler() {
 fn test_get_version_info() {
     let response = Context::create().unwrap().get_version_info().unwrap();
 
-    assert!(response.build_date.len() > 0);
-    assert!(response.git_describe_always.len() > 0);
-    assert!(response.last_git_commit.len() > 0);
-    assert!(response.long_version_string.len() > 0);
+    assert!(!response.build_date.is_empty());
+    assert!(!response.git_describe_always.is_empty());
+    assert!(!response.last_git_commit.is_empty());
+    assert!(!response.long_version_string.is_empty());
 }
 
 #[cfg_attr(feature = "schema-export", utoipa::path(

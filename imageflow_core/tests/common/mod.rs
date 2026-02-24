@@ -1,12 +1,6 @@
-extern crate dssim;
-extern crate imageflow_helpers as hlp;
-extern crate imageflow_types as s;
-extern crate rgb;
-extern crate serde_json;
-
-extern crate imgref;
-extern crate itertools;
-extern crate twox_hash;
+use imageflow_core::{here, nerror};
+use imageflow_helpers as hlp;
+use imageflow_types as s;
 
 pub mod bitmap_diff_stats;
 use bitmap_diff_stats::*;
@@ -63,7 +57,7 @@ pub fn get_url_bytes_with_retry(url: &str) -> Result<Vec<u8>, FlowError> {
     let mut retry_count = 3;
     let mut retry_wait = 100;
     loop {
-        match ::imageflow_http_helpers::fetch_bytes(&url)
+        match ::imageflow_http_helpers::fetch_bytes(url)
             .map_err(|e| nerror!(ErrorKind::FetchError, "{}: {}", url, e))
         {
             Err(e) => {
@@ -120,11 +114,8 @@ pub fn build_framewise(
     for (ix, val) in io.into_iter().enumerate() {
         IoTestTranslator {}.add(context, ix as i32, val)?;
     }
-    let build = s::Execute001 {
-        security,
-        graph_recording: default_graph_recording(debug),
-        framewise: framewise,
-    };
+    let build =
+        s::Execute001 { security, graph_recording: default_graph_recording(debug), framewise };
     if debug {
         println!("{}", serde_json::to_string_pretty(&build).unwrap());
     }
@@ -221,7 +212,7 @@ impl ChecksumCtx {
 
     fn write_url_list(&self, checksum_values: Vec<String>) -> Result<(), ()> {
         let mut f = ::std::fs::File::create(&self.url_list_file).unwrap();
-        use self::itertools::Itertools;
+        use itertools::Itertools;
         let list_contents = checksum_values.iter().map(|key| self.image_url(key)).join("\n");
         f.write_all(list_contents.as_bytes()).unwrap();
         f.sync_all().unwrap();
@@ -337,7 +328,7 @@ impl ChecksumCtx {
 
         self.record_missing(&missing);
 
-        let probably_missing = missing.iter().map(|v| v.clone()).collect::<Vec<String>>();
+        let probably_missing = missing.to_vec();
 
         let mut nowhere = Vec::new();
         let mut to_upload = Vec::new();
@@ -382,7 +373,7 @@ impl ChecksumCtx {
             );
             eprintln!("\x1b[31mSee {} for list of actively needed images that are missing both locally and on s3!\x1b[0m", self.missing_everywhere_index.display());
             for name in &nowhere {
-                println!("Missing from S3 and locally: {} from s3 {}", name, self.image_url(&name));
+                println!("Missing from S3 and locally: {} from s3 {}", name, self.image_url(name));
             }
         }
         if !to_upload.is_empty() {
@@ -392,18 +383,18 @@ impl ChecksumCtx {
                 println!(
                     "Missing from S3 but present locally: {} from s3 {}",
                     name,
-                    self.image_url(&name)
+                    self.image_url(name)
                 );
             }
             self.record_to_upload(&to_upload);
         }
         if missing.is_empty() && nowhere.is_empty() && to_upload.is_empty() {
             println!("All actively used images are uploaded!");
-            return true;
+            true
         } else {
             // red text
             eprintln!("\x1b[31mUploads not complete. Run ./imageflow_core/tests/visuals/upload.sh to upload missing images\x1b[0m");
-            return false;
+            false
         }
     }
 
@@ -456,7 +447,7 @@ impl ChecksumCtx {
         }
 
         let mut f = ::std::fs::File::create(path).unwrap();
-        use self::itertools::Itertools;
+        use itertools::Itertools;
         let list_contents = lines.iter().join("\n");
         f.write_all(list_contents.as_bytes()).unwrap();
         // write final newline
@@ -473,18 +464,18 @@ impl ChecksumCtx {
         self.load_map::<String, String>(&self.checksum_file)
             .unwrap()
             .get(name)
-            .and_then(|v| Some(v.to_owned()))
+            .map(|v| v.to_owned())
     }
 
     pub fn get_cached(&self, name: &str) -> Option<String> {
         let mut lock = CHECKSUM_FILE.write().unwrap();
         if lock.is_empty() {
             let loaded = self.load_map::<String, String>(&self.checksum_file).unwrap();
-            let value = loaded.get(name).and_then(|v| Some(v.to_owned()));
+            let value = loaded.get(name).map(|v| v.to_owned());
             *lock = loaded;
             value
         } else {
-            lock.get(name).and_then(|v| Some(v.to_owned()))
+            lock.get(name).map(|v| v.to_owned())
         }
     }
 
@@ -493,11 +484,11 @@ impl ChecksumCtx {
         if lock.is_empty() {
             let loaded =
                 self.load_map::<String, Vec<String>>(&self.alternate_checksums_file).unwrap();
-            let value = loaded.get(primary_checksum).and_then(|v| Some(v.to_owned()));
+            let value = loaded.get(primary_checksum).map(|v| v.to_owned());
             *lock = loaded;
             value
         } else {
-            lock.get(primary_checksum).and_then(|v| Some(v.to_owned()))
+            lock.get(primary_checksum).map(|v| v.to_owned())
         }
     }
     pub fn contains_alternate_checksum_cached(
@@ -509,7 +500,7 @@ impl ChecksumCtx {
         if lock.is_empty() {
             let loaded =
                 self.load_map::<String, Vec<String>>(&self.alternate_checksums_file).unwrap();
-            let value = loaded.get(primary_checksum).and_then(|v| Some(v.to_owned()));
+            let value = loaded.get(primary_checksum).map(|v| v.to_owned());
             *lock = loaded;
             value.map(|v| v.contains(alternate_checksum)).unwrap_or(false)
         } else {
@@ -546,10 +537,7 @@ impl ChecksumCtx {
     pub fn get_actual(&self, name: &str) -> Option<String> {
         #[allow(unused_variables)]
         let lock = ACTUAL_FILE.read().unwrap();
-        self.load_map::<String, String>(&self.actual_file)
-            .unwrap()
-            .get(name)
-            .and_then(|v| Some(v.to_owned()))
+        self.load_map::<String, String>(&self.actual_file).unwrap().get(name).map(|v| v.to_owned())
     }
 
     /// Set the result checksum for a named test
@@ -589,7 +577,7 @@ impl ChecksumCtx {
         let name = if !checksum.contains(".") {
             format!("{}.png", checksum)
         } else {
-            format!("{}", checksum)
+            checksum.to_string()
         };
 
         self.visuals_dir.as_path().join(Path::new(&name))
@@ -598,7 +586,7 @@ impl ChecksumCtx {
         if !checksum.contains(".") {
             format!("{}.png", checksum)
         } else {
-            format!("{}", checksum)
+            checksum.to_string()
         }
     }
 
@@ -636,13 +624,13 @@ impl ChecksumCtx {
         let path = self.image_path_string(checksum);
         c.add_file(0, s::IoDirection::In, &path).unwrap();
 
-        let image = decode_image(&mut *c, 0);
+        let image = decode_image(&mut c, 0);
         (c, image)
     }
 
     /// Save the given image to disk by calculating its checksum.
     pub fn save_frame(&self, window: &mut BitmapWindowMut<u8>, checksum: &str) {
-        let dest_path = self.image_path(&checksum);
+        let dest_path = self.image_path(checksum);
         if !dest_path.exists() {
             let path_str = dest_path.to_str();
             if let Some(path) = path_str {
@@ -655,7 +643,7 @@ impl ChecksumCtx {
     }
     /// Save the given bytes to disk by calculating their checksum.
     pub fn save_bytes(&self, bytes: &[u8], checksum: &str) {
-        let dest_path = self.image_path(&checksum);
+        let dest_path = self.image_path(checksum);
         if !dest_path.exists() {
             println!("Writing {:?}", &dest_path);
             let mut f = ::std::fs::File::create(&dest_path).unwrap();
@@ -778,18 +766,13 @@ impl ChecksumCtx {
                 self.set_actual(name.to_owned(), actual_checksum.clone()).unwrap();
                 (ChecksumMatch::Mismatch, trusted)
             }
+        } else if self.create_if_missing {
+            println!("====================\n{}\nStoring checksum {}", name, &actual_checksum);
+            self.set(name.to_owned(), actual_checksum.clone()).unwrap();
+            self.set_actual(name.to_owned(), actual_checksum.clone()).unwrap();
+            (ChecksumMatch::NewStored, actual_checksum)
         } else {
-            if self.create_if_missing {
-                println!("====================\n{}\nStoring checksum {}", name, &actual_checksum);
-                self.set(name.to_owned(), actual_checksum.clone()).unwrap();
-                self.set_actual(name.to_owned(), actual_checksum.clone()).unwrap();
-                (ChecksumMatch::NewStored, actual_checksum)
-            } else {
-                panic!(
-                    "There is no stored checksum for {}; rerun with create_if_missing=true",
-                    name
-                );
-            }
+            panic!("There is no stored checksum for {}; rerun with create_if_missing=true", name);
         }
     }
 
@@ -807,7 +790,7 @@ pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
     });
 
     result.unwrap();
-    unsafe { bit.bitmap_key(c).unwrap() }
+    bit.bitmap_key(c).unwrap()
 }
 
 pub fn decode_input(c: &mut Context, input: IoTestEnum) -> BitmapKey {
@@ -815,14 +798,14 @@ pub fn decode_input(c: &mut Context, input: IoTestEnum) -> BitmapKey {
 
     let _result = build_steps(
         c,
-        &vec![s::Node::Decode { io_id: 0, commands: None }, unsafe { bit.as_mut().get_node() }],
+        &[s::Node::Decode { io_id: 0, commands: None }, unsafe { bit.as_mut().get_node() }],
         vec![input],
         None,
         false,
     )
     .unwrap();
 
-    unsafe { bit.bitmap_key(c).unwrap() }
+    bit.bitmap_key(c).unwrap()
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -867,13 +850,13 @@ impl<'a> ResultKind<'a> {
     fn exact_match_verbose(&mut self, c: &ChecksumCtx, name: &str) -> (ChecksumMatch, String) {
         match *self {
             ResultKind::Bitmap { context, key } => c.bitmap_matches(context, key, name),
-            ResultKind::Bytes(ref b) => c.bytes_match(b, name),
+            ResultKind::Bytes(b) => c.bytes_match(b, name),
         }
     }
 }
 
 fn get_imgref_bgra32(b: &mut BitmapWindowMut<u8>) -> imgref::ImgVec<rgb::Rgba<f32>> {
-    use self::dssim::*;
+    use dssim::*;
 
     b.normalize_unused_alpha().unwrap();
     if b.info().pixel_layout() != PixelLayout::BGRA {
@@ -901,12 +884,12 @@ pub struct CompareBitmapsResult {
 /// Compare two bgra32 or bgr32 frames using the given similarity requirements
 pub fn compare_bitmaps(
     _c: &ChecksumCtx,
-    mut actual: &mut BitmapWindowMut<u8>,
-    mut expected: &mut BitmapWindowMut<u8>,
+    actual: &mut BitmapWindowMut<u8>,
+    expected: &mut BitmapWindowMut<u8>,
     require: Similarity,
     panic: bool,
 ) -> CompareBitmapsResult {
-    let stats = BitmapDiffStats::diff_bitmap_windows(&mut actual, &mut expected);
+    let stats = BitmapDiffStats::diff_bitmap_windows(actual, expected);
     if stats.pixels_differing == 0 {
         return CompareBitmapsResult {
             stats: Some(stats),
@@ -921,8 +904,8 @@ pub fn compare_bitmaps(
     eprintln!("{}", stats.legacy_report());
 
     if let Similarity::AllowDssimMatch(minval, maxval) = require {
-        let actual_ref = get_imgref_bgra32(&mut actual);
-        let expected_ref = get_imgref_bgra32(&mut expected);
+        let actual_ref = get_imgref_bgra32(actual);
+        let expected_ref = get_imgref_bgra32(expected);
         let d = dssim::new();
 
         let actual_img = d.create_image(&actual_ref).unwrap();
@@ -980,7 +963,7 @@ pub fn compare_bitmaps(
 }
 
 pub fn check_size(result: &ResultKind, require: Constraints, panic: bool) -> bool {
-    if let ResultKind::Bytes(ref actual_bytes) = *result {
+    if let ResultKind::Bytes(actual_bytes) = *result {
         if actual_bytes.len() > require.max_file_size.unwrap_or(actual_bytes.len()) {
             let message = format!(
                 "Encoded size ({}) exceeds limit ({})",
@@ -1163,7 +1146,7 @@ pub fn compare_with_context(
 
     let response = build_steps(context, &steps, inputs.unwrap_or(vec![]), None, debug).unwrap();
 
-    if let Some(bitmap_key) = unsafe { bit.bitmap_key(&context) } {
+    if let Some(bitmap_key) = bit.bitmap_key(context) {
         let mut ctx = ChecksumCtx::visuals();
         ctx.create_if_missing = store_if_missing;
 
@@ -1261,7 +1244,7 @@ pub fn compare_encoded_framewise(
             return false;
         }
     }
-    return true;
+    true
 }
 
 pub fn test_with_callback(
@@ -1272,41 +1255,39 @@ pub fn test_with_callback(
     ) -> (Option<imageflow_types::DecoderCommand>, Vec<Node>),
 ) -> bool {
     let mut context = Context::create().unwrap();
-    let matched: bool;
 
-    unsafe {
-        IoTestTranslator {}.add(&mut context, 0, input).unwrap();
+    IoTestTranslator {}.add(&mut context, 0, input).unwrap();
 
-        let image_info = context.get_unscaled_rotated_image_info(0).unwrap();
+    let image_info = context.get_unscaled_rotated_image_info(0).unwrap();
 
-        let (tell_decoder, mut steps): (Option<imageflow_types::DecoderCommand>, Vec<Node>) =
-            callback(&image_info);
+    let (tell_decoder, mut steps): (Option<imageflow_types::DecoderCommand>, Vec<Node>) =
+        callback(&image_info);
 
-        if let Some(what) = tell_decoder {
-            let send_hints = imageflow_types::TellDecoder001 { io_id: 0, command: what };
-            let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
-            context.message("v1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
-        }
-
-        let mut bit = BitmapBgraContainer::empty();
-        steps.push(bit.as_mut().get_node());
-
-        let send_execute = imageflow_types::Execute001 {
-            framewise: imageflow_types::Framewise::Steps(steps),
-            security: None,
-            graph_recording: None,
-        };
-        context.execute_1(send_execute).unwrap();
-
-        let ctx = ChecksumCtx::visuals();
-        matched = bitmap_regression_check(
-            &ctx,
-            &context,
-            bit.bitmap_key(&context).unwrap(),
-            checksum_name,
-            500,
-        )
+    if let Some(what) = tell_decoder {
+        let send_hints = imageflow_types::TellDecoder001 { io_id: 0, command: what };
+        let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
+        context.message("v1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
     }
+
+    let mut bit = BitmapBgraContainer::empty();
+    // SAFETY: bit is pinned and outlives the execute_1 call
+    steps.push(unsafe { bit.as_mut().get_node() });
+
+    let send_execute = imageflow_types::Execute001 {
+        framewise: imageflow_types::Framewise::Steps(steps),
+        security: None,
+        graph_recording: None,
+    };
+    context.execute_1(send_execute).unwrap();
+
+    let ctx = ChecksumCtx::visuals();
+    let matched = bitmap_regression_check(
+        &ctx,
+        &context,
+        bit.bitmap_key(&context).unwrap(),
+        checksum_name,
+        500,
+    );
     context.destroy().unwrap();
     matched
 }
@@ -1352,7 +1333,9 @@ impl BitmapBgraContainer {
         s::Node::FlowBitmapKeyPtr { ptr_to_bitmap_key: ptr_to_key as usize }
     }
 
-    pub unsafe fn bitmap_key(&self, _c: &Context) -> Option<BitmapKey> {
+    /// Reads back the bitmap key written by the graph engine.
+    /// Safe because `dest_bitmap` is `Copy` and read through `&self`.
+    pub fn bitmap_key(&self, _c: &Context) -> Option<BitmapKey> {
         if self.dest_bitmap.is_null() {
             None
         } else {

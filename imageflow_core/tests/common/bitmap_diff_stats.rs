@@ -119,8 +119,7 @@ impl BitmapDiffStats {
         }
 
         a.scanlines()
-            .into_iter()
-            .zip(b.scanlines().into_iter())
+            .zip(b.scanlines())
             .map(|(a_scanline, b_scanline)| {
                 if a_scanline.row() == b_scanline.row() {
                     BitmapDiffStats::no_changes(a_scanline.row().len() as i64 / 4)

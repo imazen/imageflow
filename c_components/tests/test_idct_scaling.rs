@@ -1,3 +1,4 @@
+// Force linkage of the native C library compiled by this crate's build.rs
 extern crate imageflow_c_components;
 
 #[test]
@@ -15,12 +16,6 @@ fn test_spatial_scaling() {
 
     assert_eq!(output[0], 188);
 }
-extern crate libpng_sys;
-extern crate libz_sys;
-extern crate mozjpeg_sys;
-
-extern crate libc;
-
 //mod graphics;
 
 // Define FFI types for the scaling functions

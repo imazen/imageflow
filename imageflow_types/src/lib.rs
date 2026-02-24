@@ -30,18 +30,7 @@
 pub mod build_env_info;
 pub mod version;
 
-#[macro_use]
-extern crate serde_derive;
-
-#[macro_use]
-extern crate lazy_static; //Used by build_env_info.rs
-
-extern crate chrono;
-extern crate imageflow_helpers;
-extern crate imgref;
-extern crate rgb;
-extern crate serde;
-extern crate serde_json;
+use serde_derive::{Deserialize, Serialize};
 
 use std::fmt;
 
@@ -1898,6 +1887,7 @@ pub enum ResponsePayload {
 /// Contains the types that are exclusively used in the JSON endpoints
 /// To prevent name collisions with other types
 pub mod json_messages {
+    use serde_derive::{Deserialize, Serialize};
 
     #[cfg(feature = "schema-export")]
     use utoipa::ToSchema;
@@ -2169,7 +2159,7 @@ fn decode_graph() {
         ]
     }"#;
 
-    let obj: Graph = serde_json::from_str(&text).unwrap();
+    let obj: Graph = serde_json::from_str(text).unwrap();
     let expected = Graph {
         nodes: hashmap![ "0".to_owned() => Node::Decode{ io_id: 1, commands: None},
                          "1".to_owned() => Node::Rotate90
@@ -2199,7 +2189,6 @@ fn error_from_string() {
             format!("{:?}", e)
         }
         _ => {
-            assert!(false);
             unreachable!()
         }
     };
@@ -2222,7 +2211,6 @@ fn error_from_value() {
             format!("{:?}", e)
         }
         _ => {
-            assert!(false);
             unreachable!()
         }
     };

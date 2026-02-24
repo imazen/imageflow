@@ -1,3 +1,6 @@
+# Claude Code
+.claude/
+
 # Dotfiles and renderings of them
 *.dot
 *.dot.png

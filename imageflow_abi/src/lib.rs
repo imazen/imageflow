@@ -243,12 +243,8 @@
 // These functions are not for use from Rust, so marking them unsafe just reduces compile-time verification and safety
 //#![cfg_attr(feature = "cargo-clippy", allow(not_unsafe_ptr_arg_deref))]
 
-#[macro_use]
-extern crate imageflow_core as c;
-
-extern crate backtrace;
-extern crate libc;
-extern crate smallvec;
+use imageflow_core as c;
+use imageflow_core::{here, nerror};
 
 pub use crate::c::ffi::ImageflowJsonResponse as JsonResponse;
 pub use crate::c::{Context, ErrorCategory, FlowError, ThreadSafeContext};
@@ -303,7 +299,6 @@ macro_rules! static_char {
 }
 
 fn type_name_of<T>(_: T) -> &'static str {
-    extern crate core;
     std::any::type_name::<T>()
 }
 
@@ -1468,9 +1463,6 @@ fn test_allocate_free() {
     }
 }
 
-#[cfg(test)]
-extern crate base64;
-
 #[test]
 fn test_job_with_buffers() {
     unsafe {
@@ -1617,10 +1609,9 @@ fn test_job_with_cancellation_at_every_point() {
 
             if polls_remaining > 0 {
                 if ctx.outward_error().has_error() {
-                    assert!(
-                        false,
+                    panic!(
                         "Expected no error since there were polls remaining, but got error {}",
-                        ctx.outward_error().to_string()
+                        ctx.outward_error()
                     );
                 }
 
@@ -1641,7 +1632,7 @@ fn test_job_with_cancellation_at_every_point() {
                     eprintln!(
                         "Expected cancellation, but {} polls reamined, and got error {}",
                         cancel_on_poll,
-                        ctx.outward_error().to_string()
+                        ctx.outward_error()
                     );
                     imageflow_context_print_and_exit_if_error(c);
                 }

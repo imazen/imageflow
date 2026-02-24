@@ -1073,7 +1073,7 @@ pub mod writing_to_slices {
         let mut small = [0u8; 5];
 
         let result = a.write_and_write_errors_to_cstring_slice(&mut small, None);
-        assert_eq!(result.is_ok(), false);
+        assert!(!result.is_ok());
         assert_eq!(result.bytes_written(), 4);
     }
 }

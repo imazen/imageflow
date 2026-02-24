@@ -1,7 +1,6 @@
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 
 use super::*;
-extern crate mozjpeg_sys;
 
 use ::mozjpeg_sys::*;
 use std::io::{Cursor, Read, SeekFrom};

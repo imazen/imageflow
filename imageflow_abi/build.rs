@@ -1,6 +1,3 @@
-extern crate cbindgen;
-extern crate imageflow_helpers;
-extern crate regex_lite;
 use imageflow_helpers::identifier_styles::*;
 
 use cbindgen::Builder;

@@ -1,7 +1,3 @@
-extern crate imageflow_core;
-extern crate imageflow_helpers as hlp;
-extern crate imageflow_types as s;
-
 use imageflow_core::graphics::weights::InterpolationDetails;
 
 // extern "C" {
@@ -88,62 +84,47 @@ fn test_filter(
     let details = imageflow_core::graphics::weights::InterpolationDetails::create(filter);
     let top = (details.filter)(&details, 0.0);
 
-    assert_eq!(function_bounded_bi!(&details, 0.0, expected_end, 0.05, -500.0, top), true);
+    assert!(function_bounded_bi!(&details, 0.0, expected_end, 0.05, -500.0, top));
 
-    assert_eq!(
-        function_bounded_bi!(
-            &details,
-            expected_near0,
-            if expected_second_crossing > 0.0 { expected_second_crossing } else { expected_end },
-            0.05,
-            -500.0,
-            near0_threshold
-        ),
-        true
-    );
+    assert!(function_bounded_bi!(
+        &details,
+        expected_near0,
+        if expected_second_crossing > 0.0 { expected_second_crossing } else { expected_end },
+        0.05,
+        -500.0,
+        near0_threshold
+    ));
 
-    assert_eq!(
-        function_bounded_bi!(
-            &details,
-            expected_end,
-            expected_end + 1.0,
-            0.05,
-            -0.0001f64,
-            0.0001f64
-        ),
-        true
-    );
+    assert!(function_bounded_bi!(
+        &details,
+        expected_end,
+        expected_end + 1.0,
+        0.05,
+        -0.0001f64,
+        0.0001f64
+    ));
 
     if expected_first_crossing != 0.0 && expected_second_crossing != 0.0 {
-        assert_eq!(
-            function_bounded_bi!(
-                &details,
-                expected_first_crossing + 0.05,
-                expected_second_crossing - 0.05,
-                0.05,
-                -500.0,
-                -0.0001f64
-            ),
-            true
-        );
+        assert!(function_bounded_bi!(
+            &details,
+            expected_first_crossing + 0.05,
+            expected_second_crossing - 0.05,
+            0.05,
+            -500.0,
+            -0.0001f64
+        ));
         if expected_end > expected_second_crossing + 0.1 {
-            assert_eq!(
-                function_bounded_bi!(
-                    &details,
-                    expected_second_crossing + 0.05,
-                    expected_end - 0.02,
-                    0.02,
-                    0.0,
-                    500.0
-                ),
-                true
-            );
+            assert!(function_bounded_bi!(
+                &details,
+                expected_second_crossing + 0.05,
+                expected_end - 0.02,
+                0.02,
+                0.0,
+                500.0
+            ));
         }
     } else {
-        assert_eq!(
-            function_bounded_bi!(&details, expected_near0, expected_end, 0.05, -0.0001, 500.0),
-            true
-        );
+        assert!(function_bounded_bi!(&details, expected_near0, expected_end, 0.05, -0.0001, 500.0));
     }
 }
 
@@ -387,12 +368,11 @@ fn test_output_weight_symmetric() {
                 {
                     let opposite_weights = &w.weights()[opposite_output_pixel.left_weight as usize
                         ..=opposite_output_pixel.right_weight as usize];
-                    assert_eq!(
+                    assert!(
                         (weight - opposite_weights[opposite_weights.len() - 1 - w_index]).abs()
-                            < 1e-5,
-                        true
+                            < 1e-5
                     );
-                    assert_eq!(weight < 5f32, true)
+                    assert!(weight < 5f32)
                 }
             }
         }

@@ -53,16 +53,6 @@ impl Encoder for LodepngEncoder {
         if self.matte.is_some() {
             bitmap.apply_matte(self.matte.clone().unwrap()).map_err(|e| e.at(here!()))?;
         }
-        // check if the top-right pixel is transparent
-        // let x= bitmap.w() - 1;
-        // let y= 0;
-        // let window = bitmap.get_window_u8()
-        //         .unwrap();
-        // let  top_right_pixel = window.get_pixel_bgra8(x, y).unwrap();
-        // if top_right_pixel.a == 0 {
-        //     eprintln!("lodepng: top-right pixel of image is transparent");
-        // }
-
         let (w, h) = (bitmap.w(), bitmap.h());
 
         Self::write_png_auto(

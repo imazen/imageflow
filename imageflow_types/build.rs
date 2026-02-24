@@ -1,7 +1,6 @@
-#[macro_use]
-extern crate quick_error;
-extern crate chrono;
 use chrono::*;
+use quick_error::quick_error;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::convert::AsRef;
 use std::env;
@@ -10,8 +9,6 @@ use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 use std::process::{Command, Output};
 use std::time::Instant;
-extern crate rayon;
-use rayon::prelude::*;
 
 quick_error! {
     #[derive(Debug)]

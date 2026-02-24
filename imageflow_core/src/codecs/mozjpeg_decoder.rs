@@ -4,21 +4,20 @@ use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::{Context, JsonResponse, Result};
 
 use super::*;
+use crate::graphics::bitmaps::{Bitmap, BitmapCompositing, BitmapKey, ColorSpace};
 use crate::io::IoProxy;
 use crate::io::IoProxyProxy;
 use crate::io::IoProxyRef;
+use ::mozjpeg_sys::*;
+use imageflow_helpers::preludes::from_std::ptr::{null, null_mut, slice_from_raw_parts};
 use imageflow_types::collections::AddRemoveSet;
+use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
 use imageflow_types::{IoDirection, PixelLayout};
+use mozjpeg_sys::c_void;
 use rgb::alt::BGRA8;
 use std::any::Any;
 use std::rc::Rc;
 use uuid::Uuid;
-extern crate mozjpeg_sys;
-use crate::graphics::bitmaps::{Bitmap, BitmapCompositing, BitmapKey, ColorSpace};
-use ::mozjpeg_sys::*;
-use imageflow_helpers::preludes::from_std::ptr::{null, null_mut, slice_from_raw_parts};
-use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
-use mozjpeg_sys::c_void;
 
 static CMYK_PROFILE: &[u8] = include_bytes!("cmyk.icc");
 
@@ -173,14 +172,16 @@ impl MzDec {
         message_buffer: *const u8,
         message_buffer_length: i32,
     ) -> bool {
+        if custom_state.is_null() {
+            return false;
+        }
         let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
-
-        if custom_state.is_null() || decoder.codec_info_disposed {
+        if decoder.codec_info_disposed {
             return false;
         }
 
         if decoder.error.is_none() {
-            if !message_buffer.is_null() {
+            if !message_buffer.is_null() && message_buffer_length > 0 {
                 let bytes = unsafe {
                     std::slice::from_raw_parts(message_buffer, message_buffer_length as usize)
                 };
@@ -395,9 +396,11 @@ impl MzDec {
         custom_state: *mut c_void,
         suspend_io: &mut bool,
     ) -> bool {
+        if custom_state.is_null() {
+            return false;
+        }
         let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
-
-        if custom_state.is_null() || decoder.codec_info_disposed {
+        if decoder.codec_info_disposed {
             return false;
         }
         if decoder.source_manager.is_none() {
@@ -442,19 +445,33 @@ impl MzDec {
         custom_state: *mut c_void,
         mut byte_count: c_long,
     ) -> bool {
+        if custom_state.is_null() {
+            return false;
+        }
         if byte_count > 0 {
-            let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
-            let source_manager = decoder.source_manager.as_deref_mut().unwrap();
-
-            while byte_count > source_manager.manager.shared_mgr.bytes_in_buffer as c_long {
+            // Re-derive decoder/source_manager references each iteration to avoid
+            // holding &mut MzDec across the source_fill_buffer call (which also
+            // derives &mut MzDec from custom_state, causing mutable aliasing UB).
+            loop {
+                let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
+                let source_manager = decoder.source_manager.as_deref_mut().unwrap();
+                if byte_count <= source_manager.manager.shared_mgr.bytes_in_buffer as c_long {
+                    break;
+                }
                 byte_count -= source_manager.manager.shared_mgr.bytes_in_buffer as c_long;
+                // End decoder/source_manager borrows before calling source_fill_buffer
+                let _ = source_manager;
+                let _ = decoder;
                 let mut suspend = false;
                 if !MzDec::source_fill_buffer(codec_info, custom_state, &mut suspend) {
+                    let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
                     decoder.error = decoder.error.clone().map(|e| e.at(here!()));
                     return false;
                 }
             }
 
+            let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
+            let source_manager = decoder.source_manager.as_deref_mut().unwrap();
             source_manager.manager.shared_mgr.next_input_byte = unsafe {
                 source_manager.manager.shared_mgr.next_input_byte.offset(byte_count as isize)
             };

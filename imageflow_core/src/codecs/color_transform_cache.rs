@@ -69,6 +69,9 @@ impl ColorTransformCache {
         error_code: u32,
         text: *const core::ffi::c_char,
     ) {
+        if text.is_null() {
+            return;
+        }
         let text_str = CStr::from_ptr(text).to_str().unwrap_or("LCMS error message not valid UTF8");
         let message = format!("Error {}: {}", error_code, text_str);
 
@@ -187,14 +190,19 @@ impl ColorTransformCache {
                 Some(h.finish() ^ format_hash)
             }
             ffi::ColorProfileSource::ICCP | ffi::ColorProfileSource::ICCP_GRAY => {
-                if !color.profile_buffer.is_null() && color.buffer_length > 0 {
+                if !color.profile_buffer.is_null() && color.buffer_length > 80 {
                     let bytes =
                         unsafe { slice::from_raw_parts(color.profile_buffer, color.buffer_length) };
 
-                    // Skip first 80 bytes when hashing. Wait, why?
+                    // Skip first 80 bytes (ICC header) when hashing
                     Some(imageflow_helpers::hashing::hash_64(&bytes[80..]) ^ format_hash)
-                } else {
+                } else if color.profile_buffer.is_null() || color.buffer_length == 0 {
                     unreachable!("Profile source should never be set to ICCP without a profile buffer. Buffer length {}", color.buffer_length);
+                } else {
+                    // Profile too short to skip header; hash the whole thing
+                    let bytes =
+                        unsafe { slice::from_raw_parts(color.profile_buffer, color.buffer_length) };
+                    Some(imageflow_helpers::hashing::hash_64(bytes) ^ format_hash)
                 }
             }
         }

@@ -1,4 +1,3 @@
-extern crate imageflow_tool_lib;
 use std::io::Write;
 use std::path::PathBuf;
 
