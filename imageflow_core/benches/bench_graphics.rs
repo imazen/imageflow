@@ -44,7 +44,7 @@ fn benchmark_transpose(ctx: &mut Criterion) {
             .fill_rect(0, 0, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string())))
             .unwrap();
 
-        let mut group = ctx.benchmark_group(&format!("transpose w={} && h={}", w, h));
+        let mut group = ctx.benchmark_group(format!("transpose w={} && h={}", w, h));
         group.measurement_time(Duration::from_secs(3));
 
         group.bench_function("Rust", |bencher| {
@@ -80,11 +80,11 @@ fn benchmark_transpose_block_sizes(_ctx: &mut Criterion) {
             let from: Vec<u32> = (0..(w * h) as u32).collect();
             let mut to = vec![0u32; w * h];
 
-            let mut group = _ctx.benchmark_group(&format!("transpose_blk {w}x{h}"));
+            let mut group = _ctx.benchmark_group(format!("transpose_blk {w}x{h}"));
             group.measurement_time(Duration::from_secs(3));
 
             for &bs in block_sizes {
-                group.bench_function(&format!("bs={bs}"), |bencher| {
+                group.bench_function(format!("bs={bs}"), |bencher| {
                     bencher.iter(|| {
                         transpose_u32_slices_with_block_size(&from, &mut to, w, h, w, h, bs)
                             .unwrap();
@@ -121,7 +121,7 @@ fn benchmark_flip_v(ctx: &mut Criterion) {
                     .unwrap();
 
                 let mut group =
-                    ctx.benchmark_group(&format!("flip_v w={} && h={} fmt={:?}", w, h, fmt));
+                    ctx.benchmark_group(format!("flip_v w={} && h={} fmt={:?}", w, h, fmt));
 
                 group.bench_function("Rust", |b| {
                     b.iter(|| {
@@ -161,7 +161,7 @@ fn benchmark_flip_h(ctx: &mut Criterion) {
                     .unwrap();
 
                 let mut group =
-                    ctx.benchmark_group(&format!("flip_h w={} && h={} fmt={:?}", w, h, fmt));
+                    ctx.benchmark_group(format!("flip_h w={} && h={} fmt={:?}", w, h, fmt));
 
                 group.bench_function("Rust", |b| {
                     b.iter(|| {
@@ -217,7 +217,7 @@ fn benchmark_scale_2d(ctx: &mut Criterion) {
                         scale_in_colorspace: float_space,
                     };
 
-                    let mut group = ctx.benchmark_group(&format!(
+                    let mut group = ctx.benchmark_group(format!(
                         "scale_2d w={} && h={} fmt={:?} float_space={:?}",
                         w, h, fmt, float_space
                     ));
@@ -339,7 +339,7 @@ fn benchmark_color_conversion(ctx: &mut Criterion) {
             for &v in &u8_values {
                 sum += cc_linear.srgb_to_floatspace(v);
             }
-            criterion::black_box(sum)
+            std::hint::black_box(sum)
         })
     });
 
@@ -350,7 +350,7 @@ fn benchmark_color_conversion(ctx: &mut Criterion) {
             for &v in &u8_values {
                 sum += cc_srgb.srgb_to_floatspace(v);
             }
-            criterion::black_box(sum)
+            std::hint::black_box(sum)
         })
     });
 
@@ -361,7 +361,7 @@ fn benchmark_color_conversion(ctx: &mut Criterion) {
             for &v in &f32_values {
                 sum += cc_linear.floatspace_to_srgb(v) as u32;
             }
-            criterion::black_box(sum)
+            std::hint::black_box(sum)
         })
     });
 
@@ -372,7 +372,7 @@ fn benchmark_color_conversion(ctx: &mut Criterion) {
             for &v in &f32_values {
                 sum += cc_srgb.floatspace_to_srgb(v) as u32;
             }
-            criterion::black_box(sum)
+            std::hint::black_box(sum)
         })
     });
 
@@ -402,7 +402,7 @@ fn benchmark_row_operations(ctx: &mut Criterion) {
                     weight,
                 );
             }
-            criterion::black_box(output_row[0])
+            std::hint::black_box(output_row[0])
         })
     });
 
@@ -437,7 +437,7 @@ fn benchmark_horizontal_scale(ctx: &mut Criterion) {
                 &weights,
                 0,
             );
-            criterion::black_box(target[0])
+            std::hint::black_box(target[0])
         })
     });
 

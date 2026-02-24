@@ -189,7 +189,7 @@ fn index_of_first_nonzero(arr: &[i8]) -> i32 {
 fn index_of_last_nonzero(arr: &[i8]) -> i32 {
     for (i, &value) in arr.iter().rev().enumerate() {
         if value != 0 {
-            return (arr.len() as i32 - i as i32 - 1);
+            return arr.len() as i32 - i as i32 - 1;
         }
     }
     -1
@@ -419,8 +419,7 @@ fn test_variation() {
         for pixel in contrib.contrib_row {
             //  println!("{:?} ",pixel.weights);
             if let Err(e) = find_integral_weights(&mut 0u32, &pixel) {
-                eprintln!("{}", e);
-                assert!(false);
+                panic!("{}", e);
             }
         }
     }

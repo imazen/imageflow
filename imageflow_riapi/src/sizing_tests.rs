@@ -325,7 +325,7 @@ fn vary_number(v: i32, variation_kind: u8) -> Option<i32> {
         9 => v.checked_div(2),
         10 => v.checked_div(3),
         11 => v.checked_div(10),
-        12 => Some(::std::i32::MAX),
+        12 => Some(i32::MAX),
         13 => Some(1),
         14 => Some(2),
         15 => Some(3),
@@ -368,7 +368,7 @@ fn generate_aspects(into: &mut Vec<AspectRatio>, temp: &mut Vec<AspectRatio>, se
     let n = into;
     n.reserve(80);
     n.push(seed);
-    n.push(r(1, ::std::i32::MAX));
+    n.push(r(1, i32::MAX));
     n.push(r(1, 10));
     n.push(r(1, 3));
     n.push(r(5, 7));
@@ -395,7 +395,7 @@ fn generate_aspects(into: &mut Vec<AspectRatio>, temp: &mut Vec<AspectRatio>, se
 
     //Clear and reuse the first vector
     n.clear();
-    let vary_count = vary_number(1, ::std::u8::MAX).unwrap();
+    let vary_count = vary_number(1, u8::MAX).unwrap();
     n.reserve(n_boxes.len() * vary_count as usize * vary_count as usize);
     for base_ver in n_boxes {
         let (w, h) = base_ver.size();
@@ -959,12 +959,7 @@ fn test_shrink_within_specific() {
             failed.len(),
             SHRINK_WITHIN_TESTS.len()
         );
-        assert!(
-            false,
-            "Failed {} of {} ShrinkWithinTest tests",
-            failed.len(),
-            SHRINK_WITHIN_TESTS.len()
-        );
+        panic!("Failed {} of {} ShrinkWithinTest tests", failed.len(), SHRINK_WITHIN_TESTS.len());
     }
 }
 

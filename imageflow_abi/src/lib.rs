@@ -1609,8 +1609,7 @@ fn test_job_with_cancellation_at_every_point() {
 
             if polls_remaining > 0 {
                 if ctx.outward_error().has_error() {
-                    assert!(
-                        false,
+                    panic!(
                         "Expected no error since there were polls remaining, but got error {}",
                         ctx.outward_error()
                     );

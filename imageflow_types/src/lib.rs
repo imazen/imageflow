@@ -2189,7 +2189,6 @@ fn error_from_string() {
             format!("{:?}", e)
         }
         _ => {
-            assert!(false);
             unreachable!()
         }
     };
@@ -2212,7 +2211,6 @@ fn error_from_value() {
             format!("{:?}", e)
         }
         _ => {
-            assert!(false);
             unreachable!()
         }
     };
