@@ -807,7 +807,7 @@ pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
     });
 
     result.unwrap();
-    unsafe { bit.bitmap_key(c).unwrap() }
+    bit.bitmap_key(c).unwrap()
 }
 
 pub fn decode_input(c: &mut Context, input: IoTestEnum) -> BitmapKey {
@@ -822,7 +822,7 @@ pub fn decode_input(c: &mut Context, input: IoTestEnum) -> BitmapKey {
     )
     .unwrap();
 
-    unsafe { bit.bitmap_key(c).unwrap() }
+    bit.bitmap_key(c).unwrap()
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -1163,7 +1163,7 @@ pub fn compare_with_context(
 
     let response = build_steps(context, &steps, inputs.unwrap_or(vec![]), None, debug).unwrap();
 
-    if let Some(bitmap_key) = unsafe { bit.bitmap_key(&context) } {
+    if let Some(bitmap_key) = bit.bitmap_key(&context) {
         let mut ctx = ChecksumCtx::visuals();
         ctx.create_if_missing = store_if_missing;
 
@@ -1272,41 +1272,39 @@ pub fn test_with_callback(
     ) -> (Option<imageflow_types::DecoderCommand>, Vec<Node>),
 ) -> bool {
     let mut context = Context::create().unwrap();
-    let matched: bool;
 
-    unsafe {
-        IoTestTranslator {}.add(&mut context, 0, input).unwrap();
+    IoTestTranslator {}.add(&mut context, 0, input).unwrap();
 
-        let image_info = context.get_unscaled_rotated_image_info(0).unwrap();
+    let image_info = context.get_unscaled_rotated_image_info(0).unwrap();
 
-        let (tell_decoder, mut steps): (Option<imageflow_types::DecoderCommand>, Vec<Node>) =
-            callback(&image_info);
+    let (tell_decoder, mut steps): (Option<imageflow_types::DecoderCommand>, Vec<Node>) =
+        callback(&image_info);
 
-        if let Some(what) = tell_decoder {
-            let send_hints = imageflow_types::TellDecoder001 { io_id: 0, command: what };
-            let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
-            context.message("v1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
-        }
-
-        let mut bit = BitmapBgraContainer::empty();
-        steps.push(bit.as_mut().get_node());
-
-        let send_execute = imageflow_types::Execute001 {
-            framewise: imageflow_types::Framewise::Steps(steps),
-            security: None,
-            graph_recording: None,
-        };
-        context.execute_1(send_execute).unwrap();
-
-        let ctx = ChecksumCtx::visuals();
-        matched = bitmap_regression_check(
-            &ctx,
-            &context,
-            bit.bitmap_key(&context).unwrap(),
-            checksum_name,
-            500,
-        )
+    if let Some(what) = tell_decoder {
+        let send_hints = imageflow_types::TellDecoder001 { io_id: 0, command: what };
+        let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
+        context.message("v1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
     }
+
+    let mut bit = BitmapBgraContainer::empty();
+    // SAFETY: bit is pinned and outlives the execute_1 call
+    steps.push(unsafe { bit.as_mut().get_node() });
+
+    let send_execute = imageflow_types::Execute001 {
+        framewise: imageflow_types::Framewise::Steps(steps),
+        security: None,
+        graph_recording: None,
+    };
+    context.execute_1(send_execute).unwrap();
+
+    let ctx = ChecksumCtx::visuals();
+    let matched = bitmap_regression_check(
+        &ctx,
+        &context,
+        bit.bitmap_key(&context).unwrap(),
+        checksum_name,
+        500,
+    );
     context.destroy().unwrap();
     matched
 }
@@ -1352,7 +1350,9 @@ impl BitmapBgraContainer {
         s::Node::FlowBitmapKeyPtr { ptr_to_bitmap_key: ptr_to_key as usize }
     }
 
-    pub unsafe fn bitmap_key(&self, _c: &Context) -> Option<BitmapKey> {
+    /// Reads back the bitmap key written by the graph engine.
+    /// Safe because `dest_bitmap` is `Copy` and read through `&self`.
+    pub fn bitmap_key(&self, _c: &Context) -> Option<BitmapKey> {
         if self.dest_bitmap.is_null() {
             None
         } else {
