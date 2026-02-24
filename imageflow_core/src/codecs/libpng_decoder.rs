@@ -132,8 +132,11 @@ impl PngDec {
         custom_state: *mut c_void,
         message: *const c_char,
     ) {
+        if custom_state.is_null() {
+            return;
+        }
         let decoder = unsafe { &mut *(custom_state as *mut PngDec) };
-        if custom_state.is_null() || decoder.c_state_disposed {
+        if decoder.c_state_disposed {
             return;
         }
 
@@ -153,9 +156,15 @@ impl PngDec {
         bytes_requested: usize,
         out_bytes_read: &mut usize,
     ) -> bool {
+        if custom_state.is_null() {
+            return false;
+        }
         let decoder = unsafe { &mut *(custom_state as *mut PngDec) };
-        if custom_state.is_null() || decoder.c_state_disposed {
-            return false; // Nothing else we can do.
+        if decoder.c_state_disposed {
+            return false;
+        }
+        if buffer.is_null() || bytes_requested == 0 {
+            return false;
         }
 
         let buffer_slice = unsafe { std::slice::from_raw_parts_mut(buffer, bytes_requested) };
@@ -321,7 +330,14 @@ impl PngDec {
                 return Err(self.error.clone().expect("error missing").at(here!()));
             }
 
-            let color_info = &*ffi::wrap_png_decoder_get_color_info(c_state);
+            let color_info_ptr = ffi::wrap_png_decoder_get_color_info(c_state);
+            if color_info_ptr.is_null() {
+                return Err(nerror!(
+                    ErrorKind::ImageDecodingError,
+                    "LibPNG decoder returned null color info"
+                ));
+            }
+            let color_info = &*color_info_ptr;
 
             if !self.ignore_color_profile {
                 let result = ColorTransformCache::transform_to_srgb(
