@@ -6,7 +6,6 @@ use super::*;
 use crate::graphics::bitmaps::{BitmapCompositing, ColorSpace};
 use crate::io::IoProxy;
 use crate::io::IoProxyProxy;
-use crate::io::IoProxyRef;
 use imageflow_helpers::preludes::from_std::ptr::null;
 use imageflow_types::collections::AddRemoveSet;
 use imageflow_types::{IoDirection, PixelLayout};
@@ -326,10 +325,6 @@ impl Encoder for WebPEncoder {
             preferred_extension: "webp".to_owned(),
             preferred_mime_type: "image/webp".to_owned(),
         })
-    }
-
-    fn get_io(&self) -> Result<IoProxyRef<'_>> {
-        Ok(IoProxyRef::Borrow(&self.io))
     }
 
     fn into_io(self: Box<Self>) -> Result<IoProxy> {

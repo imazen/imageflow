@@ -31,7 +31,6 @@ mod webp;
 use crate::codecs::color_transform_cache::ColorTransformCache;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
 use crate::graphics::bitmaps::BitmapKey;
-use crate::io::IoProxyRef;
 
 pub trait DecoderFactory {
     fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<dyn Decoder>>>;
@@ -57,8 +56,6 @@ pub trait Encoder {
         frame: BitmapKey,
         decoder_io_ids: &[i32],
     ) -> Result<s::EncodeResult>;
-
-    fn get_io(&self) -> Result<IoProxyRef<'_>>;
 
     fn into_io(self: Box<Self>) -> Result<IoProxy>;
 }

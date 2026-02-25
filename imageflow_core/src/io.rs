@@ -8,26 +8,6 @@ use imageflow_types::IoDirection;
 use std::rc::Rc;
 use uuid::Uuid;
 
-/// Codecs own their IoProxy, but sometimes Imageflow needs access (like when it needs to read a buffer).
-/// This enum can be extended as needed.
-pub enum IoProxyRef<'a> {
-    Borrow(&'a IoProxy),
-    BoxedAsRef(Box<dyn AsRef<IoProxy>>),
-    Ref(Ref<'a, IoProxy>),
-}
-impl<'a> IoProxyRef<'a> {
-    pub fn map<B, F>(self, mut f: F) -> B
-    where
-        F: FnMut(&IoProxy) -> B,
-    {
-        match self {
-            IoProxyRef::Borrow(r) => f(r),
-            IoProxyRef::BoxedAsRef(r) => f((*r).as_ref()),
-            IoProxyRef::Ref(r) => f(&r),
-        }
-    }
-}
-
 enum IoBackend {
     ReadSlice(Cursor<&'static [u8]>),
     ReadVec(Cursor<Vec<u8>>),

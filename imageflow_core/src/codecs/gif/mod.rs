@@ -15,7 +15,6 @@ use self::bgra::BGRA8;
 use self::screen::Screen;
 use crate::graphics::bitmaps::{BitmapCompositing, BitmapKey, ColorSpace};
 use crate::io::IoProxyProxy;
-use crate::io::IoProxyRef;
 use ::gif::Frame;
 use lcms2_sys::cmsAllocProfileSequenceDescription;
 use std::rc::Rc;
@@ -326,10 +325,6 @@ where
             })
     }
 
-    fn get_io(&self) -> Result<IoProxyRef<'_>> {
-        Ok(IoProxyRef::Ref(self.io_ref.borrow()))
-    }
-
     fn into_io(self: Box<Self>) -> Result<IoProxy> {
         match std::rc::Rc::try_unwrap(self.io_ref) {
             Ok(cell) => Ok(cell.into_inner()),
@@ -477,10 +472,6 @@ impl Encoder for GifEncoder {
             preferred_mime_type: "image/gif".to_owned(),
         })
     }
-    fn get_io(&self) -> Result<IoProxyRef<'_>> {
-        Ok(IoProxyRef::Ref(self.io_ref.borrow()))
-    }
-
     fn into_io(self: Box<Self>) -> Result<IoProxy> {
         // Consume the encoder to write the GIF trailer before reclaiming the IoProxy.
         // If the encoder was already consumed (shouldn't happen), skip this step.

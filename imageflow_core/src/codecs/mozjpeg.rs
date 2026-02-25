@@ -4,7 +4,6 @@ use crate::io::IoProxy;
 
 use crate::codecs::lode;
 use crate::graphics::bitmaps::BitmapKey;
-use crate::io::IoProxyRef;
 use crate::{Context, ErrorKind, FlowError, Result};
 use evalchroma::PixelSize;
 use imageflow_types::PixelBuffer;
@@ -190,10 +189,6 @@ impl Encoder for MozjpegEncoder {
             preferred_extension: "jpg".to_owned(),
             preferred_mime_type: "image/jpeg".to_owned(),
         })
-    }
-
-    fn get_io(&self) -> Result<IoProxyRef<'_>> {
-        Ok(IoProxyRef::Borrow(&self.io))
     }
 
     fn into_io(self: Box<Self>) -> Result<IoProxy> {

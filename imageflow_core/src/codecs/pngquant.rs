@@ -4,7 +4,6 @@ use crate::io::IoProxy;
 
 use crate::codecs::lode;
 use crate::graphics::bitmaps::{BitmapKey, BitmapWindowMut};
-use crate::io::IoProxyRef;
 use crate::{Context, ErrorKind, Result};
 use imageflow_types::{Color, PixelFormat};
 use rgb::Bgra;
@@ -162,10 +161,6 @@ impl Encoder for PngquantEncoder {
             preferred_extension: "png".to_owned(),
             preferred_mime_type: "image/png".to_owned(),
         })
-    }
-
-    fn get_io(&self) -> Result<IoProxyRef<'_>> {
-        Ok(IoProxyRef::Borrow(&self.io))
     }
 
     fn into_io(self: Box<Self>) -> Result<IoProxy> {

@@ -6,7 +6,6 @@ use super::*;
 use crate::graphics::bitmaps::{BitmapCompositing, ColorSpace};
 use crate::io::IoProxy;
 use crate::io::IoProxyProxy;
-use crate::io::IoProxyRef;
 use imageflow_types::collections::AddRemoveSet;
 use imageflow_types::{IoDirection, PixelLayout};
 use rgb::alt::BGRA8;
