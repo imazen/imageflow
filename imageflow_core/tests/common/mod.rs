@@ -757,6 +757,13 @@ impl ChecksumCtx {
             if trusted == actual_checksum {
                 self.set_actual(name.to_owned(), actual_checksum.clone()).unwrap();
                 (ChecksumMatch::Match, trusted)
+            } else if self.contains_alternate_checksum_cached(&trusted, &actual_checksum) {
+                eprintln!(
+                    "====================\n{}\nMatched alternate checksum {} (primary: {})\n",
+                    name, &actual_checksum, &trusted
+                );
+                self.set_actual(name.to_owned(), actual_checksum.clone()).unwrap();
+                (ChecksumMatch::Match, trusted)
             } else {
                 eprintln!("====================\n{}\nThe stored checksum {} differs from the actual_checksum one {}\nTrusted: {}\nActual: {}\n",
                          name, &trusted,
