@@ -400,12 +400,10 @@ impl Context {
 
     pub fn get_output_buffer_slice(&self, io_id: i32) -> Result<&[u8]> {
         let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
-        let result = if let Some(io) = codec.get_encode_io().map_err(|e| e.at(here!()))? {
-            io.map(|io| io.get_output_buffer_bytes(self).map_err(|e| e.at(here!())))
-        } else {
-            Err(nerror!(ErrorKind::InvalidArgument, "io_id {} is not an output buffer", io_id))
-        };
-        result
+        // SAFETY: The returned pointer is valid as long as the Context (and its codecs) is alive.
+        // This mirrors the old transmute-based lifetime extension.
+        let (ptr, len) = unsafe { codec.output_buffer_raw_parts().map_err(|e| e.at(here!()))? };
+        Ok(unsafe { std::slice::from_raw_parts(ptr, len) })
     }
 
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
