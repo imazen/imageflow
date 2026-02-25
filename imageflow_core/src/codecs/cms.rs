@@ -5,21 +5,16 @@ use crate::graphics::bitmaps::BitmapWindowMut;
 use crate::Result;
 
 /// Selects which CMS backend to use for color profile transforms.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum CmsBackend {
     /// Pure Rust CMS (moxcms). Default. Supports CICP, ICC, gAMA+cHRM.
+    #[default]
     Moxcms,
     /// C library CMS (lcms2). Supports ICC, gAMA+cHRM, CMYK.
     Lcms2,
     /// Run both backends, compare outputs, warn on divergence exceeding threshold.
     /// Uses moxcms result as the canonical output.
     Both { max_diff_per_channel: u8 },
-}
-
-impl Default for CmsBackend {
-    fn default() -> Self {
-        CmsBackend::Moxcms
-    }
 }
 
 /// Dispatch a source profile → sRGB transform to the selected backend.

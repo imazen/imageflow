@@ -374,17 +374,12 @@ impl MzDec {
             crate::codecs::source_profile::SourceProfile::Srgb
         };
 
-        if !self.ignore_color_profile || is_cmyk {
-            if !profile.is_srgb() {
-                let result = crate::codecs::cms::transform_to_srgb(
-                    &mut window,
-                    &profile,
-                    context.cms_backend,
-                )
-                .map_err(|e| e.at(here!()));
-                if result.is_err() && !self.ignore_color_profile_errors {
-                    return result;
-                }
+        if (!self.ignore_color_profile || is_cmyk) && !profile.is_srgb() {
+            let result =
+                crate::codecs::cms::transform_to_srgb(&mut window, &profile, context.cms_backend)
+                    .map_err(|e| e.at(here!()));
+            if result.is_err() && !self.ignore_color_profile_errors {
+                return result;
             }
         }
 
@@ -599,30 +594,6 @@ impl MzDec {
             self.exif_rotation_flag =
                 crate::codecs::mozjpeg_decoder_helpers::get_exif_orientation(&self.codec_info);
         }
-    }
-
-    fn get_decoder_color_info(&mut self) -> ffi::DecoderColorInfo {
-        let mut info = ffi::DecoderColorInfo {
-            source: ColorProfileSource::Null,
-            profile_buffer: null_mut(),
-            buffer_length: 0,
-            white_point: Default::default(),
-            primaries: Default::default(),
-            gamma: self.gamma,
-        };
-
-        if let Some(profile) = self.color_profile.as_deref_mut() {
-            //let hash = imageflow_helpers::hashing::hash_64(&profile[80..]);
-
-            // if hash == 250807001850340861 {
-            //     info.source = ColorProfileSource::sRGB;
-            // }else {
-            info.profile_buffer = profile.as_mut_ptr();
-            info.buffer_length = profile.len();
-            info.source = ColorProfileSource::ICCP;
-            //}
-        }
-        info
     }
 }
 

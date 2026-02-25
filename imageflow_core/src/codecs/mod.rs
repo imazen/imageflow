@@ -8,7 +8,6 @@ use crate::ffi::DecoderColorInfo;
 use crate::io::IoProxy;
 use imageflow_types::collections::AddRemoveSet;
 use imageflow_types::IoDirection;
-use lcms2::*;
 use std::any::Any;
 use std::borrow::BorrowMut;
 use std::ops::DerefMut;
@@ -32,7 +31,6 @@ mod mozjpeg_decoder;
 mod mozjpeg_decoder_helpers;
 pub(crate) mod source_profile;
 mod webp;
-use crate::codecs::color_transform_cache::ColorTransformCache;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
 use crate::graphics::bitmaps::BitmapKey;
 

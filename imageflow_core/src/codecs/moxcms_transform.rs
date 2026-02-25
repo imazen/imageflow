@@ -4,8 +4,8 @@ use crate::{ErrorKind, FlowError, Result};
 use dashmap::DashMap;
 use moxcms::{
     curve_from_gamma, Chromaticity, CicpColorPrimaries, CicpProfile, CmsError, ColorPrimaries,
-    ColorProfile, InPlaceTransformExecutor, Layout, MatrixCoefficients, ToneReprCurve,
-    TransferCharacteristics, Transform8BitExecutor, TransformOptions, XyY,
+    ColorProfile, DataColorSpace, InPlaceTransformExecutor, Layout, MatrixCoefficients,
+    ToneReprCurve, TransferCharacteristics, Transform8BitExecutor, TransformOptions, XyY,
 };
 use std::sync::{Arc, LazyLock};
 
@@ -155,6 +155,16 @@ impl MoxcmsTransformCache {
     fn create_icc_transform(bytes: &[u8], is_gray: bool) -> Result<CachedTransform> {
         let src = ColorProfile::new_from_slice(bytes)
             .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+
+        // Reject CMYK ICC profiles in the RGB path — they should use CmykIcc variant.
+        // This catches mismatched files (e.g., RGB JPEG with CMYK ICC profile embedded).
+        if !is_gray && src.color_space == DataColorSpace::Cmyk {
+            return Err(nerror!(
+                ErrorKind::ColorProfileError,
+                "ICC profile has CMYK color space but image data is RGB"
+            ));
+        }
+
         let dst = ColorProfile::new_srgb();
 
         if is_gray {
@@ -216,9 +226,10 @@ impl MoxcmsTransformCache {
             .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
         let dst = ColorProfile::new_srgb();
 
-        // CMYK ICC → sRGB RGBA (moxcms Cmyka layout = 4 channels like RGBA)
+        // CMYK ICC profiles require Layout::Rgba (4 channels) — moxcms maps
+        // channel semantics from the ICC profile, not from the Layout enum.
         let transform = src
-            .create_transform_8bit(Layout::Cmyka, &dst, Layout::Rgba, TransformOptions::default())
+            .create_transform_8bit(Layout::Rgba, &dst, Layout::Rgba, TransformOptions::default())
             .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
 
         let row_bytes = frame.w() as usize * 4;

@@ -13,7 +13,6 @@ use std::ops::DerefMut;
 use std::sync::*;
 use uuid::Uuid;
 
-use crate::codecs::color_transform_cache::ColorTransformCache;
 use crate::codecs::Encoder;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
 use crate::{BitmapKey, Context, ErrorCategory, ErrorKind, FlowError, JsonResponse, Result};

@@ -130,6 +130,7 @@ impl Lcms2TransformCache {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn transform_gama(
         frame: &mut BitmapWindowMut<u8>,
         gamma: f64,
