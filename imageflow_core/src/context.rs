@@ -794,11 +794,12 @@ fn test_calculate_context_heap_size() {
     assert!(context_bytes > 0);
 
     // Fail if this grows so we can notice it
+    // Windows has larger RwLock/Mutex, so allow a few extra bytes
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 976);
+    assert!(context_bytes <= 984);
 
     assert!(context_allocs <= 6);
-    assert!(thread_safe_bytes <= 1160);
+    assert!(thread_safe_bytes <= 1168);
 }
 
 #[test]
