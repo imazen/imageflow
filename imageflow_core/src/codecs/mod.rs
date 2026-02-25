@@ -19,9 +19,11 @@ mod pngquant;
 pub use lode::write_png;
 
 mod auto;
+pub(crate) mod cms;
 mod color_transform_cache;
 mod image_png_decoder;
 mod jpeg_decoder;
+pub(crate) mod lcms2_transform;
 mod libpng_decoder;
 mod libpng_encoder;
 pub(crate) mod moxcms_transform;
