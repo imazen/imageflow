@@ -1277,7 +1277,8 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
         ));
         return false;
     }
-    let (mut outward_error, inner_context_guard) = lock_context_mut_and_error_or_return!(c, false);
+    let (mut outward_error, mut inner_context_guard) =
+        lock_context_mut_and_error_or_return!(c, false);
     let result = catch_unwind(AssertUnwindSafe(|| {
         let (ptr, len) =
             unsafe { inner_context_guard.get_output_buffer_ptr(io_id).map_err(|e| e.at(here!()))? };
@@ -1338,7 +1339,8 @@ pub unsafe extern "C" fn imageflow_context_take_output_buffer(
         ));
         return false;
     }
-    let (mut outward_error, inner_context_guard) = lock_context_mut_and_error_or_return!(c, false);
+    let (mut outward_error, mut inner_context_guard) =
+        lock_context_mut_and_error_or_return!(c, false);
     let result = catch_unwind(AssertUnwindSafe(|| {
         let vec = inner_context_guard.take_output_buffer(io_id).map_err(|e| e.at(here!()))?;
         let len = vec.len();

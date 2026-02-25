@@ -327,14 +327,14 @@ impl CodecInstanceContainer {
         match self.output_state {
             OutputBufferState::Lent(_) => {
                 return Err(nerror!(
-                    ErrorKind::InvalidState,
+                    ErrorKind::InvalidArgument,
                     "Cannot take output buffer for io_id {}: a raw pointer was already lent out",
                     self.io_id
                 ))
             }
             OutputBufferState::Taken => {
                 return Err(nerror!(
-                    ErrorKind::InvalidState,
+                    ErrorKind::InvalidArgument,
                     "Output buffer for io_id {} has already been taken",
                     self.io_id
                 ))
@@ -379,7 +379,7 @@ impl CodecInstanceContainer {
                 io.output_buffer_raw_parts().map_err(|e| e.at(here!()))
             }
             OutputBufferState::Taken => Err(nerror!(
-                ErrorKind::InvalidState,
+                ErrorKind::InvalidArgument,
                 "Output buffer for io_id {} has already been taken",
                 self.io_id
             )),
