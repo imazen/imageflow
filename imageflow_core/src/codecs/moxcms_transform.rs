@@ -208,12 +208,42 @@ impl MoxcmsTransformCache {
     }
 
     /// Transform inverted-CMYK frame data to sRGB BGRA using a CMYK ICC profile.
-    fn transform_cmyk_to_srgb(_frame: &mut BitmapWindowMut<u8>, _icc_bytes: &[u8]) -> Result<()> {
-        // Full implementation in Step 6
-        Err(FlowError::without_location(
-            crate::ErrorKind::ColorProfileError,
-            "CMYK→sRGB via moxcms not yet implemented".to_string(),
-        ))
+    ///
+    /// mozjpeg outputs CMYK as 4 bytes/pixel with inverted values (255-C, 255-M, 255-Y, 255-K).
+    /// We un-invert, apply the ICC CMYK→RGB transform, and write BGRA output.
+    fn transform_cmyk_to_srgb(frame: &mut BitmapWindowMut<u8>, icc_bytes: &[u8]) -> Result<()> {
+        let src = ColorProfile::new_from_slice(icc_bytes)
+            .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+        let dst = ColorProfile::new_srgb();
+
+        // CMYK ICC → sRGB RGBA (moxcms Cmyka layout = 4 channels like RGBA)
+        let transform = src
+            .create_transform_8bit(Layout::Cmyka, &dst, Layout::Rgba, TransformOptions::default())
+            .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+
+        let row_bytes = frame.w() as usize * 4;
+        let mut scratch = vec![0u8; row_bytes];
+
+        for mut scanline in frame.scanlines() {
+            let row = scanline.row_mut();
+            // Un-invert CMYK bytes in-place: mozjpeg stores 255-C, 255-M, 255-Y, 255-K
+            for byte in row.iter_mut() {
+                *byte = 255 - *byte;
+            }
+            // Transform CMYK → RGBA into scratch
+            transform
+                .transform(row, &mut scratch)
+                .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+            // Copy RGBA → BGRA (swap R↔B)
+            for (src_pixel, dst_pixel) in scratch.chunks_exact(4).zip(row.chunks_exact_mut(4)) {
+                dst_pixel[0] = src_pixel[2]; // B ← R
+                dst_pixel[1] = src_pixel[1]; // G ← G
+                dst_pixel[2] = src_pixel[0]; // R ← B
+                dst_pixel[3] = src_pixel[3]; // A ← A
+            }
+        }
+
+        Ok(())
     }
 
     /// Try in-place first (works for matrix-shaper profiles), fall back to regular.
