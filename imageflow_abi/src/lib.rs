@@ -1279,14 +1279,15 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
     }
     let (mut outward_error, inner_context_guard) = lock_context_mut_and_error_or_return!(c, false);
     let result = catch_unwind(AssertUnwindSafe(|| {
-        let s = inner_context_guard.get_output_buffer_slice(io_id).map_err(|e| e.at(here!()))?;
+        let (ptr, len) =
+            unsafe { inner_context_guard.get_output_buffer_ptr(io_id).map_err(|e| e.at(here!()))? };
 
-        if s.len().leading_zeros() == 0 {
+        if len.leading_zeros() == 0 {
             Err(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error retrieving output buffer; length overflow prevented (most significant bit set)."))
         } else {
             unsafe {
-                (*result_buffer) = s.as_ptr();
-                (*result_buffer_length) = s.len();
+                (*result_buffer) = ptr;
+                (*result_buffer_length) = len;
             }
             Ok(true)
         }

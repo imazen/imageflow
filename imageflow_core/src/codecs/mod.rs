@@ -321,23 +321,6 @@ impl CodecInstanceContainer {
         Ok(())
     }
 
-    /// Kept for the existing C ABI `get_output_buffer_by_id` path.
-    /// Finalizes the encoder, then delegates to `get_encode_io_ref`.
-    pub fn get_encode_io(&mut self) -> Result<Option<IoProxyRef<'_>>> {
-        self.finalize_encoder().map_err(|e| e.at(here!()))?;
-        match self.output_state {
-            OutputBufferState::Ready(ref io) | OutputBufferState::Lent(ref io) => {
-                Ok(Some(IoProxyRef::Borrow(io)))
-            }
-            OutputBufferState::None => Ok(None),
-            OutputBufferState::Taken => Err(nerror!(
-                ErrorKind::InvalidState,
-                "Output buffer for io_id {} has already been taken",
-                self.io_id
-            )),
-        }
-    }
-
     /// Finalize the encoder and move the output buffer out as an owned `Vec<u8>`.
     /// After this call, the buffer is gone — further access will error.
     pub fn take_output_buffer(&mut self) -> Result<Vec<u8>> {

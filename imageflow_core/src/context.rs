@@ -398,14 +398,6 @@ impl Context {
         Ok(())
     }
 
-    pub fn get_output_buffer_slice(&self, io_id: i32) -> Result<&[u8]> {
-        let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
-        // SAFETY: The returned pointer is valid as long as the Context (and its codecs) is alive.
-        // This mirrors the old transmute-based lifetime extension.
-        let (ptr, len) = unsafe { codec.output_buffer_raw_parts().map_err(|e| e.at(here!()))? };
-        Ok(unsafe { std::slice::from_raw_parts(ptr, len) })
-    }
-
     /// Move the output buffer out as an owned `Vec<u8>`, avoiding any copy.
     /// After this call, the buffer is consumed — further access will error.
     pub fn take_output_buffer(&self, io_id: i32) -> Result<Vec<u8>> {
@@ -740,12 +732,12 @@ impl Context {
 }
 
 #[cfg(test)]
-fn test_get_output_buffer_slice_wrong_type_error() {
+fn test_take_output_buffer_wrong_type_error() {
     let mut context = Context::create().unwrap();
     // SAFETY: string literal is 'static
     unsafe { context.add_input_bytes(0, b"abcdef") }.unwrap();
 
-    assert_eq!(ErrorKind::InvalidArgument, context.get_output_buffer_slice(0).err().unwrap().kind);
+    assert_eq!(ErrorKind::InvalidArgument, context.take_output_buffer(0).err().unwrap().kind);
 }
 
 impl Drop for Context {
