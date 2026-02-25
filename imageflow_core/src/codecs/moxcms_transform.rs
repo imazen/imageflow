@@ -329,7 +329,7 @@ impl MoxcmsTransformCache {
 
     fn hash_icc_bytes(bytes: &[u8]) -> u64 {
         if bytes.len() > 80 {
-            // Skip the 80-byte ICC header (matches existing ColorTransformCache behavior)
+            // Skip the 80-byte ICC header (variable timestamp/tool info, stable data after)
             imageflow_helpers::hashing::hash_64(&bytes[80..])
         } else {
             imageflow_helpers::hashing::hash_64(bytes)
