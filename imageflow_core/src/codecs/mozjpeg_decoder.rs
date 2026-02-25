@@ -360,27 +360,31 @@ impl MzDec {
             }
         }
 
-        let mut color_info = self.get_decoder_color_info();
-
-        if is_cmyk && color_info.source != ColorProfileSource::ICCP {
-            color_info.source = ColorProfileSource::ICCP;
-            color_info.profile_buffer = &CMYK_PROFILE[0];
-            color_info.buffer_length = CMYK_PROFILE.len();
-        }
+        // Build SourceProfile directly from JPEG metadata
+        let profile = if is_cmyk {
+            // CMYK images always need color conversion, even if ignore_color_profile is set
+            if let Some(ref icc_bytes) = self.color_profile {
+                crate::codecs::source_profile::SourceProfile::CmykIcc(icc_bytes.clone())
+            } else {
+                crate::codecs::source_profile::SourceProfile::CmykIcc(CMYK_PROFILE.to_vec())
+            }
+        } else if let Some(ref icc_bytes) = self.color_profile {
+            crate::codecs::source_profile::SourceProfile::IccProfile(icc_bytes.clone())
+        } else {
+            crate::codecs::source_profile::SourceProfile::Srgb
+        };
 
         if !self.ignore_color_profile || is_cmyk {
-            let input_pixel_format =
-                if is_cmyk { PixelFormat::CMYK_8_REV } else { PixelFormat::BGRA_8 };
-
-            let result = ColorTransformCache::transform_to_srgb(
-                &mut window,
-                &color_info,
-                input_pixel_format,
-                PixelFormat::BGRA_8,
-            )
-            .map_err(|e| e.at(here!()));
-            if result.is_err() && !self.ignore_color_profile_errors {
-                return result;
+            if !profile.is_srgb() {
+                let result = crate::codecs::cms::transform_to_srgb(
+                    &mut window,
+                    &profile,
+                    context.cms_backend,
+                )
+                .map_err(|e| e.at(here!()));
+                if result.is_err() && !self.ignore_color_profile_errors {
+                    return result;
+                }
             }
         }
 

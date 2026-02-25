@@ -90,7 +90,7 @@ impl Decoder for LibPngDecoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(canvas_key).map_err(|e| e.at(here!()))?;
 
-        self.decoder.read_frame(&mut bitmap)?;
+        self.decoder.read_frame(&mut bitmap, c.cms_backend)?;
 
         Ok(canvas_key)
     }
@@ -295,7 +295,11 @@ impl PngDec {
         Ok((self.w, self.h, self.pixel_format, self.uses_palette))
     }
 
-    fn read_frame(&mut self, canvas: &mut Bitmap) -> Result<()> {
+    fn read_frame(
+        &mut self,
+        canvas: &mut Bitmap,
+        cms_backend: crate::codecs::cms::CmsBackend,
+    ) -> Result<()> {
         if self.c_state_disposed {
             return Err(nerror!(
                 ErrorKind::InvalidOperation,
@@ -325,25 +329,24 @@ impl PngDec {
                 return Err(self.error.clone().expect("error missing").at(here!()));
             }
 
-            let color_info_ptr = ffi::wrap_png_decoder_get_color_info(c_state);
-            if color_info_ptr.is_null() {
-                return Err(nerror!(
-                    ErrorKind::ImageDecodingError,
-                    "LibPNG decoder returned null color info"
-                ));
-            }
-            let color_info = &*color_info_ptr;
-
             if !self.ignore_color_profile {
-                let result = ColorTransformCache::transform_to_srgb(
-                    &mut window,
-                    color_info,
-                    PixelFormat::BGRA_8,
-                    PixelFormat::BGRA_8,
-                )
-                .map_err(|e| e.at(here!()));
-                if result.is_err() && !self.ignore_color_profile_errors {
-                    return result;
+                let color_info_ptr = ffi::wrap_png_decoder_get_color_info(c_state);
+                if color_info_ptr.is_null() {
+                    return Err(nerror!(
+                        ErrorKind::ImageDecodingError,
+                        "LibPNG decoder returned null color info"
+                    ));
+                }
+                let profile = crate::codecs::source_profile::SourceProfile::from_decoder_color_info(
+                    &*color_info_ptr,
+                );
+                if !profile.is_srgb() {
+                    let result =
+                        crate::codecs::cms::transform_to_srgb(&mut window, &profile, cms_backend)
+                            .map_err(|e| e.at(here!()));
+                    if result.is_err() && !self.ignore_color_profile_errors {
+                        return result;
+                    }
                 }
             }
         }

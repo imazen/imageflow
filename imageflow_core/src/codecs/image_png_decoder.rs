@@ -205,11 +205,12 @@ impl Decoder for ImagePngDecoder {
             _ => panic!("png decoder bug: indexed image was not expanded despite flags."),
         }
 
-        // Apply color profile transform (moxcms, pure Rust)
+        // Apply color profile transform via unified CMS dispatch
         if !self.ignore_color_profile {
             let profile = SourceProfile::from_png_info(&self.info);
             if !profile.is_srgb() {
-                let result = MoxcmsTransformCache::transform_to_srgb(&mut canvas, &profile);
+                let result =
+                    crate::codecs::cms::transform_to_srgb(&mut canvas, &profile, c.cms_backend);
                 if let Err(e) = result {
                     if !self.ignore_color_profile_errors {
                         return Err(e.at(here!()));
