@@ -5,7 +5,7 @@ use dashmap::DashMap;
 use moxcms::{
     curve_from_gamma, Chromaticity, CicpColorPrimaries, CicpProfile, CmsError, ColorPrimaries,
     ColorProfile, DataColorSpace, InPlaceTransformExecutor, Layout, MatrixCoefficients,
-    ToneReprCurve, TransferCharacteristics, Transform8BitExecutor, TransformOptions, XyY,
+    TransferCharacteristics, Transform8BitExecutor, TransformOptions, XyY,
 };
 use std::sync::{Arc, LazyLock};
 
@@ -16,6 +16,8 @@ static GAMA_TRANSFORMS: LazyLock<DashMap<u64, CachedTransform>> =
     LazyLock::new(|| DashMap::with_capacity(4));
 static CICP_TRANSFORMS: LazyLock<DashMap<u64, CachedTransform>> =
     LazyLock::new(|| DashMap::with_capacity(4));
+static CMYK_TRANSFORMS: LazyLock<DashMap<u64, Arc<Transform8BitExecutor>>> =
+    LazyLock::new(|| DashMap::with_capacity(2));
 
 const HASH_SEED: u64 = 0x8ed1_2ad9_483d_28a0;
 
@@ -24,6 +26,9 @@ const HASH_SEED: u64 = 0x8ed1_2ad9_483d_28a0;
 enum CachedTransform {
     InPlace(Arc<dyn InPlaceTransformExecutor<u8> + Send + Sync>),
     Regular(Arc<Transform8BitExecutor>),
+    /// Gray ICC: GrayAlpha input (2 bpp) → RGBA output (4 bpp).
+    /// Needs dedicated apply logic since the frame is BGRA (4 bpp).
+    Gray(Arc<Transform8BitExecutor>),
 }
 
 pub struct MoxcmsTransformCache;
@@ -72,13 +77,13 @@ impl MoxcmsTransformCache {
                 })
             }
             SourceProfile::IccProfile(bytes) => {
-                let hash = Self::hash_icc_bytes(bytes);
+                let hash = Self::hash_icc_bytes(bytes, false);
                 Self::cached_or_create(&ICC_TRANSFORMS, hash, 9, || {
                     Self::create_icc_transform(bytes, false)
                 })
             }
             SourceProfile::IccProfileGray(bytes) => {
-                let hash = Self::hash_icc_bytes(bytes);
+                let hash = Self::hash_icc_bytes(bytes, true);
                 Self::cached_or_create(&ICC_TRANSFORMS, hash, 9, || {
                     Self::create_icc_transform(bytes, true)
                 })
@@ -168,7 +173,8 @@ impl MoxcmsTransformCache {
         let dst = ColorProfile::new_srgb();
 
         if is_gray {
-            // Gray ICC → RGBA: use regular transform with layout mapping
+            // Gray ICC → RGBA: needs dedicated apply path because the frame
+            // is BGRA (4 bpp) but the transform expects GrayAlpha input (2 bpp).
             let transform = src
                 .create_transform_8bit(
                     Layout::GrayAlpha,
@@ -177,7 +183,7 @@ impl MoxcmsTransformCache {
                     TransformOptions::default(),
                 )
                 .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
-            Ok(CachedTransform::Regular(transform))
+            Ok(CachedTransform::Gray(transform))
         } else {
             Self::create_transform_prefer_in_place(&src, &dst)
         }
@@ -222,15 +228,28 @@ impl MoxcmsTransformCache {
     /// mozjpeg outputs CMYK as 4 bytes/pixel with inverted values (255-C, 255-M, 255-Y, 255-K).
     /// We un-invert, apply the ICC CMYK→RGB transform, and write BGRA output.
     fn transform_cmyk_to_srgb(frame: &mut BitmapWindowMut<u8>, icc_bytes: &[u8]) -> Result<()> {
-        let src = ColorProfile::new_from_slice(icc_bytes)
-            .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
-        let dst = ColorProfile::new_srgb();
-
-        // CMYK ICC profiles require Layout::Rgba (4 channels) — moxcms maps
-        // channel semantics from the ICC profile, not from the Layout enum.
-        let transform = src
-            .create_transform_8bit(Layout::Rgba, &dst, Layout::Rgba, TransformOptions::default())
-            .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+        let hash = Self::hash_icc_bytes(icc_bytes, false);
+        let transform = if let Some(entry) = CMYK_TRANSFORMS.get(&hash) {
+            entry.value().clone()
+        } else {
+            let src = ColorProfile::new_from_slice(icc_bytes)
+                .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+            let dst = ColorProfile::new_srgb();
+            // CMYK ICC profiles require Layout::Rgba (4 channels) — moxcms maps
+            // channel semantics from the ICC profile, not from the Layout enum.
+            let t = src
+                .create_transform_8bit(
+                    Layout::Rgba,
+                    &dst,
+                    Layout::Rgba,
+                    TransformOptions::default(),
+                )
+                .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+            if CMYK_TRANSFORMS.len() < 4 {
+                CMYK_TRANSFORMS.insert(hash, t.clone());
+            }
+            t
+        };
 
         let row_bytes = frame.w() as usize * 4;
         let mut scratch = vec![0u8; row_bytes];
@@ -312,6 +331,33 @@ impl MoxcmsTransformCache {
                 }
                 Ok(())
             }
+            CachedTransform::Gray(t) => {
+                // Gray ICC: frame is BGRA (4 bpp) but transform expects GrayAlpha (2 bpp)
+                // input and produces RGBA (4 bpp) output.
+                // For grayscale images, R=G=B so we take B channel as gray value.
+                let w = frame.w() as usize;
+                let mut gray_alpha = vec![0u8; w * 2];
+                let mut rgba_out = vec![0u8; w * 4];
+                for mut scanline in frame.scanlines() {
+                    let row = scanline.row_mut();
+                    // Extract gray + alpha from BGRA pixels
+                    for (pixel, ga) in row.chunks_exact(4).zip(gray_alpha.chunks_exact_mut(2)) {
+                        ga[0] = pixel[0]; // Gray ← B (R=G=B for grayscale)
+                        ga[1] = pixel[3]; // Alpha
+                    }
+                    // Transform GrayAlpha → RGBA
+                    t.transform(&gray_alpha, &mut rgba_out)
+                        .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+                    // Write RGBA output back as BGRA
+                    for (rgba, pixel) in rgba_out.chunks_exact(4).zip(row.chunks_exact_mut(4)) {
+                        pixel[0] = rgba[2]; // B ← B(from RGBA)
+                        pixel[1] = rgba[1]; // G
+                        pixel[2] = rgba[0]; // R ← R(from RGBA)
+                        pixel[3] = rgba[3]; // A
+                    }
+                }
+                Ok(())
+            }
         }
     }
 
@@ -327,13 +373,19 @@ impl MoxcmsTransformCache {
         h.finish()
     }
 
-    fn hash_icc_bytes(bytes: &[u8]) -> u64 {
-        if bytes.len() > 80 {
+    fn hash_icc_bytes(bytes: &[u8], is_gray: bool) -> u64 {
+        use std::hash::Hasher;
+        let base = if bytes.len() > 80 {
             // Skip the 80-byte ICC header (variable timestamp/tool info, stable data after)
             imageflow_helpers::hashing::hash_64(&bytes[80..])
         } else {
             imageflow_helpers::hashing::hash_64(bytes)
-        }
+        };
+        // Mix in is_gray flag to avoid collisions between RGB and Gray transforms
+        // for the same ICC profile bytes
+        let mut h = twox_hash::XxHash64::with_seed(base);
+        h.write_u8(is_gray as u8);
+        h.finish()
     }
 
     fn hash_gamma_primaries(

@@ -298,8 +298,8 @@ impl MzDec {
         let is_cmyk =
             jpeg_color_space == mozjpeg_sys::JCS_CMYK || jpeg_color_space == mozjpeg_sys::JCS_YCCK;
 
-        let is_grayscale = jpeg_color_space == mozjpeg_sys::JCS_GRAYSCALE;
-
+        // Note: grayscale JPEGs are decoded to BGRA by mozjpeg (JCS_EXT_BGRA),
+        // so their ICC profiles are handled as RGB, not Gray — no IccProfileGray needed.
         if !is_cmyk {
             self.codec_info.out_color_space = mozjpeg_sys::JCS_EXT_BGRA; //Why not BGRX? Maybe because it doesn't clear the alpha values
         }

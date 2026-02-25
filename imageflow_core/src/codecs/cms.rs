@@ -100,21 +100,26 @@ fn compare_results(moxcms: &[u8], lcms2: &[u8], max_diff: u8) {
     let mut divergent_pixels = 0u64;
     let total_pixels = moxcms.len() / 4;
 
-    for (i, (a, b)) in moxcms.iter().zip(lcms2.iter()).enumerate() {
-        let diff = a.abs_diff(*b);
-        if diff > max_diff {
-            divergent_pixels += 1;
-            if diff > max_observed {
-                max_observed = diff;
+    for (m_pixel, l_pixel) in moxcms.chunks_exact(4).zip(lcms2.chunks_exact(4)) {
+        let mut pixel_diverges = false;
+        for (a, b) in m_pixel.iter().zip(l_pixel.iter()) {
+            let diff = a.abs_diff(*b);
+            if diff > max_diff {
+                pixel_diverges = true;
+                if diff > max_observed {
+                    max_observed = diff;
+                }
             }
+        }
+        if pixel_diverges {
+            divergent_pixels += 1;
         }
     }
 
     if divergent_pixels > 0 {
-        let divergent_pixel_count = divergent_pixels / 4; // 4 channels per pixel
         eprintln!(
             "[CMS Both] WARNING: {}/{} pixels diverge by more than {} (max observed: {})",
-            divergent_pixel_count, total_pixels, max_diff, max_observed
+            divergent_pixels, total_pixels, max_diff, max_observed
         );
     }
 }
