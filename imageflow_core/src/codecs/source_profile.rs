@@ -1,3 +1,5 @@
+use crate::ffi::{ColorProfileSource, DecoderColorInfo};
+
 /// CMS-agnostic description of an image's source color space.
 /// Constructed by decoders, consumed by transform caches.
 #[derive(Clone, Debug)]
@@ -18,6 +20,10 @@ pub enum SourceProfile {
 
     /// Raw ICC profile bytes (grayscale).
     IccProfileGray(Vec<u8>),
+
+    /// Raw ICC profile bytes for a CMYK image. The frame contains inverted CMYK data
+    /// (4 bytes/pixel: 255-C, 255-M, 255-Y, 255-K as produced by mozjpeg).
+    CmykIcc(Vec<u8>),
 
     /// Gamma + chromaticities (PNG gAMA+cHRM).
     GammaPrimaries {
@@ -95,6 +101,44 @@ impl SourceProfile {
     /// Construct from raw ICC profile bytes (for JPEG/other decoders).
     pub fn from_icc_bytes(bytes: Vec<u8>) -> Self {
         SourceProfile::IccProfile(bytes)
+    }
+
+    /// Construct from a legacy `DecoderColorInfo` (used by C-based libpng decoder).
+    ///
+    /// # Safety
+    /// The `profile_buffer` pointer in `color` must be valid for `buffer_length` bytes
+    /// if `source` is `ICCP` or `ICCP_GRAY`.
+    pub unsafe fn from_decoder_color_info(color: &DecoderColorInfo) -> Self {
+        match color.source {
+            ColorProfileSource::Null | ColorProfileSource::sRGB => SourceProfile::Srgb,
+            ColorProfileSource::ICCP => {
+                if color.profile_buffer.is_null() || color.buffer_length == 0 {
+                    return SourceProfile::Srgb;
+                }
+                let bytes =
+                    std::slice::from_raw_parts(color.profile_buffer, color.buffer_length).to_vec();
+                SourceProfile::IccProfile(bytes)
+            }
+            ColorProfileSource::ICCP_GRAY => {
+                if color.profile_buffer.is_null() || color.buffer_length == 0 {
+                    return SourceProfile::Srgb;
+                }
+                let bytes =
+                    std::slice::from_raw_parts(color.profile_buffer, color.buffer_length).to_vec();
+                SourceProfile::IccProfileGray(bytes)
+            }
+            ColorProfileSource::GAMA_CHRM => SourceProfile::GammaPrimaries {
+                gamma: color.gamma,
+                white_x: color.white_point.x,
+                white_y: color.white_point.y,
+                red_x: color.primaries.Red.x,
+                red_y: color.primaries.Red.y,
+                green_x: color.primaries.Green.x,
+                green_y: color.primaries.Green.y,
+                blue_x: color.primaries.Blue.x,
+                blue_y: color.primaries.Blue.y,
+            },
+        }
     }
 
     /// Returns true if this profile is sRGB (no transform needed).

@@ -39,6 +39,10 @@ impl MoxcmsTransformCache {
             return Ok(());
         }
 
+        if let SourceProfile::CmykIcc(ref icc_bytes) = profile {
+            return Self::transform_cmyk_to_srgb(frame, icc_bytes);
+        }
+
         let transform = Self::get_or_create_transform(profile)?;
         Self::apply_transform(frame, &transform)
     }
@@ -100,6 +104,9 @@ impl MoxcmsTransformCache {
                         *blue_y,
                     )
                 })
+            }
+            SourceProfile::CmykIcc(_) => {
+                unreachable!("CmykIcc is handled separately in transform_to_srgb")
             }
         }
     }
@@ -198,6 +205,15 @@ impl MoxcmsTransformCache {
 
         let dst = ColorProfile::new_srgb();
         Self::create_transform_prefer_in_place(&src, &dst)
+    }
+
+    /// Transform inverted-CMYK frame data to sRGB BGRA using a CMYK ICC profile.
+    fn transform_cmyk_to_srgb(_frame: &mut BitmapWindowMut<u8>, _icc_bytes: &[u8]) -> Result<()> {
+        // Full implementation in Step 6
+        Err(FlowError::without_location(
+            crate::ErrorKind::ColorProfileError,
+            "CMYK→sRGB via moxcms not yet implemented".to_string(),
+        ))
     }
 
     /// Try in-place first (works for matrix-shaper profiles), fall back to regular.

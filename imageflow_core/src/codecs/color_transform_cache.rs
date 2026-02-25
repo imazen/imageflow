@@ -106,10 +106,12 @@ impl ColorTransformCache {
         let srgb = Profile::new_srgb_context(ColorTransformCache::create_thread_context()); // Save 1ms by caching - but not sync
 
         let gama = ToneCurve::new(1f64 / color.gamma);
+        let white_point: lcms2::CIExyY = color.white_point.into();
+        let primaries: lcms2::CIExyYTRIPLE = color.primaries.into();
         let p = Profile::new_rgb_context(
             ColorTransformCache::create_thread_context(),
-            &color.white_point,
-            &color.primaries,
+            &white_point,
+            &primaries,
             &[&gama, &gama, &gama],
         )
         .map_err(|e| ColorTransformCache::get_lcms_error(e).at(here!()))?;

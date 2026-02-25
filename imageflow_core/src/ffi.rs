@@ -73,14 +73,50 @@ pub enum ColorProfileSource {
     sRGB = 4,
 }
 
+/// CIE xyY color value. Layout-compatible with `lcms2::CIExyY` / `lcms2_sys::CIExyY`.
+#[repr(C)]
+#[derive(Clone, Debug, Copy, PartialEq)]
+#[allow(non_snake_case)]
+pub struct CIExyY {
+    pub x: f64,
+    pub y: f64,
+    pub Y: f64,
+}
+impl Default for CIExyY {
+    fn default() -> Self {
+        CIExyY { x: 0., y: 0., Y: 1. }
+    }
+}
+
+/// CIE xyY triple (Red/Green/Blue primaries). Layout-compatible with `lcms2::CIExyYTRIPLE`.
+#[repr(C)]
+#[derive(Clone, Debug, Copy, PartialEq, Default)]
+#[allow(non_snake_case)]
+pub struct CIExyYTRIPLE {
+    pub Red: CIExyY,
+    pub Green: CIExyY,
+    pub Blue: CIExyY,
+}
+
+impl From<CIExyY> for lcms2::CIExyY {
+    fn from(v: CIExyY) -> Self {
+        lcms2::CIExyY { x: v.x, y: v.y, Y: v.Y }
+    }
+}
+impl From<CIExyYTRIPLE> for lcms2::CIExyYTRIPLE {
+    fn from(v: CIExyYTRIPLE) -> Self {
+        lcms2::CIExyYTRIPLE { Red: v.Red.into(), Green: v.Green.into(), Blue: v.Blue.into() }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct DecoderColorInfo {
     pub source: ColorProfileSource,
     pub profile_buffer: *const u8,
     pub buffer_length: usize,
-    pub white_point: ::lcms2::CIExyY,
-    pub primaries: ::lcms2::CIExyYTRIPLE,
+    pub white_point: CIExyY,
+    pub primaries: CIExyYTRIPLE,
     pub gamma: f64,
 }
 

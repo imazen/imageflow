@@ -226,11 +226,7 @@ impl PngDec {
                 profile_buffer: null_mut(),
                 buffer_length: 0,
                 white_point: Default::default(),
-                primaries: ::lcms2::CIExyYTRIPLE {
-                    Red: Default::default(),
-                    Green: Default::default(),
-                    Blue: Default::default(),
-                },
+                primaries: Default::default(),
                 gamma: 0.45455,
             },
         });
