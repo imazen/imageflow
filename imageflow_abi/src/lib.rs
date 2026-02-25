@@ -1358,8 +1358,7 @@ pub unsafe extern "C" fn imageflow_context_take_output_buffer(
 /// Passing NULL is a safe no-op. The `length` must exactly match the length
 /// returned by `imageflow_context_take_output_buffer`.
 ///
-/// Returns true on success, false if `length` is 0 but `buffer` is non-NULL
-/// (which would be invalid).
+/// Always returns true.
 ///
 /// # Safety
 ///
@@ -1371,10 +1370,8 @@ pub unsafe extern "C" fn imageflow_buffer_free(buffer: *mut u8, length: libc::si
     if buffer.is_null() {
         return true; // NULL is a safe no-op
     }
-    if length == 0 {
-        return false; // Non-NULL pointer with zero length is invalid
-    }
-    // Reconstruct the Box<[u8]> and drop it
+    // Reconstruct the Box<[u8]> and drop it.
+    // Length 0 with non-null pointer is valid (empty buffer from take).
     let slice = unsafe { std::slice::from_raw_parts_mut(buffer, length) };
     let _ = unsafe { Box::from_raw(slice) };
     true

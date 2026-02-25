@@ -322,23 +322,36 @@ impl CodecInstanceContainer {
     /// After this call, the buffer is gone — further access will error.
     pub fn take_output_buffer(&mut self) -> Result<Vec<u8>> {
         self.finalize_encoder().map_err(|e| e.at(here!()))?;
+        // Check for forbidden states before committing the replace,
+        // so we don't destroy a Lent IoProxy (which would dangle the raw pointer).
+        match self.output_state {
+            OutputBufferState::Lent(_) => {
+                return Err(nerror!(
+                    ErrorKind::InvalidState,
+                    "Cannot take output buffer for io_id {}: a raw pointer was already lent out",
+                    self.io_id
+                ))
+            }
+            OutputBufferState::Taken => {
+                return Err(nerror!(
+                    ErrorKind::InvalidState,
+                    "Output buffer for io_id {} has already been taken",
+                    self.io_id
+                ))
+            }
+            OutputBufferState::None => {
+                return Err(nerror!(
+                    ErrorKind::InvalidArgument,
+                    "io_id {} is not an output buffer",
+                    self.io_id
+                ))
+            }
+            OutputBufferState::Ready(_) => {} // proceed below
+        }
+        // Only Ready reaches here — safe to replace with Taken.
         match std::mem::replace(&mut self.output_state, OutputBufferState::Taken) {
             OutputBufferState::Ready(io) => io.into_output_vec().map_err(|e| e.at(here!())),
-            OutputBufferState::Lent(_) => Err(nerror!(
-                ErrorKind::InvalidState,
-                "Cannot take output buffer for io_id {}: a raw pointer was already lent out",
-                self.io_id
-            )),
-            OutputBufferState::Taken => Err(nerror!(
-                ErrorKind::InvalidState,
-                "Output buffer for io_id {} has already been taken",
-                self.io_id
-            )),
-            OutputBufferState::None => Err(nerror!(
-                ErrorKind::InvalidArgument,
-                "io_id {} is not an output buffer",
-                self.io_id
-            )),
+            _ => unreachable!(),
         }
     }
 
