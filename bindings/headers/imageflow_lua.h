@@ -43,6 +43,20 @@ uint32_t imageflow_abi_version_major(void);
 
 uint32_t imageflow_abi_version_minor(void);
 
+// Frees a buffer previously obtained from `imageflow_context_take_output_buffer`.
+//
+// Passing NULL is a safe no-op. The `length` must exactly match the length
+// returned by `imageflow_context_take_output_buffer`.
+//
+// Always returns true.
+//
+// # Safety
+//
+// * `buffer` must be NULL or a pointer returned by `imageflow_context_take_output_buffer`
+// * `length` must match the length returned by the same call
+// * The buffer must not have been freed before
+bool imageflow_buffer_free(uint8_t *buffer, size_t length);
+
 // Adds an input buffer to the job context.
 //
 // The buffer lifetime semantics depend on the `lifetime` parameter:
@@ -540,6 +554,32 @@ const struct imageflow_json_response *imageflow_context_send_json(struct imagefl
                                                 const char *method,
                                                 const uint8_t *json_buffer,
                                                 size_t json_buffer_size);
+
+// Takes ownership of the output buffer for the given `io_id`, moving the bytes out
+// of the context. After this call, the buffer is no longer available via
+// `imageflow_context_get_output_buffer_by_id` or a second `take` call.
+//
+// The caller receives a heap-allocated buffer and is responsible for freeing it
+// with `imageflow_buffer_free`.
+//
+// Returns true on success, writing the buffer pointer and length to `result_buffer`
+// and `result_buffer_length`. Returns false on error (e.g., wrong io_id, buffer
+// already taken, or context error state).
+//
+// # Safety
+//
+// * `context` must be a valid pointer from `imageflow_context_create`
+// * `context` must not be NULL (will abort process)
+// * `result_buffer` and `result_buffer_length` must be valid, non-NULL pointers
+// * The returned buffer must be freed with `imageflow_buffer_free`
+//
+// # Thread Safety
+//
+// Safe to call from multiple threads on the same context (acquires write lock).
+bool imageflow_context_take_output_buffer(struct imageflow_context *context,
+                                          int32_t io_id,
+                                          uint8_t **result_buffer,
+                                          size_t *result_buffer_length);
 
 // Frees a struct imageflow_json_response object early.
 //

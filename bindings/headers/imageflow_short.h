@@ -18,6 +18,8 @@ uint32_t imageflow_abi_version_major(void);
 
 uint32_t imageflow_abi_version_minor(void);
 
+bool imageflow_buffer_free(uint8_t *buffer, size_t length);
+
 bool imageflow_context_add_input_buffer(void *context,
                                         int32_t io_id,
                                         const uint8_t *buffer,
@@ -73,6 +75,11 @@ const void *imageflow_context_send_json(void *context,
                                                 const char *method,
                                                 const uint8_t *json_buffer,
                                                 size_t json_buffer_size);
+
+bool imageflow_context_take_output_buffer(void *context,
+                                          int32_t io_id,
+                                          uint8_t **result_buffer,
+                                          size_t *result_buffer_length);
 
 bool imageflow_json_response_destroy(void *context, void *response);
 
