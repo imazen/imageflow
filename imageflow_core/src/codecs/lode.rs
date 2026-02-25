@@ -4,7 +4,6 @@ use crate::io::IoProxy;
 
 use crate::codecs::NamedEncoders::LodePngEncoder;
 use crate::graphics::bitmaps::BitmapKey;
-use crate::io::IoProxyRef;
 use crate::{Context, ErrorKind, FlowError, Result};
 use flate2::Compression;
 use imageflow_types::{Color, PixelFormat};
@@ -69,10 +68,6 @@ impl Encoder for LodepngEncoder {
             preferred_extension: "png".to_owned(),
             preferred_mime_type: "image/png".to_owned(),
         })
-    }
-
-    fn get_io(&self) -> Result<IoProxyRef<'_>> {
-        Ok(IoProxyRef::Borrow(&self.io))
     }
 
     fn into_io(self: Box<Self>) -> Result<IoProxy> {

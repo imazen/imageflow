@@ -8,26 +8,6 @@ use imageflow_types::IoDirection;
 use std::rc::Rc;
 use uuid::Uuid;
 
-/// Codecs own their IoProxy, but sometimes Imageflow needs access (like when it needs to read a buffer).
-/// This enum can be extended as needed.
-pub enum IoProxyRef<'a> {
-    Borrow(&'a IoProxy),
-    BoxedAsRef(Box<dyn AsRef<IoProxy>>),
-    Ref(Ref<'a, IoProxy>),
-}
-impl<'a> IoProxyRef<'a> {
-    pub fn map<B, F>(self, mut f: F) -> B
-    where
-        F: FnMut(&IoProxy) -> B,
-    {
-        match self {
-            IoProxyRef::Borrow(r) => f(r),
-            IoProxyRef::BoxedAsRef(r) => f((*r).as_ref()),
-            IoProxyRef::Ref(r) => f(&r),
-        }
-    }
-}
-
 enum IoBackend {
     ReadSlice(Cursor<&'static [u8]>),
     ReadVec(Cursor<Vec<u8>>),
@@ -195,17 +175,30 @@ impl IoProxy {
         })
     }
 
-    // This could actually live as long as the context, but this isn't on the context....
-    // but if a constraint, we could add context as an input parameter
-    /// Only valid as long as the life of the IoProxy is the same as the life of the Context, 'b
-    pub fn get_output_buffer_bytes<'b>(&self, c: &'b Context) -> Result<&'b [u8]> {
+    /// Consume this IoProxy and return the output buffer as an owned `Vec<u8>`.
+    /// Only works on `WriteVec`-backed proxies (output buffers).
+    pub fn into_output_vec(self) -> Result<Vec<u8>> {
+        match self.backend {
+            IoBackend::WriteVec(cursor) => Ok(cursor.into_inner()),
+            _ => Err(nerror!(
+                ErrorKind::InvalidOperation,
+                "into_output_vec only works on output buffers"
+            )),
+        }
+    }
+
+    /// Return a raw pointer and length to the output buffer contents.
+    /// The pointer is valid as long as this `IoProxy` is alive and not mutated.
+    /// Only works on `WriteVec`-backed proxies (output buffers).
+    pub fn output_buffer_raw_parts(&self) -> Result<(*const u8, usize)> {
         match &self.backend {
             IoBackend::WriteVec(v) => {
-                Ok(unsafe { std::mem::transmute::<&[u8], &[u8]>(v.get_ref().as_slice()) })
+                let slice = v.get_ref().as_slice();
+                Ok((slice.as_ptr(), slice.len()))
             }
             _ => Err(nerror!(
                 ErrorKind::InvalidOperation,
-                "get_output_buffer_bytes only works on output buffers"
+                "output_buffer_raw_parts only works on output buffers"
             )),
         }
     }

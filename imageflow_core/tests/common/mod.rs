@@ -1229,14 +1229,14 @@ pub fn compare_encoded_framewise(
             checksum_name.to_owned()
         };
 
-        let bytes = context.get_output_buffer_slice(output_io_id).unwrap();
+        let bytes = context.take_output_buffer(output_io_id).unwrap();
 
         let mut ctx = ChecksumCtx::visuals();
         ctx.create_if_missing = store_if_missing;
         let result = evaluate_result(
             &ctx,
             &checksum_sub_name,
-            ResultKind::Bytes(bytes),
+            ResultKind::Bytes(&bytes),
             require.clone(),
             true,
         );

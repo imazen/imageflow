@@ -248,7 +248,7 @@ pub fn compare_encoded_to_source(
         assert!(r.encodes[0].h > 0);
     }
 
-    let bytes = context.get_output_buffer_slice(1).unwrap();
+    let bytes = context.take_output_buffer(1).unwrap();
 
     let ctx = ChecksumCtx::visuals();
 
@@ -272,7 +272,7 @@ pub fn compare_encoded_to_source(
         &original_checksum,
         context2,
         bitmap_key,
-        ResultKind::Bytes(bytes),
+        ResultKind::Bytes(&bytes),
         require,
         true,
     )
@@ -326,7 +326,7 @@ fn test_animated_gif_roundtrip() {
         framewise: Framewise::Steps(steps),
     };
     ctx.execute_1(execute).unwrap();
-    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+    let output_bytes = ctx.take_output_buffer(1).unwrap();
 
     // Verify the GIF trailer byte (0x3B) is present at the end
     assert_eq!(
@@ -365,7 +365,7 @@ fn test_animated_gif_two_frames() {
         framewise: Framewise::Steps(steps),
     };
     ctx.execute_1(execute).unwrap();
-    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+    let output_bytes = ctx.take_output_buffer(1).unwrap();
 
     // Verify the GIF trailer byte (0x3B) is present at the end
     assert_eq!(
@@ -406,7 +406,7 @@ fn test_gif_select_frame() {
     };
     ctx.execute_1(execute).unwrap();
 
-    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+    let output_bytes = ctx.take_output_buffer(1).unwrap();
 
     // Verify it's a valid PNG (starts with PNG signature)
     assert_eq!(&output_bytes[1..4], b"PNG", "Output should be a PNG");
@@ -447,7 +447,7 @@ fn test_gif_select_frame_0() {
     };
     ctx.execute_1(execute).unwrap();
 
-    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+    let output_bytes = ctx.take_output_buffer(1).unwrap();
     assert_eq!(&output_bytes[1..4], b"PNG", "Output should be a PNG");
 
     let decoder = lodepng::decode32(&output_bytes).unwrap();
@@ -485,7 +485,7 @@ fn test_gif_select_frame_via_querystring() {
     };
     ctx.execute_1(execute).unwrap();
 
-    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+    let output_bytes = ctx.take_output_buffer(1).unwrap();
     assert_eq!(&output_bytes[1..4], b"PNG", "Output should be a PNG");
 
     let decoder = lodepng::decode32(&output_bytes).unwrap();
@@ -521,7 +521,7 @@ fn test_gif_roundtrip() {
         framewise: Framewise::Steps(steps),
     };
     ctx1.execute_1(execute1).unwrap();
-    let bytes = ctx1.get_output_buffer_slice(0).unwrap().to_vec();
+    let bytes = ctx1.take_output_buffer(0).unwrap();
 
     // Verify the GIF trailer byte (0x3B) is present at the end
     assert_eq!(

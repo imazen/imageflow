@@ -590,7 +590,7 @@ impl<'a> Engine<'a> {
         encodes
     }
 
-    pub fn collect_augmented_encode_results(&self, io: &[s::IoObject]) -> Vec<s::EncodeResult> {
+    pub fn collect_augmented_encode_results(&mut self, io: &[s::IoObject]) -> Vec<s::EncodeResult> {
         self.collect_encode_results()
             .into_iter()
             .map(|r: s::EncodeResult| {
@@ -601,13 +601,13 @@ impl<'a> Engine<'a> {
                             s::ResultBytes::PhysicalFile(str.to_owned())
                         }
                         s::IoEnum::OutputBase64 => {
-                            let slice = self
+                            let bytes = self
                                 .c
-                                .get_output_buffer_slice(r.io_id)
+                                .take_output_buffer(r.io_id)
                                 .map_err(|e| e.at(here!()))
                                 .unwrap();
                             use base64::Engine;
-                            let b64 = base64::engine::general_purpose::STANDARD.encode(slice);
+                            let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
 
                             s::ResultBytes::Base64(b64)
                         }

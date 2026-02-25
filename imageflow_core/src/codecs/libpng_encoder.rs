@@ -4,7 +4,6 @@ use crate::io::IoProxy;
 
 use crate::ffi;
 use crate::graphics::bitmaps::{BitmapKey, BitmapWindowMut};
-use crate::io::IoProxyRef;
 use crate::{Context, ErrorKind, FlowError, Result};
 use imageflow_helpers::preludes::from_std::CStr;
 use imageflow_types::{Color, PixelFormat};
@@ -70,10 +69,6 @@ impl Encoder for LibPngEncoder {
             preferred_extension: "png".to_owned(),
             preferred_mime_type: "image/png".to_owned(),
         })
-    }
-
-    fn get_io(&self) -> Result<IoProxyRef<'_>> {
-        Ok(IoProxyRef::Borrow(&self.io))
     }
 
     fn into_io(self: Box<Self>) -> Result<IoProxy> {

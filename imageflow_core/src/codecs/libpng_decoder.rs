@@ -6,7 +6,6 @@ use crate::{Context, JsonResponse, Result};
 use super::*;
 use crate::io::IoProxy;
 use crate::io::IoProxyProxy;
-use crate::io::IoProxyRef;
 use imageflow_types::collections::AddRemoveSet;
 use imageflow_types::IoDirection;
 use rgb::alt::BGRA8;

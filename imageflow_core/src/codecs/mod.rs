@@ -31,7 +31,6 @@ mod webp;
 use crate::codecs::color_transform_cache::ColorTransformCache;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
 use crate::graphics::bitmaps::BitmapKey;
-use crate::io::IoProxyRef;
 
 pub trait DecoderFactory {
     fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<dyn Decoder>>>;
@@ -57,8 +56,6 @@ pub trait Encoder {
         frame: BitmapKey,
         decoder_io_ids: &[i32],
     ) -> Result<s::EncodeResult>;
-
-    fn get_io(&self) -> Result<IoProxyRef<'_>>;
 
     fn into_io(self: Box<Self>) -> Result<IoProxy>;
 }
@@ -181,11 +178,32 @@ impl EnabledCodecs {
     }
 }
 
+/// Tracks the lifecycle of an encoder's output buffer.
+///
+/// ```text
+/// Ready(IoProxy) ──get_ptr()──→ Lent(IoProxy) ──get_ptr()──→ Lent (idempotent)
+///        │                            │
+///        │ take()                     │ take() → ERROR
+///        ▼                            ▼
+///      Taken                    "pointer was lent"
+/// ```
+enum OutputBufferState {
+    /// No output buffer (decoder, or IoProxy loaned to an active encoder).
+    None,
+    /// Buffer is available for reading or taking.
+    Ready(IoProxy),
+    /// A raw pointer to the buffer was given out via C ABI.
+    /// The IoProxy is kept alive; `take()` is blocked.
+    Lent(IoProxy),
+    /// The buffer Vec was moved out. All further access errors.
+    Taken,
+}
+
 // We need a rust-friendly codec instance, codec definition, and a way to wrap C codecs
 pub struct CodecInstanceContainer {
     pub io_id: i32,
     codec: CodecKind,
-    encode_io: Option<IoProxy>,
+    output_state: OutputBufferState,
 }
 
 impl CodecInstanceContainer {
@@ -207,7 +225,7 @@ impl CodecInstanceContainer {
             Ok(CodecInstanceContainer {
                 io_id,
                 codec: CodecKind::EncoderPlaceholder,
-                encode_io: Some(io),
+                output_state: OutputBufferState::Ready(io),
             })
         } else {
             let mut buffer = [0u8; 12];
@@ -221,7 +239,7 @@ impl CodecInstanceContainer {
                 codec: CodecKind::Decoder(
                     c.enabled_codecs.create_decoder_for_magic_bytes(&buffer, c, io, io_id)?,
                 ),
-                encode_io: None,
+                output_state: OutputBufferState::None,
             })
         }
     }
@@ -237,7 +255,16 @@ impl CodecInstanceContainer {
     ) -> Result<s::EncodeResult> {
         // Pick encoder
         if let CodecKind::EncoderPlaceholder = self.codec {
-            let io = self.encode_io.take().unwrap();
+            let io = match std::mem::replace(&mut self.output_state, OutputBufferState::None) {
+                OutputBufferState::Ready(io) => io,
+                _ => {
+                    return Err(nerror!(
+                        ErrorKind::InvalidState,
+                        "Encoder {} output buffer not in Ready state for write_frame",
+                        self.io_id
+                    ))
+                }
+            };
             let encoder = auto::create_encoder(c, io, preset, bitmap_key, decoder_io_ids)
                 .map_err(|e| e.at(here!()))?;
 
@@ -275,26 +302,92 @@ impl CodecInstanceContainer {
         }
     }
 
-    /// Finalize the encoder (if active) and return a reference to its IoProxy.
+    /// Finalize the encoder (if active), reclaiming the IoProxy into `output_state`.
     /// After this call, the encoder is consumed and no more frames can be written.
     /// This must be called before reading the output buffer, since some encoders
     /// (e.g., GIF) write trailing data when finalized.
-    pub fn get_encode_io(&mut self) -> Result<Option<IoProxyRef<'_>>> {
-        // Finalize: consume the encoder via into_io() to flush any trailing data,
-        // then store the reclaimed IoProxy in encode_io.
+    fn finalize_encoder(&mut self) -> Result<()> {
         if matches!(self.codec, CodecKind::Encoder(_)) {
             if let CodecKind::Encoder(encoder) =
                 std::mem::replace(&mut self.codec, CodecKind::EncoderFinished)
             {
                 let io = encoder.into_io().map_err(|e| e.at(here!()))?;
-                self.encode_io = Some(io);
+                self.output_state = OutputBufferState::Ready(io);
             }
         }
+        Ok(())
+    }
 
-        if let Some(ref e) = self.encode_io {
-            Ok(Some(IoProxyRef::Borrow(e)))
-        } else {
-            Ok(None)
+    /// Finalize the encoder and move the output buffer out as an owned `Vec<u8>`.
+    /// After this call, the buffer is gone — further access will error.
+    pub fn take_output_buffer(&mut self) -> Result<Vec<u8>> {
+        self.finalize_encoder().map_err(|e| e.at(here!()))?;
+        // Check for forbidden states before committing the replace,
+        // so we don't destroy a Lent IoProxy (which would dangle the raw pointer).
+        match self.output_state {
+            OutputBufferState::Lent(_) => {
+                return Err(nerror!(
+                    ErrorKind::InvalidArgument,
+                    "Cannot take output buffer for io_id {}: a raw pointer was already lent out",
+                    self.io_id
+                ))
+            }
+            OutputBufferState::Taken => {
+                return Err(nerror!(
+                    ErrorKind::InvalidArgument,
+                    "Output buffer for io_id {} has already been taken",
+                    self.io_id
+                ))
+            }
+            OutputBufferState::None => {
+                return Err(nerror!(
+                    ErrorKind::InvalidArgument,
+                    "io_id {} is not an output buffer",
+                    self.io_id
+                ))
+            }
+            OutputBufferState::Ready(_) => {} // proceed below
+        }
+        // Only Ready reaches here — safe to replace with Taken.
+        match std::mem::replace(&mut self.output_state, OutputBufferState::Taken) {
+            OutputBufferState::Ready(io) => io.into_output_vec().map_err(|e| e.at(here!())),
+            _ => unreachable!(),
+        }
+    }
+
+    /// Finalize the encoder and return raw pointer + length to the output buffer.
+    /// Transitions to `Lent` state — the IoProxy is kept alive but `take()` is blocked.
+    /// Idempotent: calling again on a `Lent` buffer returns the same pointer.
+    ///
+    /// # Safety
+    /// The returned pointer is valid as long as this `CodecInstanceContainer` is alive
+    /// and the buffer is not taken. Caller must ensure no mutable access occurs.
+    pub unsafe fn output_buffer_raw_parts(&mut self) -> Result<(*const u8, usize)> {
+        self.finalize_encoder().map_err(|e| e.at(here!()))?;
+        match self.output_state {
+            OutputBufferState::Ready(_) => {
+                // Transition to Lent
+                let io = match std::mem::replace(&mut self.output_state, OutputBufferState::None) {
+                    OutputBufferState::Ready(io) => io,
+                    _ => unreachable!(),
+                };
+                let (ptr, len) = io.output_buffer_raw_parts().map_err(|e| e.at(here!()))?;
+                self.output_state = OutputBufferState::Lent(io);
+                Ok((ptr, len))
+            }
+            OutputBufferState::Lent(ref io) => {
+                io.output_buffer_raw_parts().map_err(|e| e.at(here!()))
+            }
+            OutputBufferState::Taken => Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "Output buffer for io_id {} has already been taken",
+                self.io_id
+            )),
+            OutputBufferState::None => Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "io_id {} is not an output buffer",
+                self.io_id
+            )),
         }
     }
 }

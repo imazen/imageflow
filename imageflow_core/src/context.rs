@@ -398,14 +398,22 @@ impl Context {
         Ok(())
     }
 
-    pub fn get_output_buffer_slice(&self, io_id: i32) -> Result<&[u8]> {
+    /// Move the output buffer out as an owned `Vec<u8>`, avoiding any copy.
+    /// After this call, the buffer is consumed — further access will error.
+    pub fn take_output_buffer(&mut self, io_id: i32) -> Result<Vec<u8>> {
         let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
-        let result = if let Some(io) = codec.get_encode_io().map_err(|e| e.at(here!()))? {
-            io.map(|io| io.get_output_buffer_bytes(self).map_err(|e| e.at(here!())))
-        } else {
-            Err(nerror!(ErrorKind::InvalidArgument, "io_id {} is not an output buffer", io_id))
-        };
-        result
+        codec.take_output_buffer().map_err(|e| e.at(here!()))
+    }
+
+    /// Return raw pointer + length to the output buffer for C ABI use.
+    /// The buffer transitions to `Lent` state — kept alive, but `take` is blocked.
+    ///
+    /// # Safety
+    /// The returned pointer is valid as long as this `Context` is alive and
+    /// `take_output_buffer` is not called for this `io_id`.
+    pub unsafe fn get_output_buffer_ptr(&mut self, io_id: i32) -> Result<(*const u8, usize)> {
+        let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        codec.output_buffer_raw_parts().map_err(|e| e.at(here!()))
     }
 
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
@@ -723,13 +731,181 @@ impl Context {
     }
 }
 
-#[cfg(test)]
-fn test_get_output_buffer_slice_wrong_type_error() {
+#[test]
+fn test_take_output_buffer_wrong_type_error() {
+    // 1x1 RGBA PNG
+    let png_bytes: Vec<u8> = vec![
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
     let mut context = Context::create().unwrap();
-    // SAFETY: string literal is 'static
-    unsafe { context.add_input_bytes(0, b"abcdef") }.unwrap();
+    context.add_input_vector(0, png_bytes).unwrap();
 
-    assert_eq!(ErrorKind::InvalidArgument, context.get_output_buffer_slice(0).err().unwrap().kind);
+    assert_eq!(ErrorKind::InvalidArgument, context.take_output_buffer(0).err().unwrap().kind);
+}
+
+#[test]
+fn test_get_ptr_on_decoder_returns_invalid_operation() {
+    let png_bytes: Vec<u8> = vec![
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+    let mut context = Context::create().unwrap();
+    context.add_input_vector(0, png_bytes).unwrap();
+
+    let err = unsafe { context.get_output_buffer_ptr(0) }.err().unwrap();
+    assert_eq!(ErrorKind::InvalidArgument, err.kind);
+}
+
+#[test]
+fn test_take_output_before_encode_returns_empty_vec() {
+    let mut context = Context::create().unwrap();
+    context.add_output_buffer(0).unwrap();
+
+    let bytes = context.take_output_buffer(0).unwrap();
+    assert!(bytes.is_empty());
+}
+
+#[test]
+fn test_take_twice_returns_invalid_state() {
+    let mut context = Context::create().unwrap();
+    context.add_output_buffer(0).unwrap();
+
+    let _ = context.take_output_buffer(0).unwrap();
+    let err = context.take_output_buffer(0).err().unwrap();
+    assert_eq!(ErrorKind::InvalidArgument, err.kind);
+    assert!(err.message.contains("already been taken"));
+}
+
+#[test]
+fn test_get_ptr_then_take_returns_invalid_state() {
+    let mut context = Context::create().unwrap();
+    context.add_output_buffer(0).unwrap();
+
+    let (ptr, len) = unsafe { context.get_output_buffer_ptr(0) }.unwrap();
+    assert!(!ptr.is_null());
+
+    let err = context.take_output_buffer(0).err().unwrap();
+    assert_eq!(ErrorKind::InvalidArgument, err.kind);
+    assert!(err.message.contains("raw pointer"));
+}
+
+#[test]
+fn test_get_ptr_idempotent() {
+    let mut context = Context::create().unwrap();
+    context.add_output_buffer(0).unwrap();
+
+    let (ptr1, len1) = unsafe { context.get_output_buffer_ptr(0) }.unwrap();
+    let (ptr2, len2) = unsafe { context.get_output_buffer_ptr(0) }.unwrap();
+    assert_eq!(ptr1, ptr2);
+    assert_eq!(len1, len2);
+}
+
+#[test]
+fn test_get_ptr_after_take_returns_invalid_state() {
+    let mut context = Context::create().unwrap();
+    context.add_output_buffer(0).unwrap();
+
+    let _ = context.take_output_buffer(0).unwrap();
+    let err = unsafe { context.get_output_buffer_ptr(0) }.err().unwrap();
+    assert_eq!(ErrorKind::InvalidArgument, err.kind);
+    assert!(err.message.contains("already been taken"));
+}
+
+#[test]
+fn test_take_on_nonexistent_io_id() {
+    let mut context = Context::create().unwrap();
+    let err = context.take_output_buffer(42).err().unwrap();
+    assert_eq!(ErrorKind::IoIdNotFound, err.kind);
+}
+
+#[test]
+fn test_take_after_encode_returns_data() {
+    use imageflow_types as s;
+    let png_bytes: Vec<u8> = vec![
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, png_bytes).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+
+    let execute = s::Execute001 {
+        graph_recording: Some(s::Build001GraphRecording::off()),
+        security: None,
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::Encode {
+                io_id: 1,
+                preset: s::EncoderPreset::Libpng {
+                    depth: None,
+                    matte: None,
+                    zlib_compression: None,
+                },
+            },
+        ]),
+    };
+    ctx.execute_1(execute).unwrap();
+
+    let bytes = ctx.take_output_buffer(1).unwrap();
+    assert!(!bytes.is_empty());
+    assert!(bytes.starts_with(b"\x89PNG"));
+}
+
+#[test]
+fn test_get_ptr_after_encode_then_take_blocked() {
+    use imageflow_types as s;
+    let png_bytes: Vec<u8> = vec![
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, png_bytes).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+
+    let execute = s::Execute001 {
+        graph_recording: Some(s::Build001GraphRecording::off()),
+        security: None,
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::Encode {
+                io_id: 1,
+                preset: s::EncoderPreset::Libpng {
+                    depth: None,
+                    matte: None,
+                    zlib_compression: None,
+                },
+            },
+        ]),
+    };
+    ctx.execute_1(execute).unwrap();
+
+    // Lend the pointer (C ABI path)
+    let (ptr, len) = unsafe { ctx.get_output_buffer_ptr(1) }.unwrap();
+    assert!(!ptr.is_null());
+    assert!(len > 0);
+
+    // take should be blocked
+    let err = ctx.take_output_buffer(1).err().unwrap();
+    assert_eq!(ErrorKind::InvalidArgument, err.kind);
+    assert!(err.message.contains("raw pointer"));
+
+    // get_ptr again should be idempotent
+    let (ptr2, len2) = unsafe { ctx.get_output_buffer_ptr(1) }.unwrap();
+    assert_eq!(ptr, ptr2);
+    assert_eq!(len, len2);
 }
 
 impl Drop for Context {
@@ -779,11 +955,12 @@ fn test_calculate_context_heap_size() {
     assert!(context_bytes > 0);
 
     // Fail if this grows so we can notice it
+    // Windows has larger RwLock/Mutex, so allow a few extra bytes
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 968);
+    assert!(context_bytes <= 984);
 
     assert!(context_allocs <= 6);
-    assert!(thread_safe_bytes <= 1150);
+    assert!(thread_safe_bytes <= 1168);
 }
 
 #[test]

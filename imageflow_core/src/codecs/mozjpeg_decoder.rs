@@ -7,7 +7,6 @@ use super::*;
 use crate::graphics::bitmaps::{Bitmap, BitmapCompositing, BitmapKey, ColorSpace};
 use crate::io::IoProxy;
 use crate::io::IoProxyProxy;
-use crate::io::IoProxyRef;
 use ::mozjpeg_sys::*;
 use imageflow_helpers::preludes::from_std::ptr::{null, null_mut, slice_from_raw_parts};
 use imageflow_types::collections::AddRemoveSet;
