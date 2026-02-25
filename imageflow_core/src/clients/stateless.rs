@@ -151,10 +151,7 @@ impl LibClient {
         let mut outputs = Vec::new();
         for encode in encodes {
             outputs.push(BuildOutput {
-                bytes: context
-                    .get_output_buffer_slice(encode.io_id)
-                    .map(|s| s.to_vec())
-                    .map_err(|e| e.at(here!()))?,
+                bytes: context.take_output_buffer(encode.io_id).map_err(|e| e.at(here!()))?,
                 io_id: encode.io_id,
                 mime_type: encode.preferred_mime_type,
                 file_ext: encode.preferred_extension,

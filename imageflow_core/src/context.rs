@@ -406,6 +406,24 @@ impl Context {
         Ok(unsafe { std::slice::from_raw_parts(ptr, len) })
     }
 
+    /// Move the output buffer out as an owned `Vec<u8>`, avoiding any copy.
+    /// After this call, the buffer is consumed — further access will error.
+    pub fn take_output_buffer(&self, io_id: i32) -> Result<Vec<u8>> {
+        let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        codec.take_output_buffer().map_err(|e| e.at(here!()))
+    }
+
+    /// Return raw pointer + length to the output buffer for C ABI use.
+    /// The buffer transitions to `Lent` state — kept alive, but `take` is blocked.
+    ///
+    /// # Safety
+    /// The returned pointer is valid as long as this `Context` is alive and
+    /// `take_output_buffer` is not called for this `io_id`.
+    pub unsafe fn get_output_buffer_ptr(&self, io_id: i32) -> Result<(*const u8, usize)> {
+        let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        codec.output_buffer_raw_parts().map_err(|e| e.at(here!()))
+    }
+
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
         let io =
             IoProxy::file_with_mode(self, io_id, path, direction).map_err(|e| e.at(here!()))?;

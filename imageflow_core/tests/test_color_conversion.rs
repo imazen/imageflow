@@ -863,7 +863,7 @@ fn test_matte_compositing_no_double_division() {
         framewise: imageflow_types::Framewise::Steps(steps),
     };
     ctx.execute_1(execute).unwrap();
-    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+    let output_bytes = ctx.take_output_buffer(1).unwrap();
 
     // Decode the output PNG and check pixel values
     let mut ctx2 = Context::create().unwrap();
@@ -1023,7 +1023,7 @@ fn test_matte_compositing_fully_transparent_pixels() {
         framewise: imageflow_types::Framewise::Steps(steps),
     };
     ctx.execute_1(execute).unwrap();
-    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+    let output_bytes = ctx.take_output_buffer(1).unwrap();
 
     let result = lodepng::decode32(output_bytes.as_slice()).unwrap();
     let out_w = result.width;
@@ -1126,7 +1126,7 @@ fn test_matte_compositing_mixed_alpha() {
         framewise: imageflow_types::Framewise::Steps(steps),
     };
     ctx.execute_1(execute).unwrap();
-    let output_bytes = ctx.get_output_buffer_slice(1).unwrap().to_vec();
+    let output_bytes = ctx.take_output_buffer(1).unwrap();
 
     let result = lodepng::decode32(output_bytes.as_slice()).unwrap();
     let out_w = result.width;
