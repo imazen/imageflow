@@ -1295,6 +1295,91 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
     handle_result!(outward_error, result, false)
 }
 
+/// Takes ownership of the output buffer for the given `io_id`, moving the bytes out
+/// of the context. After this call, the buffer is no longer available via
+/// `imageflow_context_get_output_buffer_by_id` or a second `take` call.
+///
+/// The caller receives a heap-allocated buffer and is responsible for freeing it
+/// with `imageflow_buffer_free`.
+///
+/// Returns true on success, writing the buffer pointer and length to `result_buffer`
+/// and `result_buffer_length`. Returns false on error (e.g., wrong io_id, buffer
+/// already taken, or context error state).
+///
+/// # Safety
+///
+/// * `context` must be a valid pointer from `imageflow_context_create`
+/// * `context` must not be NULL (will abort process)
+/// * `result_buffer` and `result_buffer_length` must be valid, non-NULL pointers
+/// * The returned buffer must be freed with `imageflow_buffer_free`
+///
+/// # Thread Safety
+///
+/// Safe to call from multiple threads on the same context (acquires write lock).
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_context_take_output_buffer(
+    context: *mut ThreadSafeContext,
+    io_id: i32,
+    result_buffer: *mut *mut u8,
+    result_buffer_length: *mut libc::size_t,
+) -> bool {
+    let c = context!(context);
+    if result_buffer.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(
+            ErrorKind::NullArgument,
+            "The argument 'result_buffer' is null."
+        ));
+        return false;
+    }
+    if result_buffer_length.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(
+            ErrorKind::NullArgument,
+            "The argument 'result_buffer_length' is null."
+        ));
+        return false;
+    }
+    let (mut outward_error, inner_context_guard) = lock_context_mut_and_error_or_return!(c, false);
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        let vec = inner_context_guard.take_output_buffer(io_id).map_err(|e| e.at(here!()))?;
+        let len = vec.len();
+        let boxed = vec.into_boxed_slice();
+        let ptr = Box::into_raw(boxed) as *mut u8;
+        unsafe {
+            (*result_buffer) = ptr;
+            (*result_buffer_length) = len;
+        }
+        Ok(true)
+    }));
+    handle_result!(outward_error, result, false)
+}
+
+/// Frees a buffer previously obtained from `imageflow_context_take_output_buffer`.
+///
+/// Passing NULL is a safe no-op. The `length` must exactly match the length
+/// returned by `imageflow_context_take_output_buffer`.
+///
+/// Returns true on success, false if `length` is 0 but `buffer` is non-NULL
+/// (which would be invalid).
+///
+/// # Safety
+///
+/// * `buffer` must be NULL or a pointer returned by `imageflow_context_take_output_buffer`
+/// * `length` must match the length returned by the same call
+/// * The buffer must not have been freed before
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_buffer_free(buffer: *mut u8, length: libc::size_t) -> bool {
+    if buffer.is_null() {
+        return true; // NULL is a safe no-op
+    }
+    if length == 0 {
+        return false; // Non-NULL pointer with zero length is invalid
+    }
+    // Reconstruct the Box<[u8]> and drop it
+    let slice = unsafe { std::slice::from_raw_parts_mut(buffer, length) };
+    let _ = unsafe { Box::from_raw(slice) };
+    true
+}
+
 /// Allocates zeroed memory that will be freed automatically with the context.
 ///
 /// The allocated memory is zeroed and aligned to 16 bytes.
