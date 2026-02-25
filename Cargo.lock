@@ -1394,9 +1394,8 @@ dependencies = [
 
 [[package]]
 name = "lcms2-sys"
-version = "4.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c2604b23848ca80b2add60f0fb2270fd980e622c25029b6597fa01cfd5f8d5f"
+version = "4.0.7"
+source = "git+https://github.com/imazen/rust-lcms2-sys?branch=update-lcms2-2.18#4594ea86c66fe843da6b90da600237f2ed3ffa7f"
 dependencies = [
  "cc",
  "dunce",
@@ -1451,9 +1450,9 @@ dependencies = [
 
 [[package]]
 name = "libz-sys"
-version = "1.1.23"
+version = "1.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15d118bbf3771060e7311cc7bb0545b01d08a8b4a7de949198dec1fa0ca1c0f7"
+checksum = "4735e9cbde5aac84a5ce588f6b23a90b9b0b528f6c5a8db8a4aff300463a0839"
 dependencies = [
  "cc",
  "libc",
@@ -1475,8 +1474,9 @@ checksum = "6373607a59f0be73a39b6fe456b8192fcc3585f602af20751600e974dd455e77"
 
 [[package]]
 name = "load_image"
-version = "3.2.1"
-source = "git+https://gitlab.com/lilith6/load_image.git#cf322d8ca29741fa45a37c22a149c45fb50573a6"
+version = "3.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb2ce0544aaf135df416d3a96276250a546f1e54512bbc68bb5e2f1493197a99"
 dependencies = [
  "bytemuck",
  "imgref",
