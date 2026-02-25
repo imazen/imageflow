@@ -1152,6 +1152,7 @@ dependencies = [
  "libz-sys",
  "load_image",
  "lodepng",
+ "moxcms",
  "mozjpeg",
  "mozjpeg-sys",
  "multiversion",
@@ -1427,8 +1428,8 @@ dependencies = [
 
 [[package]]
 name = "libpng-sys"
-version = "1.1.10"
-source = "git+https://github.com/kornelski/rust-libpng-sys#d38f3997b38e3fe88249323dacc2fcbb1106b9ed"
+version = "1.1.11"
+source = "git+https://github.com/imazen/rust-libpng-sys#31ea420b3ed303c7b650ca2bacd947c67b3e1b9e"
 dependencies = [
  "cc",
  "dunce",
@@ -1543,6 +1544,16 @@ checksum = "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316"
 dependencies = [
  "adler2",
  "simd-adler32",
+]
+
+[[package]]
+name = "moxcms"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04e5f643aebb3c117fa77e268557e3bf19e250769062820fcaf3ff33ea560adf"
+dependencies = [
+ "num-traits",
+ "pxfm",
 ]
 
 [[package]]
@@ -1801,6 +1812,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "pxfm"
+version = "0.1.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7186d3822593aa4393561d186d1393b3923e9d6163d3fbfd6e825e3e6cf3e6a8"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]

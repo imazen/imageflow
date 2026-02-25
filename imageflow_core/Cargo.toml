@@ -44,6 +44,7 @@ jpeg-decoder ="0.3.1"
 
 lcms2 = "6"
 lcms2-sys = "4"
+moxcms = { version = "0.8", features = ["in_place"] }
 dashmap = "6.1.0"
 
 uuid = { version = "1", features = ["v4"] }

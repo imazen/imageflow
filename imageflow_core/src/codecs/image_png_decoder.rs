@@ -7,11 +7,15 @@ use crate::{Context, ErrorKind, FlowError, Result};
 use imageflow_helpers::preludes::from_std::*;
 use imageflow_types as s;
 //use crate::for_other_imageflow_crates::preludes::external_without_std::*;
+use crate::codecs::moxcms_transform::MoxcmsTransformCache;
+use crate::codecs::source_profile::SourceProfile;
 use crate::graphics::bitmaps::BitmapRowAccess;
 
 pub struct ImagePngDecoder {
     reader: png::Reader<IoProxy>,
     info: png::Info<'static>,
+    ignore_color_profile: bool,
+    ignore_color_profile_errors: bool,
 }
 
 impl ImagePngDecoder {
@@ -55,7 +59,12 @@ impl ImagePngDecoder {
             }
         }
 
-        Ok(ImagePngDecoder { reader, info })
+        Ok(ImagePngDecoder {
+            reader,
+            info,
+            ignore_color_profile: false,
+            ignore_color_profile_errors: false,
+        })
     }
 }
 impl Decoder for ImagePngDecoder {
@@ -84,6 +93,13 @@ impl Decoder for ImagePngDecoder {
     }
 
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()> {
+        match tell {
+            s::DecoderCommand::DiscardColorProfile => self.ignore_color_profile = true,
+            s::DecoderCommand::IgnoreColorProfileErrors => {
+                self.ignore_color_profile_errors = true;
+            }
+            _ => {}
+        }
         Ok(())
     }
 
@@ -187,6 +203,19 @@ impl Decoder for ImagePngDecoder {
             }
 
             _ => panic!("png decoder bug: indexed image was not expanded despite flags."),
+        }
+
+        // Apply color profile transform (moxcms, pure Rust)
+        if !self.ignore_color_profile {
+            let profile = SourceProfile::from_png_info(&self.info);
+            if !profile.is_srgb() {
+                let result = MoxcmsTransformCache::transform_to_srgb(&mut canvas, &profile);
+                if let Err(e) = result {
+                    if !self.ignore_color_profile_errors {
+                        return Err(e.at(here!()));
+                    }
+                }
+            }
         }
 
         Ok(canvas_key)
