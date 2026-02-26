@@ -2,6 +2,8 @@ use crate::codecs::source_profile::SourceProfile;
 use crate::codecs::tiny_lru::TinyLru;
 use crate::graphics::bitmaps::{BitmapWindowMut, PixelLayout};
 use crate::{ErrorKind, FlowError, Result};
+use archmage::incant;
+use archmage::prelude::*;
 use moxcms::{
     curve_from_gamma, Chromaticity, CicpColorPrimaries, CicpProfile, CmsError, ColorPrimaries,
     ColorProfile, DataColorSpace, InPlaceTransformExecutor, Layout, MatrixCoefficients,
@@ -263,13 +265,8 @@ impl MoxcmsTransformCache {
             transform
                 .transform(row, &mut scratch)
                 .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
-            // Copy RGBA → BGRA (swap R↔B)
-            for (src_pixel, dst_pixel) in scratch.chunks_exact(4).zip(row.chunks_exact_mut(4)) {
-                dst_pixel[0] = src_pixel[2]; // B ← R
-                dst_pixel[1] = src_pixel[1]; // G ← G
-                dst_pixel[2] = src_pixel[0]; // R ← B
-                dst_pixel[3] = src_pixel[3]; // A ← A
-            }
+            // Copy RGBA → BGRA (swap R↔B) — symmetric operation
+            copy_swap_br(&scratch, row);
         }
 
         Ok(())
@@ -321,7 +318,7 @@ impl MoxcmsTransformCache {
                 for mut scanline in frame.scanlines() {
                     let row = scanline.row_mut();
                     // Copy BGRA → RGBA into scratch
-                    copy_bgra_to_rgba(row, &mut scratch);
+                    copy_swap_br(row, &mut scratch);
                     // Transform scratch(RGBA) → row(RGBA)
                     t.transform(&scratch, row)
                         .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
@@ -347,13 +344,8 @@ impl MoxcmsTransformCache {
                     // Transform GrayAlpha → RGBA
                     t.transform(&gray_alpha, &mut rgba_out)
                         .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
-                    // Write RGBA output back as BGRA
-                    for (rgba, pixel) in rgba_out.chunks_exact(4).zip(row.chunks_exact_mut(4)) {
-                        pixel[0] = rgba[2]; // B ← B(from RGBA)
-                        pixel[1] = rgba[1]; // G
-                        pixel[2] = rgba[0]; // R ← R(from RGBA)
-                        pixel[3] = rgba[3]; // A
-                    }
+                    // Write RGBA output back as BGRA (swap R↔B)
+                    copy_swap_br(&rgba_out, row);
                 }
                 Ok(())
             }
@@ -414,21 +406,187 @@ impl MoxcmsTransformCache {
     }
 }
 
+// ---------------------------------------------------------------------------
+// B↔R channel swizzle (BGRA ↔ RGBA) — archmage SIMD dispatch
+// ---------------------------------------------------------------------------
+
+/// Swap bytes 0 and 2 of a u32 — B↔R channel swap for BGRA/RGBA pixels.
+#[inline(always)]
+fn swap_br_u32(v: u32) -> u32 {
+    (v & 0xFF00_FF00) | (v.rotate_left(16) & 0x00FF_00FF)
+}
+
 /// Swap B and R channels in-place for a row of BGRA/RGBA pixels.
-#[inline]
 fn swap_br_inplace(row: &mut [u8]) {
-    for pixel in row.chunks_exact_mut(4) {
-        pixel.swap(0, 2);
+    incant!(swap_br_impl(row), [v3, arm_v2, wasm128, scalar]);
+}
+
+/// Copy a pixel row, swapping B↔R channels (BGRA↔RGBA). Symmetric operation.
+fn copy_swap_br(src: &[u8], dst: &mut [u8]) {
+    incant!(copy_swap_br_impl(src, dst), [v3, arm_v2, wasm128, scalar]);
+}
+
+// --- Scalar fallback ---
+
+fn swap_br_impl_scalar(_token: ScalarToken, row: &mut [u8]) {
+    for v in bytemuck::cast_slice_mut::<u8, u32>(row) {
+        *v = swap_br_u32(*v);
     }
 }
 
-/// Copy BGRA row into RGBA scratch buffer (swapping B↔R during copy).
-#[inline]
-fn copy_bgra_to_rgba(bgra: &[u8], rgba: &mut [u8]) {
-    for (src, dst) in bgra.chunks_exact(4).zip(rgba.chunks_exact_mut(4)) {
-        dst[0] = src[2]; // R ← B
-        dst[1] = src[1]; // G ← G
-        dst[2] = src[0]; // B ← R
-        dst[3] = src[3]; // A ← A
+fn copy_swap_br_impl_scalar(_token: ScalarToken, src: &[u8], dst: &mut [u8]) {
+    for (s, d) in
+        bytemuck::cast_slice::<u8, u32>(src).iter().zip(bytemuck::cast_slice_mut::<u8, u32>(dst))
+    {
+        *d = swap_br_u32(*s);
+    }
+}
+
+// --- x86-64 AVX2 (V3 tier) — vpshufb: 8 pixels / 32 bytes per iteration ---
+
+/// Byte shuffle mask: swap bytes 0↔2 within each 4-byte pixel.
+/// `[B,G,R,A]` → `[R,G,B,A]` per pixel, 4 pixels per 128-bit lane.
+#[cfg(target_arch = "x86_64")]
+const BR_SHUF_MASK_AVX: [i8; 32] = [
+    2, 1, 0, 3, 6, 5, 4, 7, 10, 9, 8, 11, 14, 13, 12, 15, // lower lane
+    2, 1, 0, 3, 6, 5, 4, 7, 10, 9, 8, 11, 14, 13, 12, 15, // upper lane
+];
+
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn swap_br_impl_v3(_token: X64V3Token, row: &mut [u8]) {
+    let mask = safe_unaligned_simd::x86_64::_mm256_loadu_si256(&BR_SHUF_MASK_AVX);
+    let n = row.len();
+    let mut i = 0;
+    while i + 32 <= n {
+        let arr: &[u8; 32] = row[i..i + 32].try_into().unwrap();
+        let v = safe_unaligned_simd::x86_64::_mm256_loadu_si256(arr);
+        let shuffled = _mm256_shuffle_epi8(v, mask);
+        let out: &mut [u8; 32] = (&mut row[i..i + 32]).try_into().unwrap();
+        safe_unaligned_simd::x86_64::_mm256_storeu_si256(out, shuffled);
+        i += 32;
+    }
+    for v in bytemuck::cast_slice_mut::<u8, u32>(&mut row[i..]) {
+        *v = swap_br_u32(*v);
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[arcane]
+fn copy_swap_br_impl_v3(_token: X64V3Token, src: &[u8], dst: &mut [u8]) {
+    let mask = safe_unaligned_simd::x86_64::_mm256_loadu_si256(&BR_SHUF_MASK_AVX);
+    let n = src.len().min(dst.len());
+    let mut i = 0;
+    // SIMD: 32 bytes (8 pixels) per iteration
+    while i + 32 <= n {
+        let s: &[u8; 32] = src[i..i + 32].try_into().unwrap();
+        let v = safe_unaligned_simd::x86_64::_mm256_loadu_si256(s);
+        let shuffled = _mm256_shuffle_epi8(v, mask);
+        let d: &mut [u8; 32] = (&mut dst[i..i + 32]).try_into().unwrap();
+        safe_unaligned_simd::x86_64::_mm256_storeu_si256(d, shuffled);
+        i += 32;
+    }
+    // Scalar remainder
+    for (s, d) in bytemuck::cast_slice::<u8, u32>(&src[i..])
+        .iter()
+        .zip(bytemuck::cast_slice_mut::<u8, u32>(&mut dst[i..]))
+    {
+        *d = swap_br_u32(*s);
+    }
+}
+
+// --- ARM NEON (arm_v2 tier) — vqtbl1q_u8: 4 pixels / 16 bytes per iteration ---
+
+#[cfg(target_arch = "aarch64")]
+#[arcane]
+fn swap_br_impl_arm_v2(_token: Arm64V2Token, row: &mut [u8]) {
+    use std::arch::aarch64::vqtbl1q_u8;
+
+    let mask_bytes: [u8; 16] = [2, 1, 0, 3, 6, 5, 4, 7, 10, 9, 8, 11, 14, 13, 12, 15];
+    let mask = safe_unaligned_simd::aarch64::vld1q_u8(&mask_bytes);
+    let n = row.len();
+    let mut i = 0;
+    while i + 16 <= n {
+        let arr: &[u8; 16] = row[i..i + 16].try_into().unwrap();
+        let v = safe_unaligned_simd::aarch64::vld1q_u8(arr);
+        let shuffled = vqtbl1q_u8(v, mask);
+        let out: &mut [u8; 16] = (&mut row[i..i + 16]).try_into().unwrap();
+        safe_unaligned_simd::aarch64::vst1q_u8(out, shuffled);
+        i += 16;
+    }
+    for v in bytemuck::cast_slice_mut::<u8, u32>(&mut row[i..]) {
+        *v = swap_br_u32(*v);
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+#[arcane]
+fn copy_swap_br_impl_arm_v2(_token: Arm64V2Token, src: &[u8], dst: &mut [u8]) {
+    use std::arch::aarch64::vqtbl1q_u8;
+
+    let mask_bytes: [u8; 16] = [2, 1, 0, 3, 6, 5, 4, 7, 10, 9, 8, 11, 14, 13, 12, 15];
+    let mask = safe_unaligned_simd::aarch64::vld1q_u8(&mask_bytes);
+    let n = src.len().min(dst.len());
+    let mut i = 0;
+    while i + 16 <= n {
+        let s: &[u8; 16] = src[i..i + 16].try_into().unwrap();
+        let v = safe_unaligned_simd::aarch64::vld1q_u8(s);
+        let shuffled = vqtbl1q_u8(v, mask);
+        let d: &mut [u8; 16] = (&mut dst[i..i + 16]).try_into().unwrap();
+        safe_unaligned_simd::aarch64::vst1q_u8(d, shuffled);
+        i += 16;
+    }
+    for (s, d) in bytemuck::cast_slice::<u8, u32>(&src[i..])
+        .iter()
+        .zip(bytemuck::cast_slice_mut::<u8, u32>(&mut dst[i..]))
+    {
+        *d = swap_br_u32(*s);
+    }
+}
+
+// --- WASM SIMD128 — i8x16_swizzle: 4 pixels / 16 bytes per iteration ---
+
+#[cfg(target_arch = "wasm32")]
+#[arcane]
+fn swap_br_impl_wasm128(_token: Wasm128Token, row: &mut [u8]) {
+    use std::arch::wasm32::{i8x16, i8x16_swizzle};
+
+    let mask = i8x16(2, 1, 0, 3, 6, 5, 4, 7, 10, 9, 8, 11, 14, 13, 12, 15);
+    let n = row.len();
+    let mut i = 0;
+    while i + 16 <= n {
+        let arr: &[u8; 16] = row[i..i + 16].try_into().unwrap();
+        let v = safe_unaligned_simd::wasm32::v128_load(arr);
+        let shuffled = i8x16_swizzle(v, mask);
+        let out: &mut [u8; 16] = (&mut row[i..i + 16]).try_into().unwrap();
+        safe_unaligned_simd::wasm32::v128_store(out, shuffled);
+        i += 16;
+    }
+    for v in bytemuck::cast_slice_mut::<u8, u32>(&mut row[i..]) {
+        *v = swap_br_u32(*v);
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[arcane]
+fn copy_swap_br_impl_wasm128(_token: Wasm128Token, src: &[u8], dst: &mut [u8]) {
+    use std::arch::wasm32::{i8x16, i8x16_swizzle};
+
+    let mask = i8x16(2, 1, 0, 3, 6, 5, 4, 7, 10, 9, 8, 11, 14, 13, 12, 15);
+    let n = src.len().min(dst.len());
+    let mut i = 0;
+    while i + 16 <= n {
+        let s: &[u8; 16] = src[i..i + 16].try_into().unwrap();
+        let v = safe_unaligned_simd::wasm32::v128_load(s);
+        let shuffled = i8x16_swizzle(v, mask);
+        let d: &mut [u8; 16] = (&mut dst[i..i + 16]).try_into().unwrap();
+        safe_unaligned_simd::wasm32::v128_store(d, shuffled);
+        i += 16;
+    }
+    for (s, d) in bytemuck::cast_slice::<u8, u32>(&src[i..])
+        .iter()
+        .zip(bytemuck::cast_slice_mut::<u8, u32>(&mut dst[i..]))
+    {
+        *d = swap_br_u32(*s);
     }
 }
