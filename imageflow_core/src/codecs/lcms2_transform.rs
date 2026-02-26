@@ -8,8 +8,7 @@ use std::cell::RefCell;
 
 static PROFILE_TRANSFORMS: TinyLru<Transform<u32, u32, ThreadContext, DisallowCache>> =
     TinyLru::new(9);
-static GRAY_TRANSFORMS: TinyLru<Transform<u8, u32, ThreadContext, DisallowCache>> =
-    TinyLru::new(4);
+static GRAY_TRANSFORMS: TinyLru<Transform<u8, u32, ThreadContext, DisallowCache>> = TinyLru::new(4);
 static GAMA_TRANSFORMS: TinyLru<Transform<u32, u32, ThreadContext, DisallowCache>> =
     TinyLru::new(4);
 
@@ -78,9 +77,7 @@ impl Lcms2TransformCache {
             SourceProfile::IccProfile(bytes) => {
                 Self::transform_icc(frame, bytes, PixelFormat::BGRA_8, PixelFormat::BGRA_8)
             }
-            SourceProfile::IccProfileGray(bytes) => {
-                Self::transform_icc_gray(frame, bytes)
-            }
+            SourceProfile::IccProfileGray(bytes) => Self::transform_icc_gray(frame, bytes),
             SourceProfile::CmykIcc(bytes) => {
                 Self::transform_icc(frame, bytes, PixelFormat::CMYK_8_REV, PixelFormat::BGRA_8)
             }
@@ -121,10 +118,7 @@ impl Lcms2TransformCache {
         )
     }
 
-    fn transform_icc_gray(
-        frame: &mut BitmapWindowMut<u8>,
-        icc_bytes: &[u8],
-    ) -> Result<()> {
+    fn transform_icc_gray(frame: &mut BitmapWindowMut<u8>, icc_bytes: &[u8]) -> Result<()> {
         let hash = Self::hash_icc(icc_bytes, PixelFormat::GRAY_8, PixelFormat::BGRA_8);
         GRAY_TRANSFORMS.try_get_or_create_apply(
             hash,

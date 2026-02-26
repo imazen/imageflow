@@ -184,6 +184,10 @@ fn corpus_builder_cms_inventory() {
     eprintln!("  moxcms-only fail: {moxcms_only_fail}");
     eprintln!("  lcms2-only fail: {lcms2_only_fail}");
     eprintln!("  both fail: {both_fail}");
-    eprintln!("Elapsed: {:.1}s ({:.0} files/s)", elapsed.as_secs_f64(), total as f64 / elapsed.as_secs_f64());
+    eprintln!(
+        "Elapsed: {:.1}s ({:.0} files/s)",
+        elapsed.as_secs_f64(),
+        total as f64 / elapsed.as_secs_f64()
+    );
     eprintln!("Inventory written to {INVENTORY_PATH}");
 }
