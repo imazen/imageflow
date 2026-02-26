@@ -19,9 +19,11 @@ pub mod graphics;
 
 #[doc(hidden)]
 pub mod bench_helpers {
-    pub use crate::codecs::moxcms_transform::{
-        bench_copy_swap_br, bench_copy_swap_br_scalar, bench_swap_br_inplace,
-        bench_swap_br_inplace_scalar,
+    pub use crate::graphics::swizzle::{
+        bench_copy_swap_br, bench_copy_swap_br_scalar, bench_gray_alpha_to_bgra,
+        bench_gray_alpha_to_bgra_scalar, bench_gray_to_bgra, bench_gray_to_bgra_scalar,
+        bench_rgb_to_bgra, bench_rgb_to_bgra_scalar, bench_set_alpha_to_255,
+        bench_set_alpha_to_255_scalar, bench_swap_br_inplace, bench_swap_br_inplace_scalar,
     };
 }
 mod io;

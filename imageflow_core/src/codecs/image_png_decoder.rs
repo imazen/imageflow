@@ -7,9 +7,8 @@ use crate::{Context, ErrorKind, FlowError, Result};
 use imageflow_helpers::preludes::from_std::*;
 use imageflow_types as s;
 //use crate::for_other_imageflow_crates::preludes::external_without_std::*;
-use crate::codecs::moxcms_transform::MoxcmsTransformCache;
 use crate::codecs::source_profile::SourceProfile;
-use crate::graphics::bitmaps::BitmapRowAccess;
+use rgb::alt::BGRA8;
 
 pub struct ImagePngDecoder {
     reader: png::Reader<IoProxy>,
@@ -151,57 +150,40 @@ impl Decoder for ImagePngDecoder {
         match output_info.color_type {
             png::ColorType::Rgb => {
                 for row_ix in 0..h {
-                    let from = buffer.row_mut_rgb8(row_ix, stride).unwrap();
-                    let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
-                    from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
-                        to.r = from.r;
-                        to.g = from.g;
-                        to.b = from.b;
-                        to.a = 255;
-                    });
+                    let src = &buffer[row_ix * stride..row_ix * stride + w * 3];
+                    let dst = bytemuck::cast_slice_mut::<BGRA8, u8>(
+                        canvas.row_mut_bgra(row_ix as u32).unwrap(),
+                    );
+                    crate::graphics::swizzle::rgb_to_bgra(src, dst);
                 }
             }
             png::ColorType::Rgba => {
                 for row_ix in 0..h {
-                    let from = buffer.row_mut_rgba8(row_ix, stride).unwrap();
-                    let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
-                    from.iter_mut().zip(to.iter_mut()).for_each(|(from, to)| {
-                        to.r = from.r;
-                        to.g = from.g;
-                        to.b = from.b;
-                        to.a = from.a;
-                    });
+                    let src = &buffer[row_ix * stride..row_ix * stride + w * 4];
+                    let dst = bytemuck::cast_slice_mut::<BGRA8, u8>(
+                        canvas.row_mut_bgra(row_ix as u32).unwrap(),
+                    );
+                    crate::graphics::swizzle::copy_swap_br(src, dst);
                 }
             }
-
             png::ColorType::Grayscale => {
                 for row_ix in 0..h {
-                    let from = buffer.row_mut_gray8(row_ix, stride).unwrap();
-                    let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
-                    from.iter_mut().zip(to.iter_mut()).for_each(|(f, to)| {
-                        // TODO(rgb-0.8.91): Can simplify to f.v when Gray has named field
-                        let v = f.value();
-                        to.r = v;
-                        to.g = v;
-                        to.b = v;
-                        to.a = 255;
-                    });
+                    let src = &buffer[row_ix * stride..row_ix * stride + w];
+                    let dst = bytemuck::cast_slice_mut::<BGRA8, u8>(
+                        canvas.row_mut_bgra(row_ix as u32).unwrap(),
+                    );
+                    crate::graphics::swizzle::gray_to_bgra(src, dst);
                 }
             }
             png::ColorType::GrayscaleAlpha => {
                 for row_ix in 0..h {
-                    let start = row_ix * stride;
-                    let row = &buffer[start..start + stride];
-                    let to = canvas.row_mut_bgra(row_ix as u32).unwrap();
-                    row.chunks_exact(2).zip(to.iter_mut()).for_each(|(ga, to)| {
-                        to.r = ga[0];
-                        to.g = ga[0];
-                        to.b = ga[0];
-                        to.a = ga[1];
-                    });
+                    let src = &buffer[row_ix * stride..row_ix * stride + w * 2];
+                    let dst = bytemuck::cast_slice_mut::<BGRA8, u8>(
+                        canvas.row_mut_bgra(row_ix as u32).unwrap(),
+                    );
+                    crate::graphics::swizzle::gray_alpha_to_bgra(src, dst);
                 }
             }
-
             _ => panic!("png decoder bug: indexed image was not expanded despite flags."),
         }
 
