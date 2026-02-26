@@ -383,15 +383,22 @@ impl MoxcmsTransformCache {
 
     fn hash_icc_bytes(bytes: &[u8], is_gray: bool) -> u64 {
         use std::hash::Hasher;
-        let base = if bytes.len() > 80 {
-            // Skip the 80-byte ICC header (variable timestamp/tool info, stable data after)
-            imageflow_helpers::hashing::hash_64(&bytes[80..])
+        let mut h = twox_hash::XxHash64::with_seed(HASH_SEED);
+        // ICC header (128 bytes): selectively hash mathematical fields, skip metadata.
+        // Bytes 8-23: version, deviceClass, colorSpace, PCS (affect transform interpretation)
+        // Bytes 64-79: renderingIntent, illuminant (affect color math)
+        // Skip: size, cmmId, date, magic, platform, flags, manufacturer, model,
+        //        attributes, creator, profileID, reserved (metadata only)
+        if bytes.len() >= 128 {
+            h.write(&bytes[8..24]);
+            h.write(&bytes[64..80]);
+            h.write(&bytes[128..]);
         } else {
-            imageflow_helpers::hashing::hash_64(bytes)
-        };
+            // Profile too short for standard header — hash everything
+            h.write(bytes);
+        }
         // Mix in is_gray flag to avoid collisions between RGB and Gray transforms
         // for the same ICC profile bytes
-        let mut h = twox_hash::XxHash64::with_seed(base);
         h.write_u8(is_gray as u8);
         h.finish()
     }
