@@ -297,9 +297,11 @@ impl MzDec {
 
         let is_cmyk =
             jpeg_color_space == mozjpeg_sys::JCS_CMYK || jpeg_color_space == mozjpeg_sys::JCS_YCCK;
+        let is_grayscale = jpeg_color_space == mozjpeg_sys::JCS_GRAYSCALE;
 
-        // Note: grayscale JPEGs are decoded to BGRA by mozjpeg (JCS_EXT_BGRA),
-        // so their ICC profiles are handled as RGB, not Gray — no IccProfileGray needed.
+        // Grayscale JPEGs are decoded to BGRA by mozjpeg (JCS_EXT_BGRA),
+        // but we still need IccProfileGray so the CMS backend knows to use
+        // GrayAlpha→RGBA transform layout instead of RGBA→RGBA.
         if !is_cmyk {
             self.codec_info.out_color_space = mozjpeg_sys::JCS_EXT_BGRA; //Why not BGRX? Maybe because it doesn't clear the alpha values
         }
@@ -369,7 +371,15 @@ impl MzDec {
                 crate::codecs::source_profile::SourceProfile::CmykIcc(CMYK_PROFILE.to_vec())
             }
         } else if let Some(ref icc_bytes) = self.color_profile {
-            crate::codecs::source_profile::SourceProfile::IccProfile(icc_bytes.clone())
+            // Use IccProfileGray when the ICC profile declares Gray color space
+            // (bytes 16..20 == b"GRAY"). This handles both true grayscale JPEGs
+            // and YCbCr JPEGs with an embedded Gray ICC profile.
+            let icc_is_gray = icc_bytes.len() >= 20 && &icc_bytes[16..20] == b"GRAY";
+            if is_grayscale || icc_is_gray {
+                crate::codecs::source_profile::SourceProfile::IccProfileGray(icc_bytes.clone())
+            } else {
+                crate::codecs::source_profile::SourceProfile::IccProfile(icc_bytes.clone())
+            }
         } else {
             crate::codecs::source_profile::SourceProfile::Srgb
         };

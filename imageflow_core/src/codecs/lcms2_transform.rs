@@ -8,6 +8,8 @@ use std::cell::RefCell;
 
 static PROFILE_TRANSFORMS: TinyLru<Transform<u32, u32, ThreadContext, DisallowCache>> =
     TinyLru::new(9);
+static GRAY_TRANSFORMS: TinyLru<Transform<u8, u32, ThreadContext, DisallowCache>> =
+    TinyLru::new(4);
 static GAMA_TRANSFORMS: TinyLru<Transform<u32, u32, ThreadContext, DisallowCache>> =
     TinyLru::new(4);
 
@@ -77,7 +79,7 @@ impl Lcms2TransformCache {
                 Self::transform_icc(frame, bytes, PixelFormat::BGRA_8, PixelFormat::BGRA_8)
             }
             SourceProfile::IccProfileGray(bytes) => {
-                Self::transform_icc(frame, bytes, PixelFormat::GRAY_8, PixelFormat::BGRA_8)
+                Self::transform_icc_gray(frame, bytes)
             }
             SourceProfile::CmykIcc(bytes) => {
                 Self::transform_icc(frame, bytes, PixelFormat::CMYK_8_REV, PixelFormat::BGRA_8)
@@ -117,6 +119,57 @@ impl Lcms2TransformCache {
             || Self::create_icc_transform(icc_bytes, input_pixel_format, output_pixel_format),
             |t| Self::apply_transform(frame, t),
         )
+    }
+
+    fn transform_icc_gray(
+        frame: &mut BitmapWindowMut<u8>,
+        icc_bytes: &[u8],
+    ) -> Result<()> {
+        let hash = Self::hash_icc(icc_bytes, PixelFormat::GRAY_8, PixelFormat::BGRA_8);
+        GRAY_TRANSFORMS.try_get_or_create_apply(
+            hash,
+            || Self::create_icc_transform_gray(icc_bytes),
+            |t| Self::apply_gray_transform(frame, t),
+        )
+    }
+
+    fn create_icc_transform_gray(
+        icc_bytes: &[u8],
+    ) -> Result<Transform<u8, u32, ThreadContext, DisallowCache>> {
+        let srgb = Profile::new_srgb_context(Self::create_thread_context());
+        let p = Profile::new_icc_context(Self::create_thread_context(), icc_bytes)
+            .map_err(|e| Self::get_lcms_error(e).at(here!()))?;
+
+        Transform::new_flags_context(
+            Self::create_thread_context(),
+            &p,
+            PixelFormat::GRAY_8,
+            &srgb,
+            PixelFormat::BGRA_8,
+            Intent::Perceptual,
+            Flags::NO_CACHE,
+        )
+        .map_err(|e| Self::get_lcms_error(e).at(here!()))
+    }
+
+    fn apply_gray_transform(
+        frame: &mut BitmapWindowMut<u8>,
+        transform: &Transform<u8, u32, ThreadContext, DisallowCache>,
+    ) {
+        let w = frame.w() as usize;
+        let mut gray_buf = vec![0u8; w];
+        let mut bgra_buf = vec![0u32; w];
+        for mut line in frame.scanlines_u32().unwrap() {
+            // Extract gray value (B channel) from each BGRA pixel.
+            // Mozjpeg decodes grayscale as [gray, gray, gray, 255] in BGRA order.
+            let row = line.row();
+            for (i, &px) in row.iter().enumerate() {
+                gray_buf[i] = (px & 0xFF) as u8;
+            }
+            // GRAY_8 → BGRA_8 transform
+            transform.transform_pixels(&gray_buf, &mut bgra_buf);
+            line.row_mut().copy_from_slice(&bgra_buf);
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
