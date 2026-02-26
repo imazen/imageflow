@@ -120,6 +120,7 @@ fn run_batch(label: &str, dir: &Path) -> Option<BatchResult> {
     let mut error_counts: std::collections::BTreeMap<String, u64> =
         std::collections::BTreeMap::new();
     for (i, path) in files.iter().enumerate() {
+        eprintln!("[{label}] FILE: {}", path.display());
         match process_file(path) {
             Ok(()) => {
                 ok_count.fetch_add(1, Ordering::Relaxed);

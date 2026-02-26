@@ -192,4 +192,121 @@ impl SourceProfile {
     pub fn is_srgb(&self) -> bool {
         matches!(self, SourceProfile::Srgb)
     }
+
+    /// Human-readable description of the profile for diagnostics.
+    pub fn describe(&self) -> String {
+        match self {
+            SourceProfile::Srgb => "sRGB".to_string(),
+            SourceProfile::Cicp { color_primaries, transfer_characteristics, .. } => {
+                format!("CICP(cp={color_primaries},tc={transfer_characteristics})")
+            }
+            SourceProfile::IccProfile(bytes)
+            | SourceProfile::IccProfileGray(bytes)
+            | SourceProfile::CmykIcc(bytes) => {
+                let kind = match self {
+                    SourceProfile::IccProfileGray(_) => "Gray",
+                    SourceProfile::CmykIcc(_) => "CMYK",
+                    _ => "RGB",
+                };
+                describe_icc_bytes(bytes, kind)
+            }
+            SourceProfile::GammaPrimaries { gamma, white_x, white_y, .. } => {
+                format!("gAMA({gamma:.5})+cHRM(wp={white_x:.4},{white_y:.4})")
+            }
+        }
+    }
+}
+
+/// Extract a human-readable description from raw ICC profile bytes.
+fn describe_icc_bytes(bytes: &[u8], kind: &str) -> String {
+    if bytes.len() < 132 {
+        return format!("ICC-{kind}({} bytes, too short)", bytes.len());
+    }
+    let version_major = bytes[8];
+    let version_minor = bytes[9] >> 4;
+    let class = std::str::from_utf8(&bytes[12..16]).unwrap_or("????");
+    let pcs = std::str::from_utf8(&bytes[20..24]).unwrap_or("????");
+
+    // Try to extract 'desc' tag text
+    let tag_count = u32::from_be_bytes([bytes[128], bytes[129], bytes[130], bytes[131]]) as usize;
+    let mut desc_text = None;
+    for i in 0..tag_count.min(50) {
+        let off = 132 + i * 12;
+        if off + 12 > bytes.len() {
+            break;
+        }
+        let sig = &bytes[off..off + 4];
+        if sig != b"desc" {
+            continue;
+        }
+        let tag_off =
+            u32::from_be_bytes([bytes[off + 4], bytes[off + 5], bytes[off + 6], bytes[off + 7]])
+                as usize;
+        let tag_len =
+            u32::from_be_bytes([bytes[off + 8], bytes[off + 9], bytes[off + 10], bytes[off + 11]])
+                as usize;
+        if tag_off + tag_len > bytes.len() || tag_len < 12 {
+            break;
+        }
+        let tag_type = &bytes[tag_off..tag_off + 4];
+        if tag_type == b"desc" && tag_off + 12 <= bytes.len() {
+            // 'desc' type: 4-byte sig, 4-byte reserved, 4-byte string length, then ASCII
+            let str_len = u32::from_be_bytes([
+                bytes[tag_off + 8],
+                bytes[tag_off + 9],
+                bytes[tag_off + 10],
+                bytes[tag_off + 11],
+            ]) as usize;
+            let str_start = tag_off + 12;
+            let str_end = (str_start + str_len.saturating_sub(1)).min(bytes.len());
+            if str_start < str_end {
+                desc_text = Some(
+                    String::from_utf8_lossy(&bytes[str_start..str_end])
+                        .chars()
+                        .take(60)
+                        .collect::<String>(),
+                );
+            }
+        } else if tag_type == b"mluc" && tag_off + 28 <= bytes.len() {
+            // 'mluc' type: multi-localized Unicode
+            let rec_count = u32::from_be_bytes([
+                bytes[tag_off + 8],
+                bytes[tag_off + 9],
+                bytes[tag_off + 10],
+                bytes[tag_off + 11],
+            ]) as usize;
+            if rec_count > 0 && tag_off + 24 <= bytes.len() {
+                let str_len = u32::from_be_bytes([
+                    bytes[tag_off + 16],
+                    bytes[tag_off + 17],
+                    bytes[tag_off + 18],
+                    bytes[tag_off + 19],
+                ]) as usize;
+                let str_off = u32::from_be_bytes([
+                    bytes[tag_off + 20],
+                    bytes[tag_off + 21],
+                    bytes[tag_off + 22],
+                    bytes[tag_off + 23],
+                ]) as usize;
+                let abs_start = tag_off + str_off;
+                let abs_end = (abs_start + str_len).min(bytes.len());
+                if abs_start + 1 < abs_end {
+                    // UTF-16BE
+                    let u16s: Vec<u16> = bytes[abs_start..abs_end]
+                        .chunks_exact(2)
+                        .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                        .collect();
+                    desc_text =
+                        Some(String::from_utf16_lossy(&u16s).chars().take(60).collect::<String>());
+                }
+            }
+        }
+        break;
+    }
+
+    let desc_part = desc_text.map(|d| format!(" \"{d}\"")).unwrap_or_default();
+    format!(
+        "ICC-{kind}(v{version_major}.{version_minor},{class},PCS={pcs},{}B){desc_part}",
+        bytes.len()
+    )
 }
