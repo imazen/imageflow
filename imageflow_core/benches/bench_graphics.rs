@@ -520,8 +520,39 @@ fn benchmark_full_scale_pipeline(ctx: &mut Criterion) {
     }
 }
 
+fn benchmark_swizzle(ctx: &mut Criterion) {
+    // Row widths: typical JPEG (1920), 4K (3840), 8K (7680)
+    let widths: &[usize] = &[640, 1920, 3840, 7680];
+
+    for &w in widths {
+        let row_bytes = w * 4;
+        let mut row = vec![0xABu8; row_bytes];
+        let mut dst = vec![0u8; row_bytes];
+        let src = vec![0xCDu8; row_bytes];
+
+        let mut group = ctx.benchmark_group(format!("swizzle_br w={w}"));
+        group.throughput(criterion::Throughput::Bytes(row_bytes as u64));
+        group.measurement_time(Duration::from_secs(3));
+
+        group.bench_function("inplace", |b| {
+            b.iter(|| {
+                imageflow_core::bench_helpers::bench_swap_br_inplace(&mut row);
+            })
+        });
+
+        group.bench_function("copy", |b| {
+            b.iter(|| {
+                imageflow_core::bench_helpers::bench_copy_swap_br(&src, &mut dst);
+            })
+        });
+
+        group.finish();
+    }
+}
+
 criterion_group!(
     benches,
+    benchmark_swizzle,
     benchmark_color_conversion,
     benchmark_row_operations,
     benchmark_horizontal_scale,

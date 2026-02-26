@@ -426,6 +426,17 @@ fn copy_swap_br(src: &[u8], dst: &mut [u8]) {
     incant!(copy_swap_br_impl(src, dst), [v3, arm_v2, wasm128, scalar]);
 }
 
+/// Benchmark entry points — not part of the public API.
+#[doc(hidden)]
+pub fn bench_swap_br_inplace(row: &mut [u8]) {
+    swap_br_inplace(row);
+}
+
+#[doc(hidden)]
+pub fn bench_copy_swap_br(src: &[u8], dst: &mut [u8]) {
+    copy_swap_br(src, dst);
+}
+
 // --- Scalar fallback ---
 
 fn swap_br_impl_scalar(_token: ScalarToken, row: &mut [u8]) {

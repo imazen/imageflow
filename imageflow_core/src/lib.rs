@@ -16,6 +16,11 @@ mod codecs;
 mod context;
 mod flow;
 pub mod graphics;
+
+#[doc(hidden)]
+pub mod bench_helpers {
+    pub use crate::codecs::moxcms_transform::{bench_copy_swap_br, bench_swap_br_inplace};
+}
 mod io;
 pub mod json;
 
