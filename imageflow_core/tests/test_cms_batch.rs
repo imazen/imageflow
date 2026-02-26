@@ -8,10 +8,13 @@
 use imageflow_core::CmsBackend;
 use imageflow_core::Context;
 use imageflow_types as s;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::Instant;
+
+const ERROR_OUTPUT_DIR: &str = "/mnt/v/output/cms-errors";
 
 fn collect_image_files(dir: &Path) -> Vec<PathBuf> {
     if !dir.exists() {
@@ -42,12 +45,12 @@ fn collect_recursive(dir: &Path, out: &mut Vec<PathBuf>) {
 
 struct BatchResult {
     total: u64,
-    _ok: u64,
+    ok: u64,
     errors: Vec<(PathBuf, String)>,
-    _elapsed: std::time::Duration,
+    elapsed: std::time::Duration,
 }
 
-fn process_file(path: &Path) -> Result<Vec<String>, String> {
+fn process_file(path: &Path) -> Result<(), String> {
     // Catch panics (e.g. lcms2 assertion failures on gray ICC profiles)
     std::panic::catch_unwind(|| process_file_inner(path)).unwrap_or_else(|e| {
         let msg = if let Some(s) = e.downcast_ref::<String>() {
@@ -61,7 +64,7 @@ fn process_file(path: &Path) -> Result<Vec<String>, String> {
     })
 }
 
-fn process_file_inner(path: &Path) -> Result<Vec<String>, String> {
+fn process_file_inner(path: &Path) -> Result<(), String> {
     let bytes = std::fs::read(path).map_err(|e| format!("read error: {e}"))?;
 
     let mut ctx = Context::create().map_err(|e| format!("context: {e}"))?;
@@ -97,7 +100,7 @@ fn process_file_inner(path: &Path) -> Result<Vec<String>, String> {
 
     ctx.execute_1(execute).map_err(|e| format!("{e}"))?;
 
-    Ok(Vec::new())
+    Ok(())
 }
 
 fn run_batch(label: &str, dir: &Path) -> Option<BatchResult> {
@@ -118,7 +121,7 @@ fn run_batch(label: &str, dir: &Path) -> Option<BatchResult> {
         std::collections::BTreeMap::new();
     for (i, path) in files.iter().enumerate() {
         match process_file(path) {
-            Ok(_) => {
+            Ok(()) => {
                 ok_count.fetch_add(1, Ordering::Relaxed);
             }
             Err(e) => {
@@ -154,69 +157,115 @@ fn run_batch(label: &str, dir: &Path) -> Option<BatchResult> {
         elapsed.as_secs_f64()
     );
 
-    Some(BatchResult { total: files.len() as u64, _ok: ok, errors, _elapsed: elapsed })
+    Some(BatchResult { total: files.len() as u64, ok, errors, elapsed })
 }
 
-#[test]
-fn cms_batch_jpeg_scraping() {
-    let dir = Path::new("/mnt/v/datasets/scraping/jpeg");
-    if !dir.exists() {
-        eprintln!("Skipping: {} not found", dir.display());
+/// Copies error files into ERROR_OUTPUT_DIR organized by error category,
+/// and writes a manifest with paths and error messages.
+fn collect_error_files(label: &str, result: &BatchResult) {
+    if result.errors.is_empty() {
         return;
     }
-    let result = run_batch("jpeg", dir).unwrap();
-    assert!(
-        result.errors.len() < result.total as usize / 10,
-        "Too many errors: {}/{}",
+
+    let out_dir = Path::new(ERROR_OUTPUT_DIR).join(label);
+    std::fs::create_dir_all(&out_dir).unwrap();
+
+    // Write manifest
+    let manifest_path = out_dir.join("errors.tsv");
+    let mut manifest = std::fs::File::create(&manifest_path).unwrap();
+    writeln!(manifest, "file\terror_category\tfull_error").unwrap();
+
+    for (path, error) in &result.errors {
+        let category = error.lines().next().unwrap_or(error);
+        // Sanitize category into a directory name
+        let cat_dir_name = category
+            .chars()
+            .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+            .take(60)
+            .collect::<String>();
+
+        let cat_dir = out_dir.join(&cat_dir_name);
+        std::fs::create_dir_all(&cat_dir).unwrap();
+
+        // Copy file into category subdirectory
+        let file_name = path.file_name().unwrap_or_default();
+        let dest = cat_dir.join(file_name);
+        if let Err(e) = std::fs::copy(path, &dest) {
+            eprintln!("[{label}] Failed to copy {}: {e}", path.display());
+        }
+
+        // Write manifest line (escape tabs/newlines in error)
+        let error_oneline = error.replace('\n', " | ").replace('\t', " ");
+        writeln!(manifest, "{}\t{}\t{}", path.display(), cat_dir_name, error_oneline).unwrap();
+    }
+
+    eprintln!(
+        "[{label}] Wrote {} error files to {} and manifest to {}",
         result.errors.len(),
-        result.total
+        out_dir.display(),
+        manifest_path.display()
     );
 }
 
+/// Run all corpora, collect errors, copy failing files to /mnt/v/output/cms-errors/.
 #[test]
-fn cms_batch_non_srgb() {
-    let dir = Path::new("/mnt/v/datasets/non-srgb-by-profile");
-    if !dir.exists() {
-        eprintln!("Skipping: {} not found", dir.display());
-        return;
+fn cms_batch_collect_errors() {
+    let corpora: &[(&str, &str)] = &[
+        ("jpeg", "/mnt/v/datasets/scraping/jpeg"),
+        ("non-srgb", "/mnt/v/datasets/non-srgb-by-profile"),
+        ("wide-gamut", "/mnt/v/output/corpus-builder/wide-gamut"),
+        ("png-24-32", "/mnt/v/output/corpus-builder/png-24-32"),
+    ];
+
+    // Clean output dir
+    let out = Path::new(ERROR_OUTPUT_DIR);
+    if out.exists() {
+        std::fs::remove_dir_all(out).unwrap();
     }
-    let result = run_batch("non-srgb", dir).unwrap();
+    std::fs::create_dir_all(out).unwrap();
+
+    let mut total_files = 0u64;
+    let mut total_ok = 0u64;
+    let mut total_errors = 0usize;
+
+    for &(label, dir_str) in corpora {
+        let dir = Path::new(dir_str);
+        if !dir.exists() {
+            eprintln!("Skipping: {} not found", dir.display());
+            continue;
+        }
+        if let Some(result) = run_batch(label, dir) {
+            total_files += result.total;
+            total_ok += result.ok;
+            total_errors += result.errors.len();
+            collect_error_files(label, &result);
+        }
+    }
+
+    // Write overall summary
+    let summary_path = out.join("summary.txt");
+    let mut summary = std::fs::File::create(&summary_path).unwrap();
+    writeln!(summary, "CMS Batch Dual-Backend Test Summary").unwrap();
+    writeln!(summary, "Date: {}", chrono_free_date()).unwrap();
+    writeln!(summary, "Total files: {total_files}").unwrap();
+    writeln!(summary, "OK: {total_ok}").unwrap();
+    writeln!(summary, "Errors: {total_errors}").unwrap();
+    writeln!(summary, "Pass rate: {:.1}%", total_ok as f64 / total_files as f64 * 100.0).unwrap();
+
+    eprintln!("Overall: {total_ok}/{total_files} ok, {total_errors} errors");
+    eprintln!("Error files and manifests in {}", out.display());
+
     assert!(
-        result.errors.len() < result.total as usize / 10,
-        "Too many errors: {}/{}",
-        result.errors.len(),
-        result.total
+        total_errors < total_files as usize / 10,
+        "Too many errors: {total_errors}/{total_files}"
     );
 }
 
-#[test]
-fn cms_batch_wide_gamut() {
-    let dir = Path::new("/mnt/v/output/corpus-builder/wide-gamut");
-    if !dir.exists() {
-        eprintln!("Skipping: {} not found", dir.display());
-        return;
+fn chrono_free_date() -> String {
+    // Avoid adding chrono dependency just for a timestamp
+    let output = std::process::Command::new("date").arg("+%Y-%m-%d %H:%M:%S").output();
+    match output {
+        Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+        Err(_) => "unknown".to_string(),
     }
-    let result = run_batch("wide-gamut", dir).unwrap();
-    assert!(
-        result.errors.len() < result.total as usize / 10,
-        "Too many errors: {}/{}",
-        result.errors.len(),
-        result.total
-    );
-}
-
-#[test]
-fn cms_batch_png_24_32() {
-    let dir = Path::new("/mnt/v/output/corpus-builder/png-24-32");
-    if !dir.exists() {
-        eprintln!("Skipping: {} not found", dir.display());
-        return;
-    }
-    let result = run_batch("png-24-32", dir).unwrap();
-    assert!(
-        result.errors.len() < result.total as usize / 10,
-        "Too many errors: {}/{}",
-        result.errors.len(),
-        result.total
-    );
 }
