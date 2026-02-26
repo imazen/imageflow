@@ -123,11 +123,17 @@ fn compare_results(moxcms: &[u8], lcms2: &[u8], max_diff: u8, is_cmyk: bool) {
     let mut divergent_pixels = 0u64;
     let total_pixels = moxcms.len() / 4;
     let profile_type = if is_cmyk { "CMYK" } else { "RGB" };
+    let mut first_divergent: Option<(usize, [u8; 4], [u8; 4])> = None;
+    // Track per-channel max divergence
+    let mut max_per_channel = [0u8; 4];
 
-    for (m_pixel, l_pixel) in moxcms.chunks_exact(4).zip(lcms2.chunks_exact(4)) {
+    for (i, (m_pixel, l_pixel)) in moxcms.chunks_exact(4).zip(lcms2.chunks_exact(4)).enumerate() {
         let mut pixel_diverges = false;
-        for (a, b) in m_pixel.iter().zip(l_pixel.iter()) {
+        for (ch, (a, b)) in m_pixel.iter().zip(l_pixel.iter()).enumerate() {
             let diff = a.abs_diff(*b);
+            if diff > max_per_channel[ch] {
+                max_per_channel[ch] = diff;
+            }
             if diff > max_diff {
                 pixel_diverges = true;
                 if diff > max_observed {
@@ -137,13 +143,27 @@ fn compare_results(moxcms: &[u8], lcms2: &[u8], max_diff: u8, is_cmyk: bool) {
         }
         if pixel_diverges {
             divergent_pixels += 1;
+            if first_divergent.is_none() {
+                let mut m = [0u8; 4];
+                let mut l = [0u8; 4];
+                m.copy_from_slice(m_pixel);
+                l.copy_from_slice(l_pixel);
+                first_divergent = Some((i, m, l));
+            }
         }
     }
 
     if divergent_pixels > 0 {
         eprintln!(
-            "[CMS Both] WARNING: {} {}/{} pixels diverge by more than {} (max observed: {})",
-            profile_type, divergent_pixels, total_pixels, max_diff, max_observed
+            "[CMS Both] WARNING: {} {}/{} pixels diverge by more than {} (max observed: {}, per-channel max: B={} G={} R={} A={})",
+            profile_type, divergent_pixels, total_pixels, max_diff, max_observed,
+            max_per_channel[0], max_per_channel[1], max_per_channel[2], max_per_channel[3]
         );
+        if let Some((idx, m, l)) = first_divergent {
+            eprintln!(
+                "[CMS Both]   first divergent pixel #{}: moxcms=[{},{},{},{}] lcms2=[{},{},{},{}]",
+                idx, m[0], m[1], m[2], m[3], l[0], l[1], l[2], l[3]
+            );
+        }
     }
 }
