@@ -1,23 +1,21 @@
 use crate::codecs::source_profile::SourceProfile;
+use crate::codecs::tiny_lru::TinyLru;
 use crate::graphics::bitmaps::{BitmapWindowMut, PixelLayout};
 use crate::{ErrorKind, FlowError, Result};
-use dashmap::DashMap;
 use moxcms::{
     curve_from_gamma, Chromaticity, CicpColorPrimaries, CicpProfile, CmsError, ColorPrimaries,
     ColorProfile, DataColorSpace, InPlaceTransformExecutor, Layout, MatrixCoefficients,
     TransferCharacteristics, Transform8BitExecutor, TransformOptions, XyY,
 };
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
 /// Cached transforms keyed by hash of profile parameters.
-static ICC_TRANSFORMS: LazyLock<DashMap<u64, CachedTransform>> =
-    LazyLock::new(|| DashMap::with_capacity(4));
-static GAMA_TRANSFORMS: LazyLock<DashMap<u64, CachedTransform>> =
-    LazyLock::new(|| DashMap::with_capacity(4));
-static CICP_TRANSFORMS: LazyLock<DashMap<u64, CachedTransform>> =
-    LazyLock::new(|| DashMap::with_capacity(4));
-static CMYK_TRANSFORMS: LazyLock<DashMap<u64, Arc<Transform8BitExecutor>>> =
-    LazyLock::new(|| DashMap::with_capacity(2));
+/// TinyLru with LRU eviction — fixed capacity, linear scan (faster than
+/// DashMap for these small sizes), no hash table overhead.
+static ICC_TRANSFORMS: TinyLru<CachedTransform> = TinyLru::new(9);
+static GAMA_TRANSFORMS: TinyLru<CachedTransform> = TinyLru::new(4);
+static CICP_TRANSFORMS: TinyLru<CachedTransform> = TinyLru::new(4);
+static CMYK_TRANSFORMS: TinyLru<Arc<Transform8BitExecutor>> = TinyLru::new(4);
 
 const HASH_SEED: u64 = 0x8ed1_2ad9_483d_28a0;
 
@@ -75,7 +73,7 @@ impl MoxcmsTransformCache {
                     *matrix_coefficients,
                     *full_range,
                 );
-                Self::cached_or_create(&CICP_TRANSFORMS, hash, 4, || {
+                Self::cached_or_create(&CICP_TRANSFORMS, hash, || {
                     Self::create_cicp_transform(
                         *color_primaries,
                         *transfer_characteristics,
@@ -86,13 +84,13 @@ impl MoxcmsTransformCache {
             }
             SourceProfile::IccProfile(bytes) => {
                 let hash = Self::hash_icc_bytes(bytes, false);
-                Self::cached_or_create(&ICC_TRANSFORMS, hash, 9, || {
+                Self::cached_or_create(&ICC_TRANSFORMS, hash, || {
                     Self::create_icc_transform(bytes, false)
                 })
             }
             SourceProfile::IccProfileGray(bytes) => {
                 let hash = Self::hash_icc_bytes(bytes, true);
-                Self::cached_or_create(&ICC_TRANSFORMS, hash, 9, || {
+                Self::cached_or_create(&ICC_TRANSFORMS, hash, || {
                     Self::create_icc_transform(bytes, true)
                 })
             }
@@ -111,7 +109,7 @@ impl MoxcmsTransformCache {
                     *gamma, *white_x, *white_y, *red_x, *red_y, *green_x, *green_y, *blue_x,
                     *blue_y,
                 );
-                Self::cached_or_create(&GAMA_TRANSFORMS, hash, 4, || {
+                Self::cached_or_create(&GAMA_TRANSFORMS, hash, || {
                     Self::create_gamma_primaries_transform(
                         *gamma, *white_x, *white_y, *red_x, *red_y, *green_x, *green_y, *blue_x,
                         *blue_y,
@@ -125,19 +123,15 @@ impl MoxcmsTransformCache {
     }
 
     fn cached_or_create(
-        cache: &DashMap<u64, CachedTransform>,
+        cache: &TinyLru<CachedTransform>,
         hash: u64,
-        max_entries: usize,
         create: impl FnOnce() -> Result<CachedTransform>,
     ) -> Result<CachedTransform> {
-        if let Some(entry) = cache.get(&hash) {
-            return Ok(entry.value().clone());
+        if let Some(cached) = cache.get(hash) {
+            return Ok(cached);
         }
         let transform = create()?;
-        if cache.len() < max_entries {
-            cache.insert(hash, transform.clone());
-        }
-        Ok(transform)
+        Ok(cache.get_or_create(hash, || transform))
     }
 
     fn create_cicp_transform(
@@ -237,8 +231,8 @@ impl MoxcmsTransformCache {
     /// We un-invert, apply the ICC CMYK→RGB transform, and write BGRA output.
     fn transform_cmyk_to_srgb(frame: &mut BitmapWindowMut<u8>, icc_bytes: &[u8]) -> Result<()> {
         let hash = Self::hash_icc_bytes(icc_bytes, false);
-        let transform = if let Some(entry) = CMYK_TRANSFORMS.get(&hash) {
-            entry.value().clone()
+        let transform = if let Some(cached) = CMYK_TRANSFORMS.get(hash) {
+            cached
         } else {
             let src = ColorProfile::new_from_slice(icc_bytes)
                 .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
@@ -253,10 +247,7 @@ impl MoxcmsTransformCache {
                     TransformOptions::default(),
                 )
                 .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
-            if CMYK_TRANSFORMS.len() < 4 {
-                CMYK_TRANSFORMS.insert(hash, t.clone());
-            }
-            t
+            CMYK_TRANSFORMS.get_or_create(hash, || t)
         };
 
         let row_bytes = frame.w() as usize * 4;

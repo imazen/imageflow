@@ -1,17 +1,15 @@
 use crate::codecs::source_profile::SourceProfile;
+use crate::codecs::tiny_lru::TinyLru;
 use crate::errors::{ErrorCategory, ErrorKind, FlowError, Result};
 use crate::graphics::bitmaps::BitmapWindowMut;
-use dashmap::DashMap;
 use imageflow_types::PixelLayout;
 use lcms2::*;
 use std::cell::RefCell;
-use std::sync::*;
 
-static PROFILE_TRANSFORMS: LazyLock<
-    DashMap<u64, Transform<u32, u32, ThreadContext, DisallowCache>>,
-> = LazyLock::new(|| DashMap::with_capacity(4));
-static GAMA_TRANSFORMS: LazyLock<DashMap<u64, Transform<u32, u32, ThreadContext, DisallowCache>>> =
-    LazyLock::new(|| DashMap::with_capacity(4));
+static PROFILE_TRANSFORMS: TinyLru<Transform<u32, u32, ThreadContext, DisallowCache>> =
+    TinyLru::new(9);
+static GAMA_TRANSFORMS: TinyLru<Transform<u32, u32, ThreadContext, DisallowCache>> =
+    TinyLru::new(4);
 
 const HASH_SEED: u64 = 0x8ed1_2ad9_483d_28a0;
 
@@ -112,22 +110,13 @@ impl Lcms2TransformCache {
         output_pixel_format: PixelFormat,
     ) -> Result<()> {
         let hash = Self::hash_icc(icc_bytes, input_pixel_format, output_pixel_format);
-
-        // Cache up to 9 ICC profile transforms
-        if PROFILE_TRANSFORMS.len() > 8 {
-            let transform =
-                Self::create_icc_transform(icc_bytes, input_pixel_format, output_pixel_format)?;
-            Self::apply_transform(frame, &transform);
-            return Ok(());
-        }
-
-        if !PROFILE_TRANSFORMS.contains_key(&hash) {
-            let transform =
-                Self::create_icc_transform(icc_bytes, input_pixel_format, output_pixel_format)?;
-            PROFILE_TRANSFORMS.insert(hash, transform);
-        }
-        Self::apply_transform(frame, &PROFILE_TRANSFORMS.get(&hash).unwrap());
-        Ok(())
+        // try_get_or_create_apply: the closure receives &Transform while the lock
+        // is held, avoiding the need for Clone on lcms2 Transform.
+        PROFILE_TRANSFORMS.try_get_or_create_apply(
+            hash,
+            || Self::create_icc_transform(icc_bytes, input_pixel_format, output_pixel_format),
+            |t| Self::apply_transform(frame, t),
+        )
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -147,42 +136,24 @@ impl Lcms2TransformCache {
         let hash = Self::hash_gama(
             gamma, white_x, white_y, red_x, red_y, green_x, green_y, blue_x, blue_y,
         );
-
-        // Cache up to 4 gama transforms
-        if GAMA_TRANSFORMS.len() > 3 {
-            let transform = Self::create_gama_transform(
-                gamma,
-                white_x,
-                white_y,
-                red_x,
-                red_y,
-                green_x,
-                green_y,
-                blue_x,
-                blue_y,
-                pixel_format,
-            )?;
-            Self::apply_transform(frame, &transform);
-            return Ok(());
-        }
-
-        if !GAMA_TRANSFORMS.contains_key(&hash) {
-            let transform = Self::create_gama_transform(
-                gamma,
-                white_x,
-                white_y,
-                red_x,
-                red_y,
-                green_x,
-                green_y,
-                blue_x,
-                blue_y,
-                pixel_format,
-            )?;
-            GAMA_TRANSFORMS.insert(hash, transform);
-        }
-        Self::apply_transform(frame, &GAMA_TRANSFORMS.get(&hash).unwrap());
-        Ok(())
+        GAMA_TRANSFORMS.try_get_or_create_apply(
+            hash,
+            || {
+                Self::create_gama_transform(
+                    gamma,
+                    white_x,
+                    white_y,
+                    red_x,
+                    red_y,
+                    green_x,
+                    green_y,
+                    blue_x,
+                    blue_y,
+                    pixel_format,
+                )
+            },
+            |t| Self::apply_transform(frame, t),
+        )
     }
 
     fn create_icc_transform(

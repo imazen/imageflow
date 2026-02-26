@@ -29,6 +29,7 @@ mod mozjpeg;
 mod mozjpeg_decoder;
 mod mozjpeg_decoder_helpers;
 pub(crate) mod source_profile;
+mod tiny_lru;
 mod webp;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
 use crate::graphics::bitmaps::BitmapKey;
