@@ -187,6 +187,7 @@ bool wrap_png_decode_image_info(struct wrap_png_decoder_state * state)
     // We use BGRA, not RGBA
     png_set_bgr(state->png_ptr);
     // We don't want to think about interlacing. Let libpng fix that up.
+    png_set_interlace_handling(state->png_ptr);
 
     // Update our info based on these new settings.
     png_read_update_info(state->png_ptr, state->info_ptr);
