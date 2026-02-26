@@ -34,6 +34,14 @@ static void wrap_png_decoder_error_handler(png_structp png_ptr, png_const_charp 
     longjmp(state->error_handler_jmp, 1);
 }
 
+/* Suppress libpng warnings (benign metadata issues like invalid bKGD, tRNS
+   out-of-range, iCCP CRC errors, etc.) instead of letting them go to stderr. */
+static void wrap_png_decoder_warning_handler(png_structp png_ptr, png_const_charp msg)
+{
+    (void)png_ptr;
+    (void)msg;
+}
+
 static void wrap_png_custom_read_data(png_structp png_ptr, png_bytep buffer, png_size_t bytes_requested)
 {
     struct wrap_png_decoder_state * state = (struct wrap_png_decoder_state *)png_get_io_ptr(png_ptr);
@@ -121,7 +129,7 @@ struct flow_decoder_color_info * wrap_png_decoder_get_color_info(struct wrap_png
 
 bool wrap_png_decode_image_info(struct wrap_png_decoder_state * state)
 {
-    state->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, state, wrap_png_decoder_error_handler, NULL);
+    state->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, state, wrap_png_decoder_error_handler, wrap_png_decoder_warning_handler);
     if (state->png_ptr == NULL) {
         state->error_handler(state->png_ptr, state->custom_state, "OOM in wrap_png_decode_image_info: png_create_read_struct failed. Out of memory.\"");
         return false;
@@ -302,6 +310,12 @@ static void wrap_png_encoder_error_handler(png_structp png_ptr, png_const_charp 
     longjmp(state->error_handler_jmp, 1);
 }
 
+static void wrap_png_encoder_warning_handler(png_structp png_ptr, png_const_charp msg)
+{
+    (void)png_ptr;
+    (void)msg;
+}
+
 static void wrap_png_encoder_custom_write_data(png_structp png_ptr, png_bytep buffer, png_size_t buffer_length)
 {
     struct wrap_png_encoder_state * state = (struct wrap_png_encoder_state *)png_get_io_ptr(png_ptr);
@@ -352,7 +366,7 @@ bool wrap_png_encoder_write_png(void * custom_state,
     }
 
     png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, &state, wrap_png_encoder_error_handler,
-                                                  NULL); // makepng_error, makepng_warning);
+                                                  wrap_png_encoder_warning_handler);
     png_infop info_ptr = NULL;
     if (png_ptr == NULL){
         state.error_handler(png_ptr, state.custom_state, "OOM in wrap_png_encoder_write_png: png_create_write_struct failed. Out of memory.");
