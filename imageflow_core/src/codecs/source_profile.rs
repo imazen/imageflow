@@ -79,17 +79,38 @@ impl SourceProfile {
         // 4. gAMA (with or without cHRM)
         if let Some(gamma) = info.source_gamma {
             let gamma_val = gamma.into_value() as f64;
+
+            // Reject degenerate gamma values (0 → division by zero, negative → nonsensical)
+            if gamma_val <= 0.0 || !gamma_val.is_finite() {
+                return SourceProfile::Srgb;
+            }
+
             return if let Some(ref chrm) = info.source_chromaticities {
+                let white_x = chrm.white.0.into_value() as f64;
+                let white_y = chrm.white.1.into_value() as f64;
+                let red_x = chrm.red.0.into_value() as f64;
+                let red_y = chrm.red.1.into_value() as f64;
+                let green_x = chrm.green.0.into_value() as f64;
+                let green_y = chrm.green.1.into_value() as f64;
+                let blue_x = chrm.blue.0.into_value() as f64;
+                let blue_y = chrm.blue.1.into_value() as f64;
+
+                // Reject degenerate chromaticities (all zeros, any y=0 → division by zero
+                // in XYZ conversion)
+                if white_y == 0.0 || red_y == 0.0 || green_y == 0.0 || blue_y == 0.0 {
+                    return SourceProfile::Srgb;
+                }
+
                 SourceProfile::GammaPrimaries {
                     gamma: gamma_val,
-                    white_x: chrm.white.0.into_value() as f64,
-                    white_y: chrm.white.1.into_value() as f64,
-                    red_x: chrm.red.0.into_value() as f64,
-                    red_y: chrm.red.1.into_value() as f64,
-                    green_x: chrm.green.0.into_value() as f64,
-                    green_y: chrm.green.1.into_value() as f64,
-                    blue_x: chrm.blue.0.into_value() as f64,
-                    blue_y: chrm.blue.1.into_value() as f64,
+                    white_x,
+                    white_y,
+                    red_x,
+                    red_y,
+                    green_x,
+                    green_y,
+                    blue_x,
+                    blue_y,
                 }
             } else {
                 // gAMA without cHRM: assume sRGB primaries (D65 white, BT.709 primaries).
@@ -142,17 +163,28 @@ impl SourceProfile {
                     std::slice::from_raw_parts(color.profile_buffer, color.buffer_length).to_vec();
                 SourceProfile::IccProfileGray(bytes)
             }
-            ColorProfileSource::GAMA_CHRM => SourceProfile::GammaPrimaries {
-                gamma: color.gamma,
-                white_x: color.white_point.x,
-                white_y: color.white_point.y,
-                red_x: color.primaries.Red.x,
-                red_y: color.primaries.Red.y,
-                green_x: color.primaries.Green.x,
-                green_y: color.primaries.Green.y,
-                blue_x: color.primaries.Blue.x,
-                blue_y: color.primaries.Blue.y,
-            },
+            ColorProfileSource::GAMA_CHRM => {
+                let g = color.gamma;
+                let wy = color.white_point.y;
+                let ry = color.primaries.Red.y;
+                let gy = color.primaries.Green.y;
+                let by = color.primaries.Blue.y;
+                // Reject degenerate values (same validation as from_png_info)
+                if g <= 0.0 || !g.is_finite() || wy == 0.0 || ry == 0.0 || gy == 0.0 || by == 0.0 {
+                    return SourceProfile::Srgb;
+                }
+                SourceProfile::GammaPrimaries {
+                    gamma: g,
+                    white_x: color.white_point.x,
+                    white_y: wy,
+                    red_x: color.primaries.Red.x,
+                    red_y: ry,
+                    green_x: color.primaries.Green.x,
+                    green_y: gy,
+                    blue_x: color.primaries.Blue.x,
+                    blue_y: by,
+                }
+            }
         }
     }
 
