@@ -437,6 +437,16 @@ pub fn bench_copy_swap_br(src: &[u8], dst: &mut [u8]) {
     copy_swap_br(src, dst);
 }
 
+#[doc(hidden)]
+pub fn bench_swap_br_inplace_scalar(row: &mut [u8]) {
+    swap_br_impl_scalar(ScalarToken, row);
+}
+
+#[doc(hidden)]
+pub fn bench_copy_swap_br_scalar(src: &[u8], dst: &mut [u8]) {
+    copy_swap_br_impl_scalar(ScalarToken, src, dst);
+}
+
 // --- Scalar fallback ---
 
 fn swap_br_impl_scalar(_token: ScalarToken, row: &mut [u8]) {

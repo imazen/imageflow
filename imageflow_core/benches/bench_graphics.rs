@@ -540,9 +540,21 @@ fn benchmark_swizzle(ctx: &mut Criterion) {
             })
         });
 
+        group.bench_function("inplace_scalar", |b| {
+            b.iter(|| {
+                imageflow_core::bench_helpers::bench_swap_br_inplace_scalar(&mut row);
+            })
+        });
+
         group.bench_function("copy", |b| {
             b.iter(|| {
                 imageflow_core::bench_helpers::bench_copy_swap_br(&src, &mut dst);
+            })
+        });
+
+        group.bench_function("copy_scalar", |b| {
+            b.iter(|| {
+                imageflow_core::bench_helpers::bench_copy_swap_br_scalar(&src, &mut dst);
             })
         });
 
