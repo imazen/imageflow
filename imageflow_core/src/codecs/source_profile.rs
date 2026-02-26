@@ -76,11 +76,12 @@ impl SourceProfile {
             return SourceProfile::Srgb;
         }
 
-        // 4. gAMA + cHRM
+        // 4. gAMA (with or without cHRM)
         if let Some(gamma) = info.source_gamma {
-            if let Some(ref chrm) = info.source_chromaticities {
-                return SourceProfile::GammaPrimaries {
-                    gamma: gamma.into_value() as f64,
+            let gamma_val = gamma.into_value() as f64;
+            return if let Some(ref chrm) = info.source_chromaticities {
+                SourceProfile::GammaPrimaries {
+                    gamma: gamma_val,
                     white_x: chrm.white.0.into_value() as f64,
                     white_y: chrm.white.1.into_value() as f64,
                     red_x: chrm.red.0.into_value() as f64,
@@ -89,9 +90,23 @@ impl SourceProfile {
                     green_y: chrm.green.1.into_value() as f64,
                     blue_x: chrm.blue.0.into_value() as f64,
                     blue_y: chrm.blue.1.into_value() as f64,
-                };
-            }
-            // gAMA without cHRM: not enough to build a full transform
+                }
+            } else {
+                // gAMA without cHRM: assume sRGB primaries (D65 white, BT.709 primaries).
+                // This is critical for non-sRGB gamma values like gAMA=1.0 (linear),
+                // which would otherwise fall through to Srgb and display incorrectly.
+                SourceProfile::GammaPrimaries {
+                    gamma: gamma_val,
+                    white_x: 0.3127,
+                    white_y: 0.3290,
+                    red_x: 0.64,
+                    red_y: 0.33,
+                    green_x: 0.30,
+                    green_y: 0.60,
+                    blue_x: 0.15,
+                    blue_y: 0.06,
+                }
+            };
         }
 
         // 5. No color info — assume sRGB
