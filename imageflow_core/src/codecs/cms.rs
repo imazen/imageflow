@@ -69,16 +69,29 @@ pub fn transform_to_srgb(
                     src_offset += row.len();
                 }
             }
-            Lcms2TransformCache::transform_to_srgb(frame, profile)?;
+            // lcms2 may panic on unsupported pixel formats (e.g. gray ICC with BGRA frame).
+            // Catch panics so a single bad profile doesn't break subsequent images.
+            let lcms2_result_or_panic =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    Lcms2TransformCache::transform_to_srgb(frame, profile)
+                }));
 
-            // Capture lcms2 result
-            let mut lcms2_result = Vec::with_capacity(row_bytes * h);
-            for scanline in frame.scanlines() {
-                lcms2_result.extend_from_slice(scanline.row());
+            match lcms2_result_or_panic {
+                Ok(Ok(())) => {
+                    // Capture lcms2 result and compare
+                    let mut lcms2_result = Vec::with_capacity(row_bytes * h);
+                    for scanline in frame.scanlines() {
+                        lcms2_result.extend_from_slice(scanline.row());
+                    }
+                    compare_results(&moxcms_result, &lcms2_result, threshold, is_cmyk);
+                }
+                Ok(Err(e)) => {
+                    eprintln!("[CMS Both] lcms2 error (moxcms result used): {e}");
+                }
+                Err(_) => {
+                    eprintln!("[CMS Both] lcms2 panicked (moxcms result used)");
+                }
             }
-
-            // Compare with profile-appropriate threshold
-            compare_results(&moxcms_result, &lcms2_result, threshold, is_cmyk);
 
             // Restore moxcms result as canonical
             {

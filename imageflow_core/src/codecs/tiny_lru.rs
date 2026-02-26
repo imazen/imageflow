@@ -23,7 +23,7 @@ impl<V: Clone> TinyLru<V> {
     /// Look up a value by key. Returns a clone if found, and moves the entry
     /// to the most-recently-used position.
     pub fn get(&self, key: u64) -> Option<V> {
-        let mut slots = self.slots.lock().unwrap();
+        let mut slots = self.slots.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(pos) = slots.iter().position(|(k, _)| *k == key) {
             // Move to back (most recently used)
             let entry = slots.remove(pos);
@@ -38,7 +38,7 @@ impl<V: Clone> TinyLru<V> {
     /// Get a cached value or create and cache it. On capacity overflow, evicts
     /// the least-recently-used entry.
     pub fn get_or_create(&self, key: u64, create: impl FnOnce() -> V) -> V {
-        let mut slots = self.slots.lock().unwrap();
+        let mut slots = self.slots.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(pos) = slots.iter().position(|(k, _)| *k == key) {
             let entry = slots.remove(pos);
             let value = entry.1.clone();
@@ -67,7 +67,7 @@ impl<V> TinyLru<V> {
         create: impl FnOnce() -> Result<V, E>,
         apply: impl FnOnce(&V) -> R,
     ) -> Result<R, E> {
-        let mut slots = self.slots.lock().unwrap();
+        let mut slots = self.slots.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(pos) = slots.iter().position(|(k, _)| *k == key) {
             // Move to back (most recently used)
             let entry = slots.remove(pos);
