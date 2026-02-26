@@ -14,7 +14,9 @@ pub enum CmsBackend {
     Lcms2,
     /// Run both backends, compare outputs, warn on divergence exceeding threshold.
     /// Uses moxcms result as the canonical output.
-    Both { max_diff_per_channel: u8 },
+    /// Thresholds: 3 per channel for RGB profiles, 17 for CMYK (different LUT grid sizes).
+    /// CICP profiles fall back to moxcms-only (lcms2 doesn't support CICP).
+    Both,
 }
 
 /// Dispatch a source profile → sRGB transform to the selected backend.
@@ -32,7 +34,15 @@ pub fn transform_to_srgb(
     match backend {
         CmsBackend::Moxcms => MoxcmsTransformCache::transform_to_srgb(frame, profile),
         CmsBackend::Lcms2 => Lcms2TransformCache::transform_to_srgb(frame, profile),
-        CmsBackend::Both { max_diff_per_channel } => {
+        CmsBackend::Both => {
+            // lcms2 doesn't support CICP — fall back to moxcms only
+            if matches!(profile, SourceProfile::Cicp { .. }) {
+                return MoxcmsTransformCache::transform_to_srgb(frame, profile);
+            }
+
+            let is_cmyk = matches!(profile, SourceProfile::CmykIcc(_));
+            let threshold: u8 = if is_cmyk { 17 } else { 3 };
+
             // Snapshot the frame data before transforms
             let row_bytes = frame.w() as usize * frame.t_per_pixel();
             let h = frame.h() as usize;
@@ -67,8 +77,8 @@ pub fn transform_to_srgb(
                 lcms2_result.extend_from_slice(scanline.row());
             }
 
-            // Compare
-            compare_results(&moxcms_result, &lcms2_result, max_diff_per_channel);
+            // Compare with profile-appropriate threshold
+            compare_results(&moxcms_result, &lcms2_result, threshold, is_cmyk);
 
             // Restore moxcms result as canonical
             {
@@ -86,7 +96,7 @@ pub fn transform_to_srgb(
 }
 
 /// Compare two frame buffers and log warnings for any channel divergence exceeding the threshold.
-fn compare_results(moxcms: &[u8], lcms2: &[u8], max_diff: u8) {
+fn compare_results(moxcms: &[u8], lcms2: &[u8], max_diff: u8, is_cmyk: bool) {
     if moxcms.len() != lcms2.len() {
         eprintln!(
             "[CMS Both] WARNING: buffer length mismatch: moxcms={}, lcms2={}",
@@ -99,6 +109,7 @@ fn compare_results(moxcms: &[u8], lcms2: &[u8], max_diff: u8) {
     let mut max_observed = 0u8;
     let mut divergent_pixels = 0u64;
     let total_pixels = moxcms.len() / 4;
+    let profile_type = if is_cmyk { "CMYK" } else { "RGB" };
 
     for (m_pixel, l_pixel) in moxcms.chunks_exact(4).zip(lcms2.chunks_exact(4)) {
         let mut pixel_diverges = false;
@@ -118,8 +129,8 @@ fn compare_results(moxcms: &[u8], lcms2: &[u8], max_diff: u8) {
 
     if divergent_pixels > 0 {
         eprintln!(
-            "[CMS Both] WARNING: {}/{} pixels diverge by more than {} (max observed: {})",
-            divergent_pixels, total_pixels, max_diff, max_observed
+            "[CMS Both] WARNING: {} {}/{} pixels diverge by more than {} (max observed: {})",
+            profile_type, divergent_pixels, total_pixels, max_diff, max_observed
         );
     }
 }

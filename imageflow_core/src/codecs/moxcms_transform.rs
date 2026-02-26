@@ -1,5 +1,5 @@
 use crate::codecs::source_profile::SourceProfile;
-use crate::graphics::bitmaps::BitmapWindowMut;
+use crate::graphics::bitmaps::{BitmapWindowMut, PixelLayout};
 use crate::{ErrorKind, FlowError, Result};
 use dashmap::DashMap;
 use moxcms::{
@@ -40,6 +40,14 @@ impl MoxcmsTransformCache {
         frame: &mut BitmapWindowMut<u8>,
         profile: &SourceProfile,
     ) -> Result<()> {
+        if frame.info().pixel_layout() != PixelLayout::BGRA {
+            return Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "moxcms transform requires BGRA pixel layout, got {:?}",
+                frame.info().pixel_layout()
+            ));
+        }
+
         if profile.is_srgb() {
             return Ok(());
         }
