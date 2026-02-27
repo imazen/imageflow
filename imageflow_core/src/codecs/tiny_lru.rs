@@ -53,35 +53,27 @@ impl<V: Clone> TinyLru<V> {
         slots.push((key, value.clone()));
         value
     }
-}
 
-impl<V> TinyLru<V> {
-    /// Get a cached value or create and cache it, applying a function to the result.
-    ///
-    /// For non-Clone values (like lcms2 transforms): the `apply` callback receives
-    /// a reference to the cached value while the lock is held.
-    /// The `create` function is fallible. On creation error, nothing is cached.
-    pub fn try_get_or_create_apply<R, E>(
+    /// Get a cached value or create and cache it, with fallible creation.
+    /// On creation error, nothing is cached and the error is returned.
+    /// The lock is only held during cache lookup/insert, not during creation.
+    pub fn try_get_or_create<E>(
         &self,
         key: u64,
         create: impl FnOnce() -> Result<V, E>,
-        apply: impl FnOnce(&V) -> R,
-    ) -> Result<R, E> {
-        let mut slots = self.slots.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(pos) = slots.iter().position(|(k, _)| *k == key) {
-            // Move to back (most recently used)
-            let entry = slots.remove(pos);
-            let result = apply(&entry.1);
-            slots.push(entry);
-            return Ok(result);
+    ) -> Result<V, E> {
+        // Check cache first (lock held briefly)
+        if let Some(v) = self.get(key) {
+            return Ok(v);
         }
-        // Not found — create, evict if needed, insert, apply
+        // Create outside the lock
         let value = create()?;
-        let result = apply(&value);
+        // Insert into cache (lock held briefly)
+        let mut slots = self.slots.lock().unwrap_or_else(|e| e.into_inner());
         if slots.len() >= self.capacity {
-            slots.remove(0); // evict LRU (front)
+            slots.remove(0);
         }
-        slots.push((key, value));
-        Ok(result)
+        slots.push((key, value.clone()));
+        Ok(value)
     }
 }

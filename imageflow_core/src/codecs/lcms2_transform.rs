@@ -5,11 +5,13 @@ use crate::graphics::bitmaps::BitmapWindowMut;
 use imageflow_types::PixelLayout;
 use lcms2::*;
 use std::cell::RefCell;
+use std::sync::Arc;
 
-static PROFILE_TRANSFORMS: TinyLru<Transform<u32, u32, ThreadContext, DisallowCache>> =
+static PROFILE_TRANSFORMS: TinyLru<Arc<Transform<u32, u32, ThreadContext, DisallowCache>>> =
     TinyLru::new(9);
-static GRAY_TRANSFORMS: TinyLru<Transform<u8, u32, ThreadContext, DisallowCache>> = TinyLru::new(4);
-static GAMA_TRANSFORMS: TinyLru<Transform<u32, u32, ThreadContext, DisallowCache>> =
+static GRAY_TRANSFORMS: TinyLru<Arc<Transform<u8, u32, ThreadContext, DisallowCache>>> =
+    TinyLru::new(4);
+static GAMA_TRANSFORMS: TinyLru<Arc<Transform<u32, u32, ThreadContext, DisallowCache>>> =
     TinyLru::new(4);
 
 const HASH_SEED: u64 = 0x8ed1_2ad9_483d_28a0;
@@ -109,22 +111,20 @@ impl Lcms2TransformCache {
         output_pixel_format: PixelFormat,
     ) -> Result<()> {
         let hash = Self::hash_icc(icc_bytes, input_pixel_format, output_pixel_format);
-        // try_get_or_create_apply: the closure receives &Transform while the lock
-        // is held, avoiding the need for Clone on lcms2 Transform.
-        PROFILE_TRANSFORMS.try_get_or_create_apply(
-            hash,
-            || Self::create_icc_transform(icc_bytes, input_pixel_format, output_pixel_format),
-            |t| Self::apply_transform(frame, t),
-        )
+        let t = PROFILE_TRANSFORMS.try_get_or_create(hash, || {
+            Self::create_icc_transform(icc_bytes, input_pixel_format, output_pixel_format)
+                .map(Arc::new)
+        })?;
+        Self::apply_transform(frame, &t);
+        Ok(())
     }
 
     fn transform_icc_gray(frame: &mut BitmapWindowMut<u8>, icc_bytes: &[u8]) -> Result<()> {
         let hash = Self::hash_icc(icc_bytes, PixelFormat::GRAY_8, PixelFormat::BGRA_8);
-        GRAY_TRANSFORMS.try_get_or_create_apply(
-            hash,
-            || Self::create_icc_transform_gray(icc_bytes),
-            |t| Self::apply_gray_transform(frame, t),
-        )
+        let t = GRAY_TRANSFORMS
+            .try_get_or_create(hash, || Self::create_icc_transform_gray(icc_bytes).map(Arc::new))?;
+        Self::apply_gray_transform(frame, &t);
+        Ok(())
     }
 
     fn create_icc_transform_gray(
@@ -189,24 +189,23 @@ impl Lcms2TransformCache {
         let hash = Self::hash_gama(
             gamma, white_x, white_y, red_x, red_y, green_x, green_y, blue_x, blue_y,
         );
-        GAMA_TRANSFORMS.try_get_or_create_apply(
-            hash,
-            || {
-                Self::create_gama_transform(
-                    gamma,
-                    white_x,
-                    white_y,
-                    red_x,
-                    red_y,
-                    green_x,
-                    green_y,
-                    blue_x,
-                    blue_y,
-                    pixel_format,
-                )
-            },
-            |t| Self::apply_transform(frame, t),
-        )
+        let t = GAMA_TRANSFORMS.try_get_or_create(hash, || {
+            Self::create_gama_transform(
+                gamma,
+                white_x,
+                white_y,
+                red_x,
+                red_y,
+                green_x,
+                green_y,
+                blue_x,
+                blue_y,
+                pixel_format,
+            )
+            .map(Arc::new)
+        })?;
+        Self::apply_transform(frame, &t);
+        Ok(())
     }
 
     fn create_icc_transform(
