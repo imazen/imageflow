@@ -1398,6 +1398,109 @@ fn test_jpeg_icc4_color_profile() {
     assert!(matched);
 }
 
+// CMS regression tests for bug-exposing color profiles.
+// These fixtures cover profile types that previously caused large divergences
+// between moxcms and lcms2 backends due to CICP transfer override bugs.
+
+#[test]
+fn test_cms_gama_srgb_primaries() {
+    // PNG with gAMA(0.45455) + sRGB cHRM primaries.
+    // Previously caused max=9 divergence when moxcms CICP overrode gAMA TRC.
+    let matched = compare_max_delta(
+        Some(IoTestEnum::Url(
+            "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/gama_srgb_045455.png".to_owned(),
+        )),
+        2,
+        "cms_gama_srgb_045455",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 100,
+                h: 30,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_cms_gama_high_gamma() {
+    // PNG with gAMA(0.22727) = gamma 4.4 + sRGB cHRM primaries.
+    // Previously caused max=67 divergence from the same CICP override bug.
+    let matched = compare_max_delta(
+        Some(IoTestEnum::Url(
+            "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/gama_high_022727.png".to_owned(),
+        )),
+        2,
+        "cms_gama_high_022727",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 32,
+                h: 32,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_cms_rec2020_pq() {
+    // JPEG with ICC v4.2 "Rec. 2020 PQ" profile.
+    // Previously caused max=224 divergence when moxcms CICP PQ transfer
+    // overrode the ICC curv LUT (absolute luminance 0-10000 nits vs 0-1).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::Url(
+            "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/rec2020_pq.jpg"
+                .to_owned(),
+        )),
+        2,
+        "cms_rec2020_pq",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 32,
+                h: 32,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_cms_apple_wide_color() {
+    // JPEG with ICC v4.0 "Apple Wide Color Sharing Profile" (30KB profile).
+    // Complex ICC v4 scanner profile with expected moxcms/lcms2 rounding
+    // differences (max=3 on 64x64 crop, max=12 on full image).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::Url(
+            "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/apple_wide_color.jpg".to_owned(),
+        )),
+        3,
+        "cms_apple_wide_color",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 32,
+                h: 32,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
 #[test]
 fn test_jpeg_simple() {
     let url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/Landscape_1.jpg".to_owned();
