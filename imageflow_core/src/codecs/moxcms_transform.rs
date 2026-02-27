@@ -221,6 +221,11 @@ impl MoxcmsTransformCache {
         src.red_trc = Some(trc.clone());
         src.green_trc = Some(trc.clone());
         src.blue_trc = Some(trc);
+        // Clear CICP from the sRGB template — the source TRC is now gamma,
+        // not sRGB piecewise.  If left, allow_use_cicp_transfer causes
+        // build_r_linearize_table to use sRGB→linear instead of gamma→linear,
+        // producing a near-identity transform.
+        src.cicp = None;
 
         let dst = ColorProfile::new_srgb();
         Self::create_transform_prefer_in_place(&src, &dst)
