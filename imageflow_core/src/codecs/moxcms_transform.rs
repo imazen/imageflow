@@ -157,7 +157,7 @@ impl MoxcmsTransformCache {
 
         let src = ColorProfile::new_from_cicp(cicp);
         let dst = ColorProfile::new_srgb();
-        Self::create_transform_prefer_in_place(&src, &dst)
+        Self::create_transform_prefer_in_place(&src, &dst, TransformOptions::default())
     }
 
     fn create_icc_transform(bytes: &[u8], is_gray: bool) -> Result<CachedTransform> {
@@ -175,20 +175,22 @@ impl MoxcmsTransformCache {
 
         let dst = ColorProfile::new_srgb();
 
+        // ICC profiles: honor the profile's own curv/para TRCs, not any
+        // embedded CICP transfer characteristics (e.g., PQ in Rec. 2020 profiles).
+        let opts = TransformOptions {
+            allow_use_cicp_transfer: false,
+            ..Default::default()
+        };
+
         if is_gray {
             // Gray ICC → RGBA: needs dedicated apply path because the frame
             // is BGRA (4 bpp) but the transform expects GrayAlpha input (2 bpp).
             let transform = src
-                .create_transform_8bit(
-                    Layout::GrayAlpha,
-                    &dst,
-                    Layout::Rgba,
-                    TransformOptions::default(),
-                )
+                .create_transform_8bit(Layout::GrayAlpha, &dst, Layout::Rgba, opts)
                 .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
             Ok(CachedTransform::Gray(transform))
         } else {
-            Self::create_transform_prefer_in_place(&src, &dst)
+            Self::create_transform_prefer_in_place(&src, &dst, opts)
         }
     }
 
@@ -224,7 +226,12 @@ impl MoxcmsTransformCache {
         src.blue_trc = Some(trc);
 
         let dst = ColorProfile::new_srgb();
-        Self::create_transform_prefer_in_place(&src, &dst)
+        // Gamma/primaries profiles have no CICP — disable for safety.
+        let opts = TransformOptions {
+            allow_use_cicp_transfer: false,
+            ..Default::default()
+        };
+        Self::create_transform_prefer_in_place(&src, &dst, opts)
     }
 
     /// Transform inverted-CMYK frame data to sRGB BGRA using a CMYK ICC profile.
@@ -241,12 +248,16 @@ impl MoxcmsTransformCache {
             let dst = ColorProfile::new_srgb();
             // CMYK ICC profiles require Layout::Rgba (4 channels) — moxcms maps
             // channel semantics from the ICC profile, not from the Layout enum.
+            // Disable CICP override — honor the ICC profile's own TRCs.
             let t = src
                 .create_transform_8bit(
                     Layout::Rgba,
                     &dst,
                     Layout::Rgba,
-                    TransformOptions::default(),
+                    TransformOptions {
+                        allow_use_cicp_transfer: false,
+                        ..Default::default()
+                    },
                 )
                 .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
             CMYK_TRANSFORMS.get_or_create(hash, || t)
@@ -276,18 +287,14 @@ impl MoxcmsTransformCache {
     fn create_transform_prefer_in_place(
         src: &ColorProfile,
         dst: &ColorProfile,
+        options: TransformOptions,
     ) -> Result<CachedTransform> {
-        match src.create_in_place_transform_8bit(Layout::Rgba, dst, TransformOptions::default()) {
+        match src.create_in_place_transform_8bit(Layout::Rgba, dst, options) {
             Ok(t) => Ok(CachedTransform::InPlace(t)),
             Err(CmsError::UnsupportedProfileConnection) => {
                 // Fall back to regular transform for LUT-based profiles
                 let t = src
-                    .create_transform_8bit(
-                        Layout::Rgba,
-                        dst,
-                        Layout::Rgba,
-                        TransformOptions::default(),
-                    )
+                    .create_transform_8bit(Layout::Rgba, dst, Layout::Rgba, options)
                     .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
                 Ok(CachedTransform::Regular(t))
             }
