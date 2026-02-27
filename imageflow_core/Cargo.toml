@@ -44,7 +44,7 @@ jpeg-decoder ="0.3.1"
 
 lcms2 = "6"
 lcms2-sys = "4"
-moxcms = { path = "../../moxcms", features = ["in_place"] }
+moxcms = { git = "https://github.com/awxkee/moxcms", rev = "a451c57", features = ["in_place"] }
 
 uuid = { version = "1", features = ["v4"] }
 
