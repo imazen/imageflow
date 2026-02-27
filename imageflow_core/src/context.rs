@@ -299,7 +299,7 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-            cms_backend: Default::default(),
+            cms_backend: crate::codecs::cms::CmsBackend::from_env_or(Default::default()),
         }))
     }
     fn default_codecs_capacity() -> usize {
@@ -321,7 +321,7 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-            cms_backend: Default::default(),
+            cms_backend: crate::codecs::cms::CmsBackend::from_env_or(Default::default()),
         })
     }
     fn create_with_cancellation_token_and_can_panic(
@@ -342,7 +342,7 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-            cms_backend: Default::default(),
+            cms_backend: crate::codecs::cms::CmsBackend::from_env_or(Default::default()),
         }))
     }
 

@@ -14,9 +14,22 @@ pub enum CmsBackend {
     Lcms2,
     /// Run both backends, compare outputs, warn on divergence exceeding threshold.
     /// Uses moxcms result as the canonical output.
-    /// Thresholds: 3 per channel for RGB profiles, 17 for CMYK (different LUT grid sizes).
+    /// Thresholds: 1 per channel for RGB profiles, 17 for CMYK (different LUT grid sizes).
     /// CICP profiles fall back to moxcms-only (lcms2 doesn't support CICP).
     Both,
+}
+
+impl CmsBackend {
+    /// Read from `CMS_BACKEND` env var: "moxcms", "lcms2", or "both".
+    /// Falls back to the provided default if unset or unrecognized.
+    pub fn from_env_or(default: CmsBackend) -> CmsBackend {
+        match std::env::var("CMS_BACKEND").as_deref() {
+            Ok("both") => CmsBackend::Both,
+            Ok("lcms2") => CmsBackend::Lcms2,
+            Ok("moxcms") => CmsBackend::Moxcms,
+            _ => default,
+        }
+    }
 }
 
 /// Dispatch a source profile → sRGB transform to the selected backend.
@@ -41,7 +54,7 @@ pub fn transform_to_srgb(
             }
 
             let is_cmyk = matches!(profile, SourceProfile::CmykIcc(_));
-            let threshold: u8 = if is_cmyk { 17 } else { 3 };
+            let threshold: u8 = if is_cmyk { 17 } else { 1 };
 
             // Snapshot the frame data before transforms
             let row_bytes = frame.w() as usize * frame.t_per_pixel();
