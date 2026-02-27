@@ -218,6 +218,13 @@ fn cms_batch_collect_errors() {
         ("png-24-32", "/mnt/v/output/corpus-builder/png-24-32"),
     ];
 
+    // Check if any corpora exist before touching output dir
+    let any_exist = corpora.iter().any(|&(_, dir_str)| Path::new(dir_str).exists());
+    if !any_exist {
+        eprintln!("No corpus directories found, skipping batch test");
+        return;
+    }
+
     // Clean output dir
     let out = Path::new(ERROR_OUTPUT_DIR);
     if out.exists() {
@@ -241,6 +248,11 @@ fn cms_batch_collect_errors() {
             total_errors += result.errors.len();
             collect_error_files(label, &result);
         }
+    }
+
+    if total_files == 0 {
+        eprintln!("No files found in any corpus, skipping");
+        return;
     }
 
     // Write overall summary

@@ -186,21 +186,24 @@ fn compare_results(
     let p95_idx = total_pixels as u64 * 95 / 100;
     let p99_idx = total_pixels as u64 * 99 / 100;
     let mut cumulative = 0u64;
-    let mut p50 = 0u8;
-    let mut p95 = 0u8;
-    let mut p99 = 0u8;
+    let mut p50: Option<u8> = None;
+    let mut p95: Option<u8> = None;
+    let mut p99: Option<u8> = None;
     for (diff_val, &count) in diff_histogram.iter().enumerate() {
         cumulative += count;
-        if p50 == 0 && cumulative > p50_idx {
-            p50 = diff_val as u8;
+        if p50.is_none() && cumulative > p50_idx {
+            p50 = Some(diff_val as u8);
         }
-        if p95 == 0 && cumulative > p95_idx {
-            p95 = diff_val as u8;
+        if p95.is_none() && cumulative > p95_idx {
+            p95 = Some(diff_val as u8);
         }
-        if p99 == 0 && cumulative > p99_idx {
-            p99 = diff_val as u8;
+        if p99.is_none() && cumulative > p99_idx {
+            p99 = Some(diff_val as u8);
         }
     }
+    let p50 = p50.unwrap_or(0);
+    let p95 = p95.unwrap_or(0);
+    let p99 = p99.unwrap_or(0);
 
     let n = total_pixels as f64;
     let mean_b = sum_per_channel[0] as f64 / n;

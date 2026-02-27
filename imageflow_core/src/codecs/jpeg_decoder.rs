@@ -120,7 +120,7 @@ impl Decoder for JpegDecoder {
                 }
             }
             _ => {
-                panic!("Unsupported jpeg type (grayscale or CMYK")
+                panic!("Unsupported jpeg type (grayscale or CMYK)")
             }
         }
         Ok(bitmap_key)

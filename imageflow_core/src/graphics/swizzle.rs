@@ -103,49 +103,54 @@ pub fn bench_gray_alpha_to_bgra_scalar(src: &[u8], dst: &mut [u8]) {
 // ===========================================================================
 
 fn swap_br_impl_scalar(_token: ScalarToken, row: &mut [u8]) {
-    for v in bytemuck::cast_slice_mut::<u8, u32>(row) {
-        *v = swap_br_u32(*v);
+    for px in row.chunks_exact_mut(4) {
+        let v = u32::from_ne_bytes([px[0], px[1], px[2], px[3]]);
+        let s = swap_br_u32(v);
+        px.copy_from_slice(&s.to_ne_bytes());
     }
 }
 
 fn copy_swap_br_impl_scalar(_token: ScalarToken, src: &[u8], dst: &mut [u8]) {
-    for (s, d) in
-        bytemuck::cast_slice::<u8, u32>(src).iter().zip(bytemuck::cast_slice_mut::<u8, u32>(dst))
-    {
-        *d = swap_br_u32(*s);
+    for (s_px, d_px) in src.chunks_exact(4).zip(dst.chunks_exact_mut(4)) {
+        let v = u32::from_ne_bytes([s_px[0], s_px[1], s_px[2], s_px[3]]);
+        let s = swap_br_u32(v);
+        d_px.copy_from_slice(&s.to_ne_bytes());
     }
 }
 
 fn set_alpha_impl_scalar(_token: ScalarToken, row: &mut [u8]) {
-    for v in bytemuck::cast_slice_mut::<u8, u32>(row) {
-        *v |= 0xFF00_0000;
+    for px in row.chunks_exact_mut(4) {
+        px[3] = 0xFF;
     }
 }
 
-/// Scalar RGB→BGRA: work on u32 for single-store per pixel.
-/// BGRA little-endian u32 = B | (G << 8) | (R << 16) | (0xFF << 24).
+/// Scalar RGB→BGRA: reverse RGB to BGR, set A=0xFF.
 fn rgb_to_bgra_impl_scalar(_token: ScalarToken, src: &[u8], dst: &mut [u8]) {
-    let dst32 = bytemuck::cast_slice_mut::<u8, u32>(dst);
-    for (s, d) in src.chunks_exact(3).zip(dst32.iter_mut()) {
-        *d = s[2] as u32 | ((s[1] as u32) << 8) | ((s[0] as u32) << 16) | 0xFF00_0000;
+    for (s, d_px) in src.chunks_exact(3).zip(dst.chunks_exact_mut(4)) {
+        d_px[0] = s[2];
+        d_px[1] = s[1];
+        d_px[2] = s[0];
+        d_px[3] = 0xFF;
     }
 }
 
 /// Scalar Gray→BGRA: broadcast gray byte to B,G,R, set A=0xFF.
 fn gray_to_bgra_impl_scalar(_token: ScalarToken, src: &[u8], dst: &mut [u8]) {
-    let dst32 = bytemuck::cast_slice_mut::<u8, u32>(dst);
-    for (&v, d) in src.iter().zip(dst32.iter_mut()) {
-        let g = v as u32;
-        *d = g | (g << 8) | (g << 16) | 0xFF00_0000;
+    for (&v, d_px) in src.iter().zip(dst.chunks_exact_mut(4)) {
+        d_px[0] = v;
+        d_px[1] = v;
+        d_px[2] = v;
+        d_px[3] = 0xFF;
     }
 }
 
 /// Scalar GrayAlpha→BGRA: broadcast gray to B,G,R, copy alpha.
 fn gray_alpha_to_bgra_impl_scalar(_token: ScalarToken, src: &[u8], dst: &mut [u8]) {
-    let dst32 = bytemuck::cast_slice_mut::<u8, u32>(dst);
-    for (ga, d) in src.chunks_exact(2).zip(dst32.iter_mut()) {
-        let g = ga[0] as u32;
-        *d = g | (g << 8) | (g << 16) | ((ga[1] as u32) << 24);
+    for (ga, d_px) in src.chunks_exact(2).zip(dst.chunks_exact_mut(4)) {
+        d_px[0] = ga[0];
+        d_px[1] = ga[0];
+        d_px[2] = ga[0];
+        d_px[3] = ga[1];
     }
 }
 
