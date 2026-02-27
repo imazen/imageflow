@@ -820,14 +820,31 @@ pub enum Similarity {
     AllowOffByOneBytesCount(i64),
     AllowOffByOneBytesRatio(f32),
     AllowDssimMatch(f64, f64),
+    /// Accept results where no single channel byte differs by more than N.
+    /// For CMS-transformed output where platform-specific float rounding
+    /// produces small per-pixel differences (typically 1-3 out of 255).
+    AllowMaxChannelDelta(i64),
 }
 
 impl Similarity {
     fn report_on_bytes(&self, stats: &BitmapDiffStats) -> Option<String> {
+        if let Similarity::AllowMaxChannelDelta(max_delta) = *self {
+            if stats.max_channel_delta <= max_delta {
+                return None;
+            }
+            return Some(format!(
+                "Bitmaps mismatched (max_channel_delta {} > allowed {}): {}",
+                stats.max_channel_delta,
+                max_delta,
+                stats.legacy_report()
+            ));
+        }
+
         let allowed_off_by_one_bytes: i64 = match *self {
             Similarity::AllowOffByOneBytesCount(v) => v,
             Similarity::AllowOffByOneBytesRatio(ratio) => (ratio * stats.values as f32) as i64,
             Similarity::AllowDssimMatch(..) => return None,
+            Similarity::AllowMaxChannelDelta(_) => unreachable!(),
         };
 
         //TODO: This doesn't really work, since off-by-one errors are averaged and thus can hide +/- 4
@@ -1162,6 +1179,45 @@ pub fn compare_with_context(
         panic!("execution failed {:?}", response);
     }
 }
+/// Like `compare`, but uses `AllowMaxChannelDelta` tolerance instead of off-by-one.
+/// For CMS-affected tests where platform-specific float rounding produces small
+/// per-pixel differences across architectures (NEON vs AVX2 vs scalar).
+pub fn compare_max_delta(
+    input: Option<IoTestEnum>,
+    max_channel_delta: i64,
+    checksum_name: &str,
+    store_if_missing: bool,
+    debug: bool,
+    steps: Vec<s::Node>,
+) -> bool {
+    let mut context = Context::create().unwrap();
+    let mut bit = BitmapBgraContainer::empty();
+    let mut steps = steps;
+    steps.push(unsafe { bit.as_mut().get_node() });
+
+    let response =
+        build_steps(&mut context, &steps, input.map(|i| vec![i]).unwrap_or(vec![]), None, debug)
+            .unwrap();
+
+    if let Some(bitmap_key) = bit.bitmap_key(&context) {
+        let mut ctx = ChecksumCtx::visuals();
+        ctx.create_if_missing = store_if_missing;
+
+        evaluate_result(
+            &ctx,
+            checksum_name,
+            ResultKind::Bitmap { context: &context, key: bitmap_key },
+            Constraints {
+                similarity: Similarity::AllowMaxChannelDelta(max_channel_delta),
+                max_file_size: None,
+            },
+            true,
+        )
+    } else {
+        panic!("execution failed {:?}", response);
+    }
+}
+
 /// Complains loudly and returns false  if `bitmap` doesn't match the stored checksum and isn't within the off-by-one grace window.
 pub fn bitmap_regression_check(
     c: &ChecksumCtx,

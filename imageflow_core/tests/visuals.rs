@@ -1377,11 +1377,23 @@ fn test_jpeg_icc2_color_profile() {
 
 #[test]
 fn test_jpeg_icc4_color_profile() {
-    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
-                          "MarsRGB_ICCv4_Scaled400300", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
-Node::Decode {io_id: 0, commands: None},
-Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)) }
-]
+    // ICC v4 profile transform via moxcms has platform-specific float rounding (max delta 2).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::Url(
+            "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned(),
+        )),
+        2,
+        "MarsRGB_ICCv4_Scaled400300",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 400,
+                h: 300,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
     );
     assert!(matched);
 }
@@ -1645,12 +1657,15 @@ fn test_jpeg_crop() {
 
 #[test]
 fn decode_cmyk_jpeg() {
-    let matched = compare(
+    // CMYK→sRGB via moxcms uses f32 internally; NEON/AVX2/scalar produce
+    // different rounding per platform (max delta 2-3). Use channel delta
+    // tolerance instead of exact checksum matching.
+    let matched = compare_max_delta(
         Some(IoTestEnum::Url(
             "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/cmyk_logo.jpg"
                 .to_owned(),
         )),
-        500,
+        3,
         "cmyk_decode",
         POPULATE_CHECKSUMS,
         DEBUG_GRAPH,
