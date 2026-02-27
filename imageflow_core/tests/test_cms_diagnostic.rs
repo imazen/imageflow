@@ -7,17 +7,20 @@ use imageflow_types as s;
 
 #[test]
 fn cms_diagnostic_single_file() {
-    // Test multiple profile types to find divergence
+    // Representative files from each divergence category
     let test_files = [
-        // SC-P600 printer profiles — highest divergence (max 179/224)
-        "/mnt/v/output/corpus-builder/wide-gamut/sc-p600-series-premium-luster/flickr_6c33721c499abbae.jpg",
-        "/mnt/v/output/corpus-builder/wide-gamut/sc-p600-series-premium-luster/flickr_7b77b06a9c5a7b7e.jpg",
-        "/mnt/v/output/corpus-builder/wide-gamut/sc-p600-series-premium-luster/flickr_8c6027f8b9ec751a.jpg",
-        "/mnt/v/output/corpus-builder/wide-gamut/sc-p600-series-premium-luster/flickr_ca69175834c103c9.jpg",
-        // Other wide-gamut profiles
+        // gAMA(0.45455)+D65 — sRGB-via-gAMA, previously max=9
+        "/mnt/v/output/corpus-builder/png-24-32/web_boredpanda_com_52c63746588254c8.png",
+        "/mnt/v/output/corpus-builder/png-24-32/web_boredpanda_com_893f8142576c5929.png",
+        "/mnt/v/output/corpus-builder/png-24-32/web_cnet_com_4f935ab9c0ffae64.png",
+        // gAMA(0.22727) = gamma 4.4, previously max=67
+        "/mnt/v/output/corpus-builder/png-24-32/wm_upload_wikimedia_org_874b35d367b3a5f6.png",
+        "/mnt/v/output/corpus-builder/png-24-32/wm_upload_wikimedia_org_fb89c54b5841b4ef.png",
+        // Rec. 2020 PQ, previously max=224
+        "/mnt/v/output/corpus-builder/wide-gamut/rec-2020-pq/flickr_2a68670c58131566.jpg",
+        "/mnt/v/output/corpus-builder/wide-gamut/rec-2020-pq/flickr_c2d8824d6ffb6e60.jpg",
+        // Apple Wide Color, previously max=12
         "/mnt/v/output/corpus-builder/wide-gamut/apple-wide-color-sharing-profile/wmc_d4e6bfcba7ee8f83.jpg",
-        "/mnt/v/output/corpus-builder/wide-gamut/albook20070305colorvision/irsample_e9e92ac0384cdd65.jpg",
-        "/mnt/v/output/corpus-builder/wide-gamut/prophoto-rgb/flickr_0d2d634cf46df137.jpg",
     ];
     for test_file in test_files {
         eprintln!("\n=== Testing: {} ===", test_file);
