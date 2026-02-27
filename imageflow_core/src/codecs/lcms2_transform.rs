@@ -296,18 +296,10 @@ impl Lcms2TransformCache {
     ) -> u64 {
         use std::hash::Hasher;
         let mut h = twox_hash::XxHash64::with_seed(HASH_SEED);
-        // ICC header (128 bytes): selectively hash mathematical fields, skip metadata.
-        // Bytes 8-23: version, deviceClass, colorSpace, PCS (affect transform interpretation)
-        // Bytes 64-79: renderingIntent, illuminant (affect color math)
-        // Skip: size, cmmId, date, magic, platform, flags, manufacturer, model,
-        //        attributes, creator, profileID, reserved (metadata only)
-        if icc_bytes.len() >= 128 {
-            h.write(&icc_bytes[8..24]);
-            h.write(&icc_bytes[64..80]);
-            h.write(&icc_bytes[128..]);
-        } else {
-            h.write(icc_bytes);
-        }
+        // Hash the entire ICC profile — xxhash is fast enough that skipping
+        // header fields isn't worth the collision risk from omitting profile
+        // flags, device attributes, or profile ID bytes.
+        h.write(icc_bytes);
         // Mix in pixel formats to avoid collisions between different format transforms
         h.write_u32((input_pixel_format.0 << 16) ^ output_pixel_format.0);
         h.finish()

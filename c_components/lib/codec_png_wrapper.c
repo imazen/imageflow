@@ -105,7 +105,7 @@ static bool wrap_png_decoder_load_color_profile(struct wrap_png_decoder_state * 
                 state->color.source = flow_codec_color_profile_source_ICCP_GRAY;
             }
 
-    }else if(is_color_png && !png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)
+    }else if(!png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)
              && png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_gAMA)
              && png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_cHRM)) {
 
@@ -115,6 +115,25 @@ static bool wrap_png_decoder_load_color_profile(struct wrap_png_decoder_state * 
 
         state->color.white_point.Y = state->color.primaries.Red.Y = state->color.primaries.Green.Y = state->color.primaries.Blue.Y = 1.0;
 
+        state->color.source = flow_codec_color_profile_source_GAMA_CHRM;
+
+    }else if(!png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)
+             && png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_gAMA)
+             && !png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_cHRM)) {
+
+        // gAMA without cHRM: assume sRGB primaries (D65 white, BT.709 primaries).
+        // Matches the image_png decoder behavior in SourceProfile::from_png_info().
+        // Without this, gAMA-only PNGs with non-sRGB gamma (e.g. linear gamma=1.0)
+        // would fall through to sRGB and display with incorrect brightness.
+        state->color.white_point.x = 0.3127;
+        state->color.white_point.y = 0.3290;
+        state->color.primaries.Red.x = 0.64;
+        state->color.primaries.Red.y = 0.33;
+        state->color.primaries.Green.x = 0.30;
+        state->color.primaries.Green.y = 0.60;
+        state->color.primaries.Blue.x = 0.15;
+        state->color.primaries.Blue.y = 0.06;
+        state->color.white_point.Y = state->color.primaries.Red.Y = state->color.primaries.Green.Y = state->color.primaries.Blue.Y = 1.0;
 
         state->color.source = flow_codec_color_profile_source_GAMA_CHRM;
     }

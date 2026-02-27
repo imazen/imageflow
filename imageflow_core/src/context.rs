@@ -514,7 +514,7 @@ impl Context {
                         preferred_extension: info.preferred_extension,
                         preferred_mime_type: info.preferred_mime_type,
                         w: info.image_width,
-                        h: info.image_width,
+                        h: info.image_height,
                     })
                 } else {
                     None

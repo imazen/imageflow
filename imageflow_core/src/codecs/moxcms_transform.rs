@@ -128,11 +128,7 @@ impl MoxcmsTransformCache {
         hash: u64,
         create: impl FnOnce() -> Result<CachedTransform>,
     ) -> Result<CachedTransform> {
-        if let Some(cached) = cache.get(hash) {
-            return Ok(cached);
-        }
-        let transform = create()?;
-        Ok(cache.get_or_create(hash, || transform))
+        cache.try_get_or_create(hash, create)
     }
 
     fn create_cicp_transform(
@@ -365,19 +361,10 @@ impl MoxcmsTransformCache {
     fn hash_icc_bytes(bytes: &[u8], is_gray: bool) -> u64 {
         use std::hash::Hasher;
         let mut h = twox_hash::XxHash64::with_seed(HASH_SEED);
-        // ICC header (128 bytes): selectively hash mathematical fields, skip metadata.
-        // Bytes 8-23: version, deviceClass, colorSpace, PCS (affect transform interpretation)
-        // Bytes 64-79: renderingIntent, illuminant (affect color math)
-        // Skip: size, cmmId, date, magic, platform, flags, manufacturer, model,
-        //        attributes, creator, profileID, reserved (metadata only)
-        if bytes.len() >= 128 {
-            h.write(&bytes[8..24]);
-            h.write(&bytes[64..80]);
-            h.write(&bytes[128..]);
-        } else {
-            // Profile too short for standard header — hash everything
-            h.write(bytes);
-        }
+        // Hash the entire ICC profile — xxhash is fast enough that skipping
+        // header fields isn't worth the collision risk from omitting profile
+        // flags, device attributes, or profile ID bytes.
+        h.write(bytes);
         // Mix in is_gray flag to avoid collisions between RGB and Gray transforms
         // for the same ICC profile bytes
         h.write_u8(is_gray as u8);

@@ -59,8 +59,9 @@ impl<V: Clone> TinyLru<V> {
     /// Get a cached value or create and cache it. On capacity overflow, evicts
     /// the least-recently-used entry.
     ///
-    /// Both `create` and clone run outside the lock. A concurrent miss on the
-    /// same key may create a duplicate, but that's harmless for a cache.
+    /// Both `create` and clone run outside the lock. If another thread inserted
+    /// the same key between our initial miss and the insert lock, we return the
+    /// existing entry (promoting it to MRU) and discard the redundant value.
     pub fn get_or_create(&self, key: u64, create: impl FnOnce() -> V) -> V {
         if let Some(v) = self.get(key) {
             return v;
@@ -69,6 +70,13 @@ impl<V: Clone> TinyLru<V> {
         let value = create();
         // Insert (lock held briefly for Vec ops only)
         let mut slots = lock_or_replace(&self.slots);
+        // Re-check: another thread may have inserted the same key
+        if let Some(pos) = slots.iter().position(|(k, _)| *k == key) {
+            let entry = slots.remove(pos);
+            let existing = entry.1.clone();
+            slots.push(entry);
+            return existing;
+        }
         if slots.len() >= self.capacity {
             slots.remove(0); // evict LRU (front)
         }
@@ -91,6 +99,13 @@ impl<V: Clone> TinyLru<V> {
         let value = create()?;
         // Insert (lock held briefly)
         let mut slots = lock_or_replace(&self.slots);
+        // Re-check: another thread may have inserted the same key
+        if let Some(pos) = slots.iter().position(|(k, _)| *k == key) {
+            let entry = slots.remove(pos);
+            let existing = entry.1.clone();
+            slots.push(entry);
+            return Ok(existing);
+        }
         if slots.len() >= self.capacity {
             slots.remove(0);
         }

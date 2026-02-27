@@ -95,9 +95,13 @@ impl SourceProfile {
                 let blue_x = chrm.blue.0.into_value() as f64;
                 let blue_y = chrm.blue.1.into_value() as f64;
 
-                // Reject degenerate chromaticities (all zeros, any y=0 → division by zero
-                // in XYZ conversion)
-                if white_y == 0.0 || red_y == 0.0 || green_y == 0.0 || blue_y == 0.0 {
+                // Reject degenerate chromaticities: NaN, infinity, or y=0 (division
+                // by zero in XYZ conversion via X = x*Y/y, Z = (1-x-y)*Y/y)
+                let all_finite = [white_x, white_y, red_x, red_y, green_x, green_y, blue_x, blue_y]
+                    .iter()
+                    .all(|v| v.is_finite());
+                if !all_finite || white_y == 0.0 || red_y == 0.0 || green_y == 0.0 || blue_y == 0.0
+                {
                     return SourceProfile::Srgb;
                 }
 
@@ -165,23 +169,35 @@ impl SourceProfile {
             }
             ColorProfileSource::GAMA_CHRM => {
                 let g = color.gamma;
+                let wx = color.white_point.x;
                 let wy = color.white_point.y;
+                let rx = color.primaries.Red.x;
                 let ry = color.primaries.Red.y;
+                let gx = color.primaries.Green.x;
                 let gy = color.primaries.Green.y;
+                let bx = color.primaries.Blue.x;
                 let by = color.primaries.Blue.y;
-                // Reject degenerate values (same validation as from_png_info)
-                if g <= 0.0 || !g.is_finite() || wy == 0.0 || ry == 0.0 || gy == 0.0 || by == 0.0 {
+                // Reject degenerate values: NaN, infinity, zero gamma, or y=0
+                let all_finite = [wx, wy, rx, ry, gx, gy, bx, by].iter().all(|v| v.is_finite());
+                if g <= 0.0
+                    || !g.is_finite()
+                    || !all_finite
+                    || wy == 0.0
+                    || ry == 0.0
+                    || gy == 0.0
+                    || by == 0.0
+                {
                     return SourceProfile::Srgb;
                 }
                 SourceProfile::GammaPrimaries {
                     gamma: g,
-                    white_x: color.white_point.x,
+                    white_x: wx,
                     white_y: wy,
-                    red_x: color.primaries.Red.x,
+                    red_x: rx,
                     red_y: ry,
-                    green_x: color.primaries.Green.x,
+                    green_x: gx,
                     green_y: gy,
-                    blue_x: color.primaries.Blue.x,
+                    blue_x: bx,
                     blue_y: by,
                 }
             }

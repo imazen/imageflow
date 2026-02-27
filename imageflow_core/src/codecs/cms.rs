@@ -3,6 +3,7 @@ use crate::codecs::moxcms_transform::MoxcmsTransformCache;
 use crate::codecs::source_profile::SourceProfile;
 use crate::graphics::bitmaps::BitmapWindowMut;
 use crate::Result;
+use std::sync::OnceLock;
 
 /// Selects which CMS backend to use for color profile transforms.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -19,16 +20,22 @@ pub enum CmsBackend {
     Both,
 }
 
+/// Cached result of the `CMS_BACKEND` env var, read once at first access.
+static CMS_BACKEND_ENV: OnceLock<Option<CmsBackend>> = OnceLock::new();
+
 impl CmsBackend {
     /// Read from `CMS_BACKEND` env var: "moxcms", "lcms2", or "both".
     /// Falls back to the provided default if unset or unrecognized.
+    /// The env var is read once and cached for the process lifetime.
     pub fn from_env_or(default: CmsBackend) -> CmsBackend {
-        match std::env::var("CMS_BACKEND").as_deref() {
-            Ok("both") => CmsBackend::Both,
-            Ok("lcms2") => CmsBackend::Lcms2,
-            Ok("moxcms") => CmsBackend::Moxcms,
-            _ => default,
-        }
+        let cached =
+            CMS_BACKEND_ENV.get_or_init(|| match std::env::var("CMS_BACKEND").as_deref() {
+                Ok("both") => Some(CmsBackend::Both),
+                Ok("lcms2") => Some(CmsBackend::Lcms2),
+                Ok("moxcms") => Some(CmsBackend::Moxcms),
+                _ => None,
+            });
+        cached.unwrap_or(default)
     }
 }
 
@@ -56,7 +63,7 @@ pub fn transform_to_srgb(
             let is_cmyk = matches!(profile, SourceProfile::CmykIcc(_));
             let threshold: u8 = if is_cmyk { 17 } else { 1 };
 
-            // Snapshot the frame data before transforms
+            // Snapshot original frame data (alloc 1 of 2)
             let row_bytes = frame.w() as usize * frame.t_per_pixel();
             let h = frame.h() as usize;
             let mut snapshot = Vec::with_capacity(row_bytes * h);
@@ -64,16 +71,16 @@ pub fn transform_to_srgb(
                 snapshot.extend_from_slice(scanline.row());
             }
 
-            // Run moxcms
+            // Run moxcms (in-place on frame)
             MoxcmsTransformCache::transform_to_srgb(frame, profile)?;
 
-            // Capture moxcms result
+            // Capture moxcms result (alloc 2 of 2)
             let mut moxcms_result = Vec::with_capacity(row_bytes * h);
             for scanline in frame.scanlines() {
                 moxcms_result.extend_from_slice(scanline.row());
             }
 
-            // Restore original and run lcms2
+            // Restore original for lcms2 (then drop snapshot to reduce peak memory)
             {
                 let mut src_offset = 0;
                 for mut scanline in frame.scanlines() {
@@ -82,6 +89,8 @@ pub fn transform_to_srgb(
                     src_offset += row.len();
                 }
             }
+            drop(snapshot);
+
             // lcms2 may panic on unsupported pixel formats (e.g. gray ICC with BGRA frame).
             // Catch panics so a single bad profile doesn't break subsequent images.
             let lcms2_result_or_panic =
@@ -91,12 +100,15 @@ pub fn transform_to_srgb(
 
             match lcms2_result_or_panic {
                 Ok(Ok(())) => {
-                    // Capture lcms2 result and compare
-                    let mut lcms2_result = Vec::with_capacity(row_bytes * h);
-                    for scanline in frame.scanlines() {
-                        lcms2_result.extend_from_slice(scanline.row());
-                    }
-                    compare_results(&moxcms_result, &lcms2_result, threshold, is_cmyk, profile);
+                    // Compare moxcms result against frame (which now holds lcms2 result)
+                    // — no third allocation needed.
+                    compare_results_against_frame(
+                        &moxcms_result,
+                        frame,
+                        threshold,
+                        is_cmyk,
+                        profile,
+                    );
                 }
                 Ok(Err(e)) => {
                     eprintln!("[CMS Both] lcms2 error (moxcms result used): {e}");
@@ -121,59 +133,71 @@ pub fn transform_to_srgb(
     }
 }
 
-/// Compare two frame buffers and log warnings for any channel divergence exceeding the threshold.
-fn compare_results(
+/// Compare moxcms result buffer against the frame (which holds lcms2 result).
+/// Reads lcms2 data directly from frame scanlines to avoid a third allocation.
+fn compare_results_against_frame(
     moxcms: &[u8],
-    lcms2: &[u8],
+    frame: &mut BitmapWindowMut<u8>,
     max_diff: u8,
     is_cmyk: bool,
     profile: &SourceProfile,
 ) {
-    if moxcms.len() != lcms2.len() {
+    let row_bytes = frame.w() as usize * frame.t_per_pixel();
+    let h = frame.h() as usize;
+    let total_bytes = row_bytes * h;
+
+    if moxcms.len() != total_bytes {
         eprintln!(
-            "[CMS Both] WARNING: buffer length mismatch: moxcms={}, lcms2={}",
+            "[CMS Both] WARNING: buffer length mismatch: moxcms={}, frame={}",
             moxcms.len(),
-            lcms2.len()
+            total_bytes
         );
         return;
     }
 
-    let total_pixels = moxcms.len() / 4;
+    let total_pixels = total_bytes / 4;
     let profile_type = if is_cmyk { "CMYK" } else { "RGB" };
 
     // Per-channel stats
     let mut max_per_channel = [0u8; 4];
-    let mut sum_per_channel = [0u64; 4]; // sum of diffs for mean calculation
+    let mut sum_per_channel = [0u64; 4];
     let mut divergent_pixels = 0u64;
     let mut max_observed = 0u8;
-    // Histogram: count of pixels at each max-channel-diff level (0..=255)
     let mut diff_histogram = [0u64; 256];
-    // Track worst pixel (highest single-channel diff)
     let mut worst_pixel: Option<(usize, [u8; 4], [u8; 4], u8)> = None;
 
-    for (i, (m_pixel, l_pixel)) in moxcms.chunks_exact(4).zip(lcms2.chunks_exact(4)).enumerate() {
-        let mut pixel_max_diff: u8 = 0;
-        for (ch, (&a, &b)) in m_pixel.iter().zip(l_pixel.iter()).enumerate() {
-            let diff = a.abs_diff(b);
-            if diff > max_per_channel[ch] {
-                max_per_channel[ch] = diff;
+    let mut pixel_idx = 0usize;
+    let mut moxcms_offset = 0usize;
+    for scanline in frame.scanlines() {
+        let lcms2_row = scanline.row();
+        let moxcms_row = &moxcms[moxcms_offset..moxcms_offset + lcms2_row.len()];
+        moxcms_offset += lcms2_row.len();
+
+        for (m_pixel, l_pixel) in moxcms_row.chunks_exact(4).zip(lcms2_row.chunks_exact(4)) {
+            let mut pixel_max_diff: u8 = 0;
+            for (ch, (&a, &b)) in m_pixel.iter().zip(l_pixel.iter()).enumerate() {
+                let diff = a.abs_diff(b);
+                if diff > max_per_channel[ch] {
+                    max_per_channel[ch] = diff;
+                }
+                sum_per_channel[ch] += diff as u64;
+                if diff > pixel_max_diff {
+                    pixel_max_diff = diff;
+                }
             }
-            sum_per_channel[ch] += diff as u64;
-            if diff > pixel_max_diff {
-                pixel_max_diff = diff;
+            diff_histogram[pixel_max_diff as usize] += 1;
+            if pixel_max_diff > max_diff {
+                divergent_pixels += 1;
+                if pixel_max_diff > max_observed {
+                    max_observed = pixel_max_diff;
+                    let mut m = [0u8; 4];
+                    let mut l = [0u8; 4];
+                    m.copy_from_slice(m_pixel);
+                    l.copy_from_slice(l_pixel);
+                    worst_pixel = Some((pixel_idx, m, l, pixel_max_diff));
+                }
             }
-        }
-        diff_histogram[pixel_max_diff as usize] += 1;
-        if pixel_max_diff > max_diff {
-            divergent_pixels += 1;
-            if pixel_max_diff > max_observed {
-                max_observed = pixel_max_diff;
-                let mut m = [0u8; 4];
-                let mut l = [0u8; 4];
-                m.copy_from_slice(m_pixel);
-                l.copy_from_slice(l_pixel);
-                worst_pixel = Some((i, m, l, pixel_max_diff));
-            }
+            pixel_idx += 1;
         }
     }
 
