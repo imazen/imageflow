@@ -1451,6 +1451,78 @@ fn test_cms_gama_high_gamma() {
     assert!(matched);
 }
 
+// gAMA-only regression tests: synthetic 16x16 RGB gradient PNGs with specific
+// gAMA chunks. These catch the bugs where (1) from_png_info used the wrong field
+// (source_gamma vs gama_chunk) and (2) gAMA-only files were ignored entirely.
+
+#[test]
+fn test_cms_gama_linear_only() {
+    // gAMA=1.0 (linear gamma), no cHRM. Must apply gamma→sRGB transform.
+    // Old imageflow ignored gAMA-only completely (delta=73 vs correct output).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::ByteArray(include_bytes!("visuals/fixtures/gama_linear_1_0.png").to_vec())),
+        2,
+        "cms_gama_linear_1_0",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 8,
+                h: 8,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_cms_gama_mac_only() {
+    // gAMA=0.55556 (mac gamma ≈ 1/1.8), no cHRM. Must apply gamma→sRGB transform.
+    // Non-neutral gamma: 0.55556 * 2.2 = 1.22 (outside ±0.05 threshold).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::ByteArray(include_bytes!("visuals/fixtures/gama_mac_055556.png").to_vec())),
+        2,
+        "cms_gama_mac_055556",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 8,
+                h: 8,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_cms_gama_neutral_with_srgb_chrm() {
+    // gAMA=0.45455 + cHRM with exact sRGB primaries. Should be treated as sRGB
+    // (no transform). Neutral gamma: 0.45455 * 2.2 ≈ 1.0 (within ±0.05).
+    // This catches the old bug where gAMA+cHRM with sRGB values triggered an
+    // unnecessary gamma 2.2→sRGB TRC transform (delta=9 on dark pixels).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::ByteArray(include_bytes!("visuals/fixtures/gama_neutral_srgb_chrm.png").to_vec())),
+        2,
+        "cms_gama_neutral_srgb_chrm",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 8,
+                h: 8,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
 #[test]
 fn test_cms_rec2020_pq() {
     // JPEG with ICC v4.2 "Rec. 2020 PQ" profile.
