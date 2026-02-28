@@ -15,12 +15,7 @@ use imageflow_types as s;
 
 enum PngColorChunk {
     Gama(f64),
-    Chrm {
-        white: (f64, f64),
-        red: (f64, f64),
-        green: (f64, f64),
-        blue: (f64, f64),
-    },
+    Chrm { white: (f64, f64), red: (f64, f64), green: (f64, f64), blue: (f64, f64) },
     Srgb(u8),
 }
 
@@ -150,11 +145,7 @@ fn decode_to_rgba(png_bytes: &[u8], decoder: NamedDecoders) -> Vec<u8> {
 
     // Extract raw RGBA via lodepng
     let result = lodepng::decode32(&output_bytes).unwrap();
-    result
-        .buffer
-        .iter()
-        .flat_map(|px| [px.r, px.g, px.b, px.a])
-        .collect()
+    result.buffer.iter().flat_map(|px| [px.r, px.g, px.b, px.a]).collect()
 }
 
 /// Maximum per-channel absolute difference between two RGBA buffers.
@@ -197,10 +188,7 @@ fn decode_both(png: &[u8]) -> (Vec<u8>, Vec<u8>) {
 fn assert_noop(test_name: &str, input: &[u8], png: &[u8]) {
     let (libpng, image_png) = decode_both(png);
     let parity = max_channel_delta(&libpng, &image_png);
-    assert!(
-        parity <= 2,
-        "{test_name}: decoder parity failed — max delta {parity} (expected ≤ 2)"
-    );
+    assert!(parity <= 2, "{test_name}: decoder parity failed — max delta {parity} (expected ≤ 2)");
     let libpng_delta = max_channel_delta(input, &libpng);
     assert!(
         libpng_delta <= 1,
@@ -269,10 +257,7 @@ fn assert_transform(test_name: &str, input: &[u8], png: &[u8], encoding_gamma: f
     let (libpng, image_png) = decode_both(png);
 
     let parity = max_channel_delta(&libpng, &image_png);
-    assert!(
-        parity <= 2,
-        "{test_name}: decoder parity failed — max delta {parity} (expected ≤ 2)"
-    );
+    assert!(parity <= 2, "{test_name}: decoder parity failed — max delta {parity} (expected ≤ 2)");
 
     // Verify against reference math (tolerance of 2 for CMS rounding)
     let libpng_vs_ref = max_channel_delta(&expected, &libpng);
