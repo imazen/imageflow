@@ -153,10 +153,12 @@ impl Lcms2TransformCache {
         let w = frame.w() as usize;
         let mut gray_buf = vec![0u8; w];
         let mut bgra_buf = vec![0u32; w];
+        let mut alphas: Vec<u32> = Vec::with_capacity(w);
         for mut line in frame.scanlines_u32().unwrap() {
             let row = line.row();
             // Save alpha values (high byte of each BGRA u32 on LE)
-            let alphas: Vec<u32> = row.iter().map(|&px| px & 0xFF00_0000).collect();
+            alphas.clear();
+            alphas.extend(row.iter().map(|&px| px & 0xFF00_0000));
             // Extract gray value (B channel) from each BGRA pixel.
             // Mozjpeg decodes grayscale as [gray, gray, gray, 255] in BGRA order.
             for (i, &px) in row.iter().enumerate() {
@@ -274,12 +276,15 @@ impl Lcms2TransformCache {
         frame: &mut BitmapWindowMut<u8>,
         transform: &Transform<u32, u32, ThreadContext, DisallowCache>,
     ) {
+        let w = frame.w() as usize;
+        let mut alphas: Vec<u32> = Vec::with_capacity(w);
         for mut line in frame.scanlines_u32().unwrap() {
             let row = line.row_mut();
             // lcms2 may zero the alpha channel when transforming RGB ICC profiles
             // via BGRA_8 pixel format. Save alpha before transform and restore after.
             // BGRA as u32 little-endian: alpha is the high byte (bits 24-31).
-            let alphas: Vec<u32> = row.iter().map(|&px| px & 0xFF00_0000).collect();
+            alphas.clear();
+            alphas.extend(row.iter().map(|&px| px & 0xFF00_0000));
             transform.transform_in_place(row);
             for (px, a) in row.iter_mut().zip(alphas.iter()) {
                 *px = (*px & 0x00FF_FFFF) | a;

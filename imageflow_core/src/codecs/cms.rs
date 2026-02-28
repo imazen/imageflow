@@ -225,6 +225,9 @@ fn compare_results_against_frame(
             p99 = Some(diff_val as u8);
         }
     }
+    // These are always Some when divergent_pixels > 0 because the histogram
+    // loop above processes every divergent pixel, so every percentile index
+    // will be reached. The unwrap_or(0) is a no-op safety net.
     let p50 = p50.unwrap_or(0);
     let p95 = p95.unwrap_or(0);
     let p99 = p99.unwrap_or(0);

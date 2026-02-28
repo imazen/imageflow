@@ -218,24 +218,8 @@ fn cms_batch_collect_errors() {
         ("png-24-32", "/mnt/v/output/corpus-builder/png-24-32"),
     ];
 
-    // Check if any corpora exist before touching output dir
-    let any_exist = corpora.iter().any(|&(_, dir_str)| Path::new(dir_str).exists());
-    if !any_exist {
-        eprintln!("No corpus directories found, skipping batch test");
-        return;
-    }
-
-    // Clean output dir
-    let out = Path::new(ERROR_OUTPUT_DIR);
-    if out.exists() {
-        std::fs::remove_dir_all(out).unwrap();
-    }
-    std::fs::create_dir_all(out).unwrap();
-
-    let mut total_files = 0u64;
-    let mut total_ok = 0u64;
-    let mut total_errors = 0usize;
-
+    // Collect results first, defer output dir creation until we know there's work
+    let mut results: Vec<(&str, BatchResult)> = Vec::new();
     for &(label, dir_str) in corpora {
         let dir = Path::new(dir_str);
         if !dir.exists() {
@@ -243,16 +227,28 @@ fn cms_batch_collect_errors() {
             continue;
         }
         if let Some(result) = run_batch(label, dir) {
-            total_files += result.total;
-            total_ok += result.ok;
-            total_errors += result.errors.len();
-            collect_error_files(label, &result);
+            results.push((label, result));
         }
     }
 
+    let total_files: u64 = results.iter().map(|(_, r)| r.total).sum();
+    let total_ok: u64 = results.iter().map(|(_, r)| r.ok).sum();
+    let total_errors: usize = results.iter().map(|(_, r)| r.errors.len()).sum();
+
     if total_files == 0 {
-        eprintln!("No files found in any corpus, skipping");
+        eprintln!("No corpus directories found or all empty, skipping batch test");
         return;
+    }
+
+    // Clean and create output dir only when we have results to write
+    let out = Path::new(ERROR_OUTPUT_DIR);
+    if out.exists() {
+        std::fs::remove_dir_all(out).unwrap();
+    }
+    std::fs::create_dir_all(out).unwrap();
+
+    for (label, result) in &results {
+        collect_error_files(label, result);
     }
 
     // Write overall summary

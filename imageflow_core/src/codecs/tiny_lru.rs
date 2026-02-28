@@ -5,9 +5,10 @@ use std::sync::Mutex;
 /// Designed for 4-16 entries where linear scan is faster than hashing.
 /// Uses a Mutex for thread safety across hundreds of concurrent contexts.
 ///
-/// **Lock discipline:** No user-provided closures (create, clone) ever run
-/// while the lock is held. Only brief Vec scans and moves happen under the lock.
-/// This means a panic in transform creation or cloning cannot poison the mutex.
+/// **Lock discipline:** User-provided `create` closures always run outside
+/// the lock. Under the lock, only brief Vec scans, moves, and Arc clones
+/// (atomic ref count increments) occur. This means a panic in transform
+/// creation cannot poison the mutex.
 ///
 /// Entries are ordered from least-recently-used (front) to most-recently-used (back).
 /// On hit, the entry is moved to the back. On eviction, the front entry is removed.

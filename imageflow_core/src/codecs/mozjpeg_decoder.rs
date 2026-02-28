@@ -375,7 +375,11 @@ impl MzDec {
             // (bytes 16..20 == b"GRAY"). This handles both true grayscale JPEGs
             // and YCbCr JPEGs with an embedded Gray ICC profile.
             let icc_is_gray = icc_bytes.len() >= 20 && &icc_bytes[16..20] == b"GRAY";
-            if is_grayscale || icc_is_gray {
+            if icc_is_gray && !is_grayscale {
+                // Grayscale ICC profile on a color JPEG — applying a gray→sRGB
+                // transform to color data would silently corrupt output. Skip it.
+                crate::codecs::source_profile::SourceProfile::Srgb
+            } else if is_grayscale || icc_is_gray {
                 crate::codecs::source_profile::SourceProfile::IccProfileGray(icc_bytes.clone())
             } else {
                 crate::codecs::source_profile::SourceProfile::IccProfile(icc_bytes.clone())
