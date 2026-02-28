@@ -112,9 +112,9 @@ version = "0.1.0"
 
 [[package]]
 name = "archmage"
-version = "0.8.7"
+version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92b51ccd8fdd3cd8e00a1571cd8fac4f9cc5757a3291d3893846314b8c1d67ec"
+checksum = "c6a8d07d03baac9aeaa060763129e3dccb82d7f5033f155f342e48fbd6eecb46"
 dependencies = [
  "archmage-macros",
  "safe_unaligned_simd",
@@ -122,9 +122,9 @@ dependencies = [
 
 [[package]]
 name = "archmage-macros"
-version = "0.8.7"
+version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f44ef3881173d0d2e18f66b18bcb79fdba0532b53416985238183bd33696ec43"
+checksum = "6d809ec8d42ebc519018e480ecc1c6ce4565a58d977f898e587a49773bd43040"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -776,6 +776,8 @@ dependencies = [
 [[package]]
 name = "garb"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02fb4b910fea99b511df11b42ef02847853225d067c2cb7d5d9a0c27e7950110"
 dependencies = [
  "archmage",
  "bytemuck",
