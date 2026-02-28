@@ -1377,11 +1377,205 @@ fn test_jpeg_icc2_color_profile() {
 
 #[test]
 fn test_jpeg_icc4_color_profile() {
-    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
-                          "MarsRGB_ICCv4_Scaled400300", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
-Node::Decode {io_id: 0, commands: None},
-Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)) }
-]
+    // ICC v4 profile transform via moxcms has platform-specific float rounding (max delta 2).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::Url(
+            "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned(),
+        )),
+        2,
+        "MarsRGB_ICCv4_Scaled400300",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 400,
+                h: 300,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+// CMS regression tests for bug-exposing color profiles.
+// These fixtures cover profile types that previously caused large divergences
+// between moxcms and lcms2 backends due to CICP transfer override bugs.
+
+#[test]
+fn test_cms_gama_srgb_primaries() {
+    // PNG with gAMA(0.45455) + sRGB cHRM primaries.
+    // Treated as sRGB (no transform) — neutral gamma + sRGB primaries.
+    // Matches Chrome/Firefox behavior per PNG 3rd Ed spec.
+    let matched = compare_max_delta(
+        Some(IoTestEnum::Url(
+            "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/gama_srgb_045455.png".to_owned(),
+        )),
+        2,
+        "cms_gama_srgb_045455",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 100,
+                h: 30,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_cms_gama_high_gamma() {
+    // PNG with gAMA(0.22727) = gamma 4.4 + sRGB cHRM primaries.
+    // Previously caused max=67 divergence from the same CICP override bug.
+    let matched = compare_max_delta(
+        Some(IoTestEnum::Url(
+            "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/gama_high_022727.png".to_owned(),
+        )),
+        2,
+        "cms_gama_high_022727",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 32,
+                h: 32,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+// gAMA-only regression tests: synthetic 16x16 RGB gradient PNGs with specific
+// gAMA chunks. These catch the bugs where (1) from_png_info used the wrong field
+// (source_gamma vs gama_chunk) and (2) gAMA-only files were ignored entirely.
+
+#[test]
+fn test_cms_gama_linear_only() {
+    // gAMA=1.0 (linear gamma), no cHRM. Must apply gamma→sRGB transform.
+    // Old imageflow ignored gAMA-only completely (delta=73 vs correct output).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::ByteArray(
+            include_bytes!("visuals/fixtures/gama_linear_1_0.png").to_vec(),
+        )),
+        2,
+        "cms_gama_linear_1_0",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 8,
+                h: 8,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_cms_gama_mac_only() {
+    // gAMA=0.55556 (mac gamma ≈ 1/1.8), no cHRM. Must apply gamma→sRGB transform.
+    // Non-neutral gamma: 0.55556 * 2.2 = 1.22 (outside ±0.05 threshold).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::ByteArray(
+            include_bytes!("visuals/fixtures/gama_mac_055556.png").to_vec(),
+        )),
+        2,
+        "cms_gama_mac_055556",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 8,
+                h: 8,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_cms_gama_neutral_with_srgb_chrm() {
+    // gAMA=0.45455 + cHRM with exact sRGB primaries. Should be treated as sRGB
+    // (no transform). Neutral gamma: 0.45455 * 2.2 ≈ 1.0 (within ±0.05).
+    // This catches the old bug where gAMA+cHRM with sRGB values triggered an
+    // unnecessary gamma 2.2→sRGB TRC transform (delta=9 on dark pixels).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::ByteArray(
+            include_bytes!("visuals/fixtures/gama_neutral_srgb_chrm.png").to_vec(),
+        )),
+        2,
+        "cms_gama_neutral_srgb_chrm",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 8,
+                h: 8,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_cms_rec2020_pq() {
+    // JPEG with ICC v4.2 "Rec. 2020 PQ" profile.
+    // Previously caused max=224 divergence when moxcms CICP PQ transfer
+    // overrode the ICC curv LUT (absolute luminance 0-10000 nits vs 0-1).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::Url(
+            "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/rec2020_pq.jpg"
+                .to_owned(),
+        )),
+        2,
+        "cms_rec2020_pq",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 32,
+                h: 32,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_cms_apple_wide_color() {
+    // JPEG with ICC v4.0 "Apple Wide Color Sharing Profile" (30KB profile).
+    // Complex ICC v4 scanner profile with expected moxcms/lcms2 rounding
+    // differences (max=3 on 64x64 crop, max=12 on full image).
+    let matched = compare_max_delta(
+        Some(IoTestEnum::Url(
+            "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/apple_wide_color.jpg".to_owned(),
+        )),
+        3,
+        "cms_apple_wide_color",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        vec![
+            Node::Decode { io_id: 0, commands: None },
+            Node::Resample2D {
+                w: 32,
+                h: 32,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
+            },
+        ],
     );
     assert!(matched);
 }
@@ -1645,12 +1839,15 @@ fn test_jpeg_crop() {
 
 #[test]
 fn decode_cmyk_jpeg() {
-    let matched = compare(
+    // CMYK→sRGB via moxcms uses f32 internally; NEON/AVX2/scalar produce
+    // different rounding per platform (max delta 2-3). Use channel delta
+    // tolerance instead of exact checksum matching.
+    let matched = compare_max_delta(
         Some(IoTestEnum::Url(
             "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/cmyk_logo.jpg"
                 .to_owned(),
         )),
-        500,
+        3,
         "cmyk_decode",
         POPULATE_CHECKSUMS,
         DEBUG_GRAPH,

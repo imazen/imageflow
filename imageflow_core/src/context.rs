@@ -44,6 +44,9 @@ pub struct Context {
     pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>,
 
     pub allocations: RefCell<AllocationContainer>,
+
+    /// Which CMS backend to use for color profile transforms. Default: Moxcms.
+    pub cms_backend: crate::codecs::cms::CmsBackend,
 }
 
 // This token is the shared state.
@@ -296,6 +299,7 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
+            cms_backend: crate::codecs::cms::CmsBackend::from_env_or(Default::default()),
         }))
     }
     fn default_codecs_capacity() -> usize {
@@ -317,6 +321,7 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
+            cms_backend: crate::codecs::cms::CmsBackend::from_env_or(Default::default()),
         })
     }
     fn create_with_cancellation_token_and_can_panic(
@@ -337,6 +342,7 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
+            cms_backend: crate::codecs::cms::CmsBackend::from_env_or(Default::default()),
         }))
     }
 
@@ -508,7 +514,7 @@ impl Context {
                         preferred_extension: info.preferred_extension,
                         preferred_mime_type: info.preferred_mime_type,
                         w: info.image_width,
-                        h: info.image_width,
+                        h: info.image_height,
                     })
                 } else {
                     None

@@ -16,7 +16,6 @@ use self::screen::Screen;
 use crate::graphics::bitmaps::{BitmapCompositing, BitmapKey, ColorSpace};
 use crate::io::IoProxyProxy;
 use ::gif::Frame;
-use lcms2_sys::cmsAllocProfileSequenceDescription;
 use std::rc::Rc;
 
 pub struct GifDecoder {

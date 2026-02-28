@@ -34,6 +34,14 @@ static void wrap_png_decoder_error_handler(png_structp png_ptr, png_const_charp 
     longjmp(state->error_handler_jmp, 1);
 }
 
+/* Suppress libpng warnings (benign metadata issues like invalid bKGD, tRNS
+   out-of-range, iCCP CRC errors, etc.) instead of letting them go to stderr. */
+static void wrap_png_decoder_warning_handler(png_structp png_ptr, png_const_charp msg)
+{
+    (void)png_ptr;
+    (void)msg;
+}
+
 static void wrap_png_custom_read_data(png_structp png_ptr, png_bytep buffer, png_size_t bytes_requested)
 {
     struct wrap_png_decoder_state * state = (struct wrap_png_decoder_state *)png_get_io_ptr(png_ptr);
@@ -71,7 +79,6 @@ bool wrap_png_decoder_state_init(struct wrap_png_decoder_state * state, void * c
 
 static bool wrap_png_decoder_load_color_profile(struct wrap_png_decoder_state * state)
 {
-
     // Get gamma
     if (!png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)) {
         png_get_gAMA(state->png_ptr, state->info_ptr, &state->color.gamma);
@@ -97,7 +104,7 @@ static bool wrap_png_decoder_load_color_profile(struct wrap_png_decoder_state * 
                 state->color.source = flow_codec_color_profile_source_ICCP_GRAY;
             }
 
-    }else if(is_color_png && !png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)
+    }else if(!png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)
              && png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_gAMA)
              && png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_cHRM)) {
 
@@ -107,8 +114,35 @@ static bool wrap_png_decoder_load_color_profile(struct wrap_png_decoder_state * 
 
         state->color.white_point.Y = state->color.primaries.Red.Y = state->color.primaries.Green.Y = state->color.primaries.Blue.Y = 1.0;
 
-
         state->color.source = flow_codec_color_profile_source_GAMA_CHRM;
+
+    }else if(!png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)
+             && png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_gAMA)
+             && !png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_cHRM)) {
+
+        // gAMA without cHRM: primaries are device-dependent per PNG spec.
+        // Chrome (Skia) and Firefox treat "neutral" gamma (~1/2.2) as sRGB with
+        // no transform. Only non-neutral gamma values (e.g. 1.0 for linear) need
+        // a transform with assumed sRGB primaries.
+        //
+        // Neutral gamma: gamma * 2.2 within ±0.05 of 1.0 (Chrome's threshold).
+        double gamma = state->color.gamma;
+        double product = gamma * 2.2;
+        if (gamma > 0.0 && (product - 1.0 > 0.05 || product - 1.0 < -0.05)) {
+            // Non-neutral gamma: assume sRGB primaries (D65 white, BT.709).
+            state->color.white_point.x = 0.3127;
+            state->color.white_point.y = 0.3290;
+            state->color.primaries.Red.x = 0.64;
+            state->color.primaries.Red.y = 0.33;
+            state->color.primaries.Green.x = 0.30;
+            state->color.primaries.Green.y = 0.60;
+            state->color.primaries.Blue.x = 0.15;
+            state->color.primaries.Blue.y = 0.06;
+            state->color.white_point.Y = state->color.primaries.Red.Y = state->color.primaries.Green.Y = state->color.primaries.Blue.Y = 1.0;
+
+            state->color.source = flow_codec_color_profile_source_GAMA_CHRM;
+        }
+        // else: neutral gamma → leave source as Null (treated as sRGB, no-op)
     }
 
     return true;
@@ -121,7 +155,7 @@ struct flow_decoder_color_info * wrap_png_decoder_get_color_info(struct wrap_png
 
 bool wrap_png_decode_image_info(struct wrap_png_decoder_state * state)
 {
-    state->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, state, wrap_png_decoder_error_handler, NULL);
+    state->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, state, wrap_png_decoder_error_handler, wrap_png_decoder_warning_handler);
     if (state->png_ptr == NULL) {
         state->error_handler(state->png_ptr, state->custom_state, "OOM in wrap_png_decode_image_info: png_create_read_struct failed. Out of memory.\"");
         return false;
@@ -187,6 +221,7 @@ bool wrap_png_decode_image_info(struct wrap_png_decoder_state * state)
     // We use BGRA, not RGBA
     png_set_bgr(state->png_ptr);
     // We don't want to think about interlacing. Let libpng fix that up.
+    png_set_interlace_handling(state->png_ptr);
 
     // Update our info based on these new settings.
     png_read_update_info(state->png_ptr, state->info_ptr);
@@ -301,6 +336,12 @@ static void wrap_png_encoder_error_handler(png_structp png_ptr, png_const_charp 
     longjmp(state->error_handler_jmp, 1);
 }
 
+static void wrap_png_encoder_warning_handler(png_structp png_ptr, png_const_charp msg)
+{
+    (void)png_ptr;
+    (void)msg;
+}
+
 static void wrap_png_encoder_custom_write_data(png_structp png_ptr, png_bytep buffer, png_size_t buffer_length)
 {
     struct wrap_png_encoder_state * state = (struct wrap_png_encoder_state *)png_get_io_ptr(png_ptr);
@@ -351,7 +392,7 @@ bool wrap_png_encoder_write_png(void * custom_state,
     }
 
     png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, &state, wrap_png_encoder_error_handler,
-                                                  NULL); // makepng_error, makepng_warning);
+                                                  wrap_png_encoder_warning_handler);
     png_infop info_ptr = NULL;
     if (png_ptr == NULL){
         state.error_handler(png_ptr, state.custom_state, "OOM in wrap_png_encoder_write_png: png_create_write_struct failed. Out of memory.");

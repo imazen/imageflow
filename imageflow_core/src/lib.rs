@@ -16,9 +16,32 @@ mod codecs;
 mod context;
 mod flow;
 pub mod graphics;
+
+#[doc(hidden)]
+pub mod bench_helpers {
+    pub fn bench_swap_br_inplace(row: &mut [u8]) {
+        garb::bytes::rgba_to_bgra_inplace(row).unwrap();
+    }
+    pub fn bench_copy_swap_br(src: &[u8], dst: &mut [u8]) {
+        garb::bytes::rgba_to_bgra(src, dst).unwrap();
+    }
+    pub fn bench_set_alpha_to_255(row: &mut [u8]) {
+        garb::bytes::fill_alpha_bgra(row).unwrap();
+    }
+    pub fn bench_rgb_to_bgra(src: &[u8], dst: &mut [u8]) {
+        garb::bytes::rgb_to_bgra(src, dst).unwrap();
+    }
+    pub fn bench_gray_to_bgra(src: &[u8], dst: &mut [u8]) {
+        garb::bytes::gray_to_bgra(src, dst).unwrap();
+    }
+    pub fn bench_gray_alpha_to_bgra(src: &[u8], dst: &mut [u8]) {
+        garb::bytes::gray_alpha_to_bgra(src, dst).unwrap();
+    }
+}
 mod io;
 pub mod json;
 
+pub use crate::codecs::cms::CmsBackend;
 pub use crate::codecs::NamedDecoders;
 pub use crate::context::Context;
 pub use crate::context::ThreadSafeContext;
