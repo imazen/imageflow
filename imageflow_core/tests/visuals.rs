@@ -1405,7 +1405,8 @@ fn test_jpeg_icc4_color_profile() {
 #[test]
 fn test_cms_gama_srgb_primaries() {
     // PNG with gAMA(0.45455) + sRGB cHRM primaries.
-    // Previously caused max=9 divergence when moxcms CICP overrode gAMA TRC.
+    // Treated as sRGB (no transform) — neutral gamma + sRGB primaries.
+    // Matches Chrome/Firefox behavior per PNG 3rd Ed spec.
     let matched = compare_max_delta(
         Some(IoTestEnum::Url(
             "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/gama_srgb_045455.png".to_owned(),

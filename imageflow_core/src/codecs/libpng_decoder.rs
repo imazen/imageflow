@@ -337,9 +337,9 @@ impl PngDec {
                         "LibPNG decoder returned null color info"
                     ));
                 }
-                let profile = crate::codecs::source_profile::SourceProfile::from_decoder_color_info(
-                    &*color_info_ptr,
-                );
+                let color = &*color_info_ptr;
+                let profile =
+                    crate::codecs::source_profile::SourceProfile::from_decoder_color_info(color);
                 if !profile.is_srgb() {
                     let result =
                         crate::codecs::cms::transform_to_srgb(&mut window, &profile, cms_backend)

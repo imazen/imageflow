@@ -77,7 +77,10 @@ impl SourceProfile {
         }
 
         // 4. gAMA (with or without cHRM)
-        if let Some(gamma) = info.source_gamma {
+        // Use gama_chunk/chrm_chunk (raw chunk data) rather than source_gamma/source_chromaticities,
+        // which are only populated by the encoder. The gamma()/chromaticities() methods also check
+        // for sRGB substitution, but we already handled sRGB above.
+        if let Some(gamma) = info.gama_chunk {
             let gamma_val = gamma.into_value() as f64;
 
             // Reject degenerate gamma values (0 → division by zero, negative → nonsensical)
@@ -85,7 +88,7 @@ impl SourceProfile {
                 return SourceProfile::Srgb;
             }
 
-            return if let Some(ref chrm) = info.source_chromaticities {
+            return if let Some(ref chrm) = info.chrm_chunk {
                 let white_x = chrm.white.0.into_value() as f64;
                 let white_y = chrm.white.1.into_value() as f64;
                 let red_x = chrm.red.0.into_value() as f64;
@@ -105,31 +108,55 @@ impl SourceProfile {
                     return SourceProfile::Srgb;
                 }
 
-                SourceProfile::GammaPrimaries {
-                    gamma: gamma_val,
-                    white_x,
-                    white_y,
-                    red_x,
-                    red_y,
-                    green_x,
-                    green_y,
-                    blue_x,
-                    blue_y,
+                // If gamma is neutral and primaries match sRGB, this is effectively
+                // sRGB — no transform needed. The pure gamma 2.2 TRC differs from
+                // sRGB TRC (which has a linear toe), so skipping the transform avoids
+                // introducing unnecessary rounding error for dark values.
+                if is_neutral_gamma(gamma_val)
+                    && is_srgb_primaries([
+                        white_x, white_y, red_x, red_y, green_x, green_y, blue_x, blue_y,
+                    ])
+                {
+                    SourceProfile::Srgb
+                } else {
+                    SourceProfile::GammaPrimaries {
+                        gamma: gamma_val,
+                        white_x,
+                        white_y,
+                        red_x,
+                        red_y,
+                        green_x,
+                        green_y,
+                        blue_x,
+                        blue_y,
+                    }
                 }
             } else {
-                // gAMA without cHRM: assume sRGB primaries (D65 white, BT.709 primaries).
-                // This is critical for non-sRGB gamma values like gAMA=1.0 (linear),
-                // which would otherwise fall through to Srgb and display incorrectly.
-                SourceProfile::GammaPrimaries {
-                    gamma: gamma_val,
-                    white_x: 0.3127,
-                    white_y: 0.3290,
-                    red_x: 0.64,
-                    red_y: 0.33,
-                    green_x: 0.30,
-                    green_y: 0.60,
-                    blue_x: 0.15,
-                    blue_y: 0.06,
+                // gAMA without cHRM: primaries are device-dependent per PNG spec.
+                // Chrome (Skia) and Firefox both treat "neutral" gamma (≈1/2.2, i.e.
+                // sRGB encoding gamma) as sRGB with no transform. Only non-neutral
+                // gamma values (e.g. 1.0 for linear) need an actual transform.
+                //
+                // Neutral gamma check: if gamma * 2.2 is within ±0.05 of 1.0,
+                // the decode exponent is ≈1.0 → no-op. Matches Chrome's threshold
+                // (crbug.com/388025081).
+                if is_neutral_gamma(gamma_val) {
+                    SourceProfile::Srgb
+                } else {
+                    // Non-neutral gamma without cHRM: assume sRGB primaries
+                    // (D65 white, BT.709). Critical for gAMA=1.0 (linear) which
+                    // would otherwise display with incorrect brightness.
+                    SourceProfile::GammaPrimaries {
+                        gamma: gamma_val,
+                        white_x: 0.3127,
+                        white_y: 0.3290,
+                        red_x: 0.64,
+                        red_y: 0.33,
+                        green_x: 0.30,
+                        green_y: 0.60,
+                        blue_x: 0.15,
+                        blue_y: 0.06,
+                    }
                 }
             };
         }
@@ -189,6 +216,12 @@ impl SourceProfile {
                 {
                     return SourceProfile::Srgb;
                 }
+                // If gamma is neutral and primaries match sRGB, this is effectively
+                // sRGB — no transform needed. This catches gAMA-only PNGs where the
+                // C code synthesized sRGB primaries.
+                if is_neutral_gamma(g) && is_srgb_primaries([wx, wy, rx, ry, gx, gy, bx, by]) {
+                    return SourceProfile::Srgb;
+                }
                 SourceProfile::GammaPrimaries {
                     gamma: g,
                     white_x: wx,
@@ -231,6 +264,25 @@ impl SourceProfile {
             }
         }
     }
+}
+
+/// Returns true if `gamma` is "neutral" — close enough to sRGB encoding gamma
+/// (1/2.2 ≈ 0.45455) that the decode exponent is ≈1.0 and no transform is needed.
+///
+/// Matches Chrome's Skia threshold (crbug.com/388025081): the product `gamma * 2.2`
+/// must be within ±0.05 of 1.0. This means gamma values from ~0.4318 to ~0.4773 are
+/// considered neutral.
+fn is_neutral_gamma(gamma: f64) -> bool {
+    (gamma * 2.2 - 1.0).abs() < 0.05
+}
+
+/// Returns true if the given chromaticities match sRGB/BT.709 within tolerance.
+/// Used to detect gAMA-only PNGs where the C code synthesized sRGB primaries.
+/// Arguments: `[white_x, white_y, red_x, red_y, green_x, green_y, blue_x, blue_y]`.
+fn is_srgb_primaries(chrm: [f64; 8]) -> bool {
+    const SRGB: [f64; 8] = [0.3127, 0.3290, 0.64, 0.33, 0.30, 0.60, 0.15, 0.06];
+    const TOL: f64 = 0.01;
+    chrm.iter().zip(SRGB.iter()).all(|(a, b)| (a - b).abs() < TOL)
 }
 
 /// Extract a human-readable description from raw ICC profile bytes.

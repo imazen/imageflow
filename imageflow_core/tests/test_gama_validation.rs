@@ -96,20 +96,13 @@ fn validate_libpng_vs_image_png_for_gama_files() {
         .map(|l| l.to_string())
         .collect();
 
-    eprintln!(
-        "\n=== libpng vs image_png decoder comparison: {} files ===\n",
-        paths.len()
-    );
+    eprintln!("\n=== libpng vs image_png decoder comparison: {} files ===\n", paths.len());
 
     let mut results: Vec<(String, u8, f64, usize, &str)> = Vec::new();
     let mut errors: Vec<(String, String)> = Vec::new();
 
     for (i, path) in paths.iter().enumerate() {
-        let basename = Path::new(path)
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
+        let basename = Path::new(path).file_name().unwrap().to_string_lossy().to_string();
 
         let png_bytes = match std::fs::read(path) {
             Ok(b) => b,
@@ -150,10 +143,7 @@ fn validate_libpng_vs_image_png_for_gama_files() {
         let image_png_px = match png_to_rgba(&image_png_png) {
             Some(p) => p,
             None => {
-                errors.push((
-                    basename,
-                    "image_png output pixel extraction failed".into(),
-                ));
+                errors.push((basename, "image_png output pixel extraction failed".into()));
                 continue;
             }
         };
@@ -214,14 +204,14 @@ fn validate_libpng_vs_image_png_for_gama_files() {
     std::fs::write(&tsv_path, &tsv).unwrap();
     eprintln!("\nResults: {tsv_path}");
 
-    // Both decoders should agree within rounding tolerance.
-    // gAMA-only files should match perfectly (delta=0) since both decoders
-    // now apply the same sRGB-primaries gamma transform.
-    // gAMA+cHRM files may have delta up to 10 due to gamma 2.2 ≠ sRGB TRC
-    // rounding — this is pre-existing and unrelated to the gAMA-only fix.
+    // Both decoders should produce identical output.
+    // - gAMA-only with neutral gamma (≈0.45455): treated as sRGB (no transform)
+    // - gAMA+cHRM with sRGB values: treated as sRGB (no transform)
+    // - gAMA-only with non-neutral gamma: both apply same GammaPrimaries transform
+    // Allow <=2 for potential CMS rounding in non-neutral gamma cases.
     assert!(
-        max_across_all <= 10,
-        "Max delta {max_across_all} exceeds tolerance 10 — see output above"
+        max_across_all <= 2,
+        "Max delta {max_across_all} exceeds tolerance 2 — see output above"
     );
     assert_eq!(
         size_mismatches, 0,
