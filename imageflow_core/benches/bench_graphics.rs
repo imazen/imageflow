@@ -540,21 +540,9 @@ fn benchmark_swizzle(ctx: &mut Criterion) {
             })
         });
 
-        group.bench_function("inplace_scalar", |b| {
-            b.iter(|| {
-                imageflow_core::bench_helpers::bench_swap_br_inplace_scalar(&mut row);
-            })
-        });
-
         group.bench_function("copy", |b| {
             b.iter(|| {
                 imageflow_core::bench_helpers::bench_copy_swap_br(&src, &mut dst);
-            })
-        });
-
-        group.bench_function("copy_scalar", |b| {
-            b.iter(|| {
-                imageflow_core::bench_helpers::bench_copy_swap_br_scalar(&src, &mut dst);
             })
         });
 
@@ -575,11 +563,8 @@ fn benchmark_swizzle_expand(ctx: &mut Criterion) {
             group.throughput(criterion::Throughput::Bytes(dst_bytes as u64));
             group.measurement_time(Duration::from_secs(3));
 
-            group.bench_function("simd", |b| {
+            group.bench_function("garb", |b| {
                 b.iter(|| imageflow_core::bench_helpers::bench_set_alpha_to_255(&mut row))
-            });
-            group.bench_function("scalar", |b| {
-                b.iter(|| imageflow_core::bench_helpers::bench_set_alpha_to_255_scalar(&mut row))
             });
             group.finish();
         }
@@ -592,13 +577,8 @@ fn benchmark_swizzle_expand(ctx: &mut Criterion) {
             group.throughput(criterion::Throughput::Bytes(dst_bytes as u64));
             group.measurement_time(Duration::from_secs(3));
 
-            group.bench_function("simd", |b| {
+            group.bench_function("garb", |b| {
                 b.iter(|| imageflow_core::bench_helpers::bench_rgb_to_bgra(&rgb_src, &mut bgra_dst))
-            });
-            group.bench_function("scalar", |b| {
-                b.iter(|| {
-                    imageflow_core::bench_helpers::bench_rgb_to_bgra_scalar(&rgb_src, &mut bgra_dst)
-                })
             });
             group.finish();
         }
@@ -611,17 +591,9 @@ fn benchmark_swizzle_expand(ctx: &mut Criterion) {
             group.throughput(criterion::Throughput::Bytes(dst_bytes as u64));
             group.measurement_time(Duration::from_secs(3));
 
-            group.bench_function("simd", |b| {
+            group.bench_function("garb", |b| {
                 b.iter(|| {
                     imageflow_core::bench_helpers::bench_gray_to_bgra(&gray_src, &mut bgra_dst)
-                })
-            });
-            group.bench_function("scalar", |b| {
-                b.iter(|| {
-                    imageflow_core::bench_helpers::bench_gray_to_bgra_scalar(
-                        &gray_src,
-                        &mut bgra_dst,
-                    )
                 })
             });
             group.finish();
@@ -635,17 +607,9 @@ fn benchmark_swizzle_expand(ctx: &mut Criterion) {
             group.throughput(criterion::Throughput::Bytes(dst_bytes as u64));
             group.measurement_time(Duration::from_secs(3));
 
-            group.bench_function("simd", |b| {
+            group.bench_function("garb", |b| {
                 b.iter(|| {
                     imageflow_core::bench_helpers::bench_gray_alpha_to_bgra(&ga_src, &mut bgra_dst)
-                })
-            });
-            group.bench_function("scalar", |b| {
-                b.iter(|| {
-                    imageflow_core::bench_helpers::bench_gray_alpha_to_bgra_scalar(
-                        &ga_src,
-                        &mut bgra_dst,
-                    )
                 })
             });
             group.finish();

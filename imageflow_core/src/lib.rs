@@ -19,12 +19,24 @@ pub mod graphics;
 
 #[doc(hidden)]
 pub mod bench_helpers {
-    pub use crate::graphics::swizzle::{
-        bench_copy_swap_br, bench_copy_swap_br_scalar, bench_gray_alpha_to_bgra,
-        bench_gray_alpha_to_bgra_scalar, bench_gray_to_bgra, bench_gray_to_bgra_scalar,
-        bench_rgb_to_bgra, bench_rgb_to_bgra_scalar, bench_set_alpha_to_255,
-        bench_set_alpha_to_255_scalar, bench_swap_br_inplace, bench_swap_br_inplace_scalar,
-    };
+    pub fn bench_swap_br_inplace(row: &mut [u8]) {
+        garb::rgba_to_bgra_inplace(row).unwrap();
+    }
+    pub fn bench_copy_swap_br(src: &[u8], dst: &mut [u8]) {
+        garb::rgba_to_bgra(src, dst).unwrap();
+    }
+    pub fn bench_set_alpha_to_255(row: &mut [u8]) {
+        garb::fill_alpha(row).unwrap();
+    }
+    pub fn bench_rgb_to_bgra(src: &[u8], dst: &mut [u8]) {
+        garb::rgb_to_bgra(src, dst).unwrap();
+    }
+    pub fn bench_gray_to_bgra(src: &[u8], dst: &mut [u8]) {
+        garb::gray_to_bgra(src, dst).unwrap();
+    }
+    pub fn bench_gray_alpha_to_bgra(src: &[u8], dst: &mut [u8]) {
+        garb::gray_alpha_to_bgra(src, dst).unwrap();
+    }
 }
 mod io;
 pub mod json;
