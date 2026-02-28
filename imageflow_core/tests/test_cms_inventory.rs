@@ -1,9 +1,11 @@
 //! Build inventory of all corpus-builder files that fail CMS transforms,
 //! noting which backend(s) fail.
 //!
-//! Run: cargo test --release -p imageflow_core --test test_cms_inventory -- --nocapture
+//! **Local development tool** — requires a local image corpus.
+//! Not run on CI. Use `cargo test --release --test test_cms_inventory -- --ignored --nocapture`.
 //!
-//! Output: /mnt/v/output/cms-errors/corpus-builder-inventory.tsv
+//! Configure paths via env vars:
+//!   IMAGEFLOW_DEV_DIR  — base directory (default: /mnt/v on Linux, V:\ on Windows)
 
 use imageflow_core::CmsBackend;
 use imageflow_core::Context;
@@ -11,7 +13,11 @@ use imageflow_types as s;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-const INVENTORY_PATH: &str = "/mnt/v/output/cms-errors/corpus-builder-inventory.tsv";
+fn dev_dir() -> PathBuf {
+    std::env::var("IMAGEFLOW_DEV_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(if cfg!(windows) { "V:\\" } else { "/mnt/v" }))
+}
 
 fn collect_image_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
@@ -89,21 +95,22 @@ fn error_oneline(e: &str) -> String {
 }
 
 #[test]
+#[ignore]
 fn corpus_builder_cms_inventory() {
-    let base = Path::new("/mnt/v/output/corpus-builder");
+    let base = dev_dir().join("output").join("corpus-builder");
     if !base.exists() {
         eprintln!("Skipping: {} not found", base.display());
         return;
     }
 
-    let files = collect_image_files(base);
+    let files = collect_image_files(&base);
     eprintln!("Found {} JPEG/PNG files in {}", files.len(), base.display());
 
-    // Ensure output directory exists
-    let out_dir = Path::new(INVENTORY_PATH).parent().unwrap();
+    let inventory_path = dev_dir().join("output/cms-errors/corpus-builder-inventory.tsv");
+    let out_dir = inventory_path.parent().unwrap();
     std::fs::create_dir_all(out_dir).unwrap();
 
-    let mut inventory = std::fs::File::create(INVENTORY_PATH).unwrap();
+    let mut inventory = std::fs::File::create(&inventory_path).unwrap();
     writeln!(inventory, "file\tsubdir\tmoxcms\tlcms2").unwrap();
 
     let mut total = 0u64;
@@ -118,16 +125,13 @@ fn corpus_builder_cms_inventory() {
     for (i, path) in files.iter().enumerate() {
         total += 1;
 
-        // Determine subdirectory relative to corpus-builder
-        let rel = path.strip_prefix(base).unwrap_or(path);
+        let rel = path.strip_prefix(&base).unwrap_or(path);
         let subdir = rel.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
 
         let moxcms_result = try_decode(path, CmsBackend::Moxcms);
 
         if moxcms_result.is_ok() {
             moxcms_ok += 1;
-            // Spot-check: every 100th successful file, also test lcms2
-            // to detect lcms2-only failures
             if total % 100 == 0 {
                 let lcms2_result = try_decode(path, CmsBackend::Lcms2);
                 if lcms2_result.is_err() {
@@ -141,7 +145,6 @@ fn corpus_builder_cms_inventory() {
             moxcms_fail += 1;
             let m_err = error_oneline(&moxcms_result.unwrap_err());
 
-            // Test lcms2 on every moxcms failure
             let lcms2_result = try_decode(path, CmsBackend::Lcms2);
             let l_status = match &lcms2_result {
                 Ok(()) => "ok".to_string(),
@@ -189,5 +192,5 @@ fn corpus_builder_cms_inventory() {
         elapsed.as_secs_f64(),
         total as f64 / elapsed.as_secs_f64()
     );
-    eprintln!("Inventory written to {INVENTORY_PATH}");
+    eprintln!("Inventory written to {}", inventory_path.display());
 }

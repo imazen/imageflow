@@ -1,23 +1,34 @@
 //! Validate libpng gAMA handling by comparing two imageflow decoders.
 //!
-//! For each gAMA PNG in the test set, decode with both:
+//! For each gAMA PNG in a local file list, decode with both:
 //! 1. LibPng (C wrapper) — the decoder affected by the gAMA-only fix
-//! 2. ImagePng (pure Rust) — already handled gAMA-only correctly
+//! 2. ImagePng (pure Rust) — independent implementation
 //!
 //! If both decoders produce the same sRGB output (within rounding tolerance),
 //! the libpng fix is correct.
 //!
-//! Note: ImageMagick is NOT a valid reference for gAMA-only PNGs because it
-//! ignores the gAMA chunk when cHRM is absent (treats as passthrough).
+//! **Local development tool** — requires a file list and ImageMagick.
+//! Not run on CI. Use `cargo test --test test_gama_validation -- --ignored --nocapture`.
 //!
-//! Run with: cargo test -p imageflow_core --test test_gama_validation -- --nocapture
+//! Configure paths via env vars:
+//!   IMAGEFLOW_GAMA_TEST_LIST — path to file listing PNG paths (one per line)
+//!   IMAGEFLOW_DEV_DIR        — output base directory (default: /mnt/v on Linux, V:\ on Windows)
 
 use imageflow_core::{Context, NamedDecoders};
 use imageflow_types as s;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-const TEST_LIST: &str = "/tmp/test_gama_pngs.txt";
-const OUT_DIR: &str = "/mnt/v/output/gama-validation";
+fn dev_dir() -> PathBuf {
+    std::env::var("IMAGEFLOW_DEV_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(if cfg!(windows) { "V:\\" } else { "/mnt/v" }))
+}
+
+fn test_list_path() -> PathBuf {
+    std::env::var("IMAGEFLOW_GAMA_TEST_LIST")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| std::env::temp_dir().join("test_gama_pngs.txt"))
+}
 
 /// Decode a PNG with a specific decoder and return raw sRGB PNG bytes.
 fn decode_with_decoder(png_bytes: &[u8], decoder: NamedDecoders) -> Option<Vec<u8>> {
@@ -48,10 +59,10 @@ fn decode_with_decoder(png_bytes: &[u8], decoder: NamedDecoders) -> Option<Vec<u
 
 /// Extract raw RGBA pixels from a PNG via ImageMagick (for pixel comparison).
 fn png_to_rgba(png_bytes: &[u8]) -> Option<Vec<u8>> {
-    let tmp = format!("/tmp/gama_val_{}.png", std::process::id());
+    let tmp = std::env::temp_dir().join(format!("gama_val_{}.png", std::process::id()));
     std::fs::write(&tmp, png_bytes).ok()?;
     let output = std::process::Command::new("convert")
-        .args([&tmp, "-depth", "8", "RGBA:-"])
+        .args([tmp.to_str().unwrap(), "-depth", "8", "RGBA:-"])
         .output()
         .ok()?;
     let _ = std::fs::remove_file(&tmp);
@@ -81,15 +92,19 @@ fn compare_rgba(a: &[u8], b: &[u8]) -> (u8, f64, usize) {
 }
 
 #[test]
+#[ignore]
 fn validate_libpng_vs_image_png_for_gama_files() {
-    if !Path::new(TEST_LIST).exists() {
-        eprintln!("Skipping: {TEST_LIST} not found (run classify script first)");
+    let list_path = test_list_path();
+    if !list_path.exists() {
+        eprintln!("Skipping: {} not found", list_path.display());
+        eprintln!("Set IMAGEFLOW_GAMA_TEST_LIST to a file listing PNG paths (one per line)");
         return;
     }
 
-    let _ = std::fs::create_dir_all(OUT_DIR);
+    let out_dir = dev_dir().join("output").join("gama-validation");
+    let _ = std::fs::create_dir_all(&out_dir);
 
-    let paths: Vec<String> = std::fs::read_to_string(TEST_LIST)
+    let paths: Vec<String> = std::fs::read_to_string(&list_path)
         .unwrap()
         .lines()
         .filter(|l| !l.is_empty())
@@ -112,7 +127,6 @@ fn validate_libpng_vs_image_png_for_gama_files() {
             }
         };
 
-        // Decode with libpng (C wrapper)
         let libpng_png = match decode_with_decoder(&png_bytes, NamedDecoders::LibPngRsDecoder) {
             Some(p) => p,
             None => {
@@ -121,7 +135,6 @@ fn validate_libpng_vs_image_png_for_gama_files() {
             }
         };
 
-        // Decode with image_png (pure Rust)
         let image_png_png = match decode_with_decoder(&png_bytes, NamedDecoders::ImageRsPngDecoder)
         {
             Some(p) => p,
@@ -131,7 +144,6 @@ fn validate_libpng_vs_image_png_for_gama_files() {
             }
         };
 
-        // Extract raw pixels from both outputs
         let libpng_px = match png_to_rgba(&libpng_png) {
             Some(p) => p,
             None => {
@@ -196,19 +208,14 @@ fn validate_libpng_vs_image_png_for_gama_files() {
     }
 
     // Write TSV results
-    let tsv_path = format!("{OUT_DIR}/gama_decoder_comparison.tsv");
+    let tsv_path = out_dir.join("gama_decoder_comparison.tsv");
     let mut tsv = String::from("file\tmax_delta\tmean_delta\tpixels\tstatus\n");
     for (name, max_d, mean_d, n_px, status) in &results {
         tsv.push_str(&format!("{name}\t{max_d}\t{mean_d:.4}\t{n_px}\t{status}\n"));
     }
     std::fs::write(&tsv_path, &tsv).unwrap();
-    eprintln!("\nResults: {tsv_path}");
+    eprintln!("\nResults: {}", tsv_path.display());
 
-    // Both decoders should produce identical output.
-    // - gAMA-only with neutral gamma (≈0.45455): treated as sRGB (no transform)
-    // - gAMA+cHRM with sRGB values: treated as sRGB (no transform)
-    // - gAMA-only with non-neutral gamma: both apply same GammaPrimaries transform
-    // Allow <=2 for potential CMS rounding in non-neutral gamma cases.
     assert!(
         max_across_all <= 2,
         "Max delta {max_across_all} exceeds tolerance 2 — see output above"

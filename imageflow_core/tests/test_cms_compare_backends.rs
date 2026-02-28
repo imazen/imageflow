@@ -1,11 +1,26 @@
-//! Test each CMS error file against moxcms and lcms2 independently.
-//! Writes results to /mnt/v/output/cms-errors/backend-comparison.tsv
+//! Compare each CMS error file against moxcms and lcms2 independently.
+//!
+//! **Local development tool** — requires output from cms_batch_collect_errors.
+//! Not run on CI. Use `cargo test --test test_cms_compare_backends -- --ignored --nocapture`.
+//!
+//! Configure paths via env vars:
+//!   IMAGEFLOW_DEV_DIR  — base directory (default: /mnt/v on Linux, V:\ on Windows)
 
 use imageflow_core::CmsBackend;
 use imageflow_core::Context;
 use imageflow_types as s;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+
+fn dev_dir() -> PathBuf {
+    std::env::var("IMAGEFLOW_DEV_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(if cfg!(windows) { "V:\\" } else { "/mnt/v" }))
+}
+
+fn error_output_dir() -> PathBuf {
+    dev_dir().join("output").join("cms-errors")
+}
 
 fn try_decode(path: &Path, backend: CmsBackend) -> Result<(), String> {
     std::panic::catch_unwind(|| try_decode_inner(path, backend)).unwrap_or_else(|e| {
@@ -57,7 +72,7 @@ fn try_decode_inner(path: &Path, backend: CmsBackend) -> Result<(), String> {
 }
 
 fn collect_error_files() -> Vec<(PathBuf, String)> {
-    let base = Path::new("/mnt/v/output/cms-errors");
+    let base = error_output_dir();
     let mut files = Vec::new();
     for corpus in &["jpeg", "non-srgb", "wide-gamut", "png-24-32"] {
         let tsv = base.join(corpus).join("errors.tsv");
@@ -66,7 +81,6 @@ fn collect_error_files() -> Vec<(PathBuf, String)> {
         }
         let contents = std::fs::read_to_string(&tsv).unwrap();
         for line in contents.lines().skip(1) {
-            // header: file\terror_category\tfull_error
             let parts: Vec<&str> = line.splitn(3, '\t').collect();
             if parts.len() >= 2 {
                 let path = PathBuf::from(parts[0]);
@@ -77,13 +91,13 @@ fn collect_error_files() -> Vec<(PathBuf, String)> {
             }
         }
     }
-    // Deduplicate by filename (same file may appear in multiple corpora)
     files.sort_by(|a, b| a.0.cmp(&b.0));
     files.dedup_by(|a, b| a.0 == b.0);
     files
 }
 
 #[test]
+#[ignore]
 fn compare_backends_on_error_files() {
     let files = collect_error_files();
     if files.is_empty() {
@@ -91,8 +105,8 @@ fn compare_backends_on_error_files() {
         return;
     }
 
-    let out_path = Path::new("/mnt/v/output/cms-errors/backend-comparison.tsv");
-    let mut out = std::fs::File::create(out_path).unwrap();
+    let out_path = error_output_dir().join("backend-comparison.tsv");
+    let mut out = std::fs::File::create(&out_path).unwrap();
     writeln!(out, "file\tcategory\tmoxcms\tlcms2").unwrap();
 
     let mut moxcms_only_fail = 0u32;
@@ -101,7 +115,6 @@ fn compare_backends_on_error_files() {
     let mut neither_fail = 0u32;
 
     for (path, category) in &files {
-        // Skip non-CMS errors
         if category.contains("SizeLimitExceeded")
             || category.contains("IDAT")
             || category.contains("ObjectCreationError")
