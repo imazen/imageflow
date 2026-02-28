@@ -1460,7 +1460,9 @@ fn test_cms_gama_linear_only() {
     // gAMA=1.0 (linear gamma), no cHRM. Must apply gamma→sRGB transform.
     // Old imageflow ignored gAMA-only completely (delta=73 vs correct output).
     let matched = compare_max_delta(
-        Some(IoTestEnum::ByteArray(include_bytes!("visuals/fixtures/gama_linear_1_0.png").to_vec())),
+        Some(IoTestEnum::ByteArray(
+            include_bytes!("visuals/fixtures/gama_linear_1_0.png").to_vec(),
+        )),
         2,
         "cms_gama_linear_1_0",
         POPULATE_CHECKSUMS,
@@ -1482,7 +1484,9 @@ fn test_cms_gama_mac_only() {
     // gAMA=0.55556 (mac gamma ≈ 1/1.8), no cHRM. Must apply gamma→sRGB transform.
     // Non-neutral gamma: 0.55556 * 2.2 = 1.22 (outside ±0.05 threshold).
     let matched = compare_max_delta(
-        Some(IoTestEnum::ByteArray(include_bytes!("visuals/fixtures/gama_mac_055556.png").to_vec())),
+        Some(IoTestEnum::ByteArray(
+            include_bytes!("visuals/fixtures/gama_mac_055556.png").to_vec(),
+        )),
         2,
         "cms_gama_mac_055556",
         POPULATE_CHECKSUMS,
@@ -1506,7 +1510,9 @@ fn test_cms_gama_neutral_with_srgb_chrm() {
     // This catches the old bug where gAMA+cHRM with sRGB values triggered an
     // unnecessary gamma 2.2→sRGB TRC transform (delta=9 on dark pixels).
     let matched = compare_max_delta(
-        Some(IoTestEnum::ByteArray(include_bytes!("visuals/fixtures/gama_neutral_srgb_chrm.png").to_vec())),
+        Some(IoTestEnum::ByteArray(
+            include_bytes!("visuals/fixtures/gama_neutral_srgb_chrm.png").to_vec(),
+        )),
         2,
         "cms_gama_neutral_srgb_chrm",
         POPULATE_CHECKSUMS,
