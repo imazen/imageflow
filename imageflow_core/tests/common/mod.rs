@@ -2,7 +2,11 @@ use imageflow_core::{here, nerror};
 use imageflow_helpers as hlp;
 use imageflow_types as s;
 
+pub mod bitmap_bridge;
 pub mod bitmap_diff_stats;
+pub mod bitmap_metadata;
+pub mod checksum_adapter;
+
 use bitmap_diff_stats::*;
 
 use imageflow_core::graphics::bitmaps::BitmapWindowMut;
@@ -753,6 +757,14 @@ impl ChecksumCtx {
     /// if there is no trusted checksum, create_if_missing is set, then
     /// the checksum will be stored, and the function will return true.
     pub fn exact_match(&self, actual_checksum: String, name: &str) -> (ChecksumMatch, String) {
+        // Try TOML checksum file first (migrated tests)
+        let adapter = checksum_adapter::TomlChecksumAdapter::new(&self.visuals_dir);
+        if let Some(result) = adapter.try_match(name, &actual_checksum) {
+            self.set_actual(name.to_owned(), actual_checksum.clone()).unwrap();
+            return result;
+        }
+
+        // Fall through to legacy JSON system
         if let Some(trusted) = self.get_cached(name) {
             if trusted == actual_checksum {
                 self.set_actual(name.to_owned(), actual_checksum.clone()).unwrap();
