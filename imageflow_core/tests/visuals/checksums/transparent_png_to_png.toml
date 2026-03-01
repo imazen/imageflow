@@ -1,0 +1,21 @@
+name = "transparent_png_to_png"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0A839287BD1939BE8.png"
+confidence = 10
+reason = "migrated from checksums.json"
+
+[[checksum]]
+id = "04A240746F2C0245E.png"
+confidence = 10
+reason = "migrated alternate checksum"
+
+[meta]
+s3_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/0A839287BD1939BE8.png"

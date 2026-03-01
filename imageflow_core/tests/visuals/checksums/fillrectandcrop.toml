@@ -1,0 +1,16 @@
+name = "FillRectAndCrop"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "023A1A32B1D12004D_0AB5E1BFABF8ED80B"
+confidence = 10
+reason = "migrated from checksums.json"
+
+[meta]
+s3_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/023A1A32B1D12004D_0AB5E1BFABF8ED80B.png"

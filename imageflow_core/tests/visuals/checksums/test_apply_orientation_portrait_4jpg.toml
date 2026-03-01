@@ -1,0 +1,21 @@
+name = "Test_Apply_Orientation_Portrait_4.jpg"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "07D072BA64201D430_0AE4839D1D9B04C57"
+confidence = 10
+reason = "migrated from checksums.json"
+
+[[checksum]]
+id = "0BA3BE70269BAF87E_0AE4839D1D9B04C57"
+confidence = 10
+reason = "migrated alternate checksum"
+
+[meta]
+s3_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/07D072BA64201D430_0AE4839D1D9B04C57.png"

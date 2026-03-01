@@ -1,0 +1,16 @@
+name = "ScaleIDCT_approx_gamma"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "01DD6D368FDF435EF_0E685FA15F0460A97"
+confidence = 10
+reason = "migrated from checksums.json"
+
+[meta]
+s3_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/01DD6D368FDF435EF_0E685FA15F0460A97.png"

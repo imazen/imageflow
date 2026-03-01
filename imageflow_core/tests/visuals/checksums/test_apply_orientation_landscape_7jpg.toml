@@ -1,0 +1,21 @@
+name = "Test_Apply_Orientation_Landscape_7.jpg"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0FB73C8AFEE5E4CFC_0AF9F040B874D83F7"
+confidence = 10
+reason = "migrated from checksums.json"
+
+[[checksum]]
+id = "0DEA750505D4DB53A_0AF9F040B874D83F7"
+confidence = 10
+reason = "migrated alternate checksum"
+
+[meta]
+s3_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/0FB73C8AFEE5E4CFC_0AF9F040B874D83F7.png"

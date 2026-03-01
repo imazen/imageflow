@@ -1,0 +1,16 @@
+name = "test rotate 90 degrees"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0B843EE7B6518278E_0AE4839D1D9B04C57"
+confidence = 10
+reason = "migrated from checksums.json"
+
+[meta]
+s3_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/0B843EE7B6518278E_0AE4839D1D9B04C57.png"

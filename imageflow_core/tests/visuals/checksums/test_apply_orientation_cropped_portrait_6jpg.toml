@@ -1,0 +1,21 @@
+name = "Test_Apply_Orientation_Cropped_Portrait_6.jpg"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0AB703A061274DD1D_05B6C838D00A967A0"
+confidence = 10
+reason = "migrated from checksums.json"
+
+[[checksum]]
+id = "01F83BF0F32E22432_05B6C838D00A967A0"
+confidence = 10
+reason = "migrated alternate checksum"
+
+[meta]
+s3_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/0AB703A061274DD1D_05B6C838D00A967A0.png"

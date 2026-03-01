@@ -1,0 +1,21 @@
+name = "test ConstraintMode::FitPad on jpeg with exif rotate 8"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "020910A76D03A23D4_0BF80F0AE71CD9A63"
+confidence = 10
+reason = "migrated from checksums.json"
+
+[[checksum]]
+id = "06BE4397DD13737A2_0BF80F0AE71CD9A63"
+confidence = 10
+reason = "migrated alternate checksum"
+
+[meta]
+s3_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/020910A76D03A23D4_0BF80F0AE71CD9A63.png"

@@ -1,0 +1,21 @@
+name = "test cropping jpeg with exif rotate 3"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "058F69DB99DF3F418_0AF9F04019B0BAF16"
+confidence = 10
+reason = "migrated from checksums.json"
+
+[[checksum]]
+id = "0E474D35F2F02AE1B_0AF9F04019B0BAF16"
+confidence = 10
+reason = "migrated alternate checksum"
+
+[meta]
+s3_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/058F69DB99DF3F418_0AF9F04019B0BAF16.png"

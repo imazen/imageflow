@@ -1,0 +1,16 @@
+name = "WatermarkPixelMargins"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "05A43D398CB3015B2_0DE3336C466C67DD9"
+confidence = 10
+reason = "migrated from checksums.json"
+
+[meta]
+s3_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/05A43D398CB3015B2_0DE3336C466C67DD9.png"
