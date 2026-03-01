@@ -1739,6 +1739,11 @@ pub enum DecoderCommand {
     DiscardColorProfile,
     #[serde(rename = "ignore_color_profile_errors")]
     IgnoreColorProfileErrors,
+    /// Ignore gAMA and cHRM chunks in PNG files, treating them as if absent.
+    /// iCCP and sRGB chunks are still honored. Useful when gAMA/cHRM metadata
+    /// is known to be incorrect (common in web-scraped images).
+    #[serde(rename = "discard_gama_chrm")]
+    DiscardGamaChrm,
     #[serde(rename = "select_frame")]
     SelectFrame(i32),
 }

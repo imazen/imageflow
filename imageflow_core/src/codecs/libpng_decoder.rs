@@ -67,6 +67,10 @@ impl Decoder for LibPngDecoder {
                 self.decoder.ignore_color_profile_errors = true;
                 Ok(())
             }
+            s::DecoderCommand::DiscardGamaChrm => {
+                self.decoder.discard_gama_chrm = true;
+                Ok(())
+            }
             _ => Ok(()),
         }
     }
@@ -90,7 +94,7 @@ impl Decoder for LibPngDecoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(canvas_key).map_err(|e| e.at(here!()))?;
 
-        self.decoder.read_frame(&mut bitmap)?;
+        self.decoder.read_frame(&mut bitmap, c.cms_backend)?;
 
         Ok(canvas_key)
     }
@@ -115,6 +119,7 @@ struct PngDec {
     uses_palette: bool,
     pub ignore_color_profile: bool,
     pub ignore_color_profile_errors: bool,
+    pub discard_gama_chrm: bool,
     color_profile: Option<Vec<u8>>,
     color: ffi::DecoderColorInfo,
 }
@@ -220,17 +225,14 @@ impl PngDec {
             uses_palette: false,
             ignore_color_profile: false,
             ignore_color_profile_errors: false,
+            discard_gama_chrm: false,
             color_profile: None,
             color: ffi::DecoderColorInfo {
                 source: ColorProfileSource::Null,
                 profile_buffer: null_mut(),
                 buffer_length: 0,
                 white_point: Default::default(),
-                primaries: ::lcms2::CIExyYTRIPLE {
-                    Red: Default::default(),
-                    Green: Default::default(),
-                    Blue: Default::default(),
-                },
+                primaries: Default::default(),
                 gamma: 0.45455,
             },
         });
@@ -299,7 +301,11 @@ impl PngDec {
         Ok((self.w, self.h, self.pixel_format, self.uses_palette))
     }
 
-    fn read_frame(&mut self, canvas: &mut Bitmap) -> Result<()> {
+    fn read_frame(
+        &mut self,
+        canvas: &mut Bitmap,
+        cms_backend: crate::codecs::cms::CmsBackend,
+    ) -> Result<()> {
         if self.c_state_disposed {
             return Err(nerror!(
                 ErrorKind::InvalidOperation,
@@ -329,25 +335,27 @@ impl PngDec {
                 return Err(self.error.clone().expect("error missing").at(here!()));
             }
 
-            let color_info_ptr = ffi::wrap_png_decoder_get_color_info(c_state);
-            if color_info_ptr.is_null() {
-                return Err(nerror!(
-                    ErrorKind::ImageDecodingError,
-                    "LibPNG decoder returned null color info"
-                ));
-            }
-            let color_info = &*color_info_ptr;
-
             if !self.ignore_color_profile {
-                let result = ColorTransformCache::transform_to_srgb(
-                    &mut window,
-                    color_info,
-                    PixelFormat::BGRA_8,
-                    PixelFormat::BGRA_8,
-                )
-                .map_err(|e| e.at(here!()));
-                if result.is_err() && !self.ignore_color_profile_errors {
-                    return result;
+                let color_info_ptr = ffi::wrap_png_decoder_get_color_info(c_state);
+                if color_info_ptr.is_null() {
+                    return Err(nerror!(
+                        ErrorKind::ImageDecodingError,
+                        "LibPNG decoder returned null color info"
+                    ));
+                }
+                let color = &*color_info_ptr;
+                let mut profile =
+                    crate::codecs::source_profile::SourceProfile::from_decoder_color_info(color);
+                if self.discard_gama_chrm {
+                    profile = profile.without_gama_chrm();
+                }
+                if !profile.is_srgb() {
+                    let result =
+                        crate::codecs::cms::transform_to_srgb(&mut window, &profile, cms_backend)
+                            .map_err(|e| e.at(here!()));
+                    if result.is_err() && !self.ignore_color_profile_errors {
+                        return result;
+                    }
                 }
             }
         }

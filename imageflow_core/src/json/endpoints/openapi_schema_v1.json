@@ -1011,6 +1011,12 @@
             ]
           },
           {
+            "type": "string",
+            "enum": [
+              "discard_gama_chrm"
+            ]
+          },
+          {
             "type": "object",
             "required": [
               "select_frame"

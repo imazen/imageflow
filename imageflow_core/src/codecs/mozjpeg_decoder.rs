@@ -297,9 +297,11 @@ impl MzDec {
 
         let is_cmyk =
             jpeg_color_space == mozjpeg_sys::JCS_CMYK || jpeg_color_space == mozjpeg_sys::JCS_YCCK;
-
         let is_grayscale = jpeg_color_space == mozjpeg_sys::JCS_GRAYSCALE;
 
+        // Grayscale JPEGs are decoded to BGRA by mozjpeg (JCS_EXT_BGRA),
+        // but we still need IccProfileGray so the CMS backend knows to use
+        // GrayAlpha→RGBA transform layout instead of RGBA→RGBA.
         if !is_cmyk {
             self.codec_info.out_color_space = mozjpeg_sys::JCS_EXT_BGRA; //Why not BGRX? Maybe because it doesn't clear the alpha values
         }
@@ -360,25 +362,36 @@ impl MzDec {
             }
         }
 
-        let mut color_info = self.get_decoder_color_info();
+        // Build SourceProfile directly from JPEG metadata
+        let profile = if is_cmyk {
+            // CMYK images always need color conversion, even if ignore_color_profile is set
+            if let Some(ref icc_bytes) = self.color_profile {
+                crate::codecs::source_profile::SourceProfile::CmykIcc(icc_bytes.clone())
+            } else {
+                crate::codecs::source_profile::SourceProfile::CmykIcc(CMYK_PROFILE.to_vec())
+            }
+        } else if let Some(ref icc_bytes) = self.color_profile {
+            // Use IccProfileGray when the ICC profile declares Gray color space
+            // (bytes 16..20 == b"GRAY"). This handles both true grayscale JPEGs
+            // and YCbCr JPEGs with an embedded Gray ICC profile.
+            let icc_is_gray = icc_bytes.len() >= 20 && &icc_bytes[16..20] == b"GRAY";
+            if icc_is_gray && !is_grayscale {
+                // Grayscale ICC profile on a color JPEG — applying a gray→sRGB
+                // transform to color data would silently corrupt output. Skip it.
+                crate::codecs::source_profile::SourceProfile::Srgb
+            } else if is_grayscale || icc_is_gray {
+                crate::codecs::source_profile::SourceProfile::IccProfileGray(icc_bytes.clone())
+            } else {
+                crate::codecs::source_profile::SourceProfile::IccProfile(icc_bytes.clone())
+            }
+        } else {
+            crate::codecs::source_profile::SourceProfile::Srgb
+        };
 
-        if is_cmyk && color_info.source != ColorProfileSource::ICCP {
-            color_info.source = ColorProfileSource::ICCP;
-            color_info.profile_buffer = &CMYK_PROFILE[0];
-            color_info.buffer_length = CMYK_PROFILE.len();
-        }
-
-        if !self.ignore_color_profile || is_cmyk {
-            let input_pixel_format =
-                if is_cmyk { PixelFormat::CMYK_8_REV } else { PixelFormat::BGRA_8 };
-
-            let result = ColorTransformCache::transform_to_srgb(
-                &mut window,
-                &color_info,
-                input_pixel_format,
-                PixelFormat::BGRA_8,
-            )
-            .map_err(|e| e.at(here!()));
+        if (!self.ignore_color_profile || is_cmyk) && !profile.is_srgb() {
+            let result =
+                crate::codecs::cms::transform_to_srgb(&mut window, &profile, context.cms_backend)
+                    .map_err(|e| e.at(here!()));
             if result.is_err() && !self.ignore_color_profile_errors {
                 return result;
             }
@@ -595,34 +608,6 @@ impl MzDec {
             self.exif_rotation_flag =
                 crate::codecs::mozjpeg_decoder_helpers::get_exif_orientation(&self.codec_info);
         }
-    }
-
-    fn get_decoder_color_info(&mut self) -> ffi::DecoderColorInfo {
-        let mut info = ffi::DecoderColorInfo {
-            source: ColorProfileSource::Null,
-            profile_buffer: null_mut(),
-            buffer_length: 0,
-            white_point: Default::default(),
-            primaries: ::lcms2::CIExyYTRIPLE {
-                Red: Default::default(),
-                Green: Default::default(),
-                Blue: Default::default(),
-            },
-            gamma: self.gamma,
-        };
-
-        if let Some(profile) = self.color_profile.as_deref_mut() {
-            //let hash = imageflow_helpers::hashing::hash_64(&profile[80..]);
-
-            // if hash == 250807001850340861 {
-            //     info.source = ColorProfileSource::sRGB;
-            // }else {
-            info.profile_buffer = profile.as_mut_ptr();
-            info.buffer_length = profile.len();
-            info.source = ColorProfileSource::ICCP;
-            //}
-        }
-        info
     }
 }
 
