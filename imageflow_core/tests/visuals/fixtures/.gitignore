@@ -1,0 +1,3 @@
+# Allow test fixture files to be tracked
+!*.png
+!*.jpg
