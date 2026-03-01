@@ -166,8 +166,7 @@ pub fn smoke_test(
 }
 
 /// A context for getting/storing frames and frame checksums by test name.
-/// Currently has read-only support for remote storage.
-/// TODO: Add upload support; it's very annoying to do it manually
+/// Supports optional upload of new reference images via `ShellUploader`.
 pub struct ChecksumCtx {
     checksum_file: PathBuf,
     alternate_checksums_file: PathBuf,
@@ -182,6 +181,9 @@ pub struct ChecksumCtx {
     cache_dir: PathBuf,
     create_if_missing: bool,
     url_base: &'static str,
+    uploader: zensim_regress::upload::ShellUploader,
+    upload_enabled: bool,
+    upload_prefix: Option<String>,
 }
 
 static CHECKSUM_FILE: LazyLock<RwLock<BTreeMap<String, String>>> =
@@ -197,6 +199,13 @@ impl ChecksumCtx {
             .join(Path::new("tests"))
             .join(Path::new("visuals"));
         std::fs::create_dir_all(&visuals).unwrap();
+
+        let upload_prefix = std::env::var("REGRESS_UPLOAD_PREFIX")
+            .ok()
+            .and_then(|v| if v.is_empty() { None } else { Some(v) });
+        let upload_enabled = std::env::var("UPLOAD_REFERENCES")
+            .is_ok_and(|v| v == "1" || v == "true");
+
         ChecksumCtx {
             visuals_dir: visuals.clone(),
             cache_dir: visuals.join(Path::new("cache")),
@@ -211,6 +220,9 @@ impl ChecksumCtx {
             to_upload_index: visuals.join(Path::new("to_upload.txt")),
             url_base:
                 "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/",
+            uploader: zensim_regress::upload::ShellUploader::new(),
+            upload_enabled,
+            upload_prefix,
         }
     }
 
@@ -643,6 +655,7 @@ impl ChecksumCtx {
                 println!("Writing {:#?}", &dest_path);
             }
             imageflow_core::helpers::write_png(dest_path, window).unwrap();
+            self.upload_image(checksum);
         }
     }
     /// Save the given bytes to disk by calculating their checksum.
@@ -653,6 +666,7 @@ impl ChecksumCtx {
             let mut f = ::std::fs::File::create(&dest_path).unwrap();
             f.write_all(bytes).unwrap();
             f.sync_all().unwrap();
+            self.upload_image(checksum);
         }
     }
 
@@ -795,7 +809,30 @@ impl ChecksumCtx {
         }
     }
 
-    // TODO: implement uploader
+    /// Upload a reference image to remote storage if uploading is enabled.
+    ///
+    /// Requires `UPLOAD_REFERENCES=1` and `REGRESS_UPLOAD_PREFIX` to be set.
+    pub fn upload_image(&self, checksum: &str) {
+        if !self.upload_enabled {
+            return;
+        }
+        let Some(prefix) = &self.upload_prefix else {
+            return;
+        };
+        let local_path = self.image_path(checksum);
+        if !local_path.exists() {
+            return;
+        }
+
+        let filename = self.image_name(checksum);
+        let remote_url = format!("{}/{}", prefix.trim_end_matches('/'), filename);
+
+        use zensim_regress::upload::ResourceUploader;
+        match self.uploader.upload(&local_path, &remote_url) {
+            Ok(()) => println!("Uploaded {checksum} to {remote_url}"),
+            Err(e) => eprintln!("Warning: upload failed for {checksum}: {e}"),
+        }
+    }
 }
 
 pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
@@ -1074,6 +1111,18 @@ pub fn evaluate_result<'a>(
                 "--- '{}': checksum mismatch within tolerance ({:?}) ---",
                 name, require.similarity
             );
+
+            // Auto-accept new checksum in TOML if within imageflow tolerance
+            if std::env::var("UPDATE_CHECKSUMS").is_ok_and(|v| v == "1") {
+                let adapter = checksum_adapter::TomlChecksumAdapter::new(&c.visuals_dir);
+                if adapter.has_toml(name) {
+                    if let Some(actual) = c.get_actual(name) {
+                        if let Err(e) = adapter.accept(name, &actual) {
+                            eprintln!("Warning: failed to auto-accept {name}: {e}");
+                        }
+                    }
+                }
+            }
         }
         res.close_enough
     }
