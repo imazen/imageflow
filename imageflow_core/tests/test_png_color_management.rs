@@ -141,9 +141,13 @@ fn build_test_png(w: u32, h: u32, pixels: &[u8], chunks: &[PngColorChunk]) -> Ve
 // Decode + compare helpers
 // ---------------------------------------------------------------------------
 
-/// Decode a PNG through imageflow with a specific decoder, re-encode as PNG32,
-/// and return raw RGBA pixels extracted via lodepng.
-fn decode_to_rgba(png_bytes: &[u8], decoder: NamedDecoders) -> Vec<u8> {
+/// Decode a PNG through imageflow with a specific decoder and optional decoder
+/// commands, re-encode as PNG32, and return raw RGBA pixels extracted via lodepng.
+fn decode_to_rgba_with_commands(
+    png_bytes: &[u8],
+    decoder: NamedDecoders,
+    commands: Option<Vec<s::DecoderCommand>>,
+) -> Vec<u8> {
     let mut ctx = Context::create().unwrap();
     ctx.enabled_codecs.prefer_decoder(decoder);
     ctx.add_input_vector(0, png_bytes.to_vec()).unwrap();
@@ -153,7 +157,7 @@ fn decode_to_rgba(png_bytes: &[u8], decoder: NamedDecoders) -> Vec<u8> {
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
         framewise: s::Framewise::Steps(vec![
-            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::Decode { io_id: 0, commands },
             s::Node::Encode {
                 io_id: 1,
                 preset: s::EncoderPreset::Libpng {
@@ -171,6 +175,11 @@ fn decode_to_rgba(png_bytes: &[u8], decoder: NamedDecoders) -> Vec<u8> {
     // Extract raw RGBA via lodepng
     let result = lodepng::decode32(&output_bytes).unwrap();
     result.buffer.iter().flat_map(|px| [px.r, px.g, px.b, px.a]).collect()
+}
+
+/// Decode a PNG through imageflow with a specific decoder (no extra commands).
+fn decode_to_rgba(png_bytes: &[u8], decoder: NamedDecoders) -> Vec<u8> {
+    decode_to_rgba_with_commands(png_bytes, decoder, None)
 }
 
 /// Maximum per-channel absolute difference between two RGBA buffers.
@@ -204,8 +213,16 @@ fn test_gradient() -> Vec<u8> {
 // ---------------------------------------------------------------------------
 
 fn decode_both(png: &[u8]) -> (Vec<u8>, Vec<u8>) {
-    let libpng = decode_to_rgba(png, NamedDecoders::LibPngRsDecoder);
-    let image_png = decode_to_rgba(png, NamedDecoders::ImageRsPngDecoder);
+    decode_both_with_commands(png, None)
+}
+
+fn decode_both_with_commands(
+    png: &[u8],
+    commands: Option<Vec<s::DecoderCommand>>,
+) -> (Vec<u8>, Vec<u8>) {
+    let libpng =
+        decode_to_rgba_with_commands(png, NamedDecoders::LibPngRsDecoder, commands.clone());
+    let image_png = decode_to_rgba_with_commands(png, NamedDecoders::ImageRsPngDecoder, commands);
     (libpng, image_png)
 }
 
@@ -278,8 +295,18 @@ fn expected_gamma_to_srgb(input: &[u8], encoding_gamma: f64) -> Vec<u8> {
 /// Assert decoder parity and that pixel values match the expected gamma→sRGB
 /// transform within tolerance.
 fn assert_transform(test_name: &str, input: &[u8], png: &[u8], encoding_gamma: f64) {
+    assert_transform_with_commands(test_name, input, png, encoding_gamma, None);
+}
+
+fn assert_transform_with_commands(
+    test_name: &str,
+    input: &[u8],
+    png: &[u8],
+    encoding_gamma: f64,
+    commands: Option<Vec<s::DecoderCommand>>,
+) {
     let expected = expected_gamma_to_srgb(input, encoding_gamma);
-    let (libpng, image_png) = decode_both(png);
+    let (libpng, image_png) = decode_both_with_commands(png, commands);
 
     let parity = max_channel_delta(&libpng, &image_png);
     assert!(parity <= 2, "{test_name}: decoder parity failed — max delta {parity} (expected ≤ 2)");
@@ -355,14 +382,40 @@ fn test_png_chrm_only_no_gama() {
 fn test_png_gama_linear_only() {
     let input = test_gradient();
     let png = build_test_png(4, 4, &input, &[PngColorChunk::Gama(1.0)]);
-    assert_transform("gama_linear_only", &input, &png, 1.0);
+    // gAMA-only requires HonorGamaOnly to trigger a transform (off by default)
+    assert_transform_with_commands(
+        "gama_linear_only",
+        &input,
+        &png,
+        1.0,
+        Some(vec![s::DecoderCommand::HonorGamaOnly]),
+    );
+    // Without HonorGamaOnly, gAMA-only is ignored (legacy behavior)
+    let (libpng, image_png) = decode_both(&png);
+    let libpng_delta = max_channel_delta(&input, &libpng);
+    let image_png_delta = max_channel_delta(&input, &image_png);
+    assert!(
+        libpng_delta <= 1,
+        "gama_linear_only: legacy libpng should be no-op (delta={libpng_delta})"
+    );
+    assert!(
+        image_png_delta <= 1,
+        "gama_linear_only: legacy image_png should be no-op (delta={image_png_delta})"
+    );
 }
 
 #[test]
 fn test_png_gama_mac_only() {
     let input = test_gradient();
     let png = build_test_png(4, 4, &input, &[PngColorChunk::Gama(0.55556)]);
-    assert_transform("gama_mac_only", &input, &png, 0.55556);
+    // gAMA-only requires HonorGamaOnly to trigger a transform (off by default)
+    assert_transform_with_commands(
+        "gama_mac_only",
+        &input,
+        &png,
+        0.55556,
+        Some(vec![s::DecoderCommand::HonorGamaOnly]),
+    );
 }
 
 #[test]
@@ -788,13 +841,17 @@ fn test_png_near_srgb_gamma_high_edge() {
     assert_noop("near_srgb_gamma_high_edge (0.477)", &input, &png);
 }
 
-/// gAMA just outside the neutral range should trigger a transform.
+/// gAMA just outside the neutral range should trigger a transform when HonorGamaOnly is set.
+/// Without HonorGamaOnly, gAMA-only is ignored (legacy behavior).
 #[test]
 fn test_png_outside_neutral_gamma_transforms() {
     let input = test_gradient();
     // 0.42 * 2.2 = 0.924, outside ±0.05 of 1.0 (below 0.95 threshold)
     let png = build_test_png(4, 4, &input, &[PngColorChunk::Gama(0.42)]);
-    let (libpng, image_png) = decode_both(&png);
+
+    // With HonorGamaOnly: should trigger a transform
+    let honor_cmd = Some(vec![s::DecoderCommand::HonorGamaOnly]);
+    let (libpng, image_png) = decode_both_with_commands(&png, honor_cmd);
     let parity = max_channel_delta(&libpng, &image_png);
     assert!(parity <= 2, "outside_neutral_gamma: parity {parity} (expected ≤ 2)");
     let delta = max_channel_delta(&input, &image_png);
@@ -803,7 +860,17 @@ fn test_png_outside_neutral_gamma_transforms() {
         "outside_neutral_gamma: delta {delta} (expected ≥ 5). \
          Gamma 0.42 is outside neutral range and should trigger a transform."
     );
-    eprintln!("outside_neutral_gamma: OK (parity={parity}, delta={delta})");
+
+    // Without HonorGamaOnly: should be a no-op (legacy behavior)
+    let (_, image_png_default) = decode_both(&png);
+    let default_delta = max_channel_delta(&input, &image_png_default);
+    assert!(
+        default_delta <= 1,
+        "outside_neutral_gamma: legacy should be no-op (delta={default_delta})"
+    );
+    eprintln!(
+        "outside_neutral_gamma: OK (parity={parity}, delta={delta}, legacy_delta={default_delta})"
+    );
 }
 
 // ===========================================================================
@@ -842,23 +909,31 @@ fn decode_with_discard_gama_chrm(png_bytes: &[u8], decoder: NamedDecoders) -> Ve
     result.buffer.iter().flat_map(|px| [px.r, px.g, px.b, px.a]).collect()
 }
 
-/// DiscardGamaChrm should make gAMA(1.0) (linear) a no-op.
-/// Without the command, gAMA(1.0) causes a visible transform.
+/// DiscardGamaChrm should make gAMA(1.0) (linear) a no-op even when HonorGamaOnly is set.
+/// With HonorGamaOnly, gAMA(1.0) causes a visible transform; DiscardGamaChrm cancels it.
 #[test]
 fn test_png_discard_gama_chrm_ignores_linear_gama() {
     let input = test_gradient();
     let png = build_test_png(4, 4, &input, &[PngColorChunk::Gama(1.0)]);
 
-    // Without DiscardGamaChrm: gAMA(1.0) causes a visible transform
-    let normal = decode_to_rgba(&png, NamedDecoders::ImageRsPngDecoder);
+    // With HonorGamaOnly: gAMA(1.0) causes a visible transform
+    let honor_cmd = Some(vec![s::DecoderCommand::HonorGamaOnly]);
+    let normal = decode_to_rgba_with_commands(&png, NamedDecoders::ImageRsPngDecoder, honor_cmd);
     let normal_delta = max_channel_delta(&input, &normal);
-    assert!(normal_delta >= 10, "baseline: gAMA(1.0) should transform (delta={normal_delta})");
+    assert!(
+        normal_delta >= 10,
+        "baseline: gAMA(1.0) with HonorGamaOnly should transform (delta={normal_delta})"
+    );
 
-    // With DiscardGamaChrm: gAMA is ignored → no-op (test both decoders)
-    let discarded_ipng = decode_with_discard_gama_chrm(&png, NamedDecoders::ImageRsPngDecoder);
+    // With HonorGamaOnly + DiscardGamaChrm: gAMA is ignored → no-op (test both decoders)
+    let both_cmds =
+        Some(vec![s::DecoderCommand::HonorGamaOnly, s::DecoderCommand::DiscardGamaChrm]);
+    let discarded_ipng =
+        decode_to_rgba_with_commands(&png, NamedDecoders::ImageRsPngDecoder, both_cmds.clone());
     let delta_ipng = max_channel_delta(&input, &discarded_ipng);
     assert!(delta_ipng <= 1, "discard_gama_chrm (image_png): delta {delta_ipng} (expected ≤ 1)");
-    let discarded_lpng = decode_with_discard_gama_chrm(&png, NamedDecoders::LibPngRsDecoder);
+    let discarded_lpng =
+        decode_to_rgba_with_commands(&png, NamedDecoders::LibPngRsDecoder, both_cmds);
     let delta_lpng = max_channel_delta(&input, &discarded_lpng);
     assert!(delta_lpng <= 1, "discard_gama_chrm (libpng): delta {delta_lpng} (expected ≤ 1)");
     eprintln!("discard_gama_chrm_ignores_linear_gama: OK");

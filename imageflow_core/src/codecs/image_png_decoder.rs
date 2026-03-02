@@ -16,6 +16,7 @@ pub struct ImagePngDecoder {
     ignore_color_profile: bool,
     ignore_color_profile_errors: bool,
     discard_gama_chrm: bool,
+    honor_gama_only: bool,
 }
 
 impl ImagePngDecoder {
@@ -65,6 +66,7 @@ impl ImagePngDecoder {
             ignore_color_profile: false,
             ignore_color_profile_errors: false,
             discard_gama_chrm: false,
+            honor_gama_only: false,
         })
     }
 }
@@ -100,6 +102,7 @@ impl Decoder for ImagePngDecoder {
                 self.ignore_color_profile_errors = true;
             }
             s::DecoderCommand::DiscardGamaChrm => self.discard_gama_chrm = true,
+            s::DecoderCommand::HonorGamaOnly => self.honor_gama_only = true,
             _ => {}
         }
         Ok(())
@@ -192,7 +195,7 @@ impl Decoder for ImagePngDecoder {
 
         // Apply color profile transform via unified CMS dispatch
         if !self.ignore_color_profile {
-            let mut profile = SourceProfile::from_png_info(&self.info);
+            let mut profile = SourceProfile::from_png_info(&self.info, self.honor_gama_only);
             if self.discard_gama_chrm {
                 profile = profile.without_gama_chrm();
             }

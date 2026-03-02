@@ -1457,8 +1457,8 @@ fn test_cms_gama_high_gamma() {
 
 #[test]
 fn test_cms_gama_linear_only() {
-    // gAMA=1.0 (linear gamma), no cHRM. Must apply gamma→sRGB transform.
-    // Old imageflow ignored gAMA-only completely (delta=73 vs correct output).
+    // gAMA=1.0 (linear gamma), no cHRM. With HonorGamaOnly, must apply gamma→sRGB transform.
+    // Without HonorGamaOnly (default), gAMA-only is treated as sRGB (legacy behavior).
     let matched = compare_max_delta(
         Some(IoTestEnum::ByteArray(
             include_bytes!("visuals/fixtures/gama_linear_1_0.png").to_vec(),
@@ -1468,7 +1468,10 @@ fn test_cms_gama_linear_only() {
         POPULATE_CHECKSUMS,
         DEBUG_GRAPH,
         vec![
-            Node::Decode { io_id: 0, commands: None },
+            Node::Decode {
+                io_id: 0,
+                commands: Some(vec![imageflow_types::DecoderCommand::HonorGamaOnly]),
+            },
             Node::Resample2D {
                 w: 8,
                 h: 8,
@@ -1481,7 +1484,7 @@ fn test_cms_gama_linear_only() {
 
 #[test]
 fn test_cms_gama_mac_only() {
-    // gAMA=0.55556 (mac gamma ≈ 1/1.8), no cHRM. Must apply gamma→sRGB transform.
+    // gAMA=0.55556 (mac gamma ≈ 1/1.8), no cHRM. With HonorGamaOnly, must apply gamma→sRGB transform.
     // Non-neutral gamma: 0.55556 * 2.2 = 1.22 (outside ±0.05 threshold).
     let matched = compare_max_delta(
         Some(IoTestEnum::ByteArray(
@@ -1492,7 +1495,10 @@ fn test_cms_gama_mac_only() {
         POPULATE_CHECKSUMS,
         DEBUG_GRAPH,
         vec![
-            Node::Decode { io_id: 0, commands: None },
+            Node::Decode {
+                io_id: 0,
+                commands: Some(vec![imageflow_types::DecoderCommand::HonorGamaOnly]),
+            },
             Node::Resample2D {
                 w: 8,
                 h: 8,

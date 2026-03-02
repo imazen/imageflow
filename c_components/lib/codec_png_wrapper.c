@@ -116,34 +116,9 @@ static bool wrap_png_decoder_load_color_profile(struct wrap_png_decoder_state * 
 
         state->color.source = flow_codec_color_profile_source_GAMA_CHRM;
 
-    }else if(!png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)
-             && png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_gAMA)
-             && !png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_cHRM)) {
-
-        // gAMA without cHRM: primaries are device-dependent per PNG spec.
-        // Chrome (Skia) and Firefox treat "neutral" gamma (~1/2.2) as sRGB with
-        // no transform. Only non-neutral gamma values (e.g. 1.0 for linear) need
-        // a transform with assumed sRGB primaries.
-        //
-        // Neutral gamma: gamma * 2.2 within ±0.05 of 1.0 (Chrome's threshold).
-        double gamma = state->color.gamma;
-        double product = gamma * 2.2;
-        if (gamma > 0.0 && (product - 1.0 > 0.05 || product - 1.0 < -0.05)) {
-            // Non-neutral gamma: assume sRGB primaries (D65 white, BT.709).
-            state->color.white_point.x = 0.3127;
-            state->color.white_point.y = 0.3290;
-            state->color.primaries.Red.x = 0.64;
-            state->color.primaries.Red.y = 0.33;
-            state->color.primaries.Green.x = 0.30;
-            state->color.primaries.Green.y = 0.60;
-            state->color.primaries.Blue.x = 0.15;
-            state->color.primaries.Blue.y = 0.06;
-            state->color.white_point.Y = state->color.primaries.Red.Y = state->color.primaries.Green.Y = state->color.primaries.Blue.Y = 1.0;
-
-            state->color.source = flow_codec_color_profile_source_GAMA_CHRM;
-        }
-        // else: neutral gamma → leave source as Null (treated as sRGB, no-op)
     }
+    // gAMA without cHRM is handled on the Rust side when honor_gama_only is set.
+    // Without that flag (default), gAMA-only PNGs are treated as sRGB (legacy behavior).
 
     return true;
 }

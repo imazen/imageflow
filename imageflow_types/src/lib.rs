@@ -1744,6 +1744,13 @@ pub enum DecoderCommand {
     /// is known to be incorrect (common in web-scraped images).
     #[serde(rename = "discard_gama_chrm")]
     DiscardGamaChrm,
+    /// Honor gAMA-only PNGs (gAMA without cHRM) by applying a color transform
+    /// with assumed sRGB primaries. Without this flag, gAMA-only PNGs are
+    /// treated as sRGB (legacy behavior, no transform). Enabling this matches
+    /// Chrome and Firefox behavior for non-neutral gamma values (e.g. gAMA=1.0
+    /// for linear-light images).
+    #[serde(rename = "honor_gama_only")]
+    HonorGamaOnly,
     #[serde(rename = "select_frame")]
     SelectFrame(i32),
 }

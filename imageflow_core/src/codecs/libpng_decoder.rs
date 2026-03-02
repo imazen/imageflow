@@ -71,6 +71,10 @@ impl Decoder for LibPngDecoder {
                 self.decoder.discard_gama_chrm = true;
                 Ok(())
             }
+            s::DecoderCommand::HonorGamaOnly => {
+                self.decoder.honor_gama_only = true;
+                Ok(())
+            }
             _ => Ok(()),
         }
     }
@@ -120,6 +124,7 @@ struct PngDec {
     pub ignore_color_profile: bool,
     pub ignore_color_profile_errors: bool,
     pub discard_gama_chrm: bool,
+    pub honor_gama_only: bool,
     color_profile: Option<Vec<u8>>,
     color: ffi::DecoderColorInfo,
 }
@@ -226,6 +231,7 @@ impl PngDec {
             ignore_color_profile: false,
             ignore_color_profile_errors: false,
             discard_gama_chrm: false,
+            honor_gama_only: false,
             color_profile: None,
             color: ffi::DecoderColorInfo {
                 source: ColorProfileSource::Null,
@@ -346,6 +352,28 @@ impl PngDec {
                 let color = &*color_info_ptr;
                 let mut profile =
                     crate::codecs::source_profile::SourceProfile::from_decoder_color_info(color);
+                // For gAMA-only PNGs (no cHRM), the C code leaves source as Null.
+                // When honor_gama_only is set, detect non-neutral gamma and create
+                // a GammaPrimaries profile with assumed sRGB primaries.
+                if self.honor_gama_only
+                    && color.source == ColorProfileSource::Null
+                    && profile.is_srgb()
+                {
+                    let gamma = color.gamma;
+                    if gamma > 0.0 && gamma.is_finite() && (gamma * 2.2 - 1.0).abs() >= 0.05 {
+                        profile = crate::codecs::source_profile::SourceProfile::GammaPrimaries {
+                            gamma,
+                            white_x: 0.3127,
+                            white_y: 0.3290,
+                            red_x: 0.64,
+                            red_y: 0.33,
+                            green_x: 0.30,
+                            green_y: 0.60,
+                            blue_x: 0.15,
+                            blue_y: 0.06,
+                        };
+                    }
+                }
                 if self.discard_gama_chrm {
                     profile = profile.without_gama_chrm();
                 }

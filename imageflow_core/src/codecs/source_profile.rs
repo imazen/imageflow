@@ -42,7 +42,13 @@ pub enum SourceProfile {
 impl SourceProfile {
     /// Construct from a `png::Info`, applying PNG 3rd Edition precedence:
     /// cICP > iCCP > sRGB > gAMA+cHRM > assume sRGB
-    pub fn from_png_info(info: &png::Info<'_>) -> Self {
+    ///
+    /// When `honor_gama_only` is `true`, a PNG with gAMA but no cHRM and a
+    /// non-neutral gamma (e.g. 1.0 = linear) will create a `GammaPrimaries`
+    /// profile with assumed sRGB primaries — matching Chrome/Firefox behavior.
+    /// When `false` (default), gAMA-only PNGs are treated as sRGB (legacy
+    /// imageflow behavior, no transform).
+    pub fn from_png_info(info: &png::Info<'_>, honor_gama_only: bool) -> Self {
         // 1. cICP (highest priority)
         if let Some(ref cicp) = info.coding_independent_code_points {
             // CICP sRGB detection: primaries=1 (BT.709), transfer=13 (sRGB)
@@ -131,7 +137,7 @@ impl SourceProfile {
                         blue_y,
                     }
                 }
-            } else {
+            } else if honor_gama_only {
                 // gAMA without cHRM: primaries are device-dependent per PNG spec.
                 // Chrome (Skia) and Firefox both treat "neutral" gamma (≈1/2.2, i.e.
                 // sRGB encoding gamma) as sRGB with no transform. Only non-neutral
@@ -158,6 +164,9 @@ impl SourceProfile {
                         blue_y: 0.06,
                     }
                 }
+            } else {
+                // Legacy behavior: gAMA without cHRM is ignored (treated as sRGB).
+                SourceProfile::Srgb
             };
         }
 
