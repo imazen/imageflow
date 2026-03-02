@@ -9,6 +9,14 @@ max_alpha_delta = 0
 
 [[checksum]]
 id = "03CC86CF60D13260F_02E47202DCF2CA919"
-confidence = 100
+confidence = 0
 arch = ["x86_64-avx512"]
 reason = "migrated from checksums.json"
+status = "replaced"
+
+[[checksum]]
+id = "sea:8cb229c0799f3f90"
+confidence = 10
+commit = "576ef371"
+arch = ["x86_64-avx512"]
+reason = "replaced baseline"
