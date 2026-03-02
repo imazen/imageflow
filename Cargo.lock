@@ -1374,6 +1374,7 @@ dependencies = [
  "rgb",
  "safe_unaligned_simd",
  "schemars",
+ "seahash",
  "serde",
  "serde_json",
  "slotmap",

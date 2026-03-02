@@ -578,28 +578,47 @@ impl ChecksumCtx {
         Ok(())
     }
 
+    /// Sanitize a checksum for use as a filename (replace `:` with `_`).
+    fn sanitize_for_filename(checksum: &str) -> String {
+        checksum.replace(':', "_")
+    }
+
     pub fn image_url(&self, checksum: &str) -> String {
-        if !checksum.contains(".") {
-            format!("{}{}.png", self.url_base, checksum)
+        let filename = Self::sanitize_for_filename(checksum);
+        if checksum.starts_with("sea:") {
+            // New seahash checksums live in v2/ subfolder
+            let base = self.url_base;
+            if !filename.contains('.') {
+                format!("{base}v2/{filename}.png")
+            } else {
+                format!("{base}v2/{filename}")
+            }
         } else {
-            format!("{}{}", self.url_base, checksum)
+            // Legacy checksums use the old flat URL
+            if !checksum.contains('.') {
+                format!("{}{}.png", self.url_base, checksum)
+            } else {
+                format!("{}{}", self.url_base, checksum)
+            }
         }
     }
 
     pub fn image_path(&self, checksum: &str) -> PathBuf {
-        let name = if !checksum.contains(".") {
-            format!("{}.png", checksum)
+        let sanitized = Self::sanitize_for_filename(checksum);
+        let name = if !sanitized.contains('.') {
+            format!("{sanitized}.png")
         } else {
-            checksum.to_string()
+            sanitized
         };
-
         self.visuals_dir.as_path().join(Path::new(&name))
     }
+
     pub fn image_name(&self, checksum: &str) -> String {
-        if !checksum.contains(".") {
-            format!("{}.png", checksum)
+        let sanitized = Self::sanitize_for_filename(checksum);
+        if !sanitized.contains('.') {
+            format!("{sanitized}.png")
         } else {
-            checksum.to_string()
+            sanitized
         }
     }
 
@@ -667,14 +686,10 @@ impl ChecksumCtx {
         }
     }
 
-    /// We include the file extension in checksums of encoded images, as we can't be sure they're stored as PNG (as we can with frame checksums)
+    /// Checksum encoded bytes using seahash + file extension.
     pub fn checksum_bytes(bytes: &[u8]) -> String {
-        format!(
-            "{:02$X}.{1}",
-            hlp::hashing::hash_64(bytes),
-            Self::file_extension_for_bytes(bytes),
-            17
-        )
+        let h = seahash::hash(bytes);
+        format!("sea:{h:016x}.{}", Self::file_extension_for_bytes(bytes))
     }
 
     pub fn file_extension_for_bytes(bytes: &[u8]) -> &'static str {
@@ -694,21 +709,24 @@ impl ChecksumCtx {
         }
     }
 
-    /// Provides a checksum composed of two hashes - one from the pixels, one from the dimensions and format
-    /// This format is preserved from legacy C tests, thus its rudimentary (but, I suppose, sufficient) nature.
+    /// Checksum bitmap pixels using seahash with dimensions baked in.
+    ///
+    /// Iterates scanlines to exclude stride padding (matching the old
+    /// `short_hash_pixels` behavior). Dimensions are prepended to avoid
+    /// collisions between differently-shaped images.
     pub fn checksum_bitmap_window(bitmap_window: &mut BitmapWindowMut<u8>) -> String {
-        let info = format!(
-            "{}x{} fmt={}",
-            bitmap_window.w(),
-            bitmap_window.h(),
-            bitmap_window.info().calculate_pixel_format().unwrap() as i32
-        );
-        format!(
-            "{:02$X}_{:02$X}",
-            bitmap_window.short_hash_pixels(),
-            hlp::hashing::legacy_djb2(info.as_bytes()),
-            17
-        )
+        let w = bitmap_window.w() as u32;
+        let h = bitmap_window.h() as u32;
+
+        let mut buf = Vec::with_capacity(8 + (w as usize * h as usize * 4));
+        buf.extend_from_slice(&w.to_le_bytes());
+        buf.extend_from_slice(&h.to_le_bytes());
+        for line in bitmap_window.scanlines() {
+            buf.extend_from_slice(line.row());
+        }
+
+        let hash = seahash::hash(&buf);
+        format!("sea:{hash:016x}")
     }
 
     pub fn checksum_bitmap(c: &Context, bitmap_key: BitmapKey) -> String {
@@ -802,6 +820,7 @@ impl ChecksumCtx {
     /// Upload a reference image to remote storage if uploading is enabled.
     ///
     /// Requires `UPLOAD_REFERENCES=1` and `REGRESS_UPLOAD_PREFIX` to be set.
+    /// New `sea:` checksums are uploaded to a `v2/` subfolder.
     pub fn upload_image(&self, checksum: &str) {
         if !self.upload_enabled {
             return;
@@ -815,7 +834,11 @@ impl ChecksumCtx {
         }
 
         let filename = self.image_name(checksum);
-        let remote_url = format!("{}/{}", prefix.trim_end_matches('/'), filename);
+        let subfolder = if checksum.starts_with("sea:") { "v2/" } else { "" };
+        let remote_url = format!(
+            "{}/{subfolder}{filename}",
+            prefix.trim_end_matches('/')
+        );
 
         use zensim_regress::upload::ResourceUploader;
         match self.uploader.upload(&local_path, &remote_url) {

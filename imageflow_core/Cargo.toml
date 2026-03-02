@@ -92,6 +92,7 @@ csv = "1"
 rayon = "1"
 colorutils-rs = "0.7"
 zensim-regress = { path = "../../zensim/zensim-regress" }
+seahash = "4"
 
 [features]
 default = []
