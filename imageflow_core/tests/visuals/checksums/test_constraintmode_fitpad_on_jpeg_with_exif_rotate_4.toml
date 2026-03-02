@@ -1,0 +1,14 @@
+name = "test ConstraintMode::FitPad on jpeg with exif rotate 4"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0FF676B5A6E01B5D2_0BF80F0AE71CD9A63"
+confidence = 100
+arch = ["x86_64-avx512"]
+reason = "migrated from checksums.json"

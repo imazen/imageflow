@@ -1,0 +1,14 @@
+name = "WhiteBalanceNight"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0D84206BD2DD308DA_05C9231C6124D62A8"
+confidence = 100
+arch = ["x86_64-avx512"]
+reason = "migrated from checksums.json"

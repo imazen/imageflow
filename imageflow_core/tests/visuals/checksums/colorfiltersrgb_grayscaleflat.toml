@@ -1,0 +1,14 @@
+name = "ColorFilterSrgb_GrayscaleFlat"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0564CEC6B87176F00_0BF6B81194D5D0D9F"
+confidence = 100
+arch = ["x86_64-avx512"]
+reason = "migrated from checksums.json"

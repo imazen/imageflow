@@ -1,0 +1,14 @@
+name = "RoundCornersCircleWider"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0AFF835739E386A12_02E471F17F7F9607D"
+confidence = 100
+arch = ["x86_64-avx512"]
+reason = "migrated from checksums.json"

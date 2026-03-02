@@ -1,0 +1,14 @@
+name = "test cropping jpeg with exif rotate 6"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0944126DD54AACA23_0AF9F04019B0BAF16"
+confidence = 100
+arch = ["x86_64-avx512"]
+reason = "migrated from checksums.json"

@@ -1,0 +1,14 @@
+name = "RoundCornersSmall"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "02DE05B755CD85DEF_0172196390B512E97"
+confidence = 100
+arch = ["x86_64-avx512"]
+reason = "migrated from checksums.json"

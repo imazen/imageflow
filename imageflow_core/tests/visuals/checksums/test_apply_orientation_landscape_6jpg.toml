@@ -1,0 +1,14 @@
+name = "Test_Apply_Orientation_Landscape_6.jpg"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0D1A92F8808319893_0AF9F040B874D83F7"
+confidence = 100
+arch = ["x86_64-avx512"]
+reason = "migrated from checksums.json"

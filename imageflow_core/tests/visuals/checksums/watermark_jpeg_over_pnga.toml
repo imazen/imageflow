@@ -1,0 +1,14 @@
+name = "watermark_jpeg_over_pnga"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "067E9590017B13898_073B7BE0C1ABF189F"
+confidence = 100
+arch = ["x86_64-avx512"]
+reason = "migrated from checksums.json"
