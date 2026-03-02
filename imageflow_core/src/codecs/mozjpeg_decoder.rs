@@ -379,7 +379,11 @@ impl MzDec {
                 // Grayscale ICC profile on a color JPEG — applying a gray→sRGB
                 // transform to color data would silently corrupt output. Skip it.
                 crate::codecs::source_profile::SourceProfile::Srgb
-            } else if is_grayscale || icc_is_gray {
+            } else if icc_is_gray {
+                // Only use IccProfileGray when the ICC profile actually declares
+                // Gray color space. A grayscale JPEG with an RGB ICC profile
+                // (e.g. sRGB) should use IccProfile — the pixel data is BGRA
+                // with R=G=B after mozjpeg's color conversion.
                 crate::codecs::source_profile::SourceProfile::IccProfileGray(icc_bytes.clone())
             } else {
                 crate::codecs::source_profile::SourceProfile::IccProfile(icc_bytes.clone())
