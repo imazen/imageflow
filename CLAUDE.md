@@ -18,6 +18,12 @@ Imageflow runs hundreds of concurrent contexts (one per HTTP request in server m
 
 Always commit `cargo fmt` changes as a separate commit from code changes.
 
+**Before committing Cargo.lock, always run `cargo check --locked`** to verify the lockfile is consistent. CI uses `--locked` and will reject stale lockfiles. Use `just check-locked` or `just pre-commit`.
+
+## Justfile
+
+Common recipes live in `/justfile`. Run `just --list` to see them. Add new recurring commands there instead of writing one-off scripts.
+
 ## Delayed TODOs
 
 - **Licensing/caching module** (`imageflow_helpers/src/unused/`): ~2300 lines of draft licensing, caching, and polling code. Currently unreferenced (no `mod` declaration). Needs review, modernization, and wiring into the build when ready to complete.
