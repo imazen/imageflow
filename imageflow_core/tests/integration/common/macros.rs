@@ -29,7 +29,7 @@ macro_rules! test_identity {
         fn __f() {}
         let full = std::any::type_name_of_val(&__f);
         // full = "integration::visuals::trim::test_trim_whitespace::__f"
-        let without_f = &full[..full.len() - 4]; // strip "::__f"
+        let without_f = full.strip_suffix("::__f").unwrap_or(full);
         let func_name = match without_f.rsplit("::").next() {
             Some(n) => n,
             None => without_f,
