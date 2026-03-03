@@ -46,7 +46,6 @@ fn test_fill_rect_original() {
             },
             Node::FillRect { x1: 0, y1: 0, x2: 50, y2: 100, color: blue },
         ],
-        tolerance: zensim_regress::checksum_file::ToleranceSpec::off_by_one(),
     }
 }
 
@@ -226,7 +225,6 @@ fn test_detect_whitespace() {
             Node::FillRect { x1: 0, y1: 0, x2: 50, y2: 100, color: blue },
             Node::CropWhitespace { threshold: 80, percent_padding: 0f32 },
         ],
-        tolerance: zensim_regress::checksum_file::ToleranceSpec::off_by_one(),
     }
 }
 
@@ -247,7 +245,6 @@ fn test_round_corners_large() {
                 radius: RoundCornersMode::Pixels(200f32),
             },
         ],
-        tolerance: zensim_regress::checksum_file::ToleranceSpec::off_by_one(),
     }
 }
 
@@ -268,7 +265,6 @@ fn test_round_corners_small() {
                 radius: RoundCornersMode::Pixels(5f32),
             },
         ],
-        tolerance: zensim_regress::checksum_file::ToleranceSpec::off_by_one(),
     }
 }
 
@@ -294,7 +290,6 @@ fn test_round_corners_custom_pixels() {
                 },
             },
         ],
-        tolerance: zensim_regress::checksum_file::ToleranceSpec::off_by_one(),
     }
 }
 
@@ -320,7 +315,6 @@ fn test_round_corners_custom_percent() {
                 },
             },
         ],
-        tolerance: zensim_regress::checksum_file::ToleranceSpec::off_by_one(),
     }
 }
 
@@ -341,7 +335,6 @@ fn test_round_corners_excessive_radius() {
                 radius: RoundCornersMode::Pixels(100f32),
             },
         ],
-        tolerance: zensim_regress::checksum_file::ToleranceSpec::off_by_one(),
     }
 }
 
@@ -359,7 +352,6 @@ fn test_round_corners_circle_wide_canvas() {
             },
             Node::RoundImageCorners { background_color: matte, radius: RoundCornersMode::Circle },
         ],
-        tolerance: zensim_regress::checksum_file::ToleranceSpec::off_by_one(),
     }
 }
 
@@ -377,7 +369,6 @@ fn test_round_corners_circle_tall_canvas() {
             },
             Node::RoundImageCorners { background_color: matte, radius: RoundCornersMode::Circle },
         ],
-        tolerance: zensim_regress::checksum_file::ToleranceSpec::off_by_one(),
     }
 }
 
