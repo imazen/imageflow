@@ -177,6 +177,8 @@ pub struct ChecksumCtx {
     missing_everywhere_index: PathBuf,
     to_upload_index: PathBuf,
     visuals_dir: PathBuf,
+    /// Directory for reference image storage (`.image-cache/` at workspace root).
+    image_cache_dir: PathBuf,
     #[allow(dead_code)]
     cache_dir: PathBuf,
     create_if_missing: bool,
@@ -200,6 +202,13 @@ impl ChecksumCtx {
             .join(Path::new("visuals"));
         std::fs::create_dir_all(&visuals).unwrap();
 
+        // Reference images stored in .image-cache/ at workspace root
+        let image_cache = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("CARGO_MANIFEST_DIR has no parent")
+            .join(".image-cache");
+        std::fs::create_dir_all(&image_cache).unwrap();
+
         let upload_prefix = std::env::var("REGRESS_UPLOAD_PREFIX")
             .ok()
             .and_then(|v| if v.is_empty() { None } else { Some(v) });
@@ -208,6 +217,7 @@ impl ChecksumCtx {
 
         ChecksumCtx {
             visuals_dir: visuals.clone(),
+            image_cache_dir: image_cache,
             cache_dir: visuals.join(Path::new("cache")),
             create_if_missing: true,
             checksum_file: visuals.join(Path::new("checksums.json")),
@@ -607,13 +617,18 @@ impl ChecksumCtx {
     }
 
     pub fn image_path(&self, checksum: &str) -> PathBuf {
-        let sanitized = Self::sanitize_for_filename(checksum);
-        let name = if !sanitized.contains('.') {
-            format!("{sanitized}.png")
+        let name = self.image_name(checksum);
+        // Try .image-cache/ first, fall back to visuals_dir for legacy images
+        let cache_path = self.image_cache_dir.join(&name);
+        let legacy_path = self.visuals_dir.join(&name);
+        if cache_path.exists() {
+            cache_path
+        } else if legacy_path.exists() {
+            legacy_path
         } else {
-            sanitized
-        };
-        self.visuals_dir.as_path().join(Path::new(&name))
+            // New images go to .image-cache/
+            cache_path
+        }
     }
 
     pub fn image_name(&self, checksum: &str) -> String {
