@@ -38,16 +38,69 @@ fn test_idct_no_gamma_callback(
     )
 }
 
-#[test]
-fn test_idct_linear() {
-    let matched = test_with_callback("test_idct_linear roof_gamma_corrected", IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
-    test_idct_callback);
+/// Run IDCT test inline: create context, add input, get image info,
+/// apply decoder hints via callback, execute, then evaluate with v2.
+fn run_idct_test(
+    identity: &TestIdentity,
+    detail: &str,
+    source_url: &str,
+    callback: fn(
+        &imageflow_types::ImageInfo,
+    ) -> (Option<imageflow_types::DecoderCommand>, Vec<Node>),
+) {
+    let mut context = imageflow_core::Context::create().unwrap();
+    IoTestTranslator {}
+        .add(&mut context, 0, IoTestEnum::Url(source_url.to_owned()))
+        .unwrap();
+
+    let image_info = context.get_unscaled_rotated_image_info(0).unwrap();
+    let (tell_decoder, mut steps) = callback(&image_info);
+
+    if let Some(what) = tell_decoder {
+        let send_hints = imageflow_types::TellDecoder001 { io_id: 0, command: what };
+        let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
+        context.message("v1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
+    }
+
+    let mut bit = BitmapBgraContainer::empty();
+    steps.push(unsafe { bit.as_mut().get_node() });
+
+    let send_execute = imageflow_types::Execute001 {
+        framewise: imageflow_types::Framewise::Steps(steps),
+        security: None,
+        graph_recording: None,
+    };
+    context.execute_1(send_execute).unwrap();
+
+    let ctx = ChecksumCtx::visuals();
+    let bitmap_key = bit.bitmap_key(&context).unwrap();
+    let matched = evaluate_result_v2(
+        &ctx,
+        identity.module,
+        identity.func_name,
+        detail,
+        ResultKind::Bitmap { context: &context, key: bitmap_key },
+        Constraints {
+            similarity: Similarity::AllowOffByOneBytesCount(500),
+            max_file_size: None,
+        },
+        Some(source_url),
+        true,
+    );
+    context.destroy().unwrap();
     assert!(matched);
 }
 
 #[test]
+fn test_idct_linear() {
+    let identity = test_identity!();
+    let source_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg";
+    run_idct_test(&identity, "roof_gamma_corrected", source_url, test_idct_callback);
+}
+
+#[test]
 fn test_idct_spatial_no_gamma() {
-    let matched = test_with_callback("test_idct_spatial_no_gamma roof_approx", IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
-                                     test_idct_no_gamma_callback);
-    assert!(matched);
+    let identity = test_identity!();
+    let source_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg";
+    run_idct_test(&identity, "roof_approx", source_url, test_idct_no_gamma_callback);
 }

@@ -109,10 +109,12 @@ fn test_matte_transparent_png() {
     }
 }
 
-// This test uses compare_encoded_framewise with branching pipeline — not macro-convertible
+// This test uses a branching pipeline producing 2 outputs — not macro-convertible
 #[test]
 fn test_branching_crop_whitespace() {
+    let identity = test_identity!();
     let preset = EncoderPreset::Lodepng { maximum_deflate: None };
+    let source_url = "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/little_gradient_whitespace.jpg";
 
     let s = imageflow_core::clients::fluent::fluently().decode(0);
     let v1 = s.branch();
@@ -120,18 +122,35 @@ fn test_branching_crop_whitespace() {
     let framewise =
         v1.encode(1, preset.clone()).builder().with(v2.encode(2, preset.clone())).to_framewise();
 
-    compare_encoded_framewise(
-        Some(IoTestEnum::Url("https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/little_gradient_whitespace.jpg".to_owned())),
-        "test_branching_crop_whitespace gradient",
-        true,
-        false,
-        Constraints {
-            similarity: Similarity::AllowDssimMatch(0.0, 0.002),
-            max_file_size: None,
-        },
-        framewise,
-        2,
-    );
+    let io_vec = vec![
+        IoTestEnum::Url(source_url.to_owned()),
+        IoTestEnum::OutputBuffer,
+        IoTestEnum::OutputBuffer,
+    ];
+
+    let mut context = imageflow_core::Context::create().unwrap();
+    let _ = build_framewise(&mut context, framewise, io_vec, None, false).unwrap();
+
+    let ctx = ChecksumCtx::visuals();
+    let require = Constraints {
+        similarity: Similarity::AllowDssimMatch(0.0, 0.002),
+        max_file_size: None,
+    };
+
+    for output_io_id in [1, 2] {
+        let detail = format!("gradient_output_{output_io_id}");
+        let bytes = context.take_output_buffer(output_io_id).unwrap();
+        evaluate_result_v2(
+            &ctx,
+            identity.module,
+            identity.func_name,
+            &detail,
+            ResultKind::Bytes(&bytes),
+            require.clone(),
+            Some(source_url),
+            true,
+        );
+    }
 }
 
 #[test]
