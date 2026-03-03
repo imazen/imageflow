@@ -16,8 +16,6 @@ use std::path::Path;
 
 use imageflow_core;
 use s::PixelLayout;
-use std::fs::File;
-use std::io::Write;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::{self, panic};
@@ -41,7 +39,57 @@ pub enum IoTestEnum {
     Url(String),
 }
 
+/// Source cache directory at workspace root `.image-cache/sources/`.
+fn source_cache_dir() -> PathBuf {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("CARGO_MANIFEST_DIR has no parent");
+    let dir = workspace_root.join(".image-cache/sources");
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+}
+
+/// Convert a URL to a relative cache path by stripping scheme and host.
+///
+/// `"https://s3.amazonaws.com/bucket/test_inputs/photo.jpg"`
+/// → `"bucket/test_inputs/photo.jpg"`
+fn url_to_cache_path(url: &str) -> PathBuf {
+    let after_scheme = url.split("://").nth(1).unwrap_or(url);
+    let after_host = after_scheme
+        .split_once('/')
+        .map(|(_, p)| p)
+        .unwrap_or(after_scheme);
+    PathBuf::from(after_host)
+}
+
+/// Fetch URL bytes with local caching and retry.
+///
+/// Caches downloaded files in `.image-cache/sources/` at the workspace root,
+/// using the URL path as the cache key. Subsequent calls with the same URL
+/// return the cached bytes without making a network request.
 pub fn get_url_bytes_with_retry(url: &str) -> Result<Vec<u8>, FlowError> {
+    let cache_dir = source_cache_dir();
+    let rel_path = url_to_cache_path(url);
+    let full_path = cache_dir.join(&rel_path);
+
+    if full_path.exists() {
+        return std::fs::read(&full_path)
+            .map_err(|e| nerror!(ErrorKind::FetchError, "{}: {}", full_path.display(), e));
+    }
+
+    // Download with retry
+    let bytes = fetch_url_with_retry(url)?;
+
+    if let Some(parent) = full_path.parent() {
+        std::fs::create_dir_all(parent).unwrap();
+    }
+    std::fs::write(&full_path, &bytes).unwrap();
+
+    Ok(bytes)
+}
+
+/// Internal: download URL bytes with exponential backoff retry.
+fn fetch_url_with_retry(url: &str) -> Result<Vec<u8>, FlowError> {
     let mut retry_count = 3;
     let mut retry_wait = 100;
     loop {
@@ -150,156 +198,115 @@ pub fn smoke_test(
 }
 
 /// A context for getting/storing frames and frame checksums by test name.
-/// Supports optional upload of new reference images via `ShellUploader`.
+///
+/// Uses `ReferenceStorage` from zensim-regress for output image caching,
+/// upload, and download. Petname-based naming for reference images.
 pub struct ChecksumCtx {
-    visuals_dir: PathBuf,
-    /// Directory for reference image storage (`.image-cache/` at workspace root).
-    image_cache_dir: PathBuf,
-    url_base: &'static str,
-    uploader: zensim_regress::upload::ShellUploader,
-    upload_enabled: bool,
-    upload_prefix: Option<String>,
+    /// Directory containing `.checksums` files (one per test module).
+    checksums_dir: PathBuf,
+    /// Remote storage for output reference images (cache + S3).
+    output_storage: zensim_regress::remote::ReferenceStorage,
+    /// Local cache directory for output images (same dir given to ReferenceStorage).
+    output_cache_dir: PathBuf,
 }
 
 impl ChecksumCtx {
-    /// A checksum context configured for tests/visuals/*
+    /// A checksum context configured for integration visual tests.
     pub fn visuals() -> ChecksumCtx {
-        let visuals = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join(Path::new("tests"))
-            .join(Path::new("visuals"));
-        std::fs::create_dir_all(&visuals).unwrap();
+        let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let checksums_dir = manifest.join("tests/integration/visuals/checksums");
+        let workspace_root = manifest.parent().expect("CARGO_MANIFEST_DIR has no parent");
 
-        // Reference images stored in .image-cache/ at workspace root
-        let image_cache = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("CARGO_MANIFEST_DIR has no parent")
-            .join(".image-cache");
-        std::fs::create_dir_all(&image_cache).unwrap();
+        let output_cache_dir = workspace_root.join(".image-cache/outputs");
+        std::fs::create_dir_all(&output_cache_dir).unwrap();
 
         let upload_prefix = std::env::var("REGRESS_UPLOAD_PREFIX")
             .ok()
-            .and_then(|v| if v.is_empty() { None } else { Some(v) });
+            .and_then(|v| if v.is_empty() { None } else { Some(v) })
+            .or_else(|| {
+                Some("s3://imageflow-resources/visual_test_checksums".to_string())
+            });
         let upload_enabled = std::env::var("UPLOAD_REFERENCES")
             .is_ok_and(|v| v == "1" || v == "true");
 
-        ChecksumCtx {
-            visuals_dir: visuals,
-            image_cache_dir: image_cache,
-            url_base:
-                "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/",
-            uploader: zensim_regress::upload::ShellUploader::new(),
-            upload_enabled,
+        let output_storage = zensim_regress::remote::ReferenceStorage::new(
+            "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums",
             upload_prefix,
-        }
+            upload_enabled,
+            &output_cache_dir,
+        );
+
+        ChecksumCtx { checksums_dir, output_storage, output_cache_dir }
     }
 
-    /// Sanitize a checksum for use as a filename (replace `:` with `_`).
-    fn sanitize_for_filename(checksum: &str) -> String {
-        checksum.replace(':', "_")
-    }
-
-    pub fn image_url(&self, checksum: &str) -> String {
-        let filename = Self::sanitize_for_filename(checksum);
-        if checksum.starts_with("sea:") {
-            // New seahash checksums live in v2/ subfolder
-            let base = self.url_base;
-            if !filename.contains('.') {
-                format!("{base}v2/{filename}.png")
-            } else {
-                format!("{base}v2/{filename}")
-            }
+    /// Convert a name (petname or full hash) to a petname for storage.
+    ///
+    /// Petnames have dashes (e.g., `"north-axe-3d468:sea"`).
+    /// Full hashes don't (e.g., `"sea:a4839401fabae99c.png"`).
+    fn to_petname(name_or_hash: &str) -> String {
+        if name_or_hash.contains('-') {
+            // Already a petname
+            name_or_hash.to_string()
         } else {
-            // Legacy checksums use the old flat URL
-            if !checksum.contains('.') {
-                format!("{}{}.png", self.url_base, checksum)
-            } else {
-                format!("{}{}", self.url_base, checksum)
-            }
+            // Full hash — strip file extension, convert to petname
+            let bare = name_or_hash
+                .rsplit_once('.')
+                .filter(|(_, ext)| {
+                    matches!(*ext, "png" | "jpg" | "jpeg" | "webp" | "gif" | "unknown")
+                })
+                .map(|(base, _)| base)
+                .unwrap_or(name_or_hash);
+            zensim_regress::petname::memorable_name(bare)
         }
     }
 
-    pub fn image_path(&self, checksum: &str) -> PathBuf {
-        let name = self.image_name(checksum);
-        // Try .image-cache/ first, fall back to visuals_dir for legacy images
-        let cache_path = self.image_cache_dir.join(&name);
-        let legacy_path = self.visuals_dir.join(&name);
-        if cache_path.exists() {
-            cache_path
-        } else if legacy_path.exists() {
-            legacy_path
-        } else {
-            // New images go to .image-cache/
-            cache_path
-        }
-    }
-
-    pub fn image_name(&self, checksum: &str) -> String {
-        let sanitized = Self::sanitize_for_filename(checksum);
-        if !sanitized.contains('.') {
-            format!("{sanitized}.png")
-        } else {
-            sanitized
-        }
-    }
-
-    pub fn image_path_string(&self, checksum: &str) -> String {
-        self.image_path(checksum).into_os_string().into_string().unwrap()
-    }
-    /// Fetch the given image to disk
-    pub fn fetch_image(&self, checksum: &str) {
-        let dest_path = self.image_path(checksum);
-        let source_url = self.image_url(checksum);
-        if dest_path.exists() {
-            println!("{} (trusted) exists", checksum);
-        } else {
-            print!("Fetching {} to {:?}...", &source_url, &dest_path);
-            let bytes =
-                get_url_bytes_with_retry(&source_url).expect("Did you forget to upload {} to s3?");
-            let mut f = File::create(&dest_path).unwrap();
-            f.write_all(bytes.as_ref()).unwrap();
-            f.flush().unwrap();
-            f.sync_all().unwrap();
-
-            println!("{} bytes written successfully.", bytes.len());
-        }
-    }
-
-    /// Load the given image from disk (and download it if it's not on disk)
-    /// The bitmap will be destroyed when the returned Context goes out of scope
-    pub fn load_image(&self, checksum: &str) -> (Box<Context>, BitmapKey) {
-        self.fetch_image(checksum);
+    /// Load a reference image from cache or remote storage.
+    ///
+    /// Accepts either a petname (`"north-axe-3d468:sea"`) or a full hash
+    /// (`"sea:a4839401fabae99c.png"`). The bitmap will be destroyed when
+    /// the returned Context goes out of scope.
+    pub fn load_image(&self, name: &str) -> (Box<Context>, BitmapKey) {
+        let petname = Self::to_petname(name);
+        let path = self
+            .output_storage
+            .download_reference(&petname)
+            .unwrap_or_else(|e| panic!("Download error for {petname}: {e}"))
+            .unwrap_or_else(|| panic!("Reference image not found: {petname}"));
 
         let mut c = Context::create().unwrap();
-        let path = self.image_path_string(checksum);
-        c.add_file(0, s::IoDirection::In, &path).unwrap();
+        c.add_file(0, s::IoDirection::In, path.to_str().unwrap()).unwrap();
 
         let image = decode_image(&mut c, 0);
         (c, image)
     }
 
-    /// Save the given image to disk by calculating its checksum.
+    /// Save a bitmap frame to cache and upload to remote storage.
     pub fn save_frame(&self, window: &mut BitmapWindowMut<u8>, checksum: &str) {
-        let dest_path = self.image_path(checksum);
+        let petname = Self::to_petname(checksum);
+        let filename =
+            zensim_regress::remote::ReferenceStorage::remote_filename(&petname);
+        let dest_path = self.output_cache_dir.join(&filename);
         if !dest_path.exists() {
-            let path_str = dest_path.to_str();
-            if let Some(path) = path_str {
-                println!("Writing {}", &path);
-            } else {
-                println!("Writing {:#?}", &dest_path);
+            println!("Writing {}", dest_path.display());
+            imageflow_core::helpers::write_png(&dest_path, window).unwrap();
+            if let Err(e) = self.output_storage.upload_reference(&dest_path, &petname) {
+                eprintln!("Warning: upload failed for {petname}: {e}");
             }
-            imageflow_core::helpers::write_png(dest_path, window).unwrap();
-            self.upload_image(checksum);
         }
     }
-    /// Save the given bytes to disk by calculating their checksum.
+
+    /// Save encoded bytes to cache and upload to remote storage.
     pub fn save_bytes(&self, bytes: &[u8], checksum: &str) {
-        let dest_path = self.image_path(checksum);
+        let petname = Self::to_petname(checksum);
+        let filename =
+            zensim_regress::remote::ReferenceStorage::remote_filename(&petname);
+        let dest_path = self.output_cache_dir.join(&filename);
         if !dest_path.exists() {
-            println!("Writing {:?}", &dest_path);
-            let mut f = ::std::fs::File::create(&dest_path).unwrap();
-            f.write_all(bytes).unwrap();
-            f.sync_all().unwrap();
-            self.upload_image(checksum);
+            println!("Writing {}", dest_path.display());
+            std::fs::write(&dest_path, bytes).unwrap();
+            if let Err(e) = self.output_storage.upload_reference(&dest_path, &petname) {
+                eprintln!("Warning: upload failed for {petname}: {e}");
+            }
         }
     }
 
@@ -380,7 +387,8 @@ impl ChecksumCtx {
 
     /// Structured checksum match using (module, test_name, detail_name).
     ///
-    /// Returns (match_result, trusted_checksum, actual_checksum).
+    /// Returns (match_result, trusted_name, actual_checksum).
+    /// `trusted_name` is a petname from the `.checksums` file.
     pub fn exact_match(
         &self,
         actual_checksum: String,
@@ -388,8 +396,10 @@ impl ChecksumCtx {
         test_name: &str,
         detail_name: &str,
     ) -> (ChecksumMatch, String, String) {
-        let adapter = checksum_adapter::ChecksumAdapter::new(&self.visuals_dir);
-        if let Some((result, trusted)) = adapter.try_match(module, test_name, detail_name, &actual_checksum) {
+        let adapter = checksum_adapter::ChecksumAdapter::new(&self.checksums_dir);
+        if let Some((result, trusted)) =
+            adapter.try_match(module, test_name, detail_name, &actual_checksum)
+        {
             return (result, trusted, actual_checksum);
         }
 
@@ -398,36 +408,6 @@ impl ChecksumCtx {
             "No .checksums entry found for {module}/{test_name} {detail_name}. \
              Run with UPDATE_CHECKSUMS=1 to create it."
         );
-    }
-
-    /// Upload a reference image to remote storage if uploading is enabled.
-    ///
-    /// Requires `UPLOAD_REFERENCES=1` and `REGRESS_UPLOAD_PREFIX` to be set.
-    /// New `sea:` checksums are uploaded to a `v2/` subfolder.
-    pub fn upload_image(&self, checksum: &str) {
-        if !self.upload_enabled {
-            return;
-        }
-        let Some(prefix) = &self.upload_prefix else {
-            return;
-        };
-        let local_path = self.image_path(checksum);
-        if !local_path.exists() {
-            return;
-        }
-
-        let filename = self.image_name(checksum);
-        let subfolder = if checksum.starts_with("sea:") { "v2/" } else { "" };
-        let remote_url = format!(
-            "{}/{subfolder}{filename}",
-            prefix.trim_end_matches('/')
-        );
-
-        use zensim_regress::upload::ResourceUploader;
-        match self.uploader.upload(&local_path, &remote_url) {
-            Ok(()) => println!("Uploaded {checksum} to {remote_url}"),
-            Err(e) => eprintln!("Warning: upload failed for {checksum}: {e}"),
-        }
     }
 }
 
@@ -785,7 +765,7 @@ pub fn evaluate_result<'a>(
 
         // Auto-accept to .checksums if within tolerance
         if std::env::var("UPDATE_CHECKSUMS").is_ok_and(|v| v == "1") {
-            let adapter = checksum_adapter::ChecksumAdapter::new(&c.visuals_dir);
+            let adapter = checksum_adapter::ChecksumAdapter::new(&c.checksums_dir);
             // Compute zensim quality vs original source (same-dimension only)
             let diff_summary = source_url.and_then(|url| {
                 match compute_zensim_vs_source(c, &actual, url) {

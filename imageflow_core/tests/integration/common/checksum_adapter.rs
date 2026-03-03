@@ -16,11 +16,9 @@ pub struct ChecksumAdapter {
 }
 
 impl ChecksumAdapter {
-    /// Create a new adapter pointing at the `checksums/` subdirectory
-    /// within the given visuals directory.
-    pub fn new(visuals_dir: &Path) -> Self {
-        let checksum_dir = visuals_dir.join("checksums");
-        let manager = ChecksumManagerV2::new(&checksum_dir);
+    /// Create a new adapter pointing at the given checksums directory.
+    pub fn new(checksums_dir: &Path) -> Self {
+        let manager = ChecksumManagerV2::new(checksums_dir);
         Self { manager }
     }
 
