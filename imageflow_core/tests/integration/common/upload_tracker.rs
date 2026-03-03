@@ -186,12 +186,23 @@ fn sync_checksums_files(checksums_dir: &Path, storage: &ReferenceStorage) {
 
 /// Record a successful upload in the uploaded.log.
 ///
-/// Thread-safe: reads current log, adds the petname, writes back.
+/// Thread-safe via advisory file locking.
 /// Called from `save_bytes`/`save_frame` after successful upload.
 pub fn record_upload(petname: &str) {
-    // Use a simple file-based approach with atomic read-modify-write
+    let lock_path = uploaded_log_path().with_extension("log.lock");
+    let lock_file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(&lock_path)
+        .unwrap();
+    use fs2::FileExt;
+    lock_file.lock_exclusive().unwrap();
+
     let mut uploaded = read_uploaded_log();
     if uploaded.insert(petname.to_string()) {
         write_uploaded_log(&uploaded);
     }
+
+    let _ = lock_file.unlock();
 }

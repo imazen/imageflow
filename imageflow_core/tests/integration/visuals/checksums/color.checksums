@@ -1,97 +1,96 @@
 # color.checksums — v1
-
 ## test_simple_filters Contrast(-0.2)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = draft-tuna-474aab8287:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_white_balance_image red_night_auto
-tolerance d:0 s:100
+tolerance d:1 s:100
 = murky-stork-1a0ab17a07:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Brightness(-1.0)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = fatal-eagle-bdeff8b442:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Alpha(0.3)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = open-snow-72e04a3a6e:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Saturation(-1.0)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = elfin-sage-8eb7d1552d:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters GrayscaleBt709
-tolerance d:0 s:100
+tolerance d:1 s:100
 = cold-bloom-d7708bc3b7:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Invert
-tolerance d:0 s:100
+tolerance d:1 s:100
 = gruff-pearl-30d0d15faf:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Saturation(1.0)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = fixed-bud-debef595dc:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Saturation(-0.2)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = fluid-torch-97456e009b:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Alpha(-1.0)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = loud-river-f6aff1a2b4:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_white_balance_image_threshold_5 t0.5
-tolerance d:0 s:100
+tolerance d:1 s:100
 = funny-ridge-b6510558f0:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters GrayscaleFlat
-tolerance d:0 s:100
+tolerance d:1 s:100
 = last-gull-1b3b404349:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Brightness(1.0)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = red-foam-e67b1515b9:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters GrayscaleNtsc
-tolerance d:0 s:100
+tolerance d:1 s:100
 = muted-hill-eb0e29e7b6:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Saturation(0.3)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = focal-node-9cdda5ae98:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Sepia
-tolerance d:0 s:100
+tolerance d:1 s:100
 = modal-oak-cf235ac8be:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Alpha(-0.2)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = loud-river-f6aff1a2b4:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters GrayscaleRy
-tolerance d:0 s:100
+tolerance d:1 s:100
 = fresh-hawk-8a7cf2158a:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Contrast(0.3)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = quick-bone-4ecbdac7ac:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Contrast(1.0)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = spare-sloth-6adae801d8:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Alpha(1.0)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = lunar-hull-58c137af98:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Brightness(-0.2)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = faded-cloud-1f7cc01bfb:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Contrast(-1.0)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = fiery-wren-71e5629689:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Brightness(0.3)
-tolerance d:0 s:100
+tolerance d:1 s:100
 = jolly-tree-a82ec324e9:sea  x86_64-avx512  @8ca16e2d  human-verified

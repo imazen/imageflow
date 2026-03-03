@@ -386,10 +386,11 @@ impl ChecksumCtx {
         module: &str,
         test_name: &str,
         detail_name: &str,
+        tolerance: Option<&zensim_regress::checksum_file::ToleranceSpec>,
     ) -> (ChecksumMatch, String, String) {
         let actual = Self::checksum_bytes(bytes);
         self.save_bytes(bytes, &actual);
-        self.exact_match(actual, module, test_name, detail_name)
+        self.exact_match(actual, module, test_name, detail_name, tolerance)
     }
 
     /// Structured checksum match using (module, test_name, detail_name).
@@ -402,10 +403,11 @@ impl ChecksumCtx {
         module: &str,
         test_name: &str,
         detail_name: &str,
+        tolerance: Option<&zensim_regress::checksum_file::ToleranceSpec>,
     ) -> (ChecksumMatch, String, String) {
         let adapter = checksum_adapter::ChecksumAdapter::new(&self.checksums_dir);
         if let Some((result, trusted)) =
-            adapter.try_match(module, test_name, detail_name, &actual_checksum)
+            adapter.try_match(module, test_name, detail_name, &actual_checksum, tolerance)
         {
             return (result, trusted, actual_checksum);
         }
@@ -455,6 +457,43 @@ pub enum Similarity {
 }
 
 impl Similarity {
+    /// Convert to a `ToleranceSpec` for recording in `.checksums` files.
+    fn to_tolerance_spec(&self) -> zensim_regress::checksum_file::ToleranceSpec {
+        use zensim_regress::checksum_file::ToleranceSpec;
+        match *self {
+            Similarity::AllowOffByOneBytesCount(n) => {
+                if n == 0 {
+                    ToleranceSpec::default() // d:0 s:100
+                } else {
+                    ToleranceSpec { max_delta: 1, ..ToleranceSpec::default() }
+                }
+            }
+            Similarity::AllowOffByOneBytesRatio(ratio) => {
+                ToleranceSpec {
+                    max_delta: 1,
+                    max_pixels_different: ratio as f64,
+                    ..ToleranceSpec::default()
+                }
+            }
+            Similarity::AllowDssimMatch(_min, max) => {
+                // DSSIM 0 = identical, higher = worse.
+                // Approximate: dssim 0.002 ≈ zensim 99.8, dssim 1.0 ≈ loose
+                let min_sim = if max <= 0.0 {
+                    100.0
+                } else if max >= 1.0 {
+                    0.0
+                } else {
+                    (100.0 * (1.0 - max)).max(0.0)
+                };
+                ToleranceSpec {
+                    max_delta: 2,
+                    min_similarity: min_sim,
+                    ..ToleranceSpec::default()
+                }
+            }
+        }
+    }
+
     fn report_on_bytes(&self, stats: &BitmapDiffStats) -> Option<String> {
         let allowed_off_by_one_bytes: i64 = match *self {
             Similarity::AllowOffByOneBytesCount(v) => v,
@@ -492,14 +531,15 @@ impl<'a> ResultKind<'a> {
         module: &str,
         test_name: &str,
         detail_name: &str,
+        tolerance: Option<&zensim_regress::checksum_file::ToleranceSpec>,
     ) -> (ChecksumMatch, String, String) {
         match *self {
             ResultKind::Bitmap { context, key } => {
                 let actual = ChecksumCtx::checksum_bitmap(context, key);
                 c.save_bitmap(context, key, &actual);
-                c.exact_match(actual, module, test_name, detail_name)
+                c.exact_match(actual, module, test_name, detail_name, tolerance)
             }
-            ResultKind::Bytes(b) => c.bytes_match(b, module, test_name, detail_name),
+            ResultKind::Bytes(b) => c.bytes_match(b, module, test_name, detail_name, tolerance),
         }
     }
 }
@@ -739,7 +779,8 @@ pub fn evaluate_result<'a>(
     if !check_size(&result, require.clone(), do_panic) {
         return false;
     }
-    let (exact, trusted, actual) = result.exact_match(c, module, test_name, detail_name);
+    let tol_spec = require.similarity.to_tolerance_spec();
+    let (exact, trusted, actual) = result.exact_match(c, module, test_name, detail_name, Some(&tol_spec));
     if exact == ChecksumMatch::Match {
         return true;
     }

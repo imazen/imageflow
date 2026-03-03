@@ -1,9 +1,8 @@
 # idct.checksums — v1
-
 ## test_idct_spatial_no_gamma roof_approx
-tolerance d:0 s:100
+tolerance d:1 s:100
 = easy-whale-d79756bc1f:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_idct_linear roof_gamma_corrected
-tolerance d:0 s:100
+tolerance d:1 s:100
 = rural-box-9c80b17da0:sea  x86_64-avx512  @8ca16e2d  human-verified
