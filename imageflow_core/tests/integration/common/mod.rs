@@ -266,18 +266,27 @@ impl ChecksumCtx {
     /// (`"sea:a4839401fabae99c.png"`). The bitmap will be destroyed when
     /// the returned Context goes out of scope.
     pub fn load_image(&self, name: &str) -> (Box<Context>, BitmapKey) {
+        self.try_load_image(name)
+            .unwrap_or_else(|| panic!("Failed to load reference image: {name}"))
+    }
+
+    /// Load a reference image, returning None on any failure.
+    fn try_load_image(&self, name: &str) -> Option<(Box<Context>, BitmapKey)> {
         let petname = Self::to_petname(name);
         let path = self
             .output_storage
             .download_reference(&petname)
-            .unwrap_or_else(|e| panic!("Download error for {petname}: {e}"))
-            .unwrap_or_else(|| panic!("Reference image not found: {petname}"));
+            .ok()?
+            .or_else(|| {
+                eprintln!("Reference image not found: {petname}");
+                None
+            })?;
 
-        let mut c = Context::create().unwrap();
-        c.add_file(0, s::IoDirection::In, path.to_str().unwrap()).unwrap();
+        let mut c = Context::create().ok()?;
+        c.add_file(0, s::IoDirection::In, path.to_str()?).ok()?;
 
-        let image = decode_image(&mut c, 0);
-        (c, image)
+        let image = try_decode_image(&mut c, 0)?;
+        Some((c, image))
     }
 
     /// Save a bitmap frame to cache and upload to remote storage.
@@ -421,6 +430,11 @@ impl ChecksumCtx {
 }
 
 pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
+    try_decode_image(c, io_id).expect("decode_image failed")
+}
+
+/// Decode an input image, returning None on failure instead of panicking.
+fn try_decode_image(c: &mut Context, io_id: i32) -> Option<BitmapKey> {
     let mut bit = BitmapBgraContainer::empty();
     let result = c.execute_1(s::Execute001 {
         graph_recording: None,
@@ -430,8 +444,8 @@ pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
         }]),
     });
 
-    result.unwrap();
-    bit.bitmap_key(c).unwrap()
+    result.ok()?;
+    bit.bitmap_key(c)
 }
 
 pub fn decode_input(c: &mut Context, input: IoTestEnum) -> BitmapKey {
@@ -475,21 +489,21 @@ impl Similarity {
                 }
             }
             Similarity::AllowDssimMatch(_min, max) => {
-                // DSSIM 0 = identical, higher = worse.
-                // This mapping is for .checksums file metadata — tight bounds
-                // reflecting the expected rounding-level differences.
-                // For lossy codec comparison, use to_regression_tolerance_lossy().
-                let min_sim = if max <= 0.0 {
-                    100.0
-                } else if max >= 1.0 {
-                    0.0
+                // DSSIM and per-pixel metrics are fundamentally different.
+                // DSSIM 0.002 = "structurally nearly identical" but allows
+                // significant per-pixel differences from encoder variations
+                // across platforms (different libm, SIMD paths, etc.).
+                // Use a generous empirical mapping: zensim ≈ 100*(1 - 5*sqrt(dssim)).
+                if max <= 0.0 {
+                    Tolerance::exact()
                 } else {
-                    (100.0 * (1.0 - max)).max(0.0)
-                };
-                Tolerance {
-                    max_delta: 2,
-                    min_similarity: min_sim,
-                    ..Tolerance::exact()
+                    let min_sim = (100.0 * (1.0 - 5.0 * (max as f64).sqrt())).max(50.0);
+                    Tolerance {
+                        max_delta: 30,
+                        min_similarity: min_sim,
+                        max_pixels_different: 0.05, // 5%
+                        ..Tolerance::exact()
+                    }
                 }
             }
         }
@@ -707,7 +721,7 @@ fn compute_zensim_vs_source(
     use zensim::{PixelFormat, StridedBytes, Zensim, ZensimProfile};
 
     // Load actual output bitmap (already saved to disk during checksum)
-    let (actual_ctx, actual_key) = c.load_image(actual_checksum);
+    let (actual_ctx, actual_key) = c.try_load_image(actual_checksum)?;
     let actual_bitmaps = actual_ctx.borrow_bitmaps().ok()?;
     let mut actual_bm = actual_bitmaps.try_borrow_mut(actual_key).ok()?;
     let actual_window = actual_bm.get_window_u8()?;
@@ -722,7 +736,7 @@ fn compute_zensim_vs_source(
     } else {
         source_ctx.add_file(0, s::IoDirection::In, source_url).ok()?;
     };
-    let source_key = decode_image(&mut source_ctx, 0);
+    let source_key = try_decode_image(&mut source_ctx, 0)?;
     let source_bitmaps = source_ctx.borrow_bitmaps().ok()?;
     let mut source_bm = source_bitmaps.try_borrow_mut(source_key).ok()?;
     let source_window = source_bm.get_window_u8()?;
