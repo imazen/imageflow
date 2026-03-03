@@ -212,7 +212,7 @@ impl ChecksumCtx {
     /// A checksum context configured for integration visual tests.
     pub fn visuals() -> ChecksumCtx {
         let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let checksums_dir = manifest.join("tests/integration/visuals/checksums");
+        let checksums_dir = manifest.join("tests/integration/visuals");
         let workspace_root = manifest.parent().expect("CARGO_MANIFEST_DIR has no parent");
 
         let output_cache_dir = workspace_root.join(".image-cache/outputs");

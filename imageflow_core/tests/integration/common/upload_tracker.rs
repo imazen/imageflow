@@ -205,4 +205,5 @@ pub fn record_upload(petname: &str) {
     }
 
     let _ = lock_file.unlock();
+    let _ = std::fs::remove_file(&lock_path);
 }
