@@ -32,7 +32,7 @@ impl ChecksumAdapter {
         test_name: &str,
         detail_name: &str,
         actual_hash: &str,
-        tolerance: Option<&zensim_regress::checksum_file::ToleranceSpec>,
+        tolerance: Option<&zensim_regress::Tolerance>,
     ) -> Option<(ChecksumMatch, String)> {
         if !self.manager.has_module(module) {
             return None;

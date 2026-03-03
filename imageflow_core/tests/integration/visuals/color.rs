@@ -37,6 +37,7 @@ fn test_simple_filters() {
                 Node::Decode { io_id: 0, commands: None },
                 Node::ColorFilterSrgb(filter),
             ],
+            tolerance: Tolerance::off_by_one(),
         }
     }
 }
@@ -50,6 +51,7 @@ fn test_white_balance_image() {
             Node::Decode { io_id: 0, commands: None },
             Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold: None },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -62,5 +64,6 @@ fn test_white_balance_image_threshold_5() {
             Node::Decode { io_id: 0, commands: None },
             Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold: Some(0.5) },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }

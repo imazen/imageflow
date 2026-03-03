@@ -204,21 +204,25 @@ macro_rules! visual_check_steps {
 /// - Multiple sources: `sources: ["path1.jpg", "path2.png"],`
 /// - No source (canvas tests): omit `source:`/`sources:`
 ///
+/// # Required fields
+///
+/// - `steps`: `Vec<Node>` to execute
+/// - `tolerance`: `Tolerance` value (e.g., `Tolerance::off_by_one()`)
+///
 /// # Optional fields
 ///
 /// - `detail`: Discriminant for multiple comparisons (default: "")
-/// - `tolerance`: `ToleranceSpec` (default: `ToleranceSpec::off_by_one()`)
 macro_rules! visual_check_bitmap {
     // Single source variant
     (
         source: $source:expr,
         $( detail: $detail:expr, )?
         steps: $steps:expr,
-        $( tolerance: $tol:expr, )?
+        tolerance: $tol:expr,
     ) => {{
         let identity = test_identity!();
         let detail: &str = visual_check!(@detail $( $detail )?);
-        let tolerance = visual_check_bitmap!(@tol $( $tol )?);
+        let tolerance = $tol;
         let source_url = visual_check!(@source_url $source);
         let inputs = vec![
             $crate::common::IoTestEnum::Url(source_url.clone()),
@@ -231,11 +235,11 @@ macro_rules! visual_check_bitmap {
         sources: [$( $source:expr ),+ $(,)?],
         $( detail: $detail:expr, )?
         steps: $steps:expr,
-        $( tolerance: $tol:expr, )?
+        tolerance: $tol:expr,
     ) => {{
         let identity = test_identity!();
         let detail: &str = visual_check!(@detail $( $detail )?);
-        let tolerance = visual_check_bitmap!(@tol $( $tol )?);
+        let tolerance = $tol;
         let inputs = vec![
             $( $crate::common::IoTestEnum::Url(visual_check!(@source_url $source)), )+
         ];
@@ -247,14 +251,11 @@ macro_rules! visual_check_bitmap {
     (
         $( detail: $detail:expr, )?
         steps: $steps:expr,
-        $( tolerance: $tol:expr, )?
+        tolerance: $tol:expr,
     ) => {{
         let identity = test_identity!();
         let detail: &str = visual_check!(@detail $( $detail )?);
-        let tolerance = visual_check_bitmap!(@tol $( $tol )?);
+        let tolerance = $tol;
         $crate::common::compare_bitmap(vec![], &identity, detail, None, $steps, &tolerance);
     }};
-
-    (@tol) => { zensim_regress::checksum_file::ToleranceSpec::off_by_one() };
-    (@tol $tol:expr) => { $tol };
 }

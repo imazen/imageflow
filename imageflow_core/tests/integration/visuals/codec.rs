@@ -190,6 +190,7 @@ fn test_jpeg_simple() {
                 canvas_color: None,
             }),
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -210,6 +211,7 @@ fn test_jpeg_simple_rot_90() {
             }),
             Node::Rotate90,
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -231,6 +233,7 @@ fn test_rot_90_and_red_dot() {
             Node::Rotate90,
             Node::WatermarkRedDot,
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -246,6 +249,7 @@ fn test_rot_90_and_red_dot_command_string() {
             encode: None,
             watermarks: None,
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -261,6 +265,7 @@ fn test_negatives_in_command_string() {
             encode: None,
             watermarks: None,
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -276,6 +281,7 @@ fn test_jpeg_crop() {
             encode: None,
             watermarks: None,
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -291,6 +297,7 @@ fn decode_cmyk_jpeg() {
             encode: None,
             watermarks: None,
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -306,6 +313,7 @@ fn decode_rgb_with_cmyk_profile_jpeg() {
             encode: None,
             watermarks: None,
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -321,5 +329,6 @@ fn test_crop_with_preshrink() {
             encode: None,
             watermarks: None,
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }

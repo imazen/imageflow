@@ -22,6 +22,7 @@ use imageflow_core::BitmapKey;
 use imageflow_types::ResponsePayload;
 use slotmap::Key;
 use std::time::Duration;
+pub use zensim_regress::Tolerance;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ChecksumMatch {
@@ -383,7 +384,7 @@ impl ChecksumCtx {
         module: &str,
         test_name: &str,
         detail_name: &str,
-        tolerance: Option<&zensim_regress::checksum_file::ToleranceSpec>,
+        tolerance: Option<&Tolerance>,
     ) -> (ChecksumMatch, String, String) {
         let actual = Self::checksum_bytes(bytes);
         self.save_bytes(bytes, &actual);
@@ -400,7 +401,7 @@ impl ChecksumCtx {
         module: &str,
         test_name: &str,
         detail_name: &str,
-        tolerance: Option<&zensim_regress::checksum_file::ToleranceSpec>,
+        tolerance: Option<&Tolerance>,
     ) -> (ChecksumMatch, String, String) {
         let adapter = checksum_adapter::ChecksumAdapter::new(&self.checksums_dir);
         if let Some((result, trusted)) =
@@ -454,22 +455,21 @@ pub enum Similarity {
 }
 
 impl Similarity {
-    /// Convert to a `ToleranceSpec` for recording in `.checksums` files.
-    pub fn to_tolerance_spec(&self) -> zensim_regress::checksum_file::ToleranceSpec {
-        use zensim_regress::checksum_file::ToleranceSpec;
+    /// Convert to a `Tolerance` for recording in `.checksums` files.
+    pub fn to_tolerance_spec(&self) -> Tolerance {
         match *self {
             Similarity::AllowOffByOneBytesCount(n) => {
                 if n == 0 {
-                    ToleranceSpec::exact() // d:0 s:100
+                    Tolerance::exact() // d:0 s:100
                 } else {
-                    ToleranceSpec { max_delta: 1, ..ToleranceSpec::exact() }
+                    Tolerance { max_delta: 1, ..Tolerance::exact() }
                 }
             }
             Similarity::AllowOffByOneBytesRatio(ratio) => {
-                ToleranceSpec {
+                Tolerance {
                     max_delta: 1,
                     max_pixels_different: ratio as f64,
-                    ..ToleranceSpec::exact()
+                    ..Tolerance::exact()
                 }
             }
             Similarity::AllowDssimMatch(_min, max) => {
@@ -484,10 +484,10 @@ impl Similarity {
                 } else {
                     (100.0 * (1.0 - max)).max(0.0)
                 };
-                ToleranceSpec {
+                Tolerance {
                     max_delta: 2,
                     min_similarity: min_sim,
-                    ..ToleranceSpec::exact()
+                    ..Tolerance::exact()
                 }
             }
         }
@@ -509,7 +509,7 @@ impl Similarity {
                     .with_max_pixels_different(1.0)
             }
             _ => {
-                // Off-by-one / exact: use the standard ToleranceSpec path
+                // Off-by-one / exact: use the standard Tolerance path
                 let spec = self.to_tolerance_spec();
                 spec.to_regression_tolerance(zensim_regress::arch::detect_arch_tag())
             }
@@ -534,7 +534,7 @@ impl<'a> ResultKind<'a> {
         module: &str,
         test_name: &str,
         detail_name: &str,
-        tolerance: Option<&zensim_regress::checksum_file::ToleranceSpec>,
+        tolerance: Option<&Tolerance>,
     ) -> (ChecksumMatch, String, String) {
         match *self {
             ResultKind::Bitmap { context, key } => {
@@ -726,7 +726,7 @@ pub fn evaluate_result<'a>(
     test_name: &str,
     detail_name: &str,
     mut result: ResultKind<'a>,
-    tolerance: &zensim_regress::checksum_file::ToleranceSpec,
+    tolerance: &Tolerance,
     max_file_size: Option<usize>,
     source_url: Option<&str>,
     do_panic: bool,
@@ -882,7 +882,7 @@ pub fn compare_bitmap(
     detail: &str,
     source_url: Option<&str>,
     mut steps: Vec<s::Node>,
-    tolerance: &zensim_regress::checksum_file::ToleranceSpec,
+    tolerance: &Tolerance,
 ) -> bool {
     let mut context = Context::create().unwrap();
     let mut bit = BitmapBgraContainer::empty();

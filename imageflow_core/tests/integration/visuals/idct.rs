@@ -74,7 +74,7 @@ fn run_idct_test(
 
     let ctx = ChecksumCtx::visuals();
     let bitmap_key = bit.bitmap_key(&context).unwrap();
-    let tolerance = zensim_regress::checksum_file::ToleranceSpec::off_by_one();
+    let tolerance = Tolerance::off_by_one();
     let matched = evaluate_result(
         &ctx,
         identity.module,

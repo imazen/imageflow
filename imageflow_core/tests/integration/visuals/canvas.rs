@@ -29,6 +29,7 @@ fn test_fill_rect() {
                 hints: Some(ResampleHints::new().with_bi_filter(Filter::Hermite)),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -46,6 +47,7 @@ fn test_fill_rect_original() {
             },
             Node::FillRect { x1: 0, y1: 0, x2: 50, y2: 100, color: blue },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -84,6 +86,7 @@ fn test_expand_rect() {
                 ),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -107,6 +110,7 @@ fn test_crop() {
             },
             Node::Crop { x1: 0, y1: 50, x2: 100, y2: 100 },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -136,6 +140,7 @@ fn test_off_surface_region() {
                 background_color: Color::Transparent,
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -149,6 +154,7 @@ fn test_transparent_canvas() {
             format: PixelFormat::Bgra32,
             color: Color::Srgb(ColorSrgb::Hex("00000000".to_owned())),
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -178,6 +184,7 @@ fn test_partial_region() {
                 background_color: Color::Transparent,
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -207,6 +214,7 @@ fn test_pixels_region() {
                 background_color: Color::Transparent,
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -225,6 +233,7 @@ fn test_detect_whitespace() {
             Node::FillRect { x1: 0, y1: 0, x2: 50, y2: 100, color: blue },
             Node::CropWhitespace { threshold: 80, percent_padding: 0f32 },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -245,6 +254,7 @@ fn test_round_corners_large() {
                 radius: RoundCornersMode::Pixels(200f32),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -265,6 +275,7 @@ fn test_round_corners_small() {
                 radius: RoundCornersMode::Pixels(5f32),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -290,6 +301,7 @@ fn test_round_corners_custom_pixels() {
                 },
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -315,6 +327,7 @@ fn test_round_corners_custom_percent() {
                 },
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -335,6 +348,7 @@ fn test_round_corners_excessive_radius() {
                 radius: RoundCornersMode::Pixels(100f32),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -352,6 +366,7 @@ fn test_round_corners_circle_wide_canvas() {
             },
             Node::RoundImageCorners { background_color: matte, radius: RoundCornersMode::Circle },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -369,6 +384,7 @@ fn test_round_corners_circle_tall_canvas() {
             },
             Node::RoundImageCorners { background_color: matte, radius: RoundCornersMode::Circle },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -389,6 +405,7 @@ fn test_round_image_corners_transparent() {
                 radius: RoundCornersMode::Pixels(100f32),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -404,5 +421,6 @@ fn test_round_corners_command_string() {
             encode: None,
             watermarks: None,
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }

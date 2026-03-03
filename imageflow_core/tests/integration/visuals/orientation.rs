@@ -28,6 +28,7 @@ fn test_jpeg_rotation() {
                         canvas_color: None,
                     }),
                 ],
+                tolerance: Tolerance::off_by_one(),
             }
         }
     }
@@ -50,6 +51,7 @@ fn test_jpeg_rotation_cropped() {
                 encode: None,
                 watermarks: None,
             }],
+            tolerance: Tolerance::off_by_one(),
         }
     }
 }
@@ -75,6 +77,7 @@ fn test_crop_exif() {
                     canvas_color: None,
                 }),
             ],
+            tolerance: Tolerance::off_by_one(),
         }
     }
 }
@@ -99,6 +102,7 @@ fn test_fit_pad_exif() {
                     canvas_color: None,
                 }),
             ],
+            tolerance: Tolerance::off_by_one(),
         }
     }
 }

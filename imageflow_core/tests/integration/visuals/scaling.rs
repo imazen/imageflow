@@ -17,6 +17,7 @@ fn test_scale_image() {
                 hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -33,6 +34,7 @@ fn test_scale_rings() {
                 hints: Some(ResampleHints::new().with_bi_filter(Filter::Hermite)),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -49,6 +51,7 @@ fn test_read_gif_and_scale() {
                 hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -65,6 +68,7 @@ fn test_read_gif_and_vertical_distort() {
                 hints: Some(ResampleHints::new().with_bi_filter(Filter::Box)),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -82,6 +86,7 @@ fn test_read_gif_eof() {
                 hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -97,6 +102,7 @@ fn webp_lossless_alpha_decode_and_scale() {
             encode: None,
             watermarks: None,
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -112,6 +118,7 @@ fn webp_lossy_alpha_decode_and_scale() {
             encode: None,
             watermarks: None,
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -127,6 +134,7 @@ fn webp_lossy_noalpha_decode_and_scale() {
             encode: None,
             watermarks: None,
         }],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -143,6 +151,7 @@ fn test_jpeg_icc2_color_profile() {
                 hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
 
@@ -159,5 +168,6 @@ fn test_jpeg_icc4_color_profile() {
                 hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
             },
         ],
+        tolerance: Tolerance::off_by_one(),
     }
 }
