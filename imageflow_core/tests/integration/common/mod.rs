@@ -392,8 +392,8 @@ impl ChecksumCtx {
         test_name: &str,
         detail_name: &str,
     ) -> (ChecksumMatch, String, String) {
-        let v2_adapter = checksum_adapter::V2ChecksumAdapter::new(&self.visuals_dir);
-        if let Some((result, trusted)) = v2_adapter.try_match(module, test_name, detail_name, &actual_checksum) {
+        let adapter = checksum_adapter::ChecksumAdapter::new(&self.visuals_dir);
+        if let Some((result, trusted)) = adapter.try_match(module, test_name, detail_name, &actual_checksum) {
             return (result, trusted, actual_checksum);
         }
 
@@ -789,7 +789,7 @@ pub fn evaluate_result<'a>(
 
         // Auto-accept to v2 .checksums if within tolerance
         if std::env::var("UPDATE_CHECKSUMS").is_ok_and(|v| v == "1") {
-            let v2_adapter = checksum_adapter::V2ChecksumAdapter::new(&c.visuals_dir);
+            let adapter = checksum_adapter::ChecksumAdapter::new(&c.visuals_dir);
             // Compute zensim quality vs original source (same-dimension only)
             let diff_summary = source_url.and_then(|url| {
                 match compute_zensim_vs_source(c, &actual, url) {
@@ -801,7 +801,7 @@ pub fn evaluate_result<'a>(
                 }
             });
 
-            if let Err(e) = v2_adapter.accept(
+            if let Err(e) = adapter.accept(
                 module,
                 test_name,
                 detail_name,
