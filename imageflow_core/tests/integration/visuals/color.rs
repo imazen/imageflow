@@ -1,8 +1,6 @@
+#[allow(unused_imports)]
 use crate::common::*;
 use imageflow_types::Node;
-
-const DEBUG_GRAPH: bool = false;
-const POPULATE_CHECKSUMS: bool = true;
 
 #[test]
 fn test_simple_filters() {
@@ -32,50 +30,37 @@ fn test_simple_filters() {
     ];
 
     for filter in filters {
-        let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/pngsuite/basn6a08.png".to_owned())), 500,
-                          format!("test_simple_filters/{:?}", filter).as_str(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
-            Node::Decode {io_id: 0, commands: None},
-            Node::ColorFilterSrgb(filter)
-        ]
-        );
-        assert!(matched);
+        visual_check_bitmap! {
+            source: "test_inputs/pngsuite/basn6a08.png",
+            detail: &format!("{filter:?}"),
+            steps: vec![
+                Node::Decode { io_id: 0, commands: None },
+                Node::ColorFilterSrgb(filter),
+            ],
+        }
     }
 }
 
 #[test]
 fn test_white_balance_image() {
-    let matched = compare(
-        Some(IoTestEnum::Url(
-            "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/red-night.png"
-                .to_owned(),
-        )),
-        500,
-        "test_white_balance_image red_night_auto",
-        POPULATE_CHECKSUMS,
-        DEBUG_GRAPH,
-        vec![
+    visual_check_bitmap! {
+        source: "test_inputs/red-night.png",
+        detail: "red_night_auto",
+        steps: vec![
             Node::Decode { io_id: 0, commands: None },
             Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold: None },
         ],
-    );
-    assert!(matched);
+    }
 }
 
 #[test]
 fn test_white_balance_image_threshold_5() {
-    let matched = compare(
-        Some(IoTestEnum::Url(
-            "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/red-night.png"
-                .to_owned(),
-        )),
-        500,
-        "test_white_balance_image_threshold_5 t0.5",
-        POPULATE_CHECKSUMS,
-        DEBUG_GRAPH,
-        vec![
+    visual_check_bitmap! {
+        source: "test_inputs/red-night.png",
+        detail: "t0.5",
+        steps: vec![
             Node::Decode { io_id: 0, commands: None },
             Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold: Some(0.5) },
         ],
-    );
-    assert!(matched);
+    }
 }

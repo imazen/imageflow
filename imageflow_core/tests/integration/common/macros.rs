@@ -193,11 +193,23 @@ macro_rules! visual_check_steps {
 
 /// Run a visual check on a bitmap result (not encoded output).
 ///
-/// Uses `evaluate_result_v2` with bitmap comparison instead of
-/// encoded byte comparison.
+/// Thin wrapper around `compare_bitmap_v2` that derives module/function
+/// names at compile time via `test_identity!`.
+///
+/// # Variants
+///
+/// - Single source: `source: "path/to/image.jpg",`
+/// - Multiple sources: `sources: ["path1.jpg", "path2.png"],`
+/// - No source (canvas tests): omit `source:`/`sources:`
+///
+/// # Optional fields
+///
+/// - `detail`: Discriminant for multiple comparisons (default: "")
+/// - `allowed_off_by_one`: Max off-by-one byte count (default: 500)
 macro_rules! visual_check_bitmap {
+    // Single source variant
     (
-        $( source: $source:expr, )?
+        source: $source:expr,
         $( detail: $detail:expr, )?
         steps: $steps:expr,
         $( allowed_off_by_one: $obo:expr, )?
@@ -205,36 +217,38 @@ macro_rules! visual_check_bitmap {
         let identity = test_identity!();
         let detail: &str = visual_check!(@detail $( $detail )?);
         let allowed: usize = visual_check_bitmap!(@obo $( $obo )?);
-
-        let inputs: Vec<$crate::common::IoTestEnum> = vec![
-            $( $crate::common::IoTestEnum::Url(visual_check!(@source_url $source)), )?
+        let inputs = vec![
+            $crate::common::IoTestEnum::Url(visual_check!(@source_url $source)),
         ];
+        $crate::common::compare_bitmap_v2(inputs, &identity, detail, $steps, allowed);
+    }};
 
-        let mut context = imageflow_core::Context::create().unwrap();
-        let mut bit = $crate::common::BitmapBgraContainer::empty();
-        let mut steps_vec: Vec<imageflow_types::Node> = $steps;
-        steps_vec.push(unsafe { bit.as_mut().get_node() });
+    // Multi-source variant (e.g., watermark tests)
+    (
+        sources: [$( $source:expr ),+ $(,)?],
+        $( detail: $detail:expr, )?
+        steps: $steps:expr,
+        $( allowed_off_by_one: $obo:expr, )?
+    ) => {{
+        let identity = test_identity!();
+        let detail: &str = visual_check!(@detail $( $detail )?);
+        let allowed: usize = visual_check_bitmap!(@obo $( $obo )?);
+        let inputs = vec![
+            $( $crate::common::IoTestEnum::Url(visual_check!(@source_url $source)), )+
+        ];
+        $crate::common::compare_bitmap_v2(inputs, &identity, detail, $steps, allowed);
+    }};
 
-        let response = $crate::common::build_steps(
-            &mut context, &steps_vec, inputs, None, false,
-        ).unwrap();
-
-        let bitmap_key = bit.bitmap_key(&context)
-            .unwrap_or_else(|| panic!("execution failed {:?}", response));
-
-        let ctx = $crate::common::ChecksumCtx::visuals();
-        $crate::common::evaluate_result_v2(
-            &ctx,
-            identity.module,
-            identity.func_name,
-            detail,
-            $crate::common::ResultKind::Bitmap { context: &context, key: bitmap_key },
-            $crate::common::Constraints {
-                similarity: $crate::common::Similarity::AllowOffByOneBytesCount(allowed as i64),
-                max_file_size: None,
-            },
-            true,
-        );
+    // No source variant (canvas tests)
+    (
+        $( detail: $detail:expr, )?
+        steps: $steps:expr,
+        $( allowed_off_by_one: $obo:expr, )?
+    ) => {{
+        let identity = test_identity!();
+        let detail: &str = visual_check!(@detail $( $detail )?);
+        let allowed: usize = visual_check_bitmap!(@obo $( $obo )?);
+        $crate::common::compare_bitmap_v2(vec![], &identity, detail, $steps, allowed);
     }};
 
     (@obo) => { 500usize };

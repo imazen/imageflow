@@ -1516,6 +1516,45 @@ pub fn compare_encoded_v2(
     )
 }
 
+/// Run a bitmap comparison test with v2 structured identity.
+///
+/// Analogous to `compare_bitmap_v2` but uses the v2 checksum system
+/// with structured (module, func_name, detail) keys.
+///
+/// This is the `#[track_caller]` function backing `visual_check_bitmap!`.
+#[track_caller]
+pub fn compare_bitmap_v2(
+    inputs: Vec<IoTestEnum>,
+    identity: &TestIdentity,
+    detail: &str,
+    mut steps: Vec<s::Node>,
+    allowed_off_by_one_bytes: usize,
+) -> bool {
+    let mut context = Context::create().unwrap();
+    let mut bit = BitmapBgraContainer::empty();
+    steps.push(unsafe { bit.as_mut().get_node() });
+
+    let response = build_steps(&mut context, &steps, inputs, None, false).unwrap();
+
+    let bitmap_key = bit
+        .bitmap_key(&context)
+        .unwrap_or_else(|| panic!("execution failed {:?}", response));
+
+    let ctx = ChecksumCtx::visuals();
+    evaluate_result_v2(
+        &ctx,
+        identity.module,
+        identity.func_name,
+        detail,
+        ResultKind::Bitmap { context: &context, key: bitmap_key },
+        Constraints {
+            similarity: Similarity::AllowOffByOneBytesCount(allowed_off_by_one_bytes as i64),
+            max_file_size: None,
+        },
+        true,
+    )
+}
+
 pub fn test_with_callback(
     checksum_name: &str,
     input: IoTestEnum,
