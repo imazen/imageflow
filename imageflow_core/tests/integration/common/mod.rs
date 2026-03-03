@@ -779,6 +779,19 @@ impl ChecksumCtx {
         self.exact_match(actual, name)
     }
 
+    /// Structured bytes match using (module, test_name, detail_name).
+    pub fn bytes_match_v2(
+        &self,
+        bytes: &[u8],
+        module: &str,
+        test_name: &str,
+        detail_name: &str,
+    ) -> (ChecksumMatch, String) {
+        let actual = Self::checksum_bytes(bytes);
+        self.save_bytes(bytes, &actual);
+        self.exact_match_v2(actual, module, test_name, detail_name)
+    }
+
     /// Compares the actual checksum to the expected checksum. Returns the trusted checksum.
     ///
     /// Complains loudly and returns false if the checksums don't match.
@@ -815,6 +828,35 @@ impl ChecksumCtx {
         } else {
             panic!("There is no stored checksum for {}; rerun with create_if_missing=true", name);
         }
+    }
+
+    /// Structured checksum match using (module, test_name, detail_name).
+    ///
+    /// Tries v2 `.checksums` first, then falls back to `exact_match` with
+    /// the flat `"{test_name} {detail_name}"` key for TOML/JSON compat.
+    pub fn exact_match_v2(
+        &self,
+        actual_checksum: String,
+        module: &str,
+        test_name: &str,
+        detail_name: &str,
+    ) -> (ChecksumMatch, String) {
+        // Flat name for TOML/JSON fallback and actual tracking
+        let flat_name = if detail_name.is_empty() {
+            test_name.to_string()
+        } else {
+            format!("{test_name} {detail_name}")
+        };
+
+        // Try v2 .checksums first
+        let v2_adapter = checksum_adapter::V2ChecksumAdapter::new(&self.visuals_dir);
+        if let Some(result) = v2_adapter.try_match(module, test_name, detail_name, &actual_checksum) {
+            self.set_actual(flat_name, actual_checksum).unwrap();
+            return result;
+        }
+
+        // Fall through to existing exact_match (TOML → JSON chain)
+        self.exact_match(actual_checksum, &flat_name)
     }
 
     /// Upload a reference image to remote storage if uploading is enabled.
@@ -920,6 +962,23 @@ impl<'a> ResultKind<'a> {
         match *self {
             ResultKind::Bitmap { context, key } => c.bitmap_matches(context, key, name),
             ResultKind::Bytes(b) => c.bytes_match(b, name),
+        }
+    }
+
+    fn exact_match_v2(
+        &mut self,
+        c: &ChecksumCtx,
+        module: &str,
+        test_name: &str,
+        detail_name: &str,
+    ) -> (ChecksumMatch, String) {
+        match *self {
+            ResultKind::Bitmap { context, key } => {
+                let actual = ChecksumCtx::checksum_bitmap(context, key);
+                c.save_bitmap(context, key, &actual);
+                c.exact_match_v2(actual, module, test_name, detail_name)
+            }
+            ResultKind::Bytes(b) => c.bytes_match_v2(b, module, test_name, detail_name),
         }
     }
 }
@@ -1124,6 +1183,75 @@ pub fn evaluate_result<'a>(
     }
 }
 
+/// Evaluates the given result against known truth using structured v2 identity.
+///
+/// Uses `.checksums` v1 format as primary path, with TOML/JSON fallback.
+/// On mismatch within tolerance, auto-accepts to the `.checksums` file.
+#[track_caller]
+pub fn evaluate_result_v2<'a>(
+    c: &ChecksumCtx,
+    module: &str,
+    test_name: &str,
+    detail_name: &str,
+    mut result: ResultKind<'a>,
+    require: Constraints,
+    do_panic: bool,
+) -> bool {
+    if !check_size(&result, require.clone(), do_panic) {
+        return false;
+    }
+    let (exact, trusted) = result.exact_match_v2(c, module, test_name, detail_name);
+    if exact == ChecksumMatch::Match {
+        return true;
+    }
+    if exact == ChecksumMatch::NewStored {
+        return true;
+    }
+
+    let flat_name = if detail_name.is_empty() {
+        test_name.to_string()
+    } else {
+        format!("{test_name} {detail_name}")
+    };
+
+    eprintln!("--- Checksum mismatch for '{flat_name}' ---");
+    let (expected_context, expected_bitmap_key) = c.load_image(&trusted);
+    let res = compare_bitmaps_result_to_expected(
+        c,
+        result,
+        false,
+        expected_context,
+        expected_bitmap_key,
+        require.similarity,
+        do_panic,
+    );
+    if res.close_enough {
+        eprintln!(
+            "--- '{flat_name}': checksum mismatch within tolerance ({:?}) ---",
+            require.similarity
+        );
+
+        // Auto-accept to v2 .checksums if within tolerance
+        if std::env::var("UPDATE_CHECKSUMS").is_ok_and(|v| v == "1") {
+            let v2_adapter = checksum_adapter::V2ChecksumAdapter::new(&c.visuals_dir);
+            if let Some(actual) = c.get_actual(&flat_name) {
+                if let Err(e) = v2_adapter.accept(
+                    module,
+                    test_name,
+                    detail_name,
+                    &actual,
+                    Some(&trusted),
+                    None,
+                    None,
+                ) {
+                    eprintln!("Warning: failed to auto-accept v2 {flat_name}: {e}");
+                }
+            }
+        }
+    }
+    res.close_enough
+}
+
 pub fn compare_bitmaps_result_to_expected<'a>(
     c: &ChecksumCtx,
     result: ResultKind<'a>,
@@ -1326,6 +1454,63 @@ pub fn compare_encoded_framewise(
         }
     }
     true
+}
+
+/// Test identity: (module_name, function_name) derived from test context.
+///
+/// Used by macros to pass structured names to `#[track_caller]` functions.
+pub struct TestIdentity {
+    pub module: &'static str,
+    pub func_name: &'static str,
+}
+
+/// Run a visual comparison test with v2 structured identity.
+///
+/// This is the primary `#[track_caller]` entry point that macros call.
+/// It handles:
+/// 1. Pipeline setup (input download, node execution)
+/// 2. Output checksumming
+/// 3. Checksum matching (v2 → TOML → JSON)
+/// 4. Pixel-level comparison on mismatch
+/// 5. Auto-accept recording on tolerance match
+#[track_caller]
+pub fn compare_encoded_v2(
+    input: Option<IoTestEnum>,
+    identity: &TestIdentity,
+    detail: &str,
+    require: Constraints,
+    steps: Vec<s::Node>,
+) -> bool {
+    let mut io_vec = Vec::new();
+    if let Some(i) = input {
+        io_vec.push(i);
+    }
+    io_vec.push(IoTestEnum::OutputBuffer);
+    let output_io_id = (io_vec.len() - 1) as i32;
+
+    let mut context = Context::create().unwrap();
+    let _ = build_framewise(
+        &mut context,
+        imageflow_types::Framewise::Steps(steps),
+        io_vec,
+        None,
+        false,
+    )
+    .unwrap();
+
+    let bytes = context.take_output_buffer(output_io_id).unwrap();
+
+    let ctx = ChecksumCtx::visuals();
+
+    evaluate_result_v2(
+        &ctx,
+        identity.module,
+        identity.func_name,
+        detail,
+        ResultKind::Bytes(&bytes),
+        require,
+        true,
+    )
 }
 
 pub fn test_with_callback(
