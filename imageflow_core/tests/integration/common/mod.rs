@@ -5,10 +5,8 @@ use imageflow_types as s;
 
 #[macro_use]
 pub mod macros;
-pub mod bitmap_diff_stats;
 pub mod checksum_adapter;
 pub mod upload_tracker;
-use bitmap_diff_stats::*;
 
 use imageflow_core::graphics::bitmaps::BitmapWindowMut;
 use imageflow_core::{Context, ErrorKind, FlowError};
@@ -16,7 +14,6 @@ use std::marker::PhantomPinned;
 use std::path::Path;
 
 use imageflow_core;
-use s::PixelLayout;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::{self, panic};
@@ -463,21 +460,23 @@ impl Similarity {
         match *self {
             Similarity::AllowOffByOneBytesCount(n) => {
                 if n == 0 {
-                    ToleranceSpec::default() // d:0 s:100
+                    ToleranceSpec::exact() // d:0 s:100
                 } else {
-                    ToleranceSpec { max_delta: 1, ..ToleranceSpec::default() }
+                    ToleranceSpec { max_delta: 1, ..ToleranceSpec::exact() }
                 }
             }
             Similarity::AllowOffByOneBytesRatio(ratio) => {
                 ToleranceSpec {
                     max_delta: 1,
                     max_pixels_different: ratio as f64,
-                    ..ToleranceSpec::default()
+                    ..ToleranceSpec::exact()
                 }
             }
             Similarity::AllowDssimMatch(_min, max) => {
                 // DSSIM 0 = identical, higher = worse.
-                // Approximate: dssim 0.002 ≈ zensim 99.8, dssim 1.0 ≈ loose
+                // This mapping is for .checksums file metadata — tight bounds
+                // reflecting the expected rounding-level differences.
+                // For lossy codec comparison, use to_regression_tolerance_lossy().
                 let min_sim = if max <= 0.0 {
                     100.0
                 } else if max >= 1.0 {
@@ -488,29 +487,33 @@ impl Similarity {
                 ToleranceSpec {
                     max_delta: 2,
                     min_similarity: min_sim,
-                    ..ToleranceSpec::default()
+                    ..ToleranceSpec::exact()
                 }
             }
         }
     }
 
-    fn report_on_bytes(&self, stats: &BitmapDiffStats) -> Option<String> {
-        let allowed_off_by_one_bytes: i64 = match *self {
-            Similarity::AllowOffByOneBytesCount(v) => v,
-            Similarity::AllowOffByOneBytesRatio(ratio) => (ratio * stats.values as f32) as i64,
-            Similarity::AllowDssimMatch(..) => return None,
-        };
-
-        //TODO: This doesn't really work, since off-by-one errors are averaged and thus can hide +/- 4
-        let bad_approx_of_differing_pixels = stats.values_abs_delta_sum as i64 / 4;
-
-        if stats.pixels_differing < bad_approx_of_differing_pixels
-            || stats.values_differing_by_more_than_1 > allowed_off_by_one_bytes
-        {
-            return Some(format!("Bitmaps mismatched: {}", stats.report()));
+    /// Convert to a `RegressionTolerance` for direct bitmap comparison.
+    ///
+    /// For `AllowDssimMatch`, uses a generous empirical mapping since DSSIM
+    /// and zensim are fundamentally different metrics. The encoder tests
+    /// (which compare lossy output against source) need this loose mapping.
+    fn to_regression_tolerance_for_comparison(&self) -> zensim_regress::testing::RegressionTolerance {
+        match *self {
+            Similarity::AllowDssimMatch(_min, max) if max > 0.0 => {
+                // Empirical: zensim ≈ 100*(1 - 5*sqrt(dssim))
+                let min_sim = (100.0 * (1.0 - 5.0 * (max as f64).sqrt())).max(0.0);
+                zensim_regress::RegressionTolerance::exact()
+                    .with_max_delta(255)
+                    .with_min_similarity(min_sim)
+                    .with_max_pixels_different(1.0)
+            }
+            _ => {
+                // Off-by-one / exact: use the standard ToleranceSpec path
+                let spec = self.to_tolerance_spec();
+                spec.to_regression_tolerance(zensim_regress::arch::detect_arch_tag())
+            }
         }
-
-        None
     }
 }
 
@@ -544,112 +547,48 @@ impl<'a> ResultKind<'a> {
     }
 }
 
-fn get_imgref_bgra32(b: &mut BitmapWindowMut<u8>) -> imgref::ImgVec<rgb::Rgba<f32>> {
-    use dssim::*;
+/// Compare two BGRA bitmaps using zensim-regress, returning pass/fail.
+///
+/// Prints the regression report to stderr. On failure with `do_panic`,
+/// panics with the report message.
+fn compare_bitmaps_zensim(
+    actual: &BitmapWindowMut<u8>,
+    expected: &BitmapWindowMut<u8>,
+    tolerance: &zensim_regress::testing::RegressionTolerance,
+    do_panic: bool,
+) -> bool {
+    use zensim::{PixelFormat, StridedBytes, Zensim, ZensimProfile};
+    use zensim_regress::testing::check_regression;
 
-    b.normalize_unused_alpha().unwrap();
-    if b.info().pixel_layout() != PixelLayout::BGRA {
-        panic!("Pixel layout is not BGRA");
-    }
+    let (aw, ah) = (actual.w() as usize, actual.h() as usize);
+    let (ew, eh) = (expected.w() as usize, expected.h() as usize);
+    assert_eq!((aw, ah), (ew, eh), "bitmap dimensions differ: actual {aw}x{ah} vs expected {ew}x{eh}");
 
-    let (w, h) = (b.w() as usize, b.h() as usize);
+    let actual_stride = actual.info().t_stride() as usize;
+    let expected_stride = expected.info().t_stride() as usize;
 
-    let slice = b.get_slice();
-    let new_stride = b.info().t_stride() as usize / 4;
+    let actual_img = StridedBytes::try_new(
+        actual.get_slice(), aw, ah, actual_stride, PixelFormat::Srgb8Bgra,
+    ).expect("actual bitmap: invalid for zensim");
+    let expected_img = StridedBytes::try_new(
+        expected.get_slice(), ew, eh, expected_stride, PixelFormat::Srgb8Bgra,
+    ).expect("expected bitmap: invalid for zensim");
 
-    let cast_to_bgra8 = bytemuck::cast_slice::<u8, rgb::alt::BGRA8>(slice);
+    let z = Zensim::new(ZensimProfile::latest());
+    let report = check_regression(&z, &expected_img, &actual_img, tolerance)
+        .expect("zensim comparison failed");
 
-    imgref::Img::new_stride(cast_to_bgra8.to_rgbaplu(), w, h, new_stride)
-}
-
-#[allow(dead_code)]
-pub struct CompareBitmapsResult {
-    pub stats: Option<BitmapDiffStats>,
-    pub dssim: Option<f64>,
-    pub close_enough: bool,
-    pub exact_match: bool,
-    pub failure_message: Option<String>,
-    pub actual_checksum: Option<String>,
-}
-/// Compare two bgra32 or bgr32 frames using the given similarity requirements
-pub fn compare_bitmaps(
-    _c: &ChecksumCtx,
-    actual: &mut BitmapWindowMut<u8>,
-    expected: &mut BitmapWindowMut<u8>,
-    require: Similarity,
-    panic: bool,
-) -> CompareBitmapsResult {
-    let stats = BitmapDiffStats::diff_bitmap_windows(actual, expected);
-    if stats.pixels_differing == 0 {
-        return CompareBitmapsResult {
-            stats: Some(stats),
-            dssim: None,
-            close_enough: true,
-            exact_match: true,
-            failure_message: None,
-            actual_checksum: None,
-        };
-    }
-    // Always report pixel diff stats when pixels differ
-    eprintln!("{}", stats.report());
-
-    if let Similarity::AllowDssimMatch(minval, maxval) = require {
-        let actual_ref = get_imgref_bgra32(actual);
-        let expected_ref = get_imgref_bgra32(expected);
-        let d = dssim::new();
-
-        let actual_img = d.create_image(&actual_ref).unwrap();
-        let expected_img = d.create_image(&expected_ref).unwrap();
-
-        let (dssim, _) = d.compare(&expected_img, actual_img);
-
-        eprintln!("dssim = {} (allowed range [{}, {}])", dssim, minval, maxval);
-
-        let failure = if dssim > maxval {
-            Some(format!("The dssim {} is greater than the permitted value {}", dssim, maxval))
-        } else if dssim < minval {
-            Some(format!("The dssim {} is lower than expected minimum value {}", dssim, minval))
-        } else {
-            None
-        };
-        let result = CompareBitmapsResult {
-            stats: Some(stats),
-            dssim: Some(dssim.into()),
-            close_enough: dssim >= minval && dssim <= maxval,
-            exact_match: false,
-            failure_message: failure.clone(),
-            actual_checksum: None,
-        };
-
-        if let Some(message) = failure {
-            if panic {
-                panic!("{}", message);
-            } else {
-                eprintln!("{}", message);
-            }
+    if !report.passed() {
+        let msg = format!("{report}");
+        eprintln!("{msg}");
+        if do_panic {
+            panic!("{msg}");
         }
-        result
-    } else {
-        let failure = require.report_on_bytes(&stats);
-
-        let result = CompareBitmapsResult {
-            stats: Some(stats),
-            dssim: None,
-            close_enough: failure.is_none(),
-            exact_match: false,
-            failure_message: failure.clone(),
-            actual_checksum: None,
-        };
-
-        if let Some(message) = failure {
-            if panic {
-                panic!("{}", message);
-            } else {
-                eprintln!("{}", message);
-            }
-        }
-        result
+    } else if report.pixels_differing() > 0 {
+        // Print informational report even on pass when pixels differ
+        eprintln!("{report}");
     }
+    report.passed()
 }
 
 pub fn check_size(result: &ResultKind, require: Constraints, panic: bool) -> bool {
@@ -671,29 +610,44 @@ pub fn check_size(result: &ResultKind, require: Constraints, panic: bool) -> boo
     true
 }
 
-/// Evaluates the given result against known truth, applying the given constraints
+/// Evaluates the given result against known truth, applying the given constraints.
+///
+/// Uses zensim-regress for pixel comparison instead of the legacy BitmapDiffStats path.
 pub fn compare_with<'a>(
-    c: &ChecksumCtx,
+    _c: &ChecksumCtx,
     expected_context: Box<Context>,
     expected_bitmap_key: BitmapKey,
     result: ResultKind<'a>,
     require: Constraints,
-    panic: bool,
+    do_panic: bool,
 ) -> bool {
-    if !check_size(&result, require.clone(), panic) {
+    if !check_size(&result, require.clone(), do_panic) {
         return false;
     }
 
-    let res = compare_bitmaps_result_to_expected(
-        c,
-        result,
-        true,
-        expected_context,
-        expected_bitmap_key,
-        require.similarity,
-        panic,
-    );
-    res.close_enough
+    let tolerance = require.similarity.to_regression_tolerance_for_comparison();
+
+    let mut image_context = Context::create().unwrap();
+    let (actual_context, actual_bitmap_key) = match result {
+        ResultKind::Bitmap { context, key } => (context, key),
+        ResultKind::Bytes(actual_bytes) => {
+            unsafe { image_context.add_input_bytes(0, actual_bytes) }.unwrap();
+            let key = decode_image(&mut image_context, 0);
+            (image_context.as_ref(), key)
+        }
+    };
+
+    let actual_bitmaps = actual_context.borrow_bitmaps().map_err(|e| e.at(here!())).unwrap();
+    let mut actual_bm = actual_bitmaps.try_borrow_mut(actual_bitmap_key)
+        .map_err(|e| e.at(here!())).unwrap();
+    let actual_window = actual_bm.get_window_u8().unwrap();
+
+    let expected_bitmaps = expected_context.borrow_bitmaps().map_err(|e| e.at(here!())).unwrap();
+    let mut expected_bm = expected_bitmaps.try_borrow_mut(expected_bitmap_key)
+        .map_err(|e| e.at(here!())).unwrap();
+    let expected_window = expected_bm.get_window_u8().unwrap();
+
+    compare_bitmaps_zensim(&actual_window, &expected_window, &tolerance, do_panic)
 }
 
 /// Compute zensim quality score of the actual output vs the original source.
@@ -795,17 +749,34 @@ pub fn evaluate_result<'a>(
     };
 
     eprintln!("--- Checksum mismatch for '{flat_name}' ---");
-    let (expected_context, expected_bitmap_key) = c.load_image(&trusted);
-    let res = compare_bitmaps_result_to_expected(
-        c,
-        result,
-        false,
-        expected_context,
-        expected_bitmap_key,
-        require.similarity,
-        do_panic,
-    );
-    if res.close_enough {
+
+    // Load both bitmaps and compare via zensim-regress
+    let tolerance = tol_spec.to_regression_tolerance(zensim_regress::arch::detect_arch_tag());
+    let close_enough = {
+        let (expected_context, expected_bitmap_key) = c.load_image(&trusted);
+        let expected_bitmaps = expected_context.borrow_bitmaps().map_err(|e| e.at(here!())).unwrap();
+        let mut expected_bm = expected_bitmaps.try_borrow_mut(expected_bitmap_key)
+            .map_err(|e| e.at(here!())).unwrap();
+        let expected_window = expected_bm.get_window_u8().unwrap();
+
+        let mut image_context = Context::create().unwrap();
+        let (actual_context, actual_bitmap_key) = match result {
+            ResultKind::Bitmap { context, key } => (context, key),
+            ResultKind::Bytes(actual_bytes) => {
+                unsafe { image_context.add_input_bytes(0, actual_bytes) }.unwrap();
+                let key = decode_image(&mut image_context, 0);
+                (image_context.as_ref(), key)
+            }
+        };
+        let actual_bitmaps = actual_context.borrow_bitmaps().map_err(|e| e.at(here!())).unwrap();
+        let mut actual_bm = actual_bitmaps.try_borrow_mut(actual_bitmap_key)
+            .map_err(|e| e.at(here!())).unwrap();
+        let actual_window = actual_bm.get_window_u8().unwrap();
+
+        compare_bitmaps_zensim(&actual_window, &expected_window, &tolerance, do_panic)
+    };
+
+    if close_enough {
         eprintln!(
             "--- '{flat_name}': checksum mismatch within tolerance ({:?}) ---",
             require.similarity
@@ -814,7 +785,6 @@ pub fn evaluate_result<'a>(
         // Auto-accept to .checksums if within tolerance
         if std::env::var("UPDATE_CHECKSUMS").is_ok_and(|v| v == "1") {
             let adapter = checksum_adapter::ChecksumAdapter::new(&c.checksums_dir);
-            // Compute zensim quality vs original source (same-dimension only)
             let diff_summary = source_url.and_then(|url| {
                 match compute_zensim_vs_source(c, &actual, url) {
                     Some(score) => {
@@ -838,55 +808,7 @@ pub fn evaluate_result<'a>(
             }
         }
     }
-    res.close_enough
-}
-
-pub fn compare_bitmaps_result_to_expected<'a>(
-    c: &ChecksumCtx,
-    result: ResultKind<'a>,
-    calculate_checksum: bool,
-    expected_context: Box<Context>,
-    expected_bitmap_key: BitmapKey,
-    require: Similarity,
-    panic: bool,
-) -> CompareBitmapsResult {
-    let mut image_context = Context::create().unwrap();
-    let (actual_context, actual_bitmap_key) = match result {
-        ResultKind::Bitmap { context, key } => (context, key),
-        ResultKind::Bytes(actual_bytes) => {
-            // SAFETY: `actual_bytes` is a parameter that outlives local `image_context`
-            unsafe { image_context.add_input_bytes(0, actual_bytes) }.unwrap();
-            let key = decode_image(&mut image_context, 0);
-            (image_context.as_ref(), key)
-        }
-    };
-
-    let actual_bitmaps = actual_context.borrow_bitmaps().map_err(|e| e.at(here!())).unwrap();
-    let mut actual_bitmap =
-        actual_bitmaps.try_borrow_mut(actual_bitmap_key).map_err(|e| e.at(here!())).unwrap();
-    let mut actual = actual_bitmap.get_window_u8().unwrap();
-
-    let actual_checksum = if calculate_checksum {
-        Some(ChecksumCtx::checksum_bitmap_window(&mut actual))
-    } else {
-        None
-    };
-
-    let mut res;
-    {
-        let expected_bitmaps =
-            expected_context.borrow_bitmaps().map_err(|e| e.at(here!())).unwrap();
-
-        let mut expected_bitmap = expected_bitmaps
-            .try_borrow_mut(expected_bitmap_key)
-            .map_err(|e| e.at(here!()))
-            .unwrap();
-        let mut expected = expected_bitmap.get_window_u8().unwrap();
-        res = compare_bitmaps(c, &mut actual, &mut expected, require, panic);
-    }
-    drop(expected_context); // Context must remain in scope until we are done with expected_bitmap
-    res.actual_checksum = actual_checksum;
-    res
+    close_enough
 }
 
 /// Test identity: (module_name, function_name) derived from test context.
