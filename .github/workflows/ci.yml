@@ -249,8 +249,6 @@ jobs:
       # TESTS ---------------------------------------------------------------------
       - name: "cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
         run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
-        env:
-          UPDATE_CHECKSUMS: "1"
         if: matrix.cross != 'true'
 
       - name: "cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
@@ -262,7 +260,6 @@ jobs:
           force-use-cross: ${{ matrix.force-cross == 'true' || false }}
         env:
           CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zensim:${{ github.workspace }}/../zensim"
-          UPDATE_CHECKSUMS: "1"
         if: matrix.cross == 'true'
 
       - name: Upload updated checksums

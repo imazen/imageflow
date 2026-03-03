@@ -411,11 +411,12 @@ impl ChecksumCtx {
             return (result, trusted, actual_checksum);
         }
 
-        // No .checksums file found
-        panic!(
-            "No .checksums entry found for {module}/{test_name} {detail_name}. \
-             Run with UPDATE_CHECKSUMS=1 to create it."
+        // No .checksums file or entry found — report as mismatch so pixel
+        // comparison can still run and potentially auto-accept within tolerance.
+        eprintln!(
+            "Warning: no .checksums entry for {module}/{test_name} {detail_name}"
         );
+        (ChecksumMatch::Mismatch, String::new(), actual_checksum)
     }
 }
 
@@ -793,6 +794,20 @@ pub fn evaluate_result<'a>(
 
     eprintln!("--- Checksum mismatch for '{flat_name}' ---");
 
+    // If there's no trusted reference to compare against, we can't do pixel comparison.
+    // This happens when a brand-new test has no .checksums entry at all.
+    if trusted.is_empty() {
+        let msg = format!(
+            "No reference baseline for '{flat_name}'. \
+             Run with REPLACE_CHECKSUMS=1 to create the initial baseline."
+        );
+        eprintln!("{msg}");
+        if do_panic {
+            panic!("{msg}");
+        }
+        return false;
+    }
+
     // Load both bitmaps and compare via zensim-regress
     let reg_tolerance = tolerance.to_regression_tolerance(zensim_regress::arch::detect_arch_tag());
     let close_enough = {
@@ -825,8 +840,9 @@ pub fn evaluate_result<'a>(
             zensim_regress::diff_summary::format_tolerance_shorthand(tolerance)
         );
 
-        // Auto-accept to .checksums if within tolerance
-        if std::env::var("UPDATE_CHECKSUMS").is_ok_and(|v| v == "1") {
+        // Always auto-accept to .checksums when within tolerance.
+        // This records the platform-specific hash so future runs get exact matches.
+        {
             let adapter = checksum_adapter::ChecksumAdapter::new(&c.checksums_dir);
             let diff_summary = source_url.and_then(|url| {
                 match compute_zensim_vs_source(c, &actual, url) {
