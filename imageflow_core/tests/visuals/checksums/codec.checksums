@@ -1,0 +1,101 @@
+# codec.checksums — v1
+
+## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg
+tolerance d:0 s:100
+x legacy-0d0e7aa9f6  x86_64-avx512  @  migrated from checksums.json
+= north-axe-3d468:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## decode_cmyk_jpeg logo_passthrough
+tolerance d:0 s:100
+x legacy-00c5cd1e1a  x86_64-avx512  @  migrated from checksums.json
+= bulk-mare-1741a:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_transparent_png_to_png_rounded_corners shirt_cropped
+tolerance d:0 s:100
+x legacy-09161c21c9  x86_64-avx512  @  migrated from checksums.json
+= moot-song-b4af6:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_webp_to_webp_quality q5_100x100
+tolerance d:0 s:100
+x legacy-042c3c137d  x86_64-avx512  @  migrated from checksums.json
+= false-reed-eb43f:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_problematic_png_lossy crop_1230x760
+tolerance d:0 s:100
+x legacy-06547a9912  x86_64-avx512  @  migrated from checksums.json
+= mad-kite-f0fa0:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_negatives_in_command_string red_leaf_negative_height
+tolerance d:0 s:100
+x legacy-0ba85f7dc7  x86_64-avx512  @  migrated from checksums.json
+= short-fern-3a189:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## decode_rgb_with_cmyk_profile_jpeg wrenches_ignore_icc
+tolerance d:0 s:100
+x legacy-0e680c080b  x86_64-avx512  @  migrated from checksums.json
+= great-snail-b22fc:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_rot_90_and_red_dot_command_string landscape_70x70
+tolerance d:0 s:100
+x legacy-0c593cb334  x86_64-avx512  @  migrated from checksums.json
+= close-larch-796ef:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_transparent_webp_to_webp lossless_100x100
+tolerance d:0 s:100
+x legacy-0ff8635a6b  x86_64-avx512  @  migrated from checksums.json
+= fleet-trout-40c53:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_transparent_png_to_png shirt
+tolerance d:0 s:100
+x legacy-0a839287bd  x86_64-avx512  @  migrated from checksums.json
+= loud-stork-e3a76:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_matte_transparent_png shirt_300x300_white_matte
+tolerance d:0 s:100
+x legacy-08c1cb011b  x86_64-avx512  @  migrated from checksums.json
+= rapid-olive-59072:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_rot_90_and_red_dot landscape_70x70
+tolerance d:0 s:100
+x legacy-0d84cfa321  x86_64-avx512  @  migrated from checksums.json
+= prone-owl-3a3d7:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_branching_crop_whitespace gradient_output_1
+tolerance d:0 s:100
+x legacy-006eb6624f  x86_64-avx512  @  migrated from checksums.json
+= cold-sand-b5193:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_encode_gradients png32_passthrough
+tolerance d:0 s:100
+x legacy-076352caa7  x86_64-avx512  @  migrated from checksums.json
+= husky-song-433de:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_simple landscape_within_70x70
+tolerance d:0 s:100
+x legacy-09ebb4046b  x86_64-avx512  @  migrated from checksums.json
+= major-finch-a36f6:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_transparent_png_to_jpeg shirt
+tolerance d:0 s:100
+x legacy-04ba3fd20d  x86_64-avx512  @  migrated from checksums.json
+= final-otter-e6b05:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_crop waterhouse_100x200
+tolerance d:0 s:100
+x legacy-0898de2904  x86_64-avx512  @  migrated from checksums.json
+= cross-dust-04763:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_branching_crop_whitespace gradient_output_2
+tolerance d:0 s:100
+x legacy-0b3d16eb97  x86_64-avx512  @  migrated from checksums.json
+= level-palm-6ad84:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_crop_with_preshrink 170x220_crop
+tolerance d:0 s:100
+x legacy-0951f5819d  x86_64-avx512  @  migrated from checksums.json
+= mild-pond-a88cf:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_simple_rot_90 landscape_70x70
+tolerance d:0 s:100
+x legacy-05f7a37cf5  x86_64-avx512  @  migrated from checksums.json
+= bone-drum-452a7:sea  x86_64-avx512  @576ef371  replaced baseline

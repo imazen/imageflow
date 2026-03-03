@@ -1,0 +1,46 @@
+# scaling.checksums — v1
+
+## webp_lossy_noalpha_decode_and_scale mountain_100x100
+tolerance d:0 s:100
+x legacy-0a0e5b9130  x86_64-avx512  @  migrated from checksums.json
+= open-shell-b2109:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_icc4_color_profile mars_v4_robidoux_400x300
+tolerance d:0 s:100
+x legacy-0cea7717e7  x86_64-avx512  @  migrated from checksums.json
+= old-ant-f7056:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_scale_image waterhouse_robidoux_400x300
+tolerance d:0 s:100
+x legacy-04e757b139  x86_64-avx512  @  migrated from checksums.json
+= only-tiger-a4839:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_icc2_color_profile mars_robidoux_400x300
+tolerance d:0 s:100
+x legacy-051ea508df  x86_64-avx512  @  migrated from checksums.json
+= edgy-bud-3c5ab:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_scale_rings hermite_400x400
+tolerance d:0 s:100
+x legacy-029a257f5b  x86_64-avx512  @  migrated from checksums.json
+= salty-nest-6d4fa:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## webp_lossy_alpha_decode_and_scale 100x100
+tolerance d:0 s:100
+x legacy-05ef3d9dac  x86_64-avx512  @  migrated from checksums.json
+= both-path-4b022:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## webp_lossless_alpha_decode_and_scale 100x100
+tolerance d:0 s:100
+x legacy-0dce6166f4  x86_64-avx512  @  migrated from checksums.json
+= clean-ore-a59f8:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_read_gif_and_vertical_distort mountain_box_800x100
+tolerance d:0 s:100
+x legacy-0eca7b0a57  x86_64-avx512  @  migrated from checksums.json
+= last-fawn-83133:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_read_gif_and_scale mountain_robidoux_400x300
+tolerance d:0 s:100
+x legacy-09be890f42  x86_64-avx512  @  migrated from checksums.json
+= north-rust-f9b8c:sea  x86_64-avx512  @576ef371  replaced baseline

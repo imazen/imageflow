@@ -1,0 +1,5 @@
+# tests.checksums — v1
+
+## test rotate 90 degrees
+tolerance d:0 s:100
+= legacy-0b843ee7b6    @  migrated from checksums.json

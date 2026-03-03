@@ -1,0 +1,26 @@
+# trim.checksums — v1
+
+## test_trim_resize_whitespace_without_padding 450x450_gray
+tolerance d:0 s:100
+x legacy-0f5776301f  x86_64-avx512  @  migrated from checksums.json
+= own-spire-30310:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_trim_whitespace_with_padding_no_resize gray_bg
+tolerance d:0 s:100
+x legacy-0f1cfff568  x86_64-avx512  @  migrated from checksums.json
+= oval-flow-0956d:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_trim_resize_whitespace_with_padding 450x450_gray
+tolerance d:0 s:100
+x legacy-065771681e  x86_64-avx512  @  migrated from checksums.json
+= apt-colt-7f54f:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_trim_whitespace_with_padding gray_bg
+tolerance d:0 s:100
+x legacy-0f1cfff568  x86_64-avx512  @  migrated from checksums.json
+= oval-flow-0956d:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_trim_whitespace transparent_shirt
+tolerance d:0 s:100
+x legacy-0fbc6a5c39  x86_64-avx512  @  migrated from checksums.json
+= short-frog-4f724:sea  x86_64-avx512  @576ef371  replaced baseline

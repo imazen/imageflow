@@ -1,0 +1,201 @@
+# orientation.checksums — v1
+
+## test_crop_exif landscape_1
+tolerance d:0 s:100
+x legacy-0619ba2103  x86_64-avx512  @  migrated from checksums.json
+= royal-rose-c398f:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Portrait_8
+tolerance d:0 s:100
+x legacy-0ff491745a  x86_64-avx512  @  migrated from checksums.json
+= quiet-trail-77198:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Portrait_4
+tolerance d:0 s:100
+x legacy-07d072ba64  x86_64-avx512  @  migrated from checksums.json
+= moved-sole-96dbc:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation_cropped portrait_2
+tolerance d:0 s:100
+x legacy-002e471e06  x86_64-avx512  @  migrated from checksums.json
+= major-eagle-8311d:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_crop_exif landscape_7
+tolerance d:0 s:100
+x legacy-03a061c387  x86_64-avx512  @  migrated from checksums.json
+= proud-jade-f9efb:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Landscape_6
+tolerance d:0 s:100
+x legacy-0d1a92f880  x86_64-avx512  @  migrated from checksums.json
+= icy-flux-c678a:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_fit_pad_exif landscape_2
+tolerance d:0 s:100
+x legacy-0b5000c6d0  x86_64-avx512  @  migrated from checksums.json
+= long-ford-e4b2a:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation_cropped portrait_5
+tolerance d:0 s:100
+x legacy-0dfe368480  x86_64-avx512  @  migrated from checksums.json
+= lazy-moon-a77ad:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Landscape_2
+tolerance d:0 s:100
+x legacy-0c8dcfd8a0  x86_64-avx512  @  migrated from checksums.json
+= damp-snow-6d4ea:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation_cropped portrait_1
+tolerance d:0 s:100
+x legacy-062a1f0605  x86_64-avx512  @  migrated from checksums.json
+= equal-plum-2e18b:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_fit_pad_exif landscape_4
+tolerance d:0 s:100
+x legacy-0ff676b5a6  x86_64-avx512  @  migrated from checksums.json
+= cheap-duck-ff9e5:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_fit_pad_exif landscape_3
+tolerance d:0 s:100
+x legacy-0930eb6276  x86_64-avx512  @  migrated from checksums.json
+= roomy-clam-8ad42:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Landscape_7
+tolerance d:0 s:100
+x legacy-0fb73c8afe  x86_64-avx512  @  migrated from checksums.json
+= moot-dock-f6654:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Portrait_7
+tolerance d:0 s:100
+x legacy-0794ecdc04  x86_64-avx512  @  migrated from checksums.json
+= small-crab-f4f1e:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation_cropped portrait_7
+tolerance d:0 s:100
+x legacy-0aca833074  x86_64-avx512  @  migrated from checksums.json
+= cool-beam-a9eb2:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Portrait_1
+tolerance d:0 s:100
+x legacy-066ab572a0  x86_64-avx512  @  migrated from checksums.json
+= sunny-eagle-5099f:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_fit_pad_exif landscape_7
+tolerance d:0 s:100
+x legacy-03810d700b  x86_64-avx512  @  migrated from checksums.json
+= deep-cloud-4badb:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_crop_exif landscape_2
+tolerance d:0 s:100
+x legacy-0ddbbb8264  x86_64-avx512  @  migrated from checksums.json
+= grand-pulse-5192c:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Portrait_6
+tolerance d:0 s:100
+x legacy-09f7f9cdfe  x86_64-avx512  @  migrated from checksums.json
+= dim-otter-f7755:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Landscape_3
+tolerance d:0 s:100
+x legacy-0852c0ec80  x86_64-avx512  @  migrated from checksums.json
+= foggy-reef-527f3:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_crop_exif landscape_4
+tolerance d:0 s:100
+x legacy-0a02e15d91  x86_64-avx512  @  migrated from checksums.json
+= rich-hub-6e6f4:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation_cropped portrait_8
+tolerance d:0 s:100
+x legacy-008fe0ce56  x86_64-avx512  @  migrated from checksums.json
+= light-sage-271d7:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_fit_pad_exif landscape_8
+tolerance d:0 s:100
+x legacy-020910a76d  x86_64-avx512  @  migrated from checksums.json
+= last-maple-d271f:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_fit_pad_exif landscape_1
+tolerance d:0 s:100
+x legacy-072553ac03  x86_64-avx512  @  migrated from checksums.json
+= dense-brick-1fdbc:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation_cropped portrait_4
+tolerance d:0 s:100
+x legacy-0f0b95c915  x86_64-avx512  @  migrated from checksums.json
+= hardy-ledge-f07e3:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_fit_pad_exif landscape_5
+tolerance d:0 s:100
+x legacy-061d723b36  x86_64-avx512  @  migrated from checksums.json
+= false-fog-96040:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Portrait_2
+tolerance d:0 s:100
+x legacy-0d858ed2f9  x86_64-avx512  @  migrated from checksums.json
+= paid-panda-db60a:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_crop_exif landscape_6
+tolerance d:0 s:100
+x legacy-0944126dd5  x86_64-avx512  @  migrated from checksums.json
+= drawn-crab-a5886:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_crop_exif landscape_8
+tolerance d:0 s:100
+x legacy-0430e52360  x86_64-avx512  @  migrated from checksums.json
+= great-seed-248b1:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Landscape_1
+tolerance d:0 s:100
+x legacy-09ebb4046b  x86_64-avx512  @  migrated from checksums.json
+= major-finch-a36f6:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_crop_exif landscape_5
+tolerance d:0 s:100
+x legacy-03cbec90d2  x86_64-avx512  @  migrated from checksums.json
+= tidy-lark-9ebb0:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation_cropped portrait_3
+tolerance d:0 s:100
+x legacy-00a30fb780  x86_64-avx512  @  migrated from checksums.json
+= sharp-beam-1b8b3:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Landscape_8
+tolerance d:0 s:100
+x legacy-0cbda7249c  x86_64-avx512  @  migrated from checksums.json
+= exact-puma-5e538:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Landscape_5
+tolerance d:0 s:100
+x legacy-0aafb940a0  x86_64-avx512  @  migrated from checksums.json
+= firm-pearl-87953:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_crop_exif landscape_3
+tolerance d:0 s:100
+x legacy-058f69db99  x86_64-avx512  @  migrated from checksums.json
+= loyal-elm-26a29:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_fit_pad_exif landscape_6
+tolerance d:0 s:100
+x legacy-001f4d3e28  x86_64-avx512  @  migrated from checksums.json
+= free-den-0a6d1:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Portrait_3
+tolerance d:0 s:100
+x legacy-044766125d  x86_64-avx512  @  migrated from checksums.json
+= icy-frog-62731:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation_cropped portrait_6
+tolerance d:0 s:100
+x legacy-0ab703a061  x86_64-avx512  @  migrated from checksums.json
+= ionic-gull-803aa:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Landscape_4
+tolerance d:0 s:100
+x legacy-0aecf53474  x86_64-avx512  @  migrated from checksums.json
+= crisp-song-b9b65:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_jpeg_rotation Portrait_5
+tolerance d:0 s:100
+x legacy-0b6bb8ce7e  x86_64-avx512  @  migrated from checksums.json
+= stout-gate-dc2ef:sea  x86_64-avx512  @576ef371  replaced baseline

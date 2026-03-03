@@ -1,0 +1,11 @@
+# idct.checksums — v1
+
+## test_idct_spatial_no_gamma roof_approx
+tolerance d:0 s:100
+x legacy-01dd6d368f  x86_64-avx512  @  migrated from checksums.json
+= easy-whale-d7975:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_idct_linear roof_gamma_corrected
+tolerance d:0 s:100
+x legacy-04549c40b2  x86_64-avx512  @  migrated from checksums.json
+= rural-box-9c80b:sea  x86_64-avx512  @576ef371  replaced baseline

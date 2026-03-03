@@ -1,0 +1,121 @@
+# color.checksums — v1
+
+## test_simple_filters Contrast(-0.2)
+tolerance d:0 s:100
+x legacy-03801ff0ec  x86_64-avx512  @  migrated from checksums.json
+= draft-tuna-474aa:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_white_balance_image red_night_auto
+tolerance d:0 s:100
+x legacy-0d84206bd2  x86_64-avx512  @  migrated from checksums.json
+= murky-stork-1a0ab:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Brightness(-1.0)
+tolerance d:0 s:100
+x legacy-026ff8363c  x86_64-avx512  @  migrated from checksums.json
+= fatal-eagle-bdeff:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Alpha(0.3)
+tolerance d:0 s:100
+x legacy-02c845e344  x86_64-avx512  @  migrated from checksums.json
+= open-snow-72e04:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Saturation(-1.0)
+tolerance d:0 s:100
+x legacy-04e59c99f3  x86_64-avx512  @  migrated from checksums.json
+= elfin-sage-8eb7d:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters GrayscaleBt709
+tolerance d:0 s:100
+x legacy-07bb3f1e35  x86_64-avx512  @  migrated from checksums.json
+= cold-bloom-d7708:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Invert
+tolerance d:0 s:100
+x legacy-099453586c  x86_64-avx512  @  migrated from checksums.json
+= gruff-pearl-30d0d:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Saturation(1.0)
+tolerance d:0 s:100
+x legacy-0f4e3a057b  x86_64-avx512  @  migrated from checksums.json
+= fixed-bud-debef:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Saturation(-0.2)
+tolerance d:0 s:100
+x legacy-0b8cbdc170  x86_64-avx512  @  migrated from checksums.json
+= fluid-torch-97456:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Alpha(-1.0)
+tolerance d:0 s:100
+x legacy-08fcf4b04e  x86_64-avx512  @  migrated from checksums.json
+= loud-river-f6aff:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_white_balance_image_threshold_5 t0.5
+tolerance d:0 s:100
+x legacy-0486f036e6  x86_64-avx512  @  migrated from checksums.json
+= funny-ridge-b6510:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters GrayscaleFlat
+tolerance d:0 s:100
+x legacy-0564cec6b8  x86_64-avx512  @  migrated from checksums.json
+= last-gull-1b3b4:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Brightness(1.0)
+tolerance d:0 s:100
+x legacy-0c303e51b9  x86_64-avx512  @  migrated from checksums.json
+= red-foam-e67b1:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters GrayscaleNtsc
+tolerance d:0 s:100
+x legacy-0063427e49  x86_64-avx512  @  migrated from checksums.json
+= muted-hill-eb0e2:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Saturation(0.3)
+tolerance d:0 s:100
+x legacy-070aabf88c  x86_64-avx512  @  migrated from checksums.json
+= focal-node-9cdda:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Sepia
+tolerance d:0 s:100
+x legacy-0f8973dc36  x86_64-avx512  @  migrated from checksums.json
+= modal-oak-cf235:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Alpha(-0.2)
+tolerance d:0 s:100
+x legacy-08fcf4b04e  x86_64-avx512  @  migrated from checksums.json
+= loud-river-f6aff:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters GrayscaleRy
+tolerance d:0 s:100
+x legacy-09c384ea17  x86_64-avx512  @  migrated from checksums.json
+= fresh-hawk-8a7cf:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Contrast(0.3)
+tolerance d:0 s:100
+x legacy-09cdb90e52  x86_64-avx512  @  migrated from checksums.json
+= quick-bone-4ecbd:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Contrast(1.0)
+tolerance d:0 s:100
+x legacy-0d6be331c7  x86_64-avx512  @  migrated from checksums.json
+= spare-sloth-6adae:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Alpha(1.0)
+tolerance d:0 s:100
+x legacy-0a9bb769d5  x86_64-avx512  @  migrated from checksums.json
+= lunar-hull-58c13:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Brightness(-0.2)
+tolerance d:0 s:100
+x legacy-0036b1bd30  x86_64-avx512  @  migrated from checksums.json
+= faded-cloud-1f7cc:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Contrast(-1.0)
+tolerance d:0 s:100
+x legacy-0cb4f94c3b  x86_64-avx512  @  migrated from checksums.json
+= fiery-wren-71e56:sea  x86_64-avx512  @576ef371  replaced baseline
+
+## test_simple_filters Brightness(0.3)
+tolerance d:0 s:100
+x legacy-0e694075b7  x86_64-avx512  @  migrated from checksums.json
+= jolly-tree-a82ec:sea  x86_64-avx512  @576ef371  replaced baseline
