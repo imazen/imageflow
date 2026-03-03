@@ -616,6 +616,7 @@ fn bitmap_to_rgba_bytes(bm: &BitmapWindowMut<u8>, w: u32, h: u32) -> Vec<u8> {
 
 /// Show a 3-panel sixel comparison (Expected | Actual | Diff x10) to stdout.
 /// Flushes stderr first so the error message appears before the image.
+/// Also saves a PNG to /tmp/sixel-diff.png for non-sixel terminals.
 fn show_sixel_diff(
     expected: &BitmapWindowMut<u8>,
     actual: &BitmapWindowMut<u8>,
@@ -627,6 +628,10 @@ fn show_sixel_diff(
     let exp_rgba = bitmap_to_rgba_bytes(expected, w, h);
     let act_rgba = bitmap_to_rgba_bytes(actual, w, h);
     zensim_regress::display::print_comparison_raw(&exp_rgba, &act_rgba, w, h, 10, Some(600));
+    // Also save a PNG for non-sixel terminals
+    let path = std::path::Path::new("/tmp/sixel-diff.png");
+    zensim_regress::display::save_comparison_png(&exp_rgba, &act_rgba, w, h, 10, Some(600), path);
+    eprintln!("Saved comparison PNG to {}", path.display());
 }
 
 pub fn check_size(result: &ResultKind, max_file_size: Option<usize>, panic: bool) -> bool {
