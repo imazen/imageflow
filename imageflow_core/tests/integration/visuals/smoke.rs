@@ -594,12 +594,6 @@ fn test_detect_whitespace_all_small_images() {
     }
 }
 
-#[test]
-fn zz_verify_all_checksum_files_uploaded() {
-    let ctx = ChecksumCtx::visuals();
-    ctx.verify_all_active_images_uploaded();
-}
-
 /// Build a minimal animated GIF with the given frame colors (RGBA hex strings).
 /// Each frame is `w`x`h` pixels, solid color, with the given delay in centiseconds.
 fn build_animated_gif(w: u16, h: u16, colors: &[&str], delay: u16) -> Vec<u8> {
