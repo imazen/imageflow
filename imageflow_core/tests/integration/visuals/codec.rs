@@ -37,6 +37,9 @@ fn test_problematic_png_lossy() {
         source: "test_inputs/png_turns_empty_2.png",
         detail: "crop_1230x760",
         command: "w=1230&h=760&png.quality=75&mode=crop&scale=both",
+        // Centos pngquant selects different palette entries for ~946/934800 pixels
+        // in the bottom-right corner (max delta B=22, zensim 96.4 vs baseline).
+        similarity: Similarity::MaxZdsim(0.05), // measured centos zdsim: 0.036
     }
 }
 
@@ -132,7 +135,7 @@ fn test_branching_crop_whitespace() {
     let _ = build_framewise(&mut context, framewise, io_vec, None, false).unwrap();
 
     let ctx = ChecksumCtx::visuals();
-    let tol_spec = Similarity::MaxZdsim(0.15).to_tolerance_spec();
+    let tol_spec = Similarity::MaxZdsim(0.01).to_tolerance_spec();
 
     for output_io_id in [1, 2] {
         let detail = format!("gradient_output_{output_io_id}");

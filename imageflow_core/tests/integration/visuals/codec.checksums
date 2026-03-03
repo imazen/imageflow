@@ -11,7 +11,7 @@ tolerance off-by-one
 = close-larch-796effad97:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_branching_crop_whitespace gradient_output_2
-tolerance d:255 s:85 px:100.0%
+tolerance d:255 s:99 px:100.0%
 = level-palm-6ad84afa17:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_encode_gradients png32_passthrough
@@ -31,11 +31,11 @@ tolerance identical
 = fleet-trout-40c532f291:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_matte_transparent_png shirt_300x300_white_matte
-tolerance d:255 s:85 px:100.0%
+tolerance d:255 s:99 px:100.0%
 = rapid-olive-5907234423:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg
-tolerance d:255 s:85 px:100.0%
+tolerance d:255 s:99 px:100.0%
 = north-axe-3d46871ac4:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_transparent_png_to_png_rounded_corners shirt_cropped
@@ -47,7 +47,7 @@ tolerance off-by-one
 = cross-dust-04763ef509:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_transparent_png_to_jpeg shirt
-tolerance d:255 s:85 px:100.0%
+tolerance d:255 s:99 px:100.0%
 = final-otter-e6b0565eaf:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_with_preshrink 170x220_crop
@@ -63,11 +63,11 @@ tolerance off-by-one
 = bulk-mare-1741a4171a:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_problematic_png_lossy crop_1230x760
-tolerance d:255 s:85 px:100.0%
+tolerance d:255 s:95 px:100.0%
 = mad-kite-f0fa059c45:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_branching_crop_whitespace gradient_output_1
-tolerance d:255 s:85 px:100.0%
+tolerance d:255 s:99 px:100.0%
 = cold-sand-b519344065:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_simple landscape_within_70x70

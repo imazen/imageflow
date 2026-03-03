@@ -72,7 +72,7 @@ macro_rules! test_identity {
 /// # Optional fields
 ///
 /// - `detail`: Discriminant for multiple comparisons in one test (default: "")
-/// - `similarity`: `Similarity` value (default: `MaxZdsim(0.15)`)
+/// - `similarity`: `Similarity` value (default: `MaxZdsim(0.01)`)
 /// - `max_file_size`: Maximum encoded file size in bytes
 ///
 /// # Examples
@@ -133,8 +133,10 @@ macro_rules! visual_check {
     (@detail) => { "" };
     (@detail $detail:expr) => { $detail };
 
-    // Default similarity: zdsim <= 0.15 (zensim >= 85, generous for cross-platform encoders)
-    (@similarity) => { $crate::common::Similarity::MaxZdsim(0.15) };
+    // Default similarity: zdsim <= 0.01 (zensim >= 99). Most tests produce
+    // identical output cross-platform. Tests with known lossy differences
+    // should set an explicit similarity threshold.
+    (@similarity) => { $crate::common::Similarity::MaxZdsim(0.01) };
     (@similarity $similarity:expr) => { $similarity };
 
     // Default max_file_size: None
