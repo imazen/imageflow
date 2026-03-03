@@ -8,4 +8,3 @@ mod robustness;
 mod variation;
 mod weights;
 mod schema;
-mod migrate_checksums;

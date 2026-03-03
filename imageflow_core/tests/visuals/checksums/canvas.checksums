@@ -2,90 +2,72 @@
 
 ## test_round_corners_custom_percent semitransparent_mixed_radii
 tolerance d:0 s:100
-x legacy-0e2b10b253  x86_64-avx512  @  migrated from checksums.json
 = mad-port-dff48:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_fill_rect_original blue_on_transparent
 tolerance d:0 s:100
-x legacy-0e528c6547  x86_64-avx512  @  migrated from checksums.json
 = meek-bear-103bc:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_detect_whitespace blue_on_transparent
 tolerance d:0 s:100
-x legacy-0549704430  x86_64-avx512  @  migrated from checksums.json
 = steep-wolf-3fcac:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_crop red_canvas_blue_strip
 tolerance d:0 s:100
-x legacy-023a1a32b1  x86_64-avx512  @  migrated from checksums.json
 = paced-curl-e833f:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_round_corners_circle_wide_canvas 200x150_black
 tolerance d:0 s:100
-x legacy-0aff835739  x86_64-avx512  @  migrated from checksums.json
 = cozy-cloud-312b8:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_partial_region overlap_40pct
 tolerance d:0 s:100
-x legacy-0c51c8fbfd  x86_64-avx512  @  migrated from checksums.json
 = base-seal-6844b:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_round_corners_excessive_radius 200x150_r100
 tolerance d:0 s:100
-x legacy-0b3dbecf59  x86_64-avx512  @  migrated from checksums.json
 = fresh-pine-80bf2:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_pixels_region pixel_coords
 tolerance d:0 s:100
-x legacy-0b42e995f9  x86_64-avx512  @  migrated from checksums.json
 = brave-bay-8a067:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_round_corners_small 100x100_r5
 tolerance d:0 s:100
-x legacy-02de05b755  x86_64-avx512  @  migrated from checksums.json
 = sole-wolf-a89e7:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_round_corners_custom_pixels semitransparent_mixed_radii
 tolerance d:0 s:100
-x legacy-0ff6d76b9e  x86_64-avx512  @  migrated from checksums.json
 = late-sand-154de:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_round_corners_circle_tall_canvas 150x200_transparent
 tolerance d:0 s:100
-x legacy-03f352e662  x86_64-avx512  @  migrated from checksums.json
 = final-loom-31f07:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_round_image_corners_transparent waterhouse_400x300_r100
 tolerance d:0 s:100
-x legacy-0810d08f81  x86_64-avx512  @  migrated from checksums.json
 = north-doe-e6e0c:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_expand_rect fill_expand_hermite_linear
 tolerance d:0 s:100
-x legacy-05cf8d3116  x86_64-avx512  @  migrated from checksums.json
 = raw-nest-dd207:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_off_surface_region all_negative
 tolerance d:0 s:100
-x legacy-09fa1a44e8  x86_64-avx512  @  migrated from checksums.json
 = final-fort-b3b19:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_transparent_canvas 200x200
 tolerance d:0 s:100
-x legacy-03cc86cf60  x86_64-avx512  @  migrated from checksums.json
 = meek-eagle-8cb22:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_round_corners_command_string landscape_mixed_radii_png
 tolerance d:0 s:100
-x legacy-028f07f09f  x86_64-avx512  @  migrated from checksums.json
 = avid-kelp-a0a5b:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_round_corners_large 400x400_r200
 tolerance d:0 s:100
-x legacy-0e4832c8b0  x86_64-avx512  @  migrated from checksums.json
 = heavy-yew-a70bb:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_fill_rect eeccff_hermite_400x400
 tolerance d:0 s:100
-x legacy-0d2d3a96ec  x86_64-avx512  @  migrated from checksums.json
 = novel-box-96791:sea  x86_64-avx512  @576ef371  replaced baseline

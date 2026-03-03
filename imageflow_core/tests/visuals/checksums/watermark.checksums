@@ -2,41 +2,34 @@
 
 ## test_watermark_image_command_string dice_fitcrop_90pct
 tolerance d:0 s:100
-x legacy-0ed10ea93a  x86_64-avx512  @  migrated from checksums.json
 x ripe-marsh-dd75c:sea  x86_64-avx512  @576ef371  replaced baseline
 x ripe-marsh-dd75c:sea  x86_64-avx512  @576ef371  replaced baseline
 = ripe-marsh-dd75c:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_watermark_image dice_fitcrop_90pct
 tolerance d:0 s:100
-x legacy-0ed10ea93a  x86_64-avx512  @  migrated from checksums.json
 x ripe-marsh-dd75c:sea  x86_64-avx512  @576ef371  replaced baseline
 x ripe-marsh-dd75c:sea  x86_64-avx512  @576ef371  replaced baseline
 = ripe-marsh-dd75c:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_watermark_image_on_png shirt_with_webp
 tolerance d:0 s:100
-x legacy-00aa224a4a  x86_64-avx512  @  migrated from checksums.json
 = novel-pulse-c8d51:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_watermark_image_small webp_within_90pct
 tolerance d:0 s:100
-x legacy-06a9125402  x86_64-avx512  @  migrated from checksums.json
 = oral-cliff-ee411:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_watermark_jpeg_over_pnga gamma_test_30pct
 tolerance d:0 s:100
-x legacy-067e959001  x86_64-avx512  @  migrated from checksums.json
 = damp-maple-85c54:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_watermark_image_command_string_with_bgcolor dice_aaeeff
 tolerance d:0 s:100
-x legacy-0ed10ea93a  x86_64-avx512  @  migrated from checksums.json
 x ripe-marsh-dd75c:sea  x86_64-avx512  @576ef371  replaced baseline
 x ripe-marsh-dd75c:sea  x86_64-avx512  @576ef371  replaced baseline
 = ripe-marsh-dd75c:sea  x86_64-avx512  @576ef371  replaced baseline
 
 ## test_watermark_image_pixel_margins webp_700px_offset
 tolerance d:0 s:100
-x legacy-05a43d398c  x86_64-avx512  @  migrated from checksums.json
 = mere-river-1c2f0:sea  x86_64-avx512  @576ef371  replaced baseline
