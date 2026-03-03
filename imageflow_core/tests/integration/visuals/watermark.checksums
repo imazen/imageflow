@@ -1,28 +1,28 @@
 # watermark.checksums — v1
 ## test_watermark_image_command_string dice_fitcrop_90pct
-tolerance d:1 s:100
+tolerance identical
 = ripe-marsh-dd75ce382a:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_watermark_image dice_fitcrop_90pct
-tolerance d:1 s:100
+tolerance identical
 = ripe-marsh-dd75ce382a:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_watermark_image_on_png shirt_with_webp
-tolerance d:1 s:100
+tolerance identical
 = novel-pulse-c8d51eb293:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_watermark_image_small webp_within_90pct
-tolerance d:1 s:100
+tolerance identical
 = oral-cliff-ee411f978a:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_watermark_jpeg_over_pnga gamma_test_30pct
-tolerance d:1 s:100
+tolerance identical
 = damp-maple-85c54bb4a8:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_watermark_image_command_string_with_bgcolor dice_aaeeff
-tolerance d:1 s:100
+tolerance identical
 = ripe-marsh-dd75ce382a:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_watermark_image_pixel_margins webp_700px_offset
-tolerance d:1 s:100
+tolerance identical
 = mere-river-1c2f0751ed:sea  x86_64-avx512  @8ca16e2d  human-verified
