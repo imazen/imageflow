@@ -254,13 +254,15 @@ jobs:
         run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
         if: matrix.cross != 'true'
 
-      - name: "cross cargo test --lib --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
+      - name: "cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
         uses: houseabsolute/actions-rust-cross@v1.0.2
         with:
           command: "test"
           target: ${{ matrix.target }}
-          args: "--lib ${{ env.CROSS_ARGS }}"
+          args: "${{ env.CROSS_ARGS }}"
           force-use-cross: ${{ matrix.force-cross == 'true' || false }}
+        env:
+          CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zensim:${{ github.workspace }}/../zensim"
         if: matrix.cross == 'true'
 
       # BUILD ---------------------------------------------------------------------
@@ -276,6 +278,8 @@ jobs:
           target: ${{ matrix.target }}
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
           force-use-cross: ${{ matrix.force-cross == 'true' || false }}
+        env:
+          CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zensim:${{ github.workspace }}/../zensim"
         if: matrix.cross == 'true'
 
 
