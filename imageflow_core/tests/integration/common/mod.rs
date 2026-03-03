@@ -1,7 +1,10 @@
 use imageflow_core::{here, nerror};
+#[allow(unused_imports)]
 use imageflow_helpers as hlp;
 use imageflow_types as s;
 
+#[macro_use]
+pub mod macros;
 pub mod bitmap_diff_stats;
 pub mod checksum_adapter;
 use bitmap_diff_stats::*;
