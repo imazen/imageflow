@@ -35,9 +35,15 @@ macro_rules! test_identity {
             None => without_f,
         };
 
-        // Module stem from file!()
+        // Module stem from file!() — handle both '/' (unix) and '\' (windows)
         let file_path = file!();
-        let stem = match file_path.rfind('/') {
+        let last_sep = match (file_path.rfind('/'), file_path.rfind('\\')) {
+            (Some(a), Some(b)) => Some(a.max(b)),
+            (Some(a), None) => Some(a),
+            (None, Some(b)) => Some(b),
+            (None, None) => None,
+        };
+        let stem = match last_sep {
             Some(pos) => &file_path[pos + 1..],
             None => file_path,
         };
