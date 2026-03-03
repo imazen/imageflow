@@ -581,6 +581,12 @@ fn compare_bitmaps_zensim(
     if !report.passed() {
         let msg = format!("{report}");
         eprintln!("{msg}");
+
+        // Show sixel visual diff if SIXEL_DIFF=1
+        if std::env::var("SIXEL_DIFF").is_ok_and(|v| v == "1") {
+            show_sixel_diff(expected, actual, aw as u32, ah as u32);
+        }
+
         if do_panic {
             panic!("{msg}");
         }
@@ -589,6 +595,34 @@ fn compare_bitmaps_zensim(
         eprintln!("{report}");
     }
     report.passed()
+}
+
+/// Convert a strided BGRA BitmapWindowMut to packed RGBA bytes.
+fn bitmap_to_rgba_bytes(bm: &BitmapWindowMut<u8>, w: u32, h: u32) -> Vec<u8> {
+    let mut rgba = Vec::with_capacity((w * h * 4) as usize);
+    for row in 0..h as usize {
+        let slice = bm.row(row).unwrap();
+        for x in 0..w as usize {
+            let b = slice[x * 4];
+            let g = slice[x * 4 + 1];
+            let r = slice[x * 4 + 2];
+            let a = slice[x * 4 + 3];
+            rgba.extend_from_slice(&[r, g, b, a]);
+        }
+    }
+    rgba
+}
+
+/// Show a 3-panel sixel comparison (Expected | Actual | Diff x10) to stdout.
+fn show_sixel_diff(
+    expected: &BitmapWindowMut<u8>,
+    actual: &BitmapWindowMut<u8>,
+    w: u32,
+    h: u32,
+) {
+    let exp_rgba = bitmap_to_rgba_bytes(expected, w, h);
+    let act_rgba = bitmap_to_rgba_bytes(actual, w, h);
+    zensim_regress::display::print_comparison_raw(&exp_rgba, &act_rgba, w, h, 10, Some(600));
 }
 
 pub fn check_size(result: &ResultKind, max_file_size: Option<usize>, panic: bool) -> bool {
