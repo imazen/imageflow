@@ -7,6 +7,7 @@ use imageflow_types as s;
 pub mod macros;
 pub mod bitmap_diff_stats;
 pub mod checksum_adapter;
+pub mod upload_tracker;
 use bitmap_diff_stats::*;
 
 use imageflow_core::graphics::bitmaps::BitmapWindowMut;
@@ -289,8 +290,11 @@ impl ChecksumCtx {
         if !dest_path.exists() {
             println!("Writing {}", dest_path.display());
             imageflow_core::helpers::write_png(&dest_path, window).unwrap();
-            if let Err(e) = self.output_storage.upload_reference(&dest_path, &petname) {
-                eprintln!("Warning: upload failed for {petname}: {e}");
+            if self.output_storage.uploads_configured() {
+                match self.output_storage.upload_reference(&dest_path, &petname) {
+                    Ok(()) => upload_tracker::record_upload(&petname),
+                    Err(e) => eprintln!("Warning: upload failed for {petname}: {e}"),
+                }
             }
         }
     }
@@ -304,8 +308,11 @@ impl ChecksumCtx {
         if !dest_path.exists() {
             println!("Writing {}", dest_path.display());
             std::fs::write(&dest_path, bytes).unwrap();
-            if let Err(e) = self.output_storage.upload_reference(&dest_path, &petname) {
-                eprintln!("Warning: upload failed for {petname}: {e}");
+            if self.output_storage.uploads_configured() {
+                match self.output_storage.upload_reference(&dest_path, &petname) {
+                    Ok(()) => upload_tracker::record_upload(&petname),
+                    Err(e) => eprintln!("Warning: upload failed for {petname}: {e}"),
+                }
             }
         }
     }
