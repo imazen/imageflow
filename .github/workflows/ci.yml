@@ -277,7 +277,7 @@ jobs:
             .image-cache/outputs/
             .image-cache/diffs/
           if-no-files-found: ignore
-        if: failure()
+        if: always()
 
       # BUILD ---------------------------------------------------------------------
       - name: "cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
