@@ -370,7 +370,7 @@ impl ChecksumCtx {
     }
 
     /// Structured bytes match using (module, test_name, detail_name).
-    pub fn bytes_match_v2(
+    pub fn bytes_match(
         &self,
         bytes: &[u8],
         module: &str,
@@ -379,13 +379,13 @@ impl ChecksumCtx {
     ) -> (ChecksumMatch, String, String) {
         let actual = Self::checksum_bytes(bytes);
         self.save_bytes(bytes, &actual);
-        self.exact_match_v2(actual, module, test_name, detail_name)
+        self.exact_match(actual, module, test_name, detail_name)
     }
 
     /// Structured checksum match using (module, test_name, detail_name).
     ///
     /// Returns (match_result, trusted_checksum, actual_checksum).
-    pub fn exact_match_v2(
+    pub fn exact_match(
         &self,
         actual_checksum: String,
         module: &str,
@@ -503,7 +503,7 @@ pub enum ResultKind<'a> {
     Bytes(&'a [u8]),
 }
 impl<'a> ResultKind<'a> {
-    fn exact_match_v2(
+    fn exact_match(
         &mut self,
         c: &ChecksumCtx,
         module: &str,
@@ -514,9 +514,9 @@ impl<'a> ResultKind<'a> {
             ResultKind::Bitmap { context, key } => {
                 let actual = ChecksumCtx::checksum_bitmap(context, key);
                 c.save_bitmap(context, key, &actual);
-                c.exact_match_v2(actual, module, test_name, detail_name)
+                c.exact_match(actual, module, test_name, detail_name)
             }
-            ResultKind::Bytes(b) => c.bytes_match_v2(b, module, test_name, detail_name),
+            ResultKind::Bytes(b) => c.bytes_match(b, module, test_name, detail_name),
         }
     }
 }
@@ -743,7 +743,7 @@ fn compute_zensim_vs_source(
 /// When `source_url` is provided, computes zensim quality vs original source
 /// (same-dimension only) and records it in the `.checksums` diff summary.
 #[track_caller]
-pub fn evaluate_result_v2<'a>(
+pub fn evaluate_result<'a>(
     c: &ChecksumCtx,
     module: &str,
     test_name: &str,
@@ -756,7 +756,7 @@ pub fn evaluate_result_v2<'a>(
     if !check_size(&result, require.clone(), do_panic) {
         return false;
     }
-    let (exact, trusted, actual) = result.exact_match_v2(c, module, test_name, detail_name);
+    let (exact, trusted, actual) = result.exact_match(c, module, test_name, detail_name);
     if exact == ChecksumMatch::Match {
         return true;
     }
@@ -883,7 +883,7 @@ pub struct TestIdentity {
 /// 4. Pixel-level comparison on mismatch
 /// 5. Auto-accept recording on tolerance match
 #[track_caller]
-pub fn compare_encoded_v2(
+pub fn compare_encoded(
     input: Option<IoTestEnum>,
     identity: &TestIdentity,
     detail: &str,
@@ -912,7 +912,7 @@ pub fn compare_encoded_v2(
 
     let ctx = ChecksumCtx::visuals();
 
-    evaluate_result_v2(
+    evaluate_result(
         &ctx,
         identity.module,
         identity.func_name,
@@ -928,7 +928,7 @@ pub fn compare_encoded_v2(
 ///
 /// This is the `#[track_caller]` function backing `visual_check_bitmap!`.
 #[track_caller]
-pub fn compare_bitmap_v2(
+pub fn compare_bitmap(
     inputs: Vec<IoTestEnum>,
     identity: &TestIdentity,
     detail: &str,
@@ -947,7 +947,7 @@ pub fn compare_bitmap_v2(
         .unwrap_or_else(|| panic!("execution failed {:?}", response));
 
     let ctx = ChecksumCtx::visuals();
-    evaluate_result_v2(
+    evaluate_result(
         &ctx,
         identity.module,
         identity.func_name,

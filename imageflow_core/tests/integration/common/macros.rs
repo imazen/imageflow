@@ -21,7 +21,7 @@
 /// Returns a `TestIdentity` with the file stem (e.g., `"trim"` from
 /// `visuals/trim.rs`) and function name extracted via `type_name_of_val`.
 ///
-/// The identity is used by `compare_encoded_v2` and friends to build
+/// The identity is used by `compare_encoded` and friends to build
 /// structured `.checksums` keys.
 macro_rules! test_identity {
     () => {{
@@ -55,7 +55,7 @@ macro_rules! test_identity {
 
 /// Run a visual check test with automatic identity derivation.
 ///
-/// Thin wrapper around `compare_encoded_v2` that derives module/function
+/// Thin wrapper around `compare_encoded` that derives module/function
 /// names at compile time via `test_identity!`.
 ///
 /// # Required fields
@@ -110,7 +110,7 @@ macro_rules! visual_check {
             }
         ];
 
-        $crate::common::compare_encoded_v2(
+        $crate::common::compare_encoded(
             Some($crate::common::IoTestEnum::Url(source_url.clone())),
             &identity,
             detail,
@@ -179,7 +179,7 @@ macro_rules! visual_check_steps {
         let similarity = visual_check!(@similarity $( $similarity )?);
         let max_file_size: Option<usize> = visual_check!(@max_file_size $( $max_file_size )?);
 
-        $crate::common::compare_encoded_v2(
+        $crate::common::compare_encoded(
             Some($crate::common::IoTestEnum::Url(source_url.clone())),
             &identity,
             detail,
@@ -195,7 +195,7 @@ macro_rules! visual_check_steps {
 
 /// Run a visual check on a bitmap result (not encoded output).
 ///
-/// Thin wrapper around `compare_bitmap_v2` that derives module/function
+/// Thin wrapper around `compare_bitmap` that derives module/function
 /// names at compile time via `test_identity!`.
 ///
 /// # Variants
@@ -223,7 +223,7 @@ macro_rules! visual_check_bitmap {
         let inputs = vec![
             $crate::common::IoTestEnum::Url(source_url.clone()),
         ];
-        $crate::common::compare_bitmap_v2(inputs, &identity, detail, Some(&source_url), $steps, allowed);
+        $crate::common::compare_bitmap(inputs, &identity, detail, Some(&source_url), $steps, allowed);
     }};
 
     // Multi-source variant (e.g., watermark tests)
@@ -240,7 +240,7 @@ macro_rules! visual_check_bitmap {
             $( $crate::common::IoTestEnum::Url(visual_check!(@source_url $source)), )+
         ];
         // Multi-source: no single source for zensim comparison
-        $crate::common::compare_bitmap_v2(inputs, &identity, detail, None, $steps, allowed);
+        $crate::common::compare_bitmap(inputs, &identity, detail, None, $steps, allowed);
     }};
 
     // No source variant (canvas tests)
@@ -252,7 +252,7 @@ macro_rules! visual_check_bitmap {
         let identity = test_identity!();
         let detail: &str = visual_check!(@detail $( $detail )?);
         let allowed: usize = visual_check_bitmap!(@obo $( $obo )?);
-        $crate::common::compare_bitmap_v2(vec![], &identity, detail, None, $steps, allowed);
+        $crate::common::compare_bitmap(vec![], &identity, detail, None, $steps, allowed);
     }};
 
     (@obo) => { 500usize };

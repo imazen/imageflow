@@ -74,7 +74,7 @@ fn run_idct_test(
 
     let ctx = ChecksumCtx::visuals();
     let bitmap_key = bit.bitmap_key(&context).unwrap();
-    let matched = evaluate_result_v2(
+    let matched = evaluate_result(
         &ctx,
         identity.module,
         identity.func_name,

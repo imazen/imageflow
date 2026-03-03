@@ -140,7 +140,7 @@ fn test_branching_crop_whitespace() {
     for output_io_id in [1, 2] {
         let detail = format!("gradient_output_{output_io_id}");
         let bytes = context.take_output_buffer(output_io_id).unwrap();
-        evaluate_result_v2(
+        evaluate_result(
             &ctx,
             identity.module,
             identity.func_name,
