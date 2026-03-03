@@ -1,19 +1,19 @@
 ## test_trim_whitespace_with_padding gray_bg
-tolerance d:30 s:77.63932022500211 px:5.0%
+tolerance d:255 s:85 px:100.0%
 = oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_trim_resize_whitespace_with_padding 450x450_gray
-tolerance d:30 s:77.63932022500211 px:5.0%
+tolerance d:255 s:85 px:100.0%
 = apt-colt-7f54f13622:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_trim_resize_whitespace_without_padding 450x450_gray
-tolerance d:30 s:77.63932022500211 px:5.0%
+tolerance d:255 s:85 px:100.0%
 = own-spire-30310bace0:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_trim_whitespace transparent_shirt
-tolerance d:30 s:77.63932022500211 px:5.0%
+tolerance d:255 s:85 px:100.0%
 = short-frog-4f72443cc0:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_trim_whitespace_with_padding_no_resize gray_bg
-tolerance d:30 s:77.63932022500211 px:5.0%
+tolerance d:255 s:85 px:100.0%
 = oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline

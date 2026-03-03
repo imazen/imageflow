@@ -269,6 +269,16 @@ jobs:
           path: imageflow_core/tests/integration/visuals/*.checksums
         if: always()
 
+      - name: Upload test output images (for debugging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-outputs-${{ matrix.name }}
+          path: |
+            .image-cache/outputs/
+            .image-cache/diffs/
+          if-no-files-found: ignore
+        if: failure()
+
       # BUILD ---------------------------------------------------------------------
       - name: "cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
         if: matrix.cross != 'true'

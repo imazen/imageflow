@@ -132,7 +132,7 @@ fn test_branching_crop_whitespace() {
     let _ = build_framewise(&mut context, framewise, io_vec, None, false).unwrap();
 
     let ctx = ChecksumCtx::visuals();
-    let tol_spec = Similarity::AllowDssimMatch(0.0, 0.002).to_tolerance_spec();
+    let tol_spec = Similarity::MaxZdsim(0.15).to_tolerance_spec();
 
     for output_io_id in [1, 2] {
         let detail = format!("gradient_output_{output_io_id}");
@@ -167,7 +167,7 @@ fn test_webp_to_webp_quality() {
         source: "test_inputs/1_webp_ll.webp",
         detail: "q5_100x100",
         command: "format=webp&width=100&height=100&quality=5",
-        similarity: Similarity::AllowDssimMatch(0.0, 1.0),
+        similarity: Similarity::MaxZdsim(1.0),
         max_file_size: 2000,
     }
 }

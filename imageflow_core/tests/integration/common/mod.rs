@@ -467,16 +467,20 @@ pub fn decode_input(c: &mut Context, input: IoTestEnum) -> BitmapKey {
 pub enum Similarity {
     AllowOffByOneBytesCount(i64),
     AllowOffByOneBytesRatio(f32),
-    AllowDssimMatch(f64, f64),
+    /// Maximum allowed zdsim (zen dissimilarity, 0-1 scale).
+    /// 0.0 = exact match, higher = more different.
+    /// Mirrors DSSIM semantics: drop-in replacement for AllowDssimMatch.
+    /// zdsim = (100 - zensim_score) / 100.
+    MaxZdsim(f64),
 }
 
 impl Similarity {
-    /// Convert to a `Tolerance` for recording in `.checksums` files.
+    /// Convert to a `Tolerance` for `.checksums` files and pixel comparison.
     pub fn to_tolerance_spec(&self) -> Tolerance {
         match *self {
             Similarity::AllowOffByOneBytesCount(n) => {
                 if n == 0 {
-                    Tolerance::exact() // d:0 s:100
+                    Tolerance::exact()
                 } else {
                     Tolerance { max_delta: 1, ..Tolerance::exact() }
                 }
@@ -488,20 +492,16 @@ impl Similarity {
                     ..Tolerance::exact()
                 }
             }
-            Similarity::AllowDssimMatch(_min, max) => {
-                // DSSIM and per-pixel metrics are fundamentally different.
-                // DSSIM 0.002 = "structurally nearly identical" but allows
-                // significant per-pixel differences from encoder variations
-                // across platforms (different libm, SIMD paths, etc.).
-                // Use a generous empirical mapping: zensim ≈ 100*(1 - 5*sqrt(dssim)).
-                if max <= 0.0 {
+            Similarity::MaxZdsim(max_zdsim) => {
+                if max_zdsim <= 0.0 {
                     Tolerance::exact()
                 } else {
-                    let min_sim = (100.0 * (1.0 - 5.0 * (max as f64).sqrt())).max(50.0);
+                    // zdsim gates pass/fail; per-pixel limits are fully permissive
+                    let min_similarity = 100.0 * (1.0 - max_zdsim);
                     Tolerance {
-                        max_delta: 30,
-                        min_similarity: min_sim,
-                        max_pixels_different: 0.05, // 5%
+                        max_delta: 255,
+                        min_similarity,
+                        max_pixels_different: 1.0,
                         ..Tolerance::exact()
                     }
                 }
@@ -510,26 +510,9 @@ impl Similarity {
     }
 
     /// Convert to a `RegressionTolerance` for direct bitmap comparison.
-    ///
-    /// For `AllowDssimMatch`, uses a generous empirical mapping since DSSIM
-    /// and zensim are fundamentally different metrics. The encoder tests
-    /// (which compare lossy output against source) need this loose mapping.
     fn to_regression_tolerance_for_comparison(&self) -> zensim_regress::testing::RegressionTolerance {
-        match *self {
-            Similarity::AllowDssimMatch(_min, max) if max > 0.0 => {
-                // Empirical: zensim ≈ 100*(1 - 5*sqrt(dssim))
-                let min_sim = (100.0 * (1.0 - 5.0 * (max as f64).sqrt())).max(0.0);
-                zensim_regress::RegressionTolerance::exact()
-                    .with_max_delta(255)
-                    .with_min_similarity(min_sim)
-                    .with_max_pixels_different(1.0)
-            }
-            _ => {
-                // Off-by-one / exact: use the standard Tolerance path
-                let spec = self.to_tolerance_spec();
-                spec.to_regression_tolerance(zensim_regress::arch::detect_arch_tag())
-            }
-        }
+        let spec = self.to_tolerance_spec();
+        spec.to_regression_tolerance(zensim_regress::arch::detect_arch_tag())
     }
 }
 
@@ -565,12 +548,13 @@ impl<'a> ResultKind<'a> {
 
 /// Compare two BGRA bitmaps using zensim-regress, returning pass/fail.
 ///
-/// Prints the regression report to stderr. On failure with `do_panic`,
-/// panics with the report message.
+/// Prints the regression report to stderr. On failure, saves a comparison
+/// diff PNG to `.image-cache/diffs/`. On failure with `do_panic`, panics.
 fn compare_bitmaps_zensim(
     actual: &BitmapWindowMut<u8>,
     expected: &BitmapWindowMut<u8>,
     tolerance: &zensim_regress::testing::RegressionTolerance,
+    diff_name: &str,
     do_panic: bool,
 ) -> bool {
     use zensim::{PixelFormat, StridedBytes, Zensim, ZensimProfile};
@@ -598,10 +582,8 @@ fn compare_bitmaps_zensim(
         let msg = format!("{report}");
         eprintln!("{msg}");
 
-        // Show sixel visual diff if SIXEL_DIFF=1
-        if std::env::var("SIXEL_DIFF").is_ok_and(|v| v == "1") {
-            show_sixel_diff(expected, actual, aw as u32, ah as u32);
-        }
+        // Always save diff image on failure for debugging
+        save_diff_image(expected, actual, aw as u32, ah as u32, diff_name);
 
         if do_panic {
             panic!("{msg}");
@@ -629,24 +611,36 @@ fn bitmap_to_rgba_bytes(bm: &BitmapWindowMut<u8>, w: u32, h: u32) -> Vec<u8> {
     rgba
 }
 
-/// Show a 3-panel sixel comparison (Expected | Actual | Diff x10) to stdout.
-/// Flushes stderr first so the error message appears before the image.
-/// Also saves a PNG to /tmp/sixel-diff.png for non-sixel terminals.
-fn show_sixel_diff(
+/// Save a 3-panel comparison PNG (Expected | Actual | Diff x10) to the diffs directory.
+///
+/// Returns the path to the saved PNG, or None if saving failed.
+fn save_diff_image(
     expected: &BitmapWindowMut<u8>,
     actual: &BitmapWindowMut<u8>,
     w: u32,
     h: u32,
-) {
-    // Flush stderr so the error report appears before the sixel image
-    let _ = std::io::stderr().flush();
+    diff_name: &str,
+) -> Option<PathBuf> {
+    let diffs_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()?
+        .join(".image-cache/diffs");
+    std::fs::create_dir_all(&diffs_dir).ok()?;
+
+    let sanitized = diff_name.replace(|c: char| !c.is_alphanumeric() && c != '-' && c != '_', "_");
+    let path = diffs_dir.join(format!("{sanitized}.png"));
+
     let exp_rgba = bitmap_to_rgba_bytes(expected, w, h);
     let act_rgba = bitmap_to_rgba_bytes(actual, w, h);
-    zensim_regress::display::print_comparison_raw(&exp_rgba, &act_rgba, w, h, 10, Some(600));
-    // Also save a PNG for non-sixel terminals
-    let path = std::path::Path::new("/tmp/sixel-diff.png");
-    zensim_regress::display::save_comparison_png(&exp_rgba, &act_rgba, w, h, 10, Some(600), path);
-    eprintln!("Saved comparison PNG to {}", path.display());
+    zensim_regress::display::save_comparison_png(&exp_rgba, &act_rgba, w, h, 10, Some(600), &path);
+    eprintln!("Saved comparison diff to {}", path.display());
+
+    // Also show sixel if requested
+    if std::env::var("SIXEL_DIFF").is_ok_and(|v| v == "1") {
+        let _ = std::io::stderr().flush();
+        zensim_regress::display::print_comparison_raw(&exp_rgba, &act_rgba, w, h, 10, Some(600));
+    }
+
+    Some(path)
 }
 
 pub fn check_size(result: &ResultKind, max_file_size: Option<usize>, panic: bool) -> bool {
@@ -705,7 +699,7 @@ pub fn compare_with<'a>(
         .map_err(|e| e.at(here!())).unwrap();
     let expected_window = expected_bm.get_window_u8().unwrap();
 
-    compare_bitmaps_zensim(&actual_window, &expected_window, &tolerance, do_panic)
+    compare_bitmaps_zensim(&actual_window, &expected_window, &tolerance, "compare_with", do_panic)
 }
 
 /// Compute zensim quality score of the actual output vs the original source.
@@ -845,7 +839,7 @@ pub fn evaluate_result<'a>(
             .map_err(|e| e.at(here!())).unwrap();
         let actual_window = actual_bm.get_window_u8().unwrap();
 
-        compare_bitmaps_zensim(&actual_window, &expected_window, &reg_tolerance, do_panic)
+        compare_bitmaps_zensim(&actual_window, &expected_window, &reg_tolerance, &flat_name, do_panic)
     };
 
     if close_enough {
