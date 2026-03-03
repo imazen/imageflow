@@ -1,37 +1,26 @@
-# scaling.checksums — v1
-
-## webp_lossy_noalpha_decode_and_scale mountain_100x100
-tolerance d:0 s:100
-= open-shell-b2109:sea  x86_64-avx512  @576ef371  replaced baseline
-
 ## test_jpeg_icc4_color_profile mars_v4_robidoux_400x300
-tolerance d:0 s:100
-= old-ant-f7056:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_scale_image waterhouse_robidoux_400x300
-tolerance d:0 s:100
-= only-tiger-a4839:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_jpeg_icc2_color_profile mars_robidoux_400x300
-tolerance d:0 s:100
-= edgy-bud-3c5ab:sea  x86_64-avx512  @576ef371  replaced baseline
+= old-ant-f705618161:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_scale_rings hermite_400x400
-tolerance d:0 s:100
-= salty-nest-6d4fa:sea  x86_64-avx512  @576ef371  replaced baseline
+= salty-nest-6d4fa00ed3:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
-## webp_lossy_alpha_decode_and_scale 100x100
-tolerance d:0 s:100
-= both-path-4b022:sea  x86_64-avx512  @576ef371  replaced baseline
+## test_scale_image waterhouse_robidoux_400x300
+= only-tiger-a4839401fa:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
-## webp_lossless_alpha_decode_and_scale 100x100
-tolerance d:0 s:100
-= clean-ore-a59f8:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_read_gif_and_vertical_distort mountain_box_800x100
-tolerance d:0 s:100
-= last-fawn-83133:sea  x86_64-avx512  @576ef371  replaced baseline
+## test_jpeg_icc2_color_profile mars_robidoux_400x300
+= edgy-bud-3c5ab5c483:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_read_gif_and_scale mountain_robidoux_400x300
-tolerance d:0 s:100
-= north-rust-f9b8c:sea  x86_64-avx512  @576ef371  replaced baseline
+= north-rust-f9b8c7992d:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_read_gif_and_vertical_distort mountain_box_800x100
+= last-fawn-83133574e4:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## webp_lossless_alpha_decode_and_scale 100x100
+= clean-ore-a59f8abf2c:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## webp_lossy_alpha_decode_and_scale 100x100
+= both-path-4b02288edb:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## webp_lossy_noalpha_decode_and_scale mountain_100x100
+= open-shell-b210964ea9:sea  x86_64-avx512  @8ca16e2d  new-baseline

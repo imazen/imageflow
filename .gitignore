@@ -184,6 +184,7 @@ dlldata.c
 *.tmp
 *.tmp_proj
 *.log
+!**/uploaded.log
 *.vspscc
 *.vssscc
 .builds

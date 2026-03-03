@@ -1,21 +1,14 @@
-# trim.checksums — v1
-
-## test_trim_resize_whitespace_without_padding 450x450_gray
-tolerance d:0 s:100
-= own-spire-30310:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_trim_whitespace_with_padding_no_resize gray_bg
-tolerance d:0 s:100
-= oval-flow-0956d:sea  x86_64-avx512  @576ef371  replaced baseline
+## test_trim_whitespace_with_padding gray_bg
+= oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_trim_resize_whitespace_with_padding 450x450_gray
-tolerance d:0 s:100
-= apt-colt-7f54f:sea  x86_64-avx512  @576ef371  replaced baseline
+= apt-colt-7f54f13622:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
-## test_trim_whitespace_with_padding gray_bg
-tolerance d:0 s:100
-= oval-flow-0956d:sea  x86_64-avx512  @576ef371  replaced baseline
+## test_trim_resize_whitespace_without_padding 450x450_gray
+= own-spire-30310bace0:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_trim_whitespace transparent_shirt
-tolerance d:0 s:100
-= short-frog-4f724:sea  x86_64-avx512  @576ef371  replaced baseline
+= short-frog-4f72443cc0:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_trim_whitespace_with_padding_no_resize gray_bg
+= oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline

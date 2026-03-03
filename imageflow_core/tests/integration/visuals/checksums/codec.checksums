@@ -1,81 +1,59 @@
-# codec.checksums — v1
-
-## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg
-tolerance d:0 s:100
-= north-axe-3d468:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## decode_cmyk_jpeg logo_passthrough
-tolerance d:0 s:100
-= bulk-mare-1741a:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_transparent_png_to_png_rounded_corners shirt_cropped
-tolerance d:0 s:100
-= moot-song-b4af6:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_webp_to_webp_quality q5_100x100
-tolerance d:0 s:100
-= false-reed-eb43f:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_problematic_png_lossy crop_1230x760
-tolerance d:0 s:100
-= mad-kite-f0fa0:sea  x86_64-avx512  @576ef371  replaced baseline
-
 ## test_negatives_in_command_string red_leaf_negative_height
-tolerance d:0 s:100
-= short-fern-3a189:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## decode_rgb_with_cmyk_profile_jpeg wrenches_ignore_icc
-tolerance d:0 s:100
-= great-snail-b22fc:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_rot_90_and_red_dot_command_string landscape_70x70
-tolerance d:0 s:100
-= close-larch-796ef:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_transparent_webp_to_webp lossless_100x100
-tolerance d:0 s:100
-= fleet-trout-40c53:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_transparent_png_to_png shirt
-tolerance d:0 s:100
-= loud-stork-e3a76:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_matte_transparent_png shirt_300x300_white_matte
-tolerance d:0 s:100
-= rapid-olive-59072:sea  x86_64-avx512  @576ef371  replaced baseline
+= short-fern-3a18947ea1:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_rot_90_and_red_dot landscape_70x70
-tolerance d:0 s:100
-= prone-owl-3a3d7:sea  x86_64-avx512  @576ef371  replaced baseline
+= prone-owl-3a3d75df9b:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
-## test_branching_crop_whitespace gradient_output_1
-tolerance d:0 s:100
-= cold-sand-b5193:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_encode_gradients png32_passthrough
-tolerance d:0 s:100
-= husky-song-433de:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_jpeg_simple landscape_within_70x70
-tolerance d:0 s:100
-= major-finch-a36f6:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_transparent_png_to_jpeg shirt
-tolerance d:0 s:100
-= final-otter-e6b05:sea  x86_64-avx512  @576ef371  replaced baseline
-
-## test_jpeg_crop waterhouse_100x200
-tolerance d:0 s:100
-= cross-dust-04763:sea  x86_64-avx512  @576ef371  replaced baseline
+## test_rot_90_and_red_dot_command_string landscape_70x70
+= close-larch-796effad97:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_branching_crop_whitespace gradient_output_2
-tolerance d:0 s:100
-= level-palm-6ad84:sea  x86_64-avx512  @576ef371  replaced baseline
+= level-palm-6ad84afa17:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_encode_gradients png32_passthrough
+= husky-song-433de0fc17:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_webp_to_webp_quality q5_100x100
+= false-reed-eb43f7fd24:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## decode_rgb_with_cmyk_profile_jpeg wrenches_ignore_icc
+= great-snail-b22fce67f5:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_transparent_webp_to_webp lossless_100x100
+= fleet-trout-40c532f291:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_matte_transparent_png shirt_300x300_white_matte
+= rapid-olive-5907234423:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg
+= north-axe-3d46871ac4:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_transparent_png_to_png_rounded_corners shirt_cropped
+= moot-song-b4af647101:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_jpeg_crop waterhouse_100x200
+= cross-dust-04763ef509:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_transparent_png_to_jpeg shirt
+= final-otter-e6b0565eaf:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_with_preshrink 170x220_crop
-tolerance d:0 s:100
-= mild-pond-a88cf:sea  x86_64-avx512  @576ef371  replaced baseline
+= mild-pond-a88cf0d96f:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_transparent_png_to_png shirt
+= loud-stork-e3a76d92e7:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## decode_cmyk_jpeg logo_passthrough
+= bulk-mare-1741a4171a:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_problematic_png_lossy crop_1230x760
+= mad-kite-f0fa059c45:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_branching_crop_whitespace gradient_output_1
+= cold-sand-b519344065:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_jpeg_simple landscape_within_70x70
+= major-finch-a36f62a66e:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_simple_rot_90 landscape_70x70
-tolerance d:0 s:100
-= bone-drum-452a7:sea  x86_64-avx512  @576ef371  replaced baseline
+= bone-drum-452a7c1706:sea  x86_64-avx512  @8ca16e2d  new-baseline

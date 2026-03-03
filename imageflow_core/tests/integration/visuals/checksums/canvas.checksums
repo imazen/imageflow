@@ -2,72 +2,72 @@
 
 ## test_round_corners_custom_percent semitransparent_mixed_radii
 tolerance d:0 s:100
-= mad-port-dff48:sea  x86_64-avx512  @576ef371  replaced baseline
+= mad-port-dff48806b5:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_fill_rect_original blue_on_transparent
 tolerance d:0 s:100
-= meek-bear-103bc:sea  x86_64-avx512  @576ef371  replaced baseline
+= meek-bear-103bc946d6:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_detect_whitespace blue_on_transparent
 tolerance d:0 s:100
-= steep-wolf-3fcac:sea  x86_64-avx512  @576ef371  replaced baseline
+= steep-wolf-3fcacdd24a:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_crop red_canvas_blue_strip
 tolerance d:0 s:100
-= paced-curl-e833f:sea  x86_64-avx512  @576ef371  replaced baseline
+= paced-curl-e833f82320:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_round_corners_circle_wide_canvas 200x150_black
 tolerance d:0 s:100
-= cozy-cloud-312b8:sea  x86_64-avx512  @576ef371  replaced baseline
+= cozy-cloud-312b8c473b:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_partial_region overlap_40pct
 tolerance d:0 s:100
-= base-seal-6844b:sea  x86_64-avx512  @576ef371  replaced baseline
+= base-seal-6844b098e5:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_round_corners_excessive_radius 200x150_r100
 tolerance d:0 s:100
-= fresh-pine-80bf2:sea  x86_64-avx512  @576ef371  replaced baseline
+= fresh-pine-80bf247392:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_pixels_region pixel_coords
 tolerance d:0 s:100
-= brave-bay-8a067:sea  x86_64-avx512  @576ef371  replaced baseline
+= brave-bay-8a0677e9af:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_round_corners_small 100x100_r5
 tolerance d:0 s:100
-= sole-wolf-a89e7:sea  x86_64-avx512  @576ef371  replaced baseline
+= sole-wolf-a89e7d6ea8:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_round_corners_custom_pixels semitransparent_mixed_radii
 tolerance d:0 s:100
-= late-sand-154de:sea  x86_64-avx512  @576ef371  replaced baseline
+= late-sand-154de3acc8:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_round_corners_circle_tall_canvas 150x200_transparent
 tolerance d:0 s:100
-= final-loom-31f07:sea  x86_64-avx512  @576ef371  replaced baseline
+= final-loom-31f079eefc:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_round_image_corners_transparent waterhouse_400x300_r100
 tolerance d:0 s:100
-= north-doe-e6e0c:sea  x86_64-avx512  @576ef371  replaced baseline
+= north-doe-e6e0c779a0:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_expand_rect fill_expand_hermite_linear
 tolerance d:0 s:100
-= raw-nest-dd207:sea  x86_64-avx512  @576ef371  replaced baseline
+= raw-nest-dd2079bbc7:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_off_surface_region all_negative
 tolerance d:0 s:100
-= final-fort-b3b19:sea  x86_64-avx512  @576ef371  replaced baseline
+= final-fort-b3b19bf16c:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_transparent_canvas 200x200
 tolerance d:0 s:100
-= meek-eagle-8cb22:sea  x86_64-avx512  @576ef371  replaced baseline
+= meek-eagle-8cb229c079:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_round_corners_command_string landscape_mixed_radii_png
 tolerance d:0 s:100
-= avid-kelp-a0a5b:sea  x86_64-avx512  @576ef371  replaced baseline
+= avid-kelp-a0a5bd26d5:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_round_corners_large 400x400_r200
 tolerance d:0 s:100
-= heavy-yew-a70bb:sea  x86_64-avx512  @576ef371  replaced baseline
+= heavy-yew-a70bb2e52e:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_fill_rect eeccff_hermite_400x400
 tolerance d:0 s:100
-= novel-box-96791:sea  x86_64-avx512  @576ef371  replaced baseline
+= novel-box-967914e71e:sea  x86_64-avx512  @8ca16e2d  human-verified
