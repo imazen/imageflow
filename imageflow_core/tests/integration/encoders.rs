@@ -266,7 +266,6 @@ pub fn compare_encoded_to_source(
 
     compare_with(
         &ctx,
-        &original_checksum,
         context2,
         bitmap_key,
         ResultKind::Bytes(&bytes),

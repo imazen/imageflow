@@ -393,7 +393,7 @@ impl ChecksumCtx {
             return (result, trusted, actual_checksum);
         }
 
-        // No .checksums file found — this is an error in the v2-only system
+        // No .checksums file found
         panic!(
             "No .checksums entry found for {module}/{test_name} {detail_name}. \
              Run with UPDATE_CHECKSUMS=1 to create it."
@@ -481,7 +481,7 @@ impl Similarity {
         if stats.pixels_differing < bad_approx_of_differing_pixels
             || stats.values_differing_by_more_than_1 > allowed_off_by_one_bytes
         {
-            return Some(format!("Bitmaps mismatched: {}", stats.legacy_report()));
+            return Some(format!("Bitmaps mismatched: {}", stats.report()));
         }
 
         None
@@ -564,7 +564,7 @@ pub fn compare_bitmaps(
         };
     }
     // Always report pixel diff stats when pixels differ
-    eprintln!("{}", stats.legacy_report());
+    eprintln!("{}", stats.report());
 
     if let Similarity::AllowDssimMatch(minval, maxval) = require {
         let actual_ref = get_imgref_bgra32(actual);
@@ -645,9 +645,8 @@ pub fn check_size(result: &ResultKind, require: Constraints, panic: bool) -> boo
 }
 
 /// Evaluates the given result against known truth, applying the given constraints
-pub fn compare_with<'a, 'b>(
+pub fn compare_with<'a>(
     c: &ChecksumCtx,
-    _expected_checksum: &str,
     expected_context: Box<Context>,
     expected_bitmap_key: BitmapKey,
     result: ResultKind<'a>,
@@ -733,9 +732,9 @@ fn compute_zensim_vs_source(
     Some(result.score)
 }
 
-/// Evaluates the given result against known truth using structured v2 identity.
+/// Evaluates the given result against known truth using structured identity.
 ///
-/// Uses `.checksums` v1 format as the only lookup path.
+/// Uses `.checksums` files as the only lookup path.
 /// On mismatch within tolerance, auto-accepts to the `.checksums` file.
 /// When `source_url` is provided, computes zensim quality vs original source
 /// (same-dimension only) and records it in the `.checksums` diff summary.
@@ -784,7 +783,7 @@ pub fn evaluate_result<'a>(
             require.similarity
         );
 
-        // Auto-accept to v2 .checksums if within tolerance
+        // Auto-accept to .checksums if within tolerance
         if std::env::var("UPDATE_CHECKSUMS").is_ok_and(|v| v == "1") {
             let adapter = checksum_adapter::ChecksumAdapter::new(&c.visuals_dir);
             // Compute zensim quality vs original source (same-dimension only)
@@ -807,7 +806,7 @@ pub fn evaluate_result<'a>(
                 None,
                 diff_summary.as_deref(),
             ) {
-                eprintln!("Warning: failed to auto-accept v2 {flat_name}: {e}");
+                eprintln!("Warning: failed to auto-accept {flat_name}: {e}");
             }
         }
     }
@@ -870,7 +869,7 @@ pub struct TestIdentity {
     pub func_name: &'static str,
 }
 
-/// Run a visual comparison test with v2 structured identity.
+/// Run a visual comparison test with structured identity.
 ///
 /// This is the primary `#[track_caller]` entry point that macros call.
 /// It handles:
@@ -921,7 +920,7 @@ pub fn compare_encoded(
     )
 }
 
-/// Run a bitmap comparison test with v2 structured identity.
+/// Run a bitmap comparison test with structured identity.
 ///
 /// This is the `#[track_caller]` function backing `visual_check_bitmap!`.
 #[track_caller]

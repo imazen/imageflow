@@ -130,7 +130,7 @@ impl BitmapDiffStats {
             .fold(BitmapDiffStats::no_changes(0), |a, b| a + b)
     }
 
-    pub fn legacy_report(&self) -> String {
+    pub fn report(&self) -> String {
         if self.pixels_differing == 0 {
             return "no pixel differences".to_string();
         }

@@ -39,7 +39,7 @@ fn test_idct_no_gamma_callback(
 }
 
 /// Run IDCT test inline: create context, add input, get image info,
-/// apply decoder hints via callback, execute, then evaluate with v2.
+/// apply decoder hints via callback, execute, then evaluate.
 fn run_idct_test(
     identity: &TestIdentity,
     detail: &str,
