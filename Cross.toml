@@ -42,4 +42,6 @@ passthrough = [
     "OUT_DIR",
     "HOST",
     "RUSTC",
+    "UPDATE_CHECKSUMS",
+    "REPLACE_CHECKSUMS",
 ]
