@@ -142,6 +142,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Checkout zensim (sibling dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: imazen/zensim
+          path: ../zensim
+
       - name: Parse version
         uses: ./.github/actions/parse-version
         id: parse_version
@@ -248,12 +254,12 @@ jobs:
         run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
         if: matrix.cross != 'true'
 
-      - name: "cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
+      - name: "cross cargo test --lib --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
         uses: houseabsolute/actions-rust-cross@v1.0.2
         with:
           command: "test"
           target: ${{ matrix.target }}
-          args: "${{ env.CROSS_ARGS }}"
+          args: "--lib ${{ env.CROSS_ARGS }}"
           force-use-cross: ${{ matrix.force-cross == 'true' || false }}
         if: matrix.cross == 'true'
 
