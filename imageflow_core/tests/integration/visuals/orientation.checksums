@@ -1,159 +1,159 @@
 ## test_fit_pad_exif landscape_8
-tolerance identical
+tolerance off-by-one
 = last-maple-d271f62225:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Landscape_7
-tolerance identical
+tolerance off-by-one
 = moot-dock-f665438566:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Landscape_8
-tolerance identical
+tolerance off-by-one
 = exact-puma-5e53876d32:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_8
-tolerance identical
+tolerance off-by-one
 = light-sage-271d75d5f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Portrait_1
-tolerance identical
+tolerance off-by-one
 = sunny-eagle-5099f73c1e:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Portrait_2
-tolerance identical
+tolerance off-by-one
 = paid-panda-db60a24c60:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Portrait_3
-tolerance identical
+tolerance off-by-one
 = icy-frog-62731990f9:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Portrait_4
-tolerance identical
+tolerance off-by-one
 = moved-sole-96dbc1e677:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Portrait_5
-tolerance identical
+tolerance off-by-one
 = stout-gate-dc2ef09752:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Portrait_6
-tolerance identical
+tolerance off-by-one
 = dim-otter-f775527445:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Portrait_7
-tolerance identical
+tolerance off-by-one
 = small-crab-f4f1eec088:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Portrait_8
-tolerance identical
+tolerance off-by-one
 = quiet-trail-77198b9862:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_exif landscape_1
-tolerance identical
+tolerance off-by-one
 = royal-rose-c398febefd:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_exif landscape_2
-tolerance identical
+tolerance off-by-one
 = grand-pulse-5192c4b452:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_exif landscape_3
-tolerance identical
+tolerance off-by-one
 = loyal-elm-26a2984651:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_exif landscape_4
-tolerance identical
+tolerance off-by-one
 = rich-hub-6e6f476464:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_exif landscape_5
-tolerance identical
+tolerance off-by-one
 = tidy-lark-9ebb0fc2a4:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_exif landscape_6
-tolerance identical
+tolerance off-by-one
 = drawn-crab-a5886ed262:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_exif landscape_7
-tolerance identical
+tolerance off-by-one
 = proud-jade-f9efb152df:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_exif landscape_8
-tolerance identical
+tolerance off-by-one
 = great-seed-248b16de1a:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_fit_pad_exif landscape_1
-tolerance identical
+tolerance off-by-one
 = dense-brick-1fdbcb0226:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_fit_pad_exif landscape_2
-tolerance identical
+tolerance off-by-one
 = long-ford-e4b2ab8f16:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_fit_pad_exif landscape_3
-tolerance identical
+tolerance off-by-one
 = roomy-clam-8ad4250d6c:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_fit_pad_exif landscape_4
-tolerance identical
+tolerance off-by-one
 = cheap-duck-ff9e532a8e:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_fit_pad_exif landscape_5
-tolerance identical
+tolerance off-by-one
 = false-fog-96040360f3:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_fit_pad_exif landscape_6
-tolerance identical
+tolerance off-by-one
 = free-den-0a6d13525e:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_fit_pad_exif landscape_7
-tolerance identical
+tolerance off-by-one
 = deep-cloud-4badb09936:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Landscape_1
-tolerance identical
+tolerance off-by-one
 = major-finch-a36f62a66e:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Landscape_2
-tolerance identical
+tolerance off-by-one
 = damp-snow-6d4ea7726c:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Landscape_3
-tolerance identical
+tolerance off-by-one
 = foggy-reef-527f38f8ff:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Landscape_4
-tolerance identical
+tolerance off-by-one
 = crisp-song-b9b6587692:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Landscape_5
-tolerance identical
+tolerance off-by-one
 = firm-pearl-87953b338f:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation Landscape_6
-tolerance identical
+tolerance off-by-one
 = icy-flux-c678a14d96:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_1
-tolerance identical
+tolerance off-by-one
 = equal-plum-2e18b91600:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_2
-tolerance identical
+tolerance off-by-one
 = major-eagle-8311df5efd:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_3
-tolerance identical
+tolerance off-by-one
 = sharp-beam-1b8b3faf8b:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_4
-tolerance identical
+tolerance off-by-one
 = hardy-ledge-f07e3e665c:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_5
-tolerance identical
+tolerance off-by-one
 = lazy-moon-a77adfb9f3:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_6
-tolerance identical
+tolerance off-by-one
 = ionic-gull-803aafb644:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_7
-tolerance identical
+tolerance off-by-one
 = cool-beam-a9eb293ee9:sea  x86_64-avx512  @8ca16e2d  new-baseline

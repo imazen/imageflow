@@ -74,16 +74,15 @@ fn run_idct_test(
 
     let ctx = ChecksumCtx::visuals();
     let bitmap_key = bit.bitmap_key(&context).unwrap();
+    let tolerance = zensim_regress::checksum_file::ToleranceSpec::off_by_one();
     let matched = evaluate_result(
         &ctx,
         identity.module,
         identity.func_name,
         detail,
         ResultKind::Bitmap { context: &context, key: bitmap_key },
-        Constraints {
-            similarity: Similarity::AllowOffByOneBytesCount(500),
-            max_file_size: None,
-        },
+        &tolerance,
+        None,
         Some(source_url),
         true,
     );

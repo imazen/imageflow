@@ -132,10 +132,7 @@ fn test_branching_crop_whitespace() {
     let _ = build_framewise(&mut context, framewise, io_vec, None, false).unwrap();
 
     let ctx = ChecksumCtx::visuals();
-    let require = Constraints {
-        similarity: Similarity::AllowDssimMatch(0.0, 0.002),
-        max_file_size: None,
-    };
+    let tol_spec = Similarity::AllowDssimMatch(0.0, 0.002).to_tolerance_spec();
 
     for output_io_id in [1, 2] {
         let detail = format!("gradient_output_{output_io_id}");
@@ -146,7 +143,8 @@ fn test_branching_crop_whitespace() {
             identity.func_name,
             &detail,
             ResultKind::Bytes(&bytes),
-            require.clone(),
+            &tol_spec,
+            None,
             Some(source_url),
             true,
         );

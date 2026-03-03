@@ -207,23 +207,23 @@ macro_rules! visual_check_steps {
 /// # Optional fields
 ///
 /// - `detail`: Discriminant for multiple comparisons (default: "")
-/// - `allowed_off_by_one`: Max off-by-one byte count (default: 500)
+/// - `tolerance`: `ToleranceSpec` (default: `ToleranceSpec::off_by_one()`)
 macro_rules! visual_check_bitmap {
     // Single source variant
     (
         source: $source:expr,
         $( detail: $detail:expr, )?
         steps: $steps:expr,
-        $( allowed_off_by_one: $obo:expr, )?
+        $( tolerance: $tol:expr, )?
     ) => {{
         let identity = test_identity!();
         let detail: &str = visual_check!(@detail $( $detail )?);
-        let allowed: usize = visual_check_bitmap!(@obo $( $obo )?);
+        let tolerance = visual_check_bitmap!(@tol $( $tol )?);
         let source_url = visual_check!(@source_url $source);
         let inputs = vec![
             $crate::common::IoTestEnum::Url(source_url.clone()),
         ];
-        $crate::common::compare_bitmap(inputs, &identity, detail, Some(&source_url), $steps, allowed);
+        $crate::common::compare_bitmap(inputs, &identity, detail, Some(&source_url), $steps, &tolerance);
     }};
 
     // Multi-source variant (e.g., watermark tests)
@@ -231,30 +231,30 @@ macro_rules! visual_check_bitmap {
         sources: [$( $source:expr ),+ $(,)?],
         $( detail: $detail:expr, )?
         steps: $steps:expr,
-        $( allowed_off_by_one: $obo:expr, )?
+        $( tolerance: $tol:expr, )?
     ) => {{
         let identity = test_identity!();
         let detail: &str = visual_check!(@detail $( $detail )?);
-        let allowed: usize = visual_check_bitmap!(@obo $( $obo )?);
+        let tolerance = visual_check_bitmap!(@tol $( $tol )?);
         let inputs = vec![
             $( $crate::common::IoTestEnum::Url(visual_check!(@source_url $source)), )+
         ];
         // Multi-source: no single source for zensim comparison
-        $crate::common::compare_bitmap(inputs, &identity, detail, None, $steps, allowed);
+        $crate::common::compare_bitmap(inputs, &identity, detail, None, $steps, &tolerance);
     }};
 
     // No source variant (canvas tests)
     (
         $( detail: $detail:expr, )?
         steps: $steps:expr,
-        $( allowed_off_by_one: $obo:expr, )?
+        $( tolerance: $tol:expr, )?
     ) => {{
         let identity = test_identity!();
         let detail: &str = visual_check!(@detail $( $detail )?);
-        let allowed: usize = visual_check_bitmap!(@obo $( $obo )?);
-        $crate::common::compare_bitmap(vec![], &identity, detail, None, $steps, allowed);
+        let tolerance = visual_check_bitmap!(@tol $( $tol )?);
+        $crate::common::compare_bitmap(vec![], &identity, detail, None, $steps, &tolerance);
     }};
 
-    (@obo) => { 500usize };
-    (@obo $obo:expr) => { $obo };
+    (@tol) => { zensim_regress::checksum_file::ToleranceSpec::off_by_one() };
+    (@tol $tol:expr) => { $tol };
 }

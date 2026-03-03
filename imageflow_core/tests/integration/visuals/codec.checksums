@@ -1,13 +1,13 @@
 ## test_negatives_in_command_string red_leaf_negative_height
-tolerance identical
+tolerance off-by-one
 = short-fern-3a18947ea1:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_rot_90_and_red_dot landscape_70x70
-tolerance identical
+tolerance off-by-one
 = prone-owl-3a3d75df9b:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_rot_90_and_red_dot_command_string landscape_70x70
-tolerance identical
+tolerance off-by-one
 = close-larch-796effad97:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_branching_crop_whitespace gradient_output_2
@@ -23,7 +23,7 @@ tolerance d:2 s:0
 = false-reed-eb43f7fd24:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## decode_rgb_with_cmyk_profile_jpeg wrenches_ignore_icc
-tolerance identical
+tolerance off-by-one
 = great-snail-b22fce67f5:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_transparent_webp_to_webp lossless_100x100
@@ -43,7 +43,7 @@ tolerance identical
 = moot-song-b4af647101:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_crop waterhouse_100x200
-tolerance identical
+tolerance off-by-one
 = cross-dust-04763ef509:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_transparent_png_to_jpeg shirt
@@ -51,7 +51,7 @@ tolerance d:2 s:99.8
 = final-otter-e6b0565eaf:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_crop_with_preshrink 170x220_crop
-tolerance identical
+tolerance off-by-one
 = mild-pond-a88cf0d96f:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_transparent_png_to_png shirt
@@ -59,7 +59,7 @@ tolerance identical
 = loud-stork-e3a76d92e7:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## decode_cmyk_jpeg logo_passthrough
-tolerance identical
+tolerance off-by-one
 = bulk-mare-1741a4171a:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_problematic_png_lossy crop_1230x760
@@ -71,9 +71,9 @@ tolerance d:2 s:99.8
 = cold-sand-b519344065:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_simple landscape_within_70x70
-tolerance identical
+tolerance off-by-one
 = major-finch-a36f62a66e:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_simple_rot_90 landscape_70x70
-tolerance identical
+tolerance off-by-one
 = bone-drum-452a7c1706:sea  x86_64-avx512  @8ca16e2d  new-baseline

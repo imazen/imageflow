@@ -455,7 +455,7 @@ pub enum Similarity {
 
 impl Similarity {
     /// Convert to a `ToleranceSpec` for recording in `.checksums` files.
-    fn to_tolerance_spec(&self) -> zensim_regress::checksum_file::ToleranceSpec {
+    pub fn to_tolerance_spec(&self) -> zensim_regress::checksum_file::ToleranceSpec {
         use zensim_regress::checksum_file::ToleranceSpec;
         match *self {
             Similarity::AllowOffByOneBytesCount(n) => {
@@ -591,13 +591,13 @@ fn compare_bitmaps_zensim(
     report.passed()
 }
 
-pub fn check_size(result: &ResultKind, require: Constraints, panic: bool) -> bool {
+pub fn check_size(result: &ResultKind, max_file_size: Option<usize>, panic: bool) -> bool {
     if let ResultKind::Bytes(actual_bytes) = *result {
-        if actual_bytes.len() > require.max_file_size.unwrap_or(actual_bytes.len()) {
+        if actual_bytes.len() > max_file_size.unwrap_or(actual_bytes.len()) {
             let message = format!(
                 "Encoded size ({}) exceeds limit ({})",
                 actual_bytes.len(),
-                require.max_file_size.unwrap()
+                max_file_size.unwrap()
             );
             if panic {
                 panic!("{}", &message);
@@ -621,7 +621,7 @@ pub fn compare_with<'a>(
     require: Constraints,
     do_panic: bool,
 ) -> bool {
-    if !check_size(&result, require.clone(), do_panic) {
+    if !check_size(&result, require.max_file_size, do_panic) {
         return false;
     }
 
@@ -726,15 +726,15 @@ pub fn evaluate_result<'a>(
     test_name: &str,
     detail_name: &str,
     mut result: ResultKind<'a>,
-    require: Constraints,
+    tolerance: &zensim_regress::checksum_file::ToleranceSpec,
+    max_file_size: Option<usize>,
     source_url: Option<&str>,
     do_panic: bool,
 ) -> bool {
-    if !check_size(&result, require.clone(), do_panic) {
+    if !check_size(&result, max_file_size, do_panic) {
         return false;
     }
-    let tol_spec = require.similarity.to_tolerance_spec();
-    let (exact, trusted, actual) = result.exact_match(c, module, test_name, detail_name, Some(&tol_spec));
+    let (exact, trusted, actual) = result.exact_match(c, module, test_name, detail_name, Some(tolerance));
     if exact == ChecksumMatch::Match {
         return true;
     }
@@ -751,7 +751,7 @@ pub fn evaluate_result<'a>(
     eprintln!("--- Checksum mismatch for '{flat_name}' ---");
 
     // Load both bitmaps and compare via zensim-regress
-    let tolerance = tol_spec.to_regression_tolerance(zensim_regress::arch::detect_arch_tag());
+    let reg_tolerance = tolerance.to_regression_tolerance(zensim_regress::arch::detect_arch_tag());
     let close_enough = {
         let (expected_context, expected_bitmap_key) = c.load_image(&trusted);
         let expected_bitmaps = expected_context.borrow_bitmaps().map_err(|e| e.at(here!())).unwrap();
@@ -773,13 +773,13 @@ pub fn evaluate_result<'a>(
             .map_err(|e| e.at(here!())).unwrap();
         let actual_window = actual_bm.get_window_u8().unwrap();
 
-        compare_bitmaps_zensim(&actual_window, &expected_window, &tolerance, do_panic)
+        compare_bitmaps_zensim(&actual_window, &expected_window, &reg_tolerance, do_panic)
     };
 
     if close_enough {
         eprintln!(
-            "--- '{flat_name}': checksum mismatch within tolerance ({:?}) ---",
-            require.similarity
+            "--- '{flat_name}': checksum mismatch within tolerance ({}) ---",
+            zensim_regress::diff_summary::format_tolerance_shorthand(tolerance)
         );
 
         // Auto-accept to .checksums if within tolerance
@@ -857,6 +857,7 @@ pub fn compare_encoded(
     let bytes = context.take_output_buffer(output_io_id).unwrap();
 
     let ctx = ChecksumCtx::visuals();
+    let tol_spec = require.similarity.to_tolerance_spec();
 
     evaluate_result(
         &ctx,
@@ -864,7 +865,8 @@ pub fn compare_encoded(
         identity.func_name,
         detail,
         ResultKind::Bytes(&bytes),
-        require,
+        &tol_spec,
+        require.max_file_size,
         source_url,
         true,
     )
@@ -880,7 +882,7 @@ pub fn compare_bitmap(
     detail: &str,
     source_url: Option<&str>,
     mut steps: Vec<s::Node>,
-    allowed_off_by_one_bytes: usize,
+    tolerance: &zensim_regress::checksum_file::ToleranceSpec,
 ) -> bool {
     let mut context = Context::create().unwrap();
     let mut bit = BitmapBgraContainer::empty();
@@ -899,10 +901,8 @@ pub fn compare_bitmap(
         identity.func_name,
         detail,
         ResultKind::Bitmap { context: &context, key: bitmap_key },
-        Constraints {
-            similarity: Similarity::AllowOffByOneBytesCount(allowed_off_by_one_bytes as i64),
-            max_file_size: None,
-        },
+        tolerance,
+        None,
         source_url,
         true,
     )
