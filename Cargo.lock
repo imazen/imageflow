@@ -1383,6 +1383,7 @@ dependencies = [
  "utoipa",
  "uuid",
  "walkdir",
+ "zensim",
  "zensim-regress",
  "zune-bmp",
 ]

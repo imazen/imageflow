@@ -1201,10 +1201,75 @@ pub fn evaluate_result<'a>(
     }
 }
 
+/// Compute zensim quality score of the actual output vs the original source.
+///
+/// Returns `None` if dimensions differ (pipeline resized/cropped), if either
+/// image can't be loaded, or if the source URL can't be fetched. Only produces
+/// a meaningful score for same-dimension comparisons (encode-only, passthrough).
+fn compute_zensim_vs_source(
+    c: &ChecksumCtx,
+    actual_checksum: &str,
+    source_url: &str,
+) -> Option<f64> {
+    use zensim::{PixelFormat, StridedBytes, Zensim, ZensimProfile};
+
+    // Load actual output bitmap (already saved to disk during checksum)
+    let (actual_ctx, actual_key) = c.load_image(actual_checksum);
+    let actual_bitmaps = actual_ctx.borrow_bitmaps().ok()?;
+    let mut actual_bm = actual_bitmaps.try_borrow_mut(actual_key).ok()?;
+    let actual_window = actual_bm.get_window_u8()?;
+    let (aw, ah) = (actual_window.w() as usize, actual_window.h() as usize);
+    let actual_stride = actual_window.info().t_stride() as usize;
+
+    // Load and decode source image
+    let mut source_ctx = Context::create().ok()?;
+    if source_url.starts_with("http://") || source_url.starts_with("https://") {
+        let bytes = get_url_bytes_with_retry(source_url).ok()?;
+        unsafe { source_ctx.add_input_bytes(0, &bytes) }.ok()?;
+    } else {
+        source_ctx.add_file(0, s::IoDirection::In, source_url).ok()?;
+    };
+    let source_key = decode_image(&mut source_ctx, 0);
+    let source_bitmaps = source_ctx.borrow_bitmaps().ok()?;
+    let mut source_bm = source_bitmaps.try_borrow_mut(source_key).ok()?;
+    let source_window = source_bm.get_window_u8()?;
+    let (sw, sh) = (source_window.w() as usize, source_window.h() as usize);
+    let source_stride = source_window.info().t_stride() as usize;
+
+    // Dimensions must match for zensim comparison
+    if aw != sw || ah != sh {
+        return None;
+    }
+    // Minimum 8×8 for zensim
+    if aw < 8 || ah < 8 {
+        return None;
+    }
+
+    let actual_slice = actual_window.get_slice();
+    let source_slice = source_window.get_slice();
+
+    let actual_img =
+        StridedBytes::try_new(actual_slice, aw, ah, actual_stride, PixelFormat::Srgb8Bgra).ok()?;
+    let source_img = StridedBytes::try_new(
+        source_slice,
+        sw,
+        sh,
+        source_stride,
+        PixelFormat::Srgb8Bgra,
+    )
+    .ok()?;
+
+    let z = Zensim::new(ZensimProfile::latest());
+    let result = z.compute(&source_img, &actual_img).ok()?;
+    Some(result.score)
+}
+
 /// Evaluates the given result against known truth using structured v2 identity.
 ///
 /// Uses `.checksums` v1 format as primary path, with TOML/JSON fallback.
 /// On mismatch within tolerance, auto-accepts to the `.checksums` file.
+/// When `source_url` is provided, computes zensim quality vs original source
+/// (same-dimension only) and records it in the `.checksums` diff summary.
 #[track_caller]
 pub fn evaluate_result_v2<'a>(
     c: &ChecksumCtx,
@@ -1213,6 +1278,7 @@ pub fn evaluate_result_v2<'a>(
     detail_name: &str,
     mut result: ResultKind<'a>,
     require: Constraints,
+    source_url: Option<&str>,
     do_panic: bool,
 ) -> bool {
     if !check_size(&result, require.clone(), do_panic) {
@@ -1253,6 +1319,17 @@ pub fn evaluate_result_v2<'a>(
         if std::env::var("UPDATE_CHECKSUMS").is_ok_and(|v| v == "1") {
             let v2_adapter = checksum_adapter::V2ChecksumAdapter::new(&c.visuals_dir);
             if let Some(actual) = c.get_actual(&flat_name) {
+                // Compute zensim quality vs original source (same-dimension only)
+                let diff_summary = source_url.and_then(|url| {
+                    match compute_zensim_vs_source(c, &actual, url) {
+                        Some(score) => {
+                            eprintln!("  zensim vs source: {score:.1}");
+                            Some(format!("src_zs:{score:.1}"))
+                        }
+                        None => None,
+                    }
+                });
+
                 if let Err(e) = v2_adapter.accept(
                     module,
                     test_name,
@@ -1260,7 +1337,7 @@ pub fn evaluate_result_v2<'a>(
                     &actual,
                     Some(&trusted),
                     None,
-                    None,
+                    diff_summary.as_deref(),
                 ) {
                     eprintln!("Warning: failed to auto-accept v2 {flat_name}: {e}");
                 }
@@ -1496,6 +1573,7 @@ pub fn compare_encoded_v2(
     input: Option<IoTestEnum>,
     identity: &TestIdentity,
     detail: &str,
+    source_url: Option<&str>,
     require: Constraints,
     steps: Vec<s::Node>,
 ) -> bool {
@@ -1527,6 +1605,7 @@ pub fn compare_encoded_v2(
         detail,
         ResultKind::Bytes(&bytes),
         require,
+        source_url,
         true,
     )
 }
@@ -1542,6 +1621,7 @@ pub fn compare_bitmap_v2(
     inputs: Vec<IoTestEnum>,
     identity: &TestIdentity,
     detail: &str,
+    source_url: Option<&str>,
     mut steps: Vec<s::Node>,
     allowed_off_by_one_bytes: usize,
 ) -> bool {
@@ -1566,6 +1646,7 @@ pub fn compare_bitmap_v2(
             similarity: Similarity::AllowOffByOneBytesCount(allowed_off_by_one_bytes as i64),
             max_file_size: None,
         },
+        source_url,
         true,
     )
 }

@@ -111,9 +111,10 @@ macro_rules! visual_check {
         ];
 
         $crate::common::compare_encoded_v2(
-            Some($crate::common::IoTestEnum::Url(source_url)),
+            Some($crate::common::IoTestEnum::Url(source_url.clone())),
             &identity,
             detail,
+            Some(&source_url),
             $crate::common::Constraints {
                 similarity,
                 max_file_size,
@@ -179,9 +180,10 @@ macro_rules! visual_check_steps {
         let max_file_size: Option<usize> = visual_check!(@max_file_size $( $max_file_size )?);
 
         $crate::common::compare_encoded_v2(
-            Some($crate::common::IoTestEnum::Url(source_url)),
+            Some($crate::common::IoTestEnum::Url(source_url.clone())),
             &identity,
             detail,
+            Some(&source_url),
             $crate::common::Constraints {
                 similarity,
                 max_file_size,
@@ -217,10 +219,11 @@ macro_rules! visual_check_bitmap {
         let identity = test_identity!();
         let detail: &str = visual_check!(@detail $( $detail )?);
         let allowed: usize = visual_check_bitmap!(@obo $( $obo )?);
+        let source_url = visual_check!(@source_url $source);
         let inputs = vec![
-            $crate::common::IoTestEnum::Url(visual_check!(@source_url $source)),
+            $crate::common::IoTestEnum::Url(source_url.clone()),
         ];
-        $crate::common::compare_bitmap_v2(inputs, &identity, detail, $steps, allowed);
+        $crate::common::compare_bitmap_v2(inputs, &identity, detail, Some(&source_url), $steps, allowed);
     }};
 
     // Multi-source variant (e.g., watermark tests)
@@ -236,7 +239,8 @@ macro_rules! visual_check_bitmap {
         let inputs = vec![
             $( $crate::common::IoTestEnum::Url(visual_check!(@source_url $source)), )+
         ];
-        $crate::common::compare_bitmap_v2(inputs, &identity, detail, $steps, allowed);
+        // Multi-source: no single source for zensim comparison
+        $crate::common::compare_bitmap_v2(inputs, &identity, detail, None, $steps, allowed);
     }};
 
     // No source variant (canvas tests)
@@ -248,7 +252,7 @@ macro_rules! visual_check_bitmap {
         let identity = test_identity!();
         let detail: &str = visual_check!(@detail $( $detail )?);
         let allowed: usize = visual_check_bitmap!(@obo $( $obo )?);
-        $crate::common::compare_bitmap_v2(vec![], &identity, detail, $steps, allowed);
+        $crate::common::compare_bitmap_v2(vec![], &identity, detail, None, $steps, allowed);
     }};
 
     (@obo) => { 500usize };
