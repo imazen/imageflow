@@ -1,4 +1,4 @@
-name = "test_branching_crop_whitespace gradient_output_1"
+name = "test_crop_with_preshrink 170x220_crop"
 
 [tolerance]
 max_channel_delta = 0
@@ -8,14 +8,14 @@ min_identical_channel_fraction = 1.0
 max_alpha_delta = 0
 
 [[checksum]]
-id = "006EB6624F7756938.png"
+id = "0951F5819DFF86EB2_09D5B46DC8E13B7B4"
 confidence = 0
 arch = ["x86_64-avx512"]
 reason = "migrated from checksums.json"
 status = "replaced"
 
 [[checksum]]
-id = "sea:b5193440651dcfe3.png"
+id = "sea:a88cf0d96fa1b7f4"
 confidence = 10
 commit = "576ef371"
 arch = ["x86_64-avx512"]

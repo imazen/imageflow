@@ -1,4 +1,4 @@
-name = "test_branching_crop_whitespace gradient_output_1"
+name = "test_watermark_image_on_png shirt_with_webp"
 
 [tolerance]
 max_channel_delta = 0
@@ -8,14 +8,14 @@ min_identical_channel_fraction = 1.0
 max_alpha_delta = 0
 
 [[checksum]]
-id = "006EB6624F7756938.png"
+id = "00AA224A4A91EE900_073B7BE0C1ABF189F"
 confidence = 0
 arch = ["x86_64-avx512"]
 reason = "migrated from checksums.json"
 status = "replaced"
 
 [[checksum]]
-id = "sea:b5193440651dcfe3.png"
+id = "sea:c8d51eb293b5bb25"
 confidence = 10
 commit = "576ef371"
 arch = ["x86_64-avx512"]

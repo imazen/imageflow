@@ -1,4 +1,4 @@
-name = "test_branching_crop_whitespace gradient_output_1"
+name = "test_jpeg_rotation_cropped/portrait_3"
 
 [tolerance]
 max_channel_delta = 0
@@ -8,14 +8,14 @@ min_identical_channel_fraction = 1.0
 max_alpha_delta = 0
 
 [[checksum]]
-id = "006EB6624F7756938.png"
+id = "00A30FB780185F509_05B6C838D00A967A0"
 confidence = 0
 arch = ["x86_64-avx512"]
 reason = "migrated from checksums.json"
 status = "replaced"
 
 [[checksum]]
-id = "sea:b5193440651dcfe3.png"
+id = "sea:1b8b3faf8be90b33"
 confidence = 10
 commit = "576ef371"
 arch = ["x86_64-avx512"]

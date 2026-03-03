@@ -1,4 +1,4 @@
-name = "test_branching_crop_whitespace gradient_output_1"
+name = "test_off_surface_region all_negative"
 
 [tolerance]
 max_channel_delta = 0
@@ -8,14 +8,14 @@ min_identical_channel_fraction = 1.0
 max_alpha_delta = 0
 
 [[checksum]]
-id = "006EB6624F7756938.png"
+id = "09FA1A44E855DFBB0_01D9D2C49A4E782F9"
 confidence = 0
 arch = ["x86_64-avx512"]
 reason = "migrated from checksums.json"
 status = "replaced"
 
 [[checksum]]
-id = "sea:b5193440651dcfe3.png"
+id = "sea:b3b19bf16c4e53c3"
 confidence = 10
 commit = "576ef371"
 arch = ["x86_64-avx512"]

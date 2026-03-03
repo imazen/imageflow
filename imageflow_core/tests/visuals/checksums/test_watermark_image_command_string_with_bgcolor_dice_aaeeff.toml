@@ -1,0 +1,38 @@
+name = "test_watermark_image_command_string_with_bgcolor dice_aaeeff"
+
+[tolerance]
+max_channel_delta = 0
+min_score = 100.0
+max_differing_pixel_fraction = 0.0
+min_identical_channel_fraction = 1.0
+max_alpha_delta = 0
+
+[[checksum]]
+id = "0ED10EA93A14399AB_0DE3336C466C67DD9"
+confidence = 0
+arch = ["x86_64-avx512"]
+reason = "migrated from checksums.json"
+status = "replaced"
+
+[[checksum]]
+id = "sea:dd75ce382adb9035"
+confidence = 0
+commit = "576ef371"
+arch = ["x86_64-avx512"]
+reason = "replaced baseline"
+status = "replaced"
+
+[[checksum]]
+id = "sea:dd75ce382adb9035"
+confidence = 0
+commit = "576ef371"
+arch = ["x86_64-avx512"]
+reason = "replaced baseline"
+status = "replaced"
+
+[[checksum]]
+id = "sea:dd75ce382adb9035"
+confidence = 10
+commit = "576ef371"
+arch = ["x86_64-avx512"]
+reason = "replaced baseline"

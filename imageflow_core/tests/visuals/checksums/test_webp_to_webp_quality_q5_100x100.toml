@@ -1,4 +1,4 @@
-name = "test_branching_crop_whitespace gradient_output_1"
+name = "test_webp_to_webp_quality q5_100x100"
 
 [tolerance]
 max_channel_delta = 0
@@ -8,14 +8,14 @@ min_identical_channel_fraction = 1.0
 max_alpha_delta = 0
 
 [[checksum]]
-id = "006EB6624F7756938.png"
+id = "042C3C137D1AED4D0.webp"
 confidence = 0
 arch = ["x86_64-avx512"]
 reason = "migrated from checksums.json"
 status = "replaced"
 
 [[checksum]]
-id = "sea:b5193440651dcfe3.png"
+id = "sea:eb43f7fd2445c301.webp"
 confidence = 10
 commit = "576ef371"
 arch = ["x86_64-avx512"]

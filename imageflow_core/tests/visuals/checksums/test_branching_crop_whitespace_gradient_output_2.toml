@@ -1,4 +1,4 @@
-name = "test_branching_crop_whitespace_gradient_output_2"
+name = "test_branching_crop_whitespace gradient_output_2"
 
 [tolerance]
 max_channel_delta = 0
