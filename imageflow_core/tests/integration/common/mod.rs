@@ -16,6 +16,7 @@ use std::path::Path;
 use imageflow_core;
 use std::path::PathBuf;
 use std::pin::Pin;
+use std::io::Write as _;
 use std::{self, panic};
 
 use imageflow_core::BitmapKey;
@@ -614,12 +615,15 @@ fn bitmap_to_rgba_bytes(bm: &BitmapWindowMut<u8>, w: u32, h: u32) -> Vec<u8> {
 }
 
 /// Show a 3-panel sixel comparison (Expected | Actual | Diff x10) to stdout.
+/// Flushes stderr first so the error message appears before the image.
 fn show_sixel_diff(
     expected: &BitmapWindowMut<u8>,
     actual: &BitmapWindowMut<u8>,
     w: u32,
     h: u32,
 ) {
+    // Flush stderr so the error report appears before the sixel image
+    let _ = std::io::stderr().flush();
     let exp_rgba = bitmap_to_rgba_bytes(expected, w, h);
     let act_rgba = bitmap_to_rgba_bytes(actual, w, h);
     zensim_regress::display::print_comparison_raw(&exp_rgba, &act_rgba, w, h, 10, Some(600));
