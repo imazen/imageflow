@@ -292,7 +292,7 @@ fn test_output_weight() {
     }
     assert_eq!(
         output.trim(),
-        include_str!("../visuals/weights.txt").to_string().trim().replace("\r\n", "\n")
+        include_str!("weights.txt").to_string().trim().replace("\r\n", "\n")
     );
 }
 
