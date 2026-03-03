@@ -11,7 +11,6 @@ use bitmap_diff_stats::*;
 
 use imageflow_core::graphics::bitmaps::BitmapWindowMut;
 use imageflow_core::{Context, ErrorKind, FlowError};
-use std::ffi::CString;
 use std::marker::PhantomPinned;
 use std::path::Path;
 
@@ -245,9 +244,6 @@ impl ChecksumCtx {
 
     pub fn image_path_string(&self, checksum: &str) -> String {
         self.image_path(checksum).into_os_string().into_string().unwrap()
-    }
-    pub fn image_path_cstring(&self, checksum: &str) -> CString {
-        CString::new(self.image_path_string(checksum)).unwrap()
     }
     /// Fetch the given image to disk
     pub fn fetch_image(&self, checksum: &str) {
@@ -539,6 +535,7 @@ fn get_imgref_bgra32(b: &mut BitmapWindowMut<u8>) -> imgref::ImgVec<rgb::Rgba<f3
     imgref::Img::new_stride(cast_to_bgra8.to_rgbaplu(), w, h, new_stride)
 }
 
+#[allow(dead_code)]
 pub struct CompareBitmapsResult {
     pub stats: Option<BitmapDiffStats>,
     pub dssim: Option<f64>,
