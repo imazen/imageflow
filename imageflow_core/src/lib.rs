@@ -16,9 +16,11 @@ mod codecs;
 mod context;
 mod flow;
 pub mod graphics;
+
 mod io;
 pub mod json;
 
+pub use crate::codecs::cms::CmsBackend;
 pub use crate::codecs::NamedDecoders;
 pub use crate::context::Context;
 pub use crate::context::ThreadSafeContext;
