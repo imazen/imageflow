@@ -142,6 +142,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Checkout zensim (sibling dependency)
+        run: git clone --depth 1 https://github.com/imazen/zensim.git ../zensim
+
       - name: Parse version
         uses: ./.github/actions/parse-version
         id: parse_version
@@ -246,6 +249,8 @@ jobs:
       # TESTS ---------------------------------------------------------------------
       - name: "cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
         run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
+        env:
+          REGRESS_MANIFEST_DIR: ${{ github.workspace }}/.image-cache/manifests
         if: matrix.cross != 'true'
 
       - name: "cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
@@ -255,7 +260,40 @@ jobs:
           target: ${{ matrix.target }}
           args: "${{ env.CROSS_ARGS }}"
           force-use-cross: ${{ matrix.force-cross == 'true' || false }}
+        env:
+          CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zensim:${{ github.workspace }}/../zensim"
+          REGRESS_MANIFEST_DIR: ${{ github.workspace }}/.image-cache/manifests
         if: matrix.cross == 'true'
+
+      - name: Generate regression report
+        run: |
+          cargo run --manifest-path ../zensim/Cargo.toml -p zensim-regress --bin regress_report -- \
+            --manifest-dir .image-cache/manifests \
+            --diffs-dir .image-cache/diffs \
+            --platform "${{ matrix.name }}" \
+            --combine-output .image-cache/test-manifest.tsv \
+            -o .image-cache/regression-report.html
+        if: always() && hashFiles('.image-cache/manifests/*.tsv') != ''
+
+      - name: Upload updated checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums-${{ matrix.name }}
+          path: imageflow_core/tests/integration/visuals/*.checksums
+        if: always()
+
+      - name: Upload test output images (for debugging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-outputs-${{ matrix.name }}
+          path: |
+            .image-cache/outputs/
+            .image-cache/diffs/
+            .image-cache/manifests/
+            .image-cache/test-manifest.tsv
+            .image-cache/regression-report.html
+          if-no-files-found: ignore
+        if: always()
 
       # BUILD ---------------------------------------------------------------------
       - name: "cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
@@ -270,6 +308,8 @@ jobs:
           target: ${{ matrix.target }}
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
           force-use-cross: ${{ matrix.force-cross == 'true' || false }}
+        env:
+          CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zensim:${{ github.workspace }}/../zensim"
         if: matrix.cross == 'true'
 
 
