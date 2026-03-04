@@ -80,9 +80,8 @@ libpng-sys = { version = "1.1.9", features = ["static", "static-libz", "libz-sys
 schemars = { version = "1", features = ["derive"], optional = true }
 
 [dev-dependencies]
+fs2 = "0.4.3"
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
-dssim = "3.3.4"
-load_image = "3.3.2"
 criterion = "0.8"
 rand = "*"
 include_dir = { version = "0.7.4", features = ["glob"] }
@@ -91,6 +90,10 @@ walkdir = "2"
 csv = "1"
 rayon = "1"
 colorutils-rs = "0.7"
+zensim-regress = { path = "../../zensim/zensim-regress" }
+zensim = { path = "../../zensim/zensim" }
+seahash = "4"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [features]
 default = []

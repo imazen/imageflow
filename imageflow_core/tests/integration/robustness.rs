@@ -5,11 +5,17 @@
 use imageflow_core::Context;
 use imageflow_types as s;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Helper to create a context
 fn create_context() -> Box<Context> {
     Context::create().expect("Failed to create context")
+}
+
+/// Returns the imageflow repo root directory.
+fn repo_root() -> PathBuf {
+    // CARGO_MANIFEST_DIR is imageflow_core/
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..")
 }
 
 // =============================================================================
@@ -212,23 +218,9 @@ fn test_bitmap_canvas_i32_overflow() {
 // ICC profile and EXIF handling tests
 // =============================================================================
 
-fn create_decode_encode_job() -> s::Build001 {
-    s::Build001 {
-        builder_config: None,
-        io: vec![],
-        framewise: s::Framewise::Steps(vec![
-            s::Node::Decode { io_id: 0, commands: None },
-            s::Node::Encode {
-                io_id: 1,
-                preset: s::EncoderPreset::Lodepng { maximum_deflate: None },
-            },
-        ]),
-    }
-}
-
 #[test]
 fn test_icc_profile_handling() {
-    let test_jpg = Path::new("/home/lilith/work/imageflow/examples/export_4_sizes/waterhouse.jpg");
+    let test_jpg = repo_root().join("examples/export_4_sizes/waterhouse.jpg");
 
     if test_jpg.exists() {
         let jpg_bytes = fs::read(test_jpg).expect("Failed to read test JPEG");
@@ -258,7 +250,7 @@ fn test_icc_profile_handling() {
 
 #[test]
 fn test_exif_parsing_with_real_jpeg() {
-    let test_jpg = Path::new("/home/lilith/work/imageflow/examples/export_4_sizes/waterhouse.jpg");
+    let test_jpg = repo_root().join("examples/export_4_sizes/waterhouse.jpg");
 
     if test_jpg.exists() {
         let jpg_bytes = fs::read(test_jpg).expect("Failed to read test JPEG");
@@ -429,11 +421,11 @@ fn test_png_icc_lifetime() {
     // Test PNG ICC profile handling — the ICC buffer must remain valid for the
     // duration of processing. Run under valgrind/ASAN for full detection.
 
-    let test_pngs =
-        ["/home/lilith/work/imageflow/imageflow_core/tests/visuals/01864661ED8AB31EF.png"];
+    let visuals_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/visuals");
+    let test_pngs = [visuals_dir.join("01864661ED8AB31EF.png")];
 
     for png_path in &test_pngs {
-        if Path::new(png_path).exists() {
+        if png_path.exists() {
             let png_bytes = fs::read(png_path).expect("Failed to read PNG");
 
             let mut ctx = create_context();
@@ -444,7 +436,7 @@ fn test_png_icc_lifetime() {
                 Ok(i) => {
                     println!(
                         "PNG info retrieved for {}: {}x{}",
-                        png_path, i.image_width, i.image_height
+                        png_path.display(), i.image_width, i.image_height
                     );
                     println!("Note: Use valgrind/ASAN to detect lifetime issues");
                 }

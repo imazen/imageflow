@@ -11,6 +11,7 @@ on:
       - published
 
 env:
+    ZENSIM_TOOLS_VERSION: "tools-v0.1.0"
     # env. context is not available, so we set these in github org vars
     IMAGEFLOW_RELEASE_BUCKET: ${{ vars.IMAGEFLOW_RELEASE_BUCKET || 'imageflow-nightlies' }}
     IMAGEFLOW_RELEASE_BUCKET_REGION: ${{ vars.IMAGEFLOW_RELEASE_BUCKET_REGION || 'us-west-1' }}
@@ -140,7 +141,10 @@ jobs:
 
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Checkout zensim (sibling dependency)
+        run: git clone --depth 1 https://github.com/imazen/zensim.git ../zensim
 
       - name: Parse version
         uses: ./.github/actions/parse-version
@@ -164,6 +168,20 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         if: matrix.cross != 'true'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+        if: matrix.cross == 'true' && matrix.force-cross != 'true'
+
+      - name: Install musl-tools
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+        if: contains(matrix.target, 'musl')
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
 
       - name: Install i686 target
         if: ${{ matrix.target == 'i686-pc-windows-msvc' && matrix.cross != 'true' }}
@@ -244,18 +262,82 @@ jobs:
 
 
       # TESTS ---------------------------------------------------------------------
-      - name: "cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-        run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
+      - name: "cargo nextest run --all --locked --profile ci ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
+        run: cargo nextest run --all --locked --profile ci ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
+        env:
+          REGRESS_MANIFEST_DIR: ${{ github.workspace }}/.image-cache/manifests
         if: matrix.cross != 'true'
 
-      - name: "cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
-        uses: houseabsolute/actions-rust-cross@v1.0.2
+      - name: Install cross
+        uses: taiki-e/install-action@v2
         with:
-          command: "test"
-          target: ${{ matrix.target }}
-          args: "${{ env.CROSS_ARGS }}"
-          force-use-cross: ${{ matrix.force-cross == 'true' || false }}
+          tool: cross
+        if: matrix.force-cross == 'true'
+
+      - name: "nextest run (cross) --target ${{ matrix.target }} ${{ env.CROSS_ARGS }} --profile ci"
+        shell: bash
+        run: |
+          if [ "${{ matrix.force-cross }}" = "true" ]; then
+            cross nextest run --target ${{ matrix.target }} ${{ env.CROSS_ARGS }} --profile ci
+          else
+            cargo nextest run --target ${{ matrix.target }} ${{ env.CROSS_ARGS }} --profile ci
+          fi
+        env:
+          CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zensim:${{ github.workspace }}/../zensim"
+          REGRESS_MANIFEST_DIR: ${{ github.workspace }}/.image-cache/manifests
         if: matrix.cross == 'true'
+
+      - name: Download regress_report
+        shell: bash
+        run: |
+          case "${{ runner.os }}-${{ runner.arch }}" in
+            Linux-X64)   ASSET="regress_report-linux-x64" ;;
+            Linux-ARM64) ASSET="regress_report-linux-arm64" ;;
+            macOS-X64)   ASSET="regress_report-macos-x64" ;;
+            macOS-ARM64) ASSET="regress_report-macos-arm64" ;;
+            Windows-X64)   ASSET="regress_report-windows-x64.exe" ;;
+            Windows-ARM64) ASSET="regress_report-windows-arm64.exe" ;;
+            *) echo "Unknown platform: ${{ runner.os }}-${{ runner.arch }}"; exit 1 ;;
+          esac
+          gh release download "${{ env.ZENSIM_TOOLS_VERSION }}" \
+            --repo imazen/zensim \
+            --pattern "$ASSET" \
+            --output regress_report${{ contains(runner.os, 'Windows') && '.exe' || '' }}
+          chmod +x regress_report${{ contains(runner.os, 'Windows') && '.exe' || '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        if: always() && hashFiles('.image-cache/manifests/*.tsv') != ''
+
+      - name: Generate regression report
+        shell: bash
+        run: |
+          ./regress_report${{ contains(runner.os, 'Windows') && '.exe' || '' }} \
+            --manifest-dir .image-cache/manifests \
+            --diffs-dir .image-cache/diffs \
+            --platform "${{ matrix.name }}" \
+            --combine-output .image-cache/test-manifest.tsv \
+            -o .image-cache/regression-report.html
+        if: always() && hashFiles('.image-cache/manifests/*.tsv') != ''
+
+      - name: Upload updated checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums-${{ matrix.name }}
+          path: imageflow_core/tests/integration/visuals/*.checksums
+        if: always()
+
+      - name: Upload test output images (for debugging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-outputs-${{ matrix.name }}
+          path: |
+            .image-cache/outputs/
+            .image-cache/diffs/
+            .image-cache/manifests/
+            .image-cache/test-manifest.tsv
+            .image-cache/regression-report.html
+          if-no-files-found: ignore
+        if: always()
 
       # BUILD ---------------------------------------------------------------------
       - name: "cargo build --all ${{ env.BUILD_EXCLUDE }} ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
@@ -270,6 +352,8 @@ jobs:
           target: ${{ matrix.target }}
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
           force-use-cross: ${{ matrix.force-cross == 'true' || false }}
+        env:
+          CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zensim:${{ github.workspace }}/../zensim"
         if: matrix.cross == 'true'
 
 
@@ -289,7 +373,7 @@ jobs:
       # BUILD DOCUMENTATION ---------------------------------------------------------------------
       - name: "Build ${{ env.PROFILE }} Docs"
         run: cargo doc --all --no-deps ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
-        if: matrix.cross != 'true'
+        if: matrix.name == 'linux-x64-ubuntu-24'
 
       # CREATE ZIP/TAR FILES FOR UPLOAD ---------------------------------------------------------------------
       - name: "Create zip/tar files for S3/Release upload" # (always, so we know if it fails before we make a release)
@@ -527,6 +611,54 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
 
 
+  aggregate-regression:
+    needs: [build]
+    if: always()
+    runs-on: ubuntu-24.04
+    name: "Cross-platform regression report"
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: test-outputs-*
+          path: artifacts/
+
+      - name: Download regress_report
+        run: |
+          gh release download "${{ env.ZENSIM_TOOLS_VERSION }}" \
+            --repo imazen/zensim \
+            --pattern "regress_report-linux-x64" \
+            --output regress_report
+          chmod +x regress_report
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Generate merged regression report
+        run: |
+          PLATFORMS=()
+          for dir in artifacts/test-outputs-*/; do
+            name=$(basename "$dir" | sed 's/^test-outputs-//')
+            manifest_dir="$dir/manifests"
+            diffs_dir="$dir/diffs"
+            if [ -d "$manifest_dir" ] && ls "$manifest_dir"/*.tsv 1>/dev/null 2>&1; then
+              PLATFORMS+=("--platform" "$name" "--manifest-dir" "$manifest_dir")
+              if [ -d "$diffs_dir" ]; then
+                PLATFORMS+=("--diffs-dir" "$diffs_dir")
+              fi
+            fi
+          done
+          if [ ${#PLATFORMS[@]} -eq 0 ]; then
+            echo "No platforms produced manifests"
+            exit 0
+          fi
+          echo "Generating merged report for: ${PLATFORMS[*]}"
+          ./regress_report "${PLATFORMS[@]}" -o merged-regression-report.html
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: merged-regression-report
+          path: merged-regression-report.html
+          if-no-files-found: warn
+
   pack-and-publish-nuget:
     needs: [build]
     runs-on: ubuntu-latest # Use Linux for consistency in packing/pushing
@@ -543,7 +675,7 @@ jobs:
         run: echo "Starting NuGet pack, test, and publish job..."
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Parse version
         uses: ./.github/actions/parse-version
