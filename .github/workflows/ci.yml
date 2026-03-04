@@ -152,6 +152,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.name }}
+          workspaces: |
+            . -> target
+            ../zensim -> target
         if: matrix.cross != 'true'
 
       - name: Install 7z
@@ -265,10 +268,15 @@ jobs:
           REGRESS_MANIFEST_DIR: ${{ github.workspace }}/.image-cache/manifests
         if: matrix.cross == 'true'
 
+      - name: Build regression report tool
+        shell: bash
+        run: cargo build --manifest-path ../zensim/Cargo.toml -p zensim-regress --bin regress_report --release
+        if: always() && hashFiles('.image-cache/manifests/*.tsv') != ''
+
       - name: Generate regression report
         shell: bash
         run: |
-          cargo run --manifest-path ../zensim/Cargo.toml -p zensim-regress --bin regress_report -- \
+          ../zensim/target/release/regress_report \
             --manifest-dir .image-cache/manifests \
             --diffs-dir .image-cache/diffs \
             --platform "${{ matrix.name }}" \
@@ -613,8 +621,8 @@ jobs:
             exit 0
           fi
           echo "Generating merged report for: ${PLATFORMS[*]}"
-          cargo run --manifest-path ../zensim/Cargo.toml -p zensim-regress \
-            --bin regress_report -- "${PLATFORMS[@]}" -o merged-regression-report.html
+          cargo build --manifest-path ../zensim/Cargo.toml -p zensim-regress --bin regress_report --release
+          ../zensim/target/release/regress_report "${PLATFORMS[@]}" -o merged-regression-report.html
 
       - uses: actions/upload-artifact@v6
         with:
