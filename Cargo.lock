@@ -1310,6 +1310,7 @@ dependencies = [
  "fs2",
  "gif",
  "hex",
+ "image",
  "imageflow_c_components",
  "imageflow_helpers",
  "imageflow_http_helpers",

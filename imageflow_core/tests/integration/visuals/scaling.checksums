@@ -1,7 +1,7 @@
 ## test_jpeg_icc4_color_profile mars_v4_robidoux_400x300
-tolerance d:2 s:80 px:100.0%
+tolerance max-delta:2 zensim:80 (dissim 0.20) pixels-changed:100.0%
 = old-ant-f705618161:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ plain-forge-2bbaf351fa:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs old-ant-f705618161:sea
+~ plain-forge-2bbaf351fa:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs old-ant-f705618161:sea (zensim:99.85 (dissim 0.0015), 100.0% pixels ±1, max-delta:[0,1,0], category:rounding, biased)
 ~ raw-otter-b8c900dccf:sea  aarch64-windows  @ace43a05  auto-accepted vs old-ant-f705618161:sea  diff d:2 s:82.9 px:100.0%
 
 ## test_scale_rings hermite_400x400

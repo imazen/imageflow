@@ -11,7 +11,7 @@ tolerance off-by-one
 ## test_watermark_image_on_png shirt_with_webp
 tolerance off-by-one
 = novel-pulse-c8d51eb293:sea  x86_64-avx512  @8ca16e2d  human-verified
-~ elite-mace-1b22fb8dfd:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs novel-pulse-c8d51eb293:sea
+~ elite-mace-1b22fb8dfd:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs novel-pulse-c8d51eb293:sea (zensim:98.42 (dissim 0.016), 11.1% pixels ±2, max-delta:[2,1,1], category:rounding, biased)
 
 ## test_watermark_image_small webp_within_90pct
 tolerance off-by-one
@@ -20,7 +20,7 @@ tolerance off-by-one
 ## test_watermark_jpeg_over_pnga gamma_test_30pct
 tolerance off-by-one
 = damp-maple-85c54bb4a8:sea  x86_64-avx512  @8ca16e2d  human-verified
-~ damp-palm-cef4e7d314:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs damp-maple-85c54bb4a8:sea
+~ damp-palm-cef4e7d314:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs damp-maple-85c54bb4a8:sea (zensim:98.65 (dissim 0.013), 7.6% pixels ±3, max-delta:[3,3,3], category:rounding, biased)
 
 ## test_watermark_image_command_string_with_bgcolor dice_aaeeff
 tolerance off-by-one

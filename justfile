@@ -36,6 +36,33 @@ upload:
 verify-uploads:
     cargo test -p imageflow_core --test integration verify_upload_log -- --ignored --nocapture
 
+# Backfill diff stats on auto-accepted entries (downloads images from S3)
+backfill-diffs:
+    cargo test -p imageflow_core --test integration backfill_diff_stats -- --ignored --nocapture
+
+# Download checksums from latest CI run for a specific platform
+accept-ci platform branch="ci-speedup":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    RUN_ID=$(gh run list --branch "{{branch}}" --limit 1 --json databaseId --jq '.[0].databaseId')
+    if [ -z "$RUN_ID" ]; then
+        echo "No CI runs found for branch {{branch}}"
+        exit 1
+    fi
+    echo "Downloading checksums-{{platform}} from run $RUN_ID..."
+    TMPDIR=$(mktemp -d)
+    trap 'rm -rf "$TMPDIR"' EXIT
+    gh run download "$RUN_ID" --name "checksums-{{platform}}" --dir "$TMPDIR"
+    VISUALS=imageflow_core/tests/integration/visuals
+    for f in "$TMPDIR"/*.checksums; do
+        base=$(basename "$f")
+        if [ -f "$VISUALS/$base" ]; then
+            cp "$f" "$VISUALS/$base"
+            echo "Updated: $base"
+        fi
+    done
+    echo "Done. Review changes with: git diff $VISUALS/"
+
 # Check the whole workspace
 check:
     cargo check --workspace

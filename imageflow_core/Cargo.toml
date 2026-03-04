@@ -93,6 +93,7 @@ colorutils-rs = "0.7"
 zensim-regress = { path = "../../zensim/zensim-regress" }
 zensim = { path = "../../zensim/zensim" }
 seahash = "4"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [features]
 default = []
