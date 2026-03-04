@@ -159,7 +159,7 @@ fn test_webp_to_webp_quality() {
         source: "test_inputs/1_webp_ll.webp",
         detail: "q5_100x100",
         command: "format=webp&width=100&height=100&quality=5",
-        similarity: Similarity::MaxZdsim(1.0),
+        similarity: Similarity::MaxZdsim(0.05),
         max_file_size: 2000,
     }
 }

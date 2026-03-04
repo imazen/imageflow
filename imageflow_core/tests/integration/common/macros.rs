@@ -119,7 +119,7 @@ macro_rules! visual_check {
             detail,
             Some(&source_url),
             $crate::common::Constraints {
-                similarity,
+                similarity: Some(similarity),
                 max_file_size,
             },
             steps,
@@ -190,7 +190,7 @@ macro_rules! visual_check_steps {
             detail,
             Some(&source_url),
             $crate::common::Constraints {
-                similarity,
+                similarity: Some(similarity),
                 max_file_size,
             },
             $steps,

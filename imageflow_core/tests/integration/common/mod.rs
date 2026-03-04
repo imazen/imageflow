@@ -363,6 +363,11 @@ impl Similarity {
                 ..Tolerance::exact()
             },
             Similarity::MaxZdsim(max_zdsim) => {
+                assert!(
+                    max_zdsim < 1.0,
+                    "MaxZdsim({max_zdsim}) is >= 1.0 — this disables similarity checking entirely. \
+                     Use a meaningful threshold or restructure the test."
+                );
                 if max_zdsim <= 0.0 {
                     Tolerance::exact()
                 } else {
@@ -392,7 +397,8 @@ impl Similarity {
 
 #[derive(Clone)]
 pub struct Constraints {
-    pub similarity: Similarity,
+    /// If `None`, skip pixel similarity comparison (file-size-only test).
+    pub similarity: Option<Similarity>,
     pub max_file_size: Option<usize>,
 }
 
@@ -554,7 +560,10 @@ pub fn compare_with(
         }
     }
 
-    let tolerance = require.similarity.to_regression_tolerance_for_comparison();
+    let Some(similarity) = require.similarity else {
+        return true; // file-size-only test, no pixel comparison
+    };
+    let tolerance = similarity.to_regression_tolerance_for_comparison();
 
     let mut image_context = Context::create().unwrap();
     unsafe { image_context.add_input_bytes(0, actual_bytes) }.unwrap();
@@ -724,7 +733,10 @@ pub fn compare_encoded(
         assert!(bytes.len() <= max, "Encoded size ({}) exceeds limit ({max})", bytes.len());
     }
 
-    let tol_spec = require.similarity.to_tolerance_spec();
+    let similarity = require
+        .similarity
+        .expect("compare_encoded requires a similarity threshold");
+    let tol_spec = similarity.to_tolerance_spec();
     check_visual_bytes(identity, detail, &bytes, &tol_spec)
 }
 

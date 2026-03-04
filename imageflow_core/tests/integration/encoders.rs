@@ -15,7 +15,7 @@ fn test_encode_png() {
     compare_encoded_to_source(
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
-        Constraints { max_file_size: Some(390_000), similarity: Similarity::MaxZdsim(0.0) },
+        Constraints { max_file_size: Some(390_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
         steps,
     );
 }
@@ -34,7 +34,7 @@ fn test_encode_pngquant() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(280_000),
-            similarity: Similarity::MaxZdsim(0.30), // measured zdsim: 0.189
+            similarity: Some(Similarity::MaxZdsim(0.30)), // measured zdsim: 0.189
         },
         steps,
     );
@@ -48,7 +48,7 @@ fn test_encode_pngquant_command() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(280_000),
-            similarity: Similarity::MaxZdsim(0.30), // measured zdsim: 0.189
+            similarity: Some(Similarity::MaxZdsim(0.30)), // measured zdsim: 0.189
         },
         steps,
     );
@@ -65,7 +65,7 @@ fn test_encode_pngquant_fallback() {
     compare_encoded_to_source(
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
-        Constraints { max_file_size: None, similarity: Similarity::MaxZdsim(0.0) },
+        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.0)) },
         steps,
     );
 }
@@ -76,7 +76,7 @@ fn test_encode_pngquant_fallback_command() {
     compare_encoded_to_source(
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
-        Constraints { max_file_size: None, similarity: Similarity::MaxZdsim(0.0) },
+        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.0)) },
         steps,
     );
 }
@@ -88,7 +88,7 @@ fn test_encode_lodepng() {
     compare_encoded_to_source(
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
-        Constraints { max_file_size: Some(390_000), similarity: Similarity::MaxZdsim(0.0) },
+        Constraints { max_file_size: Some(390_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
         steps,
     );
 }
@@ -109,7 +109,9 @@ fn test_encode_mozjpeg_resized() {
     compare_encoded_to_source(
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
-        Constraints { max_file_size: Some(160_000), similarity: Similarity::MaxZdsim(1.0) },
+        // File-size-only: double-resize + q=50 produces output too different from source
+        // for meaningful pixel comparison (measured zdsim=1.0)
+        Constraints { max_file_size: Some(160_000), similarity: None },
         steps,
     );
 }
@@ -127,7 +129,7 @@ fn test_encode_mozjpeg() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(301_000),
-            similarity: Similarity::MaxZdsim(0.70), // measured zdsim: 0.57
+            similarity: Some(Similarity::MaxZdsim(0.70)), // measured zdsim: 0.57
         },
         steps,
     );
@@ -140,7 +142,7 @@ fn test_encode_webp_lossless() {
     compare_encoded_to_source(
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
-        Constraints { max_file_size: Some(301_000), similarity: Similarity::MaxZdsim(0.0) },
+        Constraints { max_file_size: Some(301_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
         steps,
     );
 }
@@ -155,7 +157,7 @@ fn test_roundtrip_webp_lossless() {
                 .to_owned(),
         ),
         DEBUG_GRAPH,
-        Constraints { max_file_size: Some(301_000), similarity: Similarity::MaxZdsim(0.0) },
+        Constraints { max_file_size: Some(301_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
         steps,
     );
 }
@@ -169,7 +171,7 @@ fn test_encode_webp_lossy() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(425_000),
-            similarity: Similarity::MaxZdsim(0.40), // measured zdsim: 0.267
+            similarity: Some(Similarity::MaxZdsim(0.40)), // measured zdsim: 0.267
         },
         steps,
     );
