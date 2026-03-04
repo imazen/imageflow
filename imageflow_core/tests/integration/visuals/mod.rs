@@ -1,0 +1,9 @@
+mod canvas;
+mod codec;
+mod color;
+mod idct;
+mod orientation;
+mod scaling;
+mod smoke;
+mod trim;
+mod watermark;

@@ -1,6 +1,9 @@
 # Claude Code
 .claude/
 
+# Reference image cache (downloaded/generated test baselines)
+.image-cache/
+
 # Dotfiles and renderings of them
 *.dot
 *.dot.png
@@ -181,6 +184,7 @@ dlldata.c
 *.tmp
 *.tmp_proj
 *.log
+!**/uploaded.log
 *.vspscc
 *.vssscc
 .builds
