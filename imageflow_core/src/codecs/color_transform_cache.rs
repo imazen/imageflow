@@ -211,9 +211,34 @@ impl ColorTransformCache {
     fn apply_transform(
         frame: &mut BitmapWindowMut<u8>,
         transform: &Transform<u32, u32, ThreadContext, DisallowCache>,
+        preserve_alpha: bool,
     ) {
-        for mut line in frame.scanlines_u32().unwrap() {
-            transform.transform_in_place(line.row_mut());
+        if preserve_alpha {
+            // lcms2 zeroes the alpha channel when transforming RGB ICC profiles
+            // via BGRA_8 pixel format. Save alpha before transform, restore after.
+            // BGRA as u32 little-endian: alpha is the high byte (bits 24-31).
+            let w = frame.w() as usize;
+            let mut alphas: Vec<u32> = Vec::with_capacity(w);
+            for mut line in frame.scanlines_u32().unwrap() {
+                let row = line.row_mut();
+                alphas.clear();
+                alphas.extend(row.iter().map(|&px| px & 0xFF00_0000));
+                transform.transform_in_place(row);
+                for (px, a) in row.iter_mut().zip(alphas.iter()) {
+                    *px = (*px & 0x00FF_FFFF) | a;
+                }
+            }
+        } else {
+            // CMYK→BGRA: input byte 3 is K (black), not alpha. lcms2 leaves
+            // the alpha byte undefined after CMYK→BGRA transform.
+            // Set it to 255 (fully opaque) since CMYK has no alpha channel.
+            for mut line in frame.scanlines_u32().unwrap() {
+                let row = line.row_mut();
+                transform.transform_in_place(row);
+                for px in row.iter_mut() {
+                    *px |= 0xFF00_0000;
+                }
+            }
         }
     }
 
@@ -238,7 +263,7 @@ impl ColorTransformCache {
                 if GAMA_TRANSFORMS.len() > 3 {
                     let transform = ColorTransformCache::create_gama_transform(color, pixel_format)
                         .map_err(|e| e.at(here!()))?;
-                    ColorTransformCache::apply_transform(frame, &transform);
+                    ColorTransformCache::apply_transform(frame, &transform, true);
                     Ok(())
                 } else {
                     let hash =
@@ -253,11 +278,13 @@ impl ColorTransformCache {
                     ColorTransformCache::apply_transform(
                         frame,
                         &GAMA_TRANSFORMS.get(&hash).unwrap(),
+                        true,
                     );
                     Ok(())
                 }
             }
             ffi::ColorProfileSource::ICCP | ffi::ColorProfileSource::ICCP_GRAY => {
+                let is_cmyk = input_pixel_format == PixelFormat::CMYK_8_REV;
                 // Cache up to 9 ICC profile x PixelFormat transforms
                 if PROFILE_TRANSFORMS.len() > 8 {
                     let transform = ColorTransformCache::create_profile_transform(
@@ -266,7 +293,7 @@ impl ColorTransformCache {
                         output_pixel_format,
                     )
                     .map_err(|e| e.at(here!()))?;
-                    ColorTransformCache::apply_transform(frame, &transform);
+                    ColorTransformCache::apply_transform(frame, &transform, !is_cmyk);
                     Ok(())
                 } else {
                     let hash =
@@ -284,6 +311,7 @@ impl ColorTransformCache {
                     ColorTransformCache::apply_transform(
                         frame,
                         &PROFILE_TRANSFORMS.get(&hash).unwrap(),
+                        !is_cmyk,
                     );
                     Ok(())
                 }
