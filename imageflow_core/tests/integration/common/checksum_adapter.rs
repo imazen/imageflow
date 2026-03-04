@@ -3,9 +3,17 @@
 use std::path::Path;
 
 use zensim_regress::checksums_v2::{CheckResultV2, ChecksumManagerV2};
+use zensim_regress::remote::ReferenceStorage;
 use zensim_regress::RegressError;
 
 use super::ChecksumMatch;
+
+/// Default S3 base URL for downloading reference images.
+const DEFAULT_REFERENCE_URL: &str =
+    "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums";
+/// Default S3 upload prefix for new reference images.
+const DEFAULT_UPLOAD_PREFIX: &str =
+    "s3://imageflow-resources/visual_test_checksums";
 
 /// Adapter for `.checksums` v1 format files via `ChecksumManagerV2`.
 ///
@@ -17,8 +25,26 @@ pub struct ChecksumAdapter {
 
 impl ChecksumAdapter {
     /// Create a new adapter pointing at the given checksums directory.
+    ///
+    /// Configures remote S3 storage with hardcoded defaults for imageflow.
+    /// `REGRESS_REFERENCE_URL` env var overrides the download URL.
+    /// `REGRESS_UPLOAD_PREFIX` env var overrides the upload prefix.
+    /// Uploads require `UPLOAD_REFERENCES=1`.
     pub fn new(checksums_dir: &Path) -> Self {
-        let manager = ChecksumManagerV2::new(checksums_dir);
+        let cache_dir = checksums_dir.join(".remote-cache");
+        let download_url = std::env::var("REGRESS_REFERENCE_URL")
+            .ok()
+            .and_then(|v| if v.is_empty() { None } else { Some(v) })
+            .unwrap_or_else(|| DEFAULT_REFERENCE_URL.to_string());
+        let upload_prefix = std::env::var("REGRESS_UPLOAD_PREFIX")
+            .ok()
+            .and_then(|v| if v.is_empty() { None } else { Some(v) })
+            .or_else(|| Some(DEFAULT_UPLOAD_PREFIX.to_string()));
+        let upload_enabled = std::env::var("UPLOAD_REFERENCES")
+            .is_ok_and(|v| v == "1" || v == "true");
+        let remote = ReferenceStorage::new(download_url, upload_prefix, upload_enabled, cache_dir);
+        let manager = ChecksumManagerV2::new(checksums_dir)
+            .with_remote_storage(remote);
         Self { manager }
     }
 
