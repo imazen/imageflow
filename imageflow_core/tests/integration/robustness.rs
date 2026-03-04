@@ -212,20 +212,6 @@ fn test_bitmap_canvas_i32_overflow() {
 // ICC profile and EXIF handling tests
 // =============================================================================
 
-fn create_decode_encode_job() -> s::Build001 {
-    s::Build001 {
-        builder_config: None,
-        io: vec![],
-        framewise: s::Framewise::Steps(vec![
-            s::Node::Decode { io_id: 0, commands: None },
-            s::Node::Encode {
-                io_id: 1,
-                preset: s::EncoderPreset::Lodepng { maximum_deflate: None },
-            },
-        ]),
-    }
-}
-
 #[test]
 fn test_icc_profile_handling() {
     let test_jpg = Path::new("/home/lilith/work/imageflow/examples/export_4_sizes/waterhouse.jpg");

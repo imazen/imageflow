@@ -1,0 +1,4 @@
+# Reference images are stored in remote storage (S3), not in the repo.
+# They're downloaded on demand by the test framework.
+images/
+.remote-cache/
