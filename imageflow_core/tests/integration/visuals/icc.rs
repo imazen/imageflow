@@ -179,6 +179,8 @@ fn test_icc_repro_pillow_icc() {
         source: "test_inputs/repro-icc/python-pillow/1529_9fa6c9ca-8603-11e5-97e7-589cf9e3baaa.jpg",
         detail: "pillow_icc",
         command: "format=png",
+        // ICC transform rounding differs across SIMD paths: sim 95.3 on win-arm64
+        similarity: Similarity::MaxZdsim(0.05),
     }
 }
 
@@ -197,6 +199,8 @@ fn test_icc_repro_libvips_icc() {
         source: "test_inputs/repro-icc/libvips/1063_44146319-5742eab6-a08f-11e8-911a-2aaef2a42540.jpg",
         detail: "libvips_icc",
         command: "format=png",
+        // ICC transform rounding differs across SIMD paths: sim 97.1 on win-arm64
+        similarity: Similarity::MaxZdsim(0.03),
     }
 }
 

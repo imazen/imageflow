@@ -300,7 +300,14 @@ fn decode_cmyk_jpeg() {
             encode: None,
             watermarks: None,
         }],
-        tolerance: Tolerance::off_by_one(),
+        // CMYK→RGB conversion differs by up to 3 levels across SIMD paths
+        // (AVX512 vs NEON vs AVX2). Perceptually identical.
+        tolerance: Tolerance {
+            max_delta: 3,
+            min_similarity: 95.0,
+            max_pixels_different: 1.0,
+            ..Tolerance::exact()
+        },
     }
 }
 

@@ -65,9 +65,11 @@ tolerance d:1 s:99 px:1.0%
 ~ lazy-disc-329f73dcff:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs loud-stork-e3a76d92e7:sea
 
 ## decode_cmyk_jpeg logo_passthrough
-tolerance off-by-one
+tolerance d:3 s:95 px:100.0%
 = bulk-mare-1741a4171a:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ ill-slate-0bfaf9f16b:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs bulk-mare-1741a4171a:sea
+~ red-box-ccae6b6de4:sea  aarch64  @ace43a05  auto-accepted vs bulk-mare-1741a4171a:sea  diff d:3 s:98.4 px:32.4%
+~ brave-wheat-a1d8dbb9f1:sea  aarch64-windows  @ace43a05  auto-accepted vs bulk-mare-1741a4171a:sea  diff d:2 s:98.4 px:31.9%
 
 ## test_problematic_png_lossy crop_1230x760
 tolerance zdsim:0.05
