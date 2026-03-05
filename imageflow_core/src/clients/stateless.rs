@@ -77,8 +77,7 @@ impl LibClient {
         context: &mut Context,
         bytes: &[u8],
     ) -> std::result::Result<s::ImageInfo, FlowError> {
-        // SAFETY: `bytes` is a parameter that outlives local `context`
-        unsafe { context.add_input_bytes(0, bytes) }.map_err(|e| e.at(here!()))?;
+        context.add_copied_input_buffer(0, bytes).map_err(|e| e.at(here!()))?;
         context.get_unscaled_rotated_image_info(0).map_err(|e| e.at(here!()))
     }
     pub fn get_image_info(
@@ -110,9 +109,7 @@ impl LibClient {
         task: BuildRequest,
     ) -> std::result::Result<BuildSuccess, FlowError> {
         for input in task.inputs {
-            // SAFETY: `task` is passed by value and outlives local `context`
-            unsafe { context.add_input_buffer(input.io_id, input.bytes) }
-                .map_err(|e| e.at(here!()))?;
+            context.add_copied_input_buffer(input.io_id, input.bytes).map_err(|e| e.at(here!()))?;
         }
 
         // Assume output ids only come from nodes
@@ -199,7 +196,10 @@ fn test_stateless() {
         export_graphs_to: None,
         framewise: Framewise::Steps(vec![
             s::Node::Decode { io_id: 0, commands: None },
-            s::Node::Encode { io_id: 1, preset: s::EncoderPreset::libpng32() },
+            s::Node::Encode {
+                io_id: 1,
+                preset: s::EncoderPreset::Lodepng { maximum_deflate: None },
+            },
         ]),
     };
     let result = LibClient {}.build(req).unwrap();

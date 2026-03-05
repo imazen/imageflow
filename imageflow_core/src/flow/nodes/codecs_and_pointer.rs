@@ -2,15 +2,18 @@ use super::internal_prelude::*;
 use crate::ErrorKind::BitmapKeyNotFound;
 use slotmap::{Key, KeyData};
 
+#[cfg(feature = "ffi-nodes")]
 pub static BITMAP_KEY_POINTER: BitmapKeyDef = BitmapKeyDef {};
 
 pub static DECODER: DecoderDef = DecoderDef {};
 pub static ENCODE: EncoderDef = EncoderDef {};
 pub static PRIMITIVE_DECODER: DecoderPrimitiveDef = DecoderPrimitiveDef {};
 
+#[cfg(feature = "ffi-nodes")]
 #[derive(Debug, Clone)]
 pub struct BitmapKeyDef {}
 
+#[cfg(feature = "ffi-nodes")]
 impl BitmapKeyDef {
     fn get_key_ptr(&self, p: &NodeParams) -> Result<*mut BitmapKey> {
         if let NodeParams::Json(s::Node::FlowBitmapKeyPtr { ptr_to_bitmap_key }) = *p {
@@ -26,6 +29,7 @@ impl BitmapKeyDef {
     }
 }
 
+#[cfg(feature = "ffi-nodes")]
 impl NodeDef for BitmapKeyDef {
     fn fqn(&self) -> &'static str {
         "imazen.bitmap_bgra_pointer"

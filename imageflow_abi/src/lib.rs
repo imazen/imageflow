@@ -1163,8 +1163,12 @@ pub unsafe extern "C" fn imageflow_context_add_input_buffer(
                     .add_copied_input_buffer(io_id, bytes)
                     .map_err(|e| e.at(here!()))?;
             } else {
-                // SAFETY: C caller guarantees buffer outlives context (Lifetime::OutlivesContext)
-                unsafe { inner_context_guard.add_input_buffer(io_id, bytes) }
+                // SAFETY: C caller guarantees buffer outlives context (Lifetime::OutlivesContext).
+                // We erase the lifetime here at the ABI boundary so imageflow_core stays safe.
+                let static_bytes: &'static [u8] =
+                    unsafe { std::mem::transmute::<&[u8], &'static [u8]>(bytes) };
+                inner_context_guard
+                    .add_input_buffer(io_id, static_bytes)
                     .map_err(|e| e.at(here!()))?;
             }
             Ok(true)
@@ -1280,7 +1284,7 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
         lock_context_mut_and_error_or_return!(c, false);
     let result = catch_unwind(AssertUnwindSafe(|| {
         let (ptr, len) =
-            unsafe { inner_context_guard.get_output_buffer_ptr(io_id).map_err(|e| e.at(here!()))? };
+            inner_context_guard.get_output_buffer_ptr(io_id).map_err(|e| e.at(here!()))?;
 
         if len.leading_zeros() == 0 {
             Err(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error retrieving output buffer; length overflow prevented (most significant bit set)."))

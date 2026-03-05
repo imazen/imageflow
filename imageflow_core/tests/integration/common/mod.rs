@@ -566,7 +566,7 @@ pub fn compare_with(
     let tolerance = similarity.to_regression_tolerance_for_comparison();
 
     let mut image_context = Context::create().unwrap();
-    unsafe { image_context.add_input_bytes(0, actual_bytes) }.unwrap();
+    image_context.add_copied_input_buffer(0, actual_bytes).unwrap();
     let actual_bitmap_key = decode_image(&mut image_context, 0);
 
     let actual_bitmaps = image_context.borrow_bitmaps().map_err(|e| e.at(here!())).unwrap();
@@ -656,7 +656,7 @@ pub fn check_visual_bytes(
 
     // Decode encoded output to BGRA bitmap for pixel comparison
     let mut ctx = Context::create().unwrap();
-    unsafe { ctx.add_input_bytes(0, bytes) }.unwrap();
+    ctx.add_copied_input_buffer(0, bytes).unwrap();
     let bitmap_key = decode_image(&mut ctx, 0);
 
     let bitmaps = ctx.borrow_bitmaps().map_err(|e| e.at(here!())).unwrap();

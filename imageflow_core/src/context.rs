@@ -1,11 +1,11 @@
 use crate::errors::OutwardErrorBuffer;
-use crate::ffi;
 use crate::flow::definitions::Graph;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::io::IoProxy;
 use crate::{ErrorKind, FlowError, JsonResponse, Result};
 use enough::{Stop, StopReason};
 use imageflow_types::collections::AddRemoveSet;
+use imageflow_types::IoDirection;
 use std::any::Any;
 #[cfg(debug_assertions)]
 use std::sync::atomic::AtomicI64;
@@ -17,7 +17,6 @@ use std::sync::*;
 use crate::allocation_container::AllocationContainer;
 use crate::codecs::CodecInstanceContainer;
 use crate::codecs::EnabledCodecs;
-use crate::ffi::IoDirection;
 use crate::graphics::bitmaps::{Bitmap, BitmapKey, BitmapWindowMut, BitmapsContainer};
 use imageflow_types::ImageInfo;
 use itertools::Itertools;
@@ -414,10 +413,10 @@ impl Context {
     /// Return raw pointer + length to the output buffer for C ABI use.
     /// The buffer transitions to `Lent` state — kept alive, but `take` is blocked.
     ///
-    /// # Safety
     /// The returned pointer is valid as long as this `Context` is alive and
     /// `take_output_buffer` is not called for this `io_id`.
-    pub unsafe fn get_output_buffer_ptr(&mut self, io_id: i32) -> Result<(*const u8, usize)> {
+    /// Dereferencing the pointer is the caller's responsibility (unsafe at use site).
+    pub fn get_output_buffer_ptr(&mut self, io_id: i32) -> Result<(*const u8, usize)> {
         let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
         codec.output_buffer_raw_parts().map_err(|e| e.at(here!()))
     }
@@ -439,24 +438,16 @@ impl Context {
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
 
-    /// Zero-copy: borrows `bytes` without copying. Use `add_copied_input_buffer`
-    /// or `add_input_vector` for a safe alternative that owns the data.
-    ///
-    /// # Safety
-    /// `bytes` must remain valid and unchanged for the lifetime of this `Context`.
-    /// The borrow checker cannot enforce this — the `'b` lifetime only constrains
-    /// the call, not the `Context`'s actual use of the data.
-    pub unsafe fn add_input_bytes<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
+    /// Zero-copy: borrows `bytes` without copying.
+    /// The `'static` lifetime means callers must guarantee the data outlives the Context.
+    pub fn add_input_bytes(&mut self, io_id: i32, bytes: &'static [u8]) -> Result<()> {
         self.add_input_buffer(io_id, bytes)
     }
-    /// Zero-copy: borrows `bytes` without copying. Use `add_copied_input_buffer`
-    /// or `add_input_vector` for a safe alternative that owns the data.
-    ///
-    /// # Safety
-    /// `bytes` must remain valid and unchanged for the lifetime of this `Context`.
-    /// The borrow checker cannot enforce this — the `'b` lifetime only constrains
-    /// the call, not the `Context`'s actual use of the data.
-    pub unsafe fn add_input_buffer<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
+
+    /// Zero-copy: borrows `bytes` without copying.
+    /// The `'static` lifetime means callers must guarantee the data outlives the Context.
+    /// In practice, the ABI layer (imageflow_abi) uses transmute to erase the real lifetime.
+    pub fn add_input_buffer(&mut self, io_id: i32, bytes: &'static [u8]) -> Result<()> {
         let io = IoProxy::read_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
 
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
@@ -765,7 +756,7 @@ fn test_get_ptr_on_decoder_returns_invalid_operation() {
     let mut context = Context::create().unwrap();
     context.add_input_vector(0, png_bytes).unwrap();
 
-    let err = unsafe { context.get_output_buffer_ptr(0) }.err().unwrap();
+    let err = context.get_output_buffer_ptr(0).err().unwrap();
     assert_eq!(ErrorKind::InvalidArgument, err.kind);
 }
 
@@ -794,7 +785,7 @@ fn test_get_ptr_then_take_returns_invalid_state() {
     let mut context = Context::create().unwrap();
     context.add_output_buffer(0).unwrap();
 
-    let (ptr, len) = unsafe { context.get_output_buffer_ptr(0) }.unwrap();
+    let (ptr, len) = context.get_output_buffer_ptr(0).unwrap();
     assert!(!ptr.is_null());
 
     let err = context.take_output_buffer(0).err().unwrap();
@@ -807,8 +798,8 @@ fn test_get_ptr_idempotent() {
     let mut context = Context::create().unwrap();
     context.add_output_buffer(0).unwrap();
 
-    let (ptr1, len1) = unsafe { context.get_output_buffer_ptr(0) }.unwrap();
-    let (ptr2, len2) = unsafe { context.get_output_buffer_ptr(0) }.unwrap();
+    let (ptr1, len1) = context.get_output_buffer_ptr(0).unwrap();
+    let (ptr2, len2) = context.get_output_buffer_ptr(0).unwrap();
     assert_eq!(ptr1, ptr2);
     assert_eq!(len1, len2);
 }
@@ -819,7 +810,7 @@ fn test_get_ptr_after_take_returns_invalid_state() {
     context.add_output_buffer(0).unwrap();
 
     let _ = context.take_output_buffer(0).unwrap();
-    let err = unsafe { context.get_output_buffer_ptr(0) }.err().unwrap();
+    let err = context.get_output_buffer_ptr(0).err().unwrap();
     assert_eq!(ErrorKind::InvalidArgument, err.kind);
     assert!(err.message.contains("already been taken"));
 }
@@ -899,7 +890,7 @@ fn test_get_ptr_after_encode_then_take_blocked() {
     ctx.execute_1(execute).unwrap();
 
     // Lend the pointer (C ABI path)
-    let (ptr, len) = unsafe { ctx.get_output_buffer_ptr(1) }.unwrap();
+    let (ptr, len) = ctx.get_output_buffer_ptr(1).unwrap();
     assert!(!ptr.is_null());
     assert!(len > 0);
 
@@ -909,7 +900,7 @@ fn test_get_ptr_after_encode_then_take_blocked() {
     assert!(err.message.contains("raw pointer"));
 
     // get_ptr again should be idempotent
-    let (ptr2, len2) = unsafe { ctx.get_output_buffer_ptr(1) }.unwrap();
+    let (ptr2, len2) = ctx.get_output_buffer_ptr(1).unwrap();
     assert_eq!(ptr, ptr2);
     assert_eq!(len, len2);
 }

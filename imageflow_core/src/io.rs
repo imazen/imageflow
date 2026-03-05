@@ -157,22 +157,15 @@ impl IoProxy {
         }
     }
 
-    /// # Safety
-    /// The caller must ensure `bytes` remains valid for the lifetime of the returned
-    /// `IoProxy` (and any `Context` it is added to). The `'static` bound on the internal
-    /// `Cursor` is a lie — the real lifetime is erased via transmute.
-    pub unsafe fn read_slice<'a>(
-        context: &'a Context,
-        io_id: i32,
-        bytes: &'a [u8],
-    ) -> Result<IoProxy> {
+    /// Creates a zero-copy IoProxy that reads from a borrowed byte slice.
+    /// The `'static` lifetime means the caller must guarantee the bytes
+    /// outlive the IoProxy (and any Context it is added to).
+    /// In practice, the caller (imageflow_abi) uses transmute to erase
+    /// the real lifetime before calling this.
+    pub fn read_slice(context: &Context, io_id: i32, bytes: &'static [u8]) -> Result<IoProxy> {
         IoProxy::check_io_id(context, io_id)?;
 
-        Ok(IoProxy {
-            path: None,
-            io_id,
-            backend: IoBackend::ReadSlice(Cursor::new(std::mem::transmute::<&[u8], &[u8]>(bytes))),
-        })
+        Ok(IoProxy { path: None, io_id, backend: IoBackend::ReadSlice(Cursor::new(bytes)) })
     }
 
     /// Consume this IoProxy and return the output buffer as an owned `Vec<u8>`.

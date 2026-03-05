@@ -1,10 +1,7 @@
-use crate::ffi;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::{Context, ErrorCategory, ErrorKind, FlowError, JsonResponse, Result};
 use std::sync::*;
 
-use crate::ffi::ColorProfileSource;
-use crate::ffi::DecoderColorInfo;
 use crate::io::IoProxy;
 use imageflow_types::collections::AddRemoveSet;
 use imageflow_types::IoDirection;
@@ -20,18 +17,28 @@ pub use lode::write_png;
 mod auto;
 pub(crate) mod cms;
 mod image_png_decoder;
-mod jpeg_decoder;
-pub(crate) mod lcms2_transform;
-mod libpng_decoder;
-mod libpng_encoder;
 pub(crate) mod moxcms_transform;
-mod mozjpeg;
-mod mozjpeg_decoder;
-mod mozjpeg_decoder_helpers;
 pub(crate) mod source_profile;
 mod tiny_lru;
+
+// C codec modules — require c-codecs feature
+#[cfg(feature = "c-codecs")]
+mod jpeg_decoder;
+#[cfg(feature = "c-codecs")]
+pub(crate) mod lcms2_transform;
+#[cfg(feature = "c-codecs")]
+mod libpng_decoder;
+#[cfg(feature = "c-codecs")]
+mod libpng_encoder;
+#[cfg(feature = "c-codecs")]
+mod mozjpeg;
+#[cfg(feature = "c-codecs")]
+mod mozjpeg_decoder;
+#[cfg(feature = "c-codecs")]
+mod mozjpeg_decoder_helpers;
+#[cfg(feature = "c-codecs")]
 mod webp;
-use crate::codecs::NamedEncoders::LibPngRsEncoder;
+
 use crate::graphics::bitmaps::BitmapKey;
 
 pub trait DecoderFactory {
@@ -71,25 +78,35 @@ enum CodecKind {
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum NamedDecoders {
+    #[cfg(feature = "c-codecs")]
     MozJpegRsDecoder,
+    #[cfg(feature = "c-codecs")]
     ImageRsJpegDecoder,
     ImageRsPngDecoder,
+    #[cfg(feature = "c-codecs")]
     LibPngRsDecoder,
     GifRsDecoder,
+    #[cfg(feature = "c-codecs")]
     WebPDecoder,
 }
 impl NamedDecoders {
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
         match self {
+            #[cfg(feature = "c-codecs")]
             NamedDecoders::ImageRsJpegDecoder | NamedDecoders::MozJpegRsDecoder => {
                 bytes.starts_with(b"\xFF\xD8\xFF")
             }
             NamedDecoders::GifRsDecoder => {
                 bytes.starts_with(b"GIF89a") || bytes.starts_with(b"GIF87a")
             }
-            NamedDecoders::LibPngRsDecoder | NamedDecoders::ImageRsPngDecoder => {
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::LibPngRsDecoder => {
                 bytes.starts_with(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A")
             }
+            NamedDecoders::ImageRsPngDecoder => {
+                bytes.starts_with(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A")
+            }
+            #[cfg(feature = "c-codecs")]
             NamedDecoders::WebPDecoder => {
                 bytes.starts_with(b"RIFF") && bytes[8..12].starts_with(b"WEBP")
             }
@@ -99,19 +116,23 @@ impl NamedDecoders {
     pub fn create(&self, c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>> {
         return_if_cancelled!(c);
         match self {
+            #[cfg(feature = "c-codecs")]
             NamedDecoders::MozJpegRsDecoder => {
                 Ok(Box::new(mozjpeg_decoder::MozJpegDecoder::create(c, io, io_id)?))
             }
+            #[cfg(feature = "c-codecs")]
             NamedDecoders::LibPngRsDecoder => {
                 Ok(Box::new(libpng_decoder::LibPngDecoder::create(c, io, io_id)?))
             }
             NamedDecoders::GifRsDecoder => Ok(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
+            #[cfg(feature = "c-codecs")]
             NamedDecoders::ImageRsJpegDecoder => {
                 Ok(Box::new(jpeg_decoder::JpegDecoder::create(c, io, io_id)?))
             }
             NamedDecoders::ImageRsPngDecoder => {
                 Ok(Box::new(image_png_decoder::ImagePngDecoder::create(c, io, io_id)?))
             }
+            #[cfg(feature = "c-codecs")]
             NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
         }
     }
@@ -120,10 +141,13 @@ impl NamedDecoders {
 #[allow(clippy::enum_variant_names)]
 pub enum NamedEncoders {
     GifEncoder,
+    #[cfg(feature = "c-codecs")]
     MozJpegEncoder,
     PngQuantEncoder,
     LodePngEncoder,
+    #[cfg(feature = "c-codecs")]
     WebPEncoder,
+    #[cfg(feature = "c-codecs")]
     LibPngRsEncoder,
 }
 pub struct EnabledCodecs {
@@ -134,18 +158,25 @@ impl Default for EnabledCodecs {
     fn default() -> Self {
         EnabledCodecs {
             decoders: smallvec::SmallVec::from_slice(&[
+                #[cfg(feature = "c-codecs")]
                 NamedDecoders::MozJpegRsDecoder,
-                // NamedDecoders::ImageRsPngDecoder,
+                #[cfg(not(feature = "c-codecs"))]
+                NamedDecoders::ImageRsPngDecoder,
+                #[cfg(feature = "c-codecs")]
                 NamedDecoders::LibPngRsDecoder,
                 NamedDecoders::GifRsDecoder,
+                #[cfg(feature = "c-codecs")]
                 NamedDecoders::WebPDecoder,
             ]),
             encoders: smallvec::SmallVec::from_slice(&[
                 NamedEncoders::GifEncoder,
+                #[cfg(feature = "c-codecs")]
                 NamedEncoders::MozJpegEncoder,
                 NamedEncoders::PngQuantEncoder,
                 NamedEncoders::LodePngEncoder,
+                #[cfg(feature = "c-codecs")]
                 NamedEncoders::WebPEncoder,
+                #[cfg(feature = "c-codecs")]
                 NamedEncoders::LibPngRsEncoder,
             ]),
         }
@@ -361,10 +392,10 @@ impl CodecInstanceContainer {
     /// Transitions to `Lent` state — the IoProxy is kept alive but `take()` is blocked.
     /// Idempotent: calling again on a `Lent` buffer returns the same pointer.
     ///
-    /// # Safety
     /// The returned pointer is valid as long as this `CodecInstanceContainer` is alive
-    /// and the buffer is not taken. Caller must ensure no mutable access occurs.
-    pub unsafe fn output_buffer_raw_parts(&mut self) -> Result<(*const u8, usize)> {
+    /// and the buffer is not taken. Caller must ensure no mutable access occurs
+    /// when dereferencing the pointer.
+    pub fn output_buffer_raw_parts(&mut self) -> Result<(*const u8, usize)> {
         self.finalize_encoder().map_err(|e| e.at(here!()))?;
         match self.output_state {
             OutputBufferState::Ready(_) => {

@@ -1,3 +1,4 @@
+#[cfg(feature = "c-codecs")]
 use crate::codecs::lcms2_transform::Lcms2TransformCache;
 use crate::codecs::moxcms_transform::MoxcmsTransformCache;
 use crate::codecs::source_profile::SourceProfile;
@@ -12,11 +13,11 @@ pub enum CmsBackend {
     #[default]
     Moxcms,
     /// C library CMS (lcms2). Supports ICC, gAMA+cHRM, CMYK.
+    /// Requires the `c-codecs` feature.
     Lcms2,
     /// Run both backends, compare outputs, warn on divergence exceeding threshold.
     /// Uses moxcms result as the canonical output.
-    /// Thresholds: 1 per channel for RGB profiles, 3 for CMYK (extra Lab conversion step).
-    /// CICP profiles fall back to moxcms-only (lcms2 doesn't support CICP).
+    /// Requires the `c-codecs` feature.
     Both,
 }
 
@@ -60,7 +61,16 @@ pub fn transform_to_srgb(
 
     match backend {
         CmsBackend::Moxcms => MoxcmsTransformCache::transform_to_srgb(frame, profile),
+        #[cfg(feature = "c-codecs")]
         CmsBackend::Lcms2 => Lcms2TransformCache::transform_to_srgb(frame, profile),
+        #[cfg(not(feature = "c-codecs"))]
+        CmsBackend::Lcms2 => {
+            eprintln!(
+                "[CMS] lcms2 backend requested but c-codecs feature is disabled, using moxcms"
+            );
+            MoxcmsTransformCache::transform_to_srgb(frame, profile)
+        }
+        #[cfg(feature = "c-codecs")]
         CmsBackend::Both => {
             // lcms2 doesn't support CICP — fall back to moxcms only
             if matches!(profile, SourceProfile::Cicp { .. }) {
@@ -137,11 +147,17 @@ pub fn transform_to_srgb(
 
             Ok(())
         }
+        #[cfg(not(feature = "c-codecs"))]
+        CmsBackend::Both => {
+            eprintln!("[CMS] Both-mode requested but c-codecs feature is disabled, using moxcms");
+            MoxcmsTransformCache::transform_to_srgb(frame, profile)
+        }
     }
 }
 
 /// Compare moxcms result buffer against the frame (which holds lcms2 result).
 /// Reads lcms2 data directly from frame scanlines to avoid a third allocation.
+#[cfg(feature = "c-codecs")]
 fn compare_results_against_frame(
     moxcms: &[u8],
     frame: &mut BitmapWindowMut<u8>,

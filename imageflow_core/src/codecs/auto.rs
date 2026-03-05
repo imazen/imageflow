@@ -1,6 +1,3 @@
-use crate::ffi;
-use crate::ffi::ColorProfileSource;
-use crate::ffi::DecoderColorInfo;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::io::IoProxy;
 use imageflow_types as s;
@@ -14,7 +11,6 @@ use std::sync::*;
 use uuid::Uuid;
 
 use crate::codecs::Encoder;
-use crate::codecs::NamedEncoders::LibPngRsEncoder;
 use crate::{BitmapKey, Context, ErrorCategory, ErrorKind, FlowError, JsonResponse, Result};
 
 pub(crate) fn create_encoder(
@@ -98,54 +94,120 @@ pub(crate) fn create_encoder(
                 .map_err(|e| e.at(here!()))?,
             )
         }
-        s::EncoderPreset::Mozjpeg { quality, progressive, ref matte } => Box::new(
-            crate::codecs::mozjpeg::MozjpegEncoder::create(
-                c,
-                quality,
-                progressive,
-                matte.clone(),
-                io,
-            )
-            .map_err(|e| e.at(here!()))?,
-        ),
+        s::EncoderPreset::Mozjpeg { quality, progressive, ref matte } => {
+            #[cfg(feature = "c-codecs")]
+            {
+                Box::new(
+                    crate::codecs::mozjpeg::MozjpegEncoder::create(
+                        c,
+                        quality,
+                        progressive,
+                        matte.clone(),
+                        io,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "c-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "Mozjpeg encoder requires the 'c-codecs' feature"
+                ));
+            }
+        }
         s::EncoderPreset::LibjpegTurbo {
             quality,
             progressive,
             optimize_huffman_coding,
             ref matte,
-        } => Box::new(
-            crate::codecs::mozjpeg::MozjpegEncoder::create_classic(
-                c,
-                quality.map(|q| q as u8),
-                progressive,
-                optimize_huffman_coding,
-                matte.clone(),
-                io,
-            )
-            .map_err(|e| e.at(here!()))?,
-        ),
+        } => {
+            #[cfg(feature = "c-codecs")]
+            {
+                Box::new(
+                    crate::codecs::mozjpeg::MozjpegEncoder::create_classic(
+                        c,
+                        quality.map(|q| q as u8),
+                        progressive,
+                        optimize_huffman_coding,
+                        matte.clone(),
+                        io,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "c-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "LibjpegTurbo encoder requires the 'c-codecs' feature"
+                ));
+            }
+        }
         s::EncoderPreset::Lodepng { maximum_deflate } => Box::new(
             crate::codecs::lode::LodepngEncoder::create(c, io, maximum_deflate, None)
                 .map_err(|e| e.at(here!()))?,
         ),
-        s::EncoderPreset::Libpng { depth, ref matte, zlib_compression } => Box::new(
-            crate::codecs::libpng_encoder::LibPngEncoder::create(
-                c,
-                io,
-                depth,
-                matte.clone(),
-                zlib_compression.map(|z| z.clamp(0, 255) as u8),
-            )
-            .map_err(|e| e.at(here!()))?,
-        ),
-        s::EncoderPreset::WebPLossless => Box::new(
-            crate::codecs::webp::WebPEncoder::create(c, io, None, Some(true), None)
-                .map_err(|e| e.at(here!()))?,
-        ),
-        s::EncoderPreset::WebPLossy { quality } => Box::new(
-            crate::codecs::webp::WebPEncoder::create(c, io, Some(quality), Some(false), None)
-                .map_err(|e| e.at(here!()))?,
-        ),
+        s::EncoderPreset::Libpng { depth, ref matte, zlib_compression } => {
+            #[cfg(feature = "c-codecs")]
+            {
+                Box::new(
+                    crate::codecs::libpng_encoder::LibPngEncoder::create(
+                        c,
+                        io,
+                        depth,
+                        matte.clone(),
+                        zlib_compression.map(|z| z.clamp(0, 255) as u8),
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "c-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "Libpng encoder requires the 'c-codecs' feature"
+                ));
+            }
+        }
+        s::EncoderPreset::WebPLossless => {
+            #[cfg(feature = "c-codecs")]
+            {
+                Box::new(
+                    crate::codecs::webp::WebPEncoder::create(c, io, None, Some(true), None)
+                        .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "c-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "WebP encoder requires the 'c-codecs' feature"
+                ));
+            }
+        }
+        s::EncoderPreset::WebPLossy { quality } => {
+            #[cfg(feature = "c-codecs")]
+            {
+                Box::new(
+                    crate::codecs::webp::WebPEncoder::create(
+                        c,
+                        io,
+                        Some(quality),
+                        Some(false),
+                        None,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "c-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "WebP encoder requires the 'c-codecs' feature"
+                ));
+            }
+        }
     };
     Ok(codec)
 }
@@ -179,13 +241,35 @@ fn create_encoder_auto(
                 .map_err(|e| e.at(here!()))?,
         ),
         OutputImageFormat::Jpeg | OutputImageFormat::Jpg => {
-            create_jpeg_auto(ctx, io, bitmap_key, decoder_io_ids, details)
-                .map_err(|e| e.at(here!()))?
+            #[cfg(feature = "c-codecs")]
+            {
+                create_jpeg_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+                    .map_err(|e| e.at(here!()))?
+            }
+            #[cfg(not(feature = "c-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "JPEG encoding requires the 'c-codecs' feature"
+                ));
+            }
         }
         OutputImageFormat::Png => create_png_auto(ctx, io, bitmap_key, decoder_io_ids, details)
             .map_err(|e| e.at(here!()))?,
-        OutputImageFormat::Webp => create_webp_auto(ctx, io, bitmap_key, decoder_io_ids, details)
-            .map_err(|e| e.at(here!()))?,
+        OutputImageFormat::Webp => {
+            #[cfg(feature = "c-codecs")]
+            {
+                create_webp_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+                    .map_err(|e| e.at(here!()))?
+            }
+            #[cfg(not(feature = "c-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "WebP encoding requires the 'c-codecs' feature"
+                ));
+            }
+        }
         OutputImageFormat::Jxl => {
             unimplemented!()
         }
@@ -372,6 +456,7 @@ fn get_quality_hints_by_ssim2(ssim2: f32) -> QualityProfileHints {
     }
 }
 
+#[cfg(feature = "c-codecs")]
 fn create_jpeg_auto(
     ctx: &Context,
     io: IoProxy,
@@ -441,6 +526,7 @@ fn create_jpeg_auto(
         }
     }
 }
+#[cfg(feature = "c-codecs")]
 fn create_webp_auto(
     ctx: &Context,
     io: IoProxy,
@@ -533,22 +619,32 @@ fn create_png_auto(
     } else {
         match png_style {
             PngEncoderStyle::Libpng => {
-                let depth = if !details.needs_alpha {
-                    s::PngBitDepth::Png24
-                } else {
-                    s::PngBitDepth::Png32
-                };
-                let zlib_compression = if max_deflate == Some(true) { Some(9) } else { None };
-                Ok(Box::new(
-                    crate::codecs::libpng_encoder::LibPngEncoder::create(
-                        ctx,
-                        io,
-                        Some(depth),
-                        matte,
-                        zlib_compression,
-                    )
-                    .map_err(|e| e.at(here!()))?,
-                ))
+                #[cfg(feature = "c-codecs")]
+                {
+                    let depth = if !details.needs_alpha {
+                        s::PngBitDepth::Png24
+                    } else {
+                        s::PngBitDepth::Png32
+                    };
+                    let zlib_compression = if max_deflate == Some(true) { Some(9) } else { None };
+                    Ok(Box::new(
+                        crate::codecs::libpng_encoder::LibPngEncoder::create(
+                            ctx,
+                            io,
+                            Some(depth),
+                            matte,
+                            zlib_compression,
+                        )
+                        .map_err(|e| e.at(here!()))?,
+                    ))
+                }
+                #[cfg(not(feature = "c-codecs"))]
+                {
+                    return Err(nerror!(
+                        ErrorKind::CodecDisabledError,
+                        "Libpng encoder requires the 'c-codecs' feature"
+                    ));
+                }
             }
             PngEncoderStyle::Pngquant | PngEncoderStyle::Default if !lossless => {
                 let manual_quality = manual_quality.map(|s| s.clamp(0.0, 100.0) as u8);

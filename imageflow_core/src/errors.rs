@@ -1,5 +1,4 @@
 use crate::context::Context;
-use crate::ffi;
 use crate::flow::definitions::FrameEstimate;
 use crate::json::JsonResponse;
 use imageflow_riapi::sizing::LayoutError;
@@ -381,6 +380,7 @@ impl From<::imageflow_helpers::colors::ParseColorError> for FlowError {
     }
 }
 
+#[cfg(feature = "c-codecs")]
 impl From<jpeg_decoder::Error> for FlowError {
     fn from(f: jpeg_decoder::Error) -> Self {
         match f {
