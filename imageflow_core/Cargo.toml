@@ -52,6 +52,11 @@ enough = { version = "0.4", features = ["std"] }
 garb = "0.1"
 moxcms = { git = "https://github.com/awxkee/moxcms.git", rev = "c4affa1", features = ["in_place"] }
 
+# --- Zen codec dependencies (pure Rust, default) ---
+zenjpeg = { version = "0.6", features = ["decoder"], optional = true }
+zengif = { version = "0.6", optional = true }
+zenwebp = { version = "0.3", optional = true }
+
 # Used for schema generation if feature enabled
 utoipa = { version = "5.3.1", features = [], optional = true }
 
@@ -89,7 +94,7 @@ seahash = "4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [features]
-default = ["c-codecs"]
+default = ["c-codecs", "zen-codecs"]
 neon = ["libwebp-sys/neon"]
 # All C library codecs: mozjpeg, libpng, libwebp, lcms2, and the C components library.
 c-codecs = [
@@ -100,6 +105,12 @@ c-codecs = [
     "dep:libwebp-sys",
     "dep:lcms2", "dep:lcms2-sys",
     "dep:libz-sys",
+]
+# Pure Rust codecs: zenjpeg, zengif, zenwebp (no C dependencies)
+zen-codecs = [
+    "dep:zenjpeg",
+    "dep:zengif",
+    "dep:zenwebp",
 ]
 # Feature to enable OpenAPI schema generation capabilities
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]

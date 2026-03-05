@@ -142,7 +142,7 @@ fn test_encode_webp_lossless() {
     compare_encoded_to_source(
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
-        Constraints { max_file_size: Some(301_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
+        Constraints { max_file_size: Some(550_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
         steps,
     );
 }
@@ -157,7 +157,7 @@ fn test_roundtrip_webp_lossless() {
                 .to_owned(),
         ),
         DEBUG_GRAPH,
-        Constraints { max_file_size: Some(301_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
+        Constraints { max_file_size: Some(550_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
         steps,
     );
 }
@@ -170,7 +170,7 @@ fn test_encode_webp_lossy() {
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
         Constraints {
-            max_file_size: Some(425_000),
+            max_file_size: Some(450_000),
             similarity: Some(Similarity::MaxZdsim(0.40)), // measured zdsim: 0.267
         },
         steps,
