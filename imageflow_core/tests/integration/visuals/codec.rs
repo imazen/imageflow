@@ -82,6 +82,7 @@ fn test_transparent_png_to_jpeg_constrain() {
                 preset: EncoderPreset::Mozjpeg { quality: Some(100), progressive: None, matte: None },
             },
         ],
+        similarity: Similarity::MaxZdsim(0.03),
     }
 }
 
