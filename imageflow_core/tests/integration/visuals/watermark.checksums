@@ -1,31 +1,29 @@
 # watermark.checksums — v1
 
-## test_watermark_image_command_string dice_fitcrop_90pct
-tolerance off-by-one
-= ripe-marsh-dd75ce382a:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_watermark_image dice_fitcrop_90pct
-tolerance off-by-one
-= ripe-marsh-dd75ce382a:sea  x86_64-avx512  @8ca16e2d  human-verified
-
 ## test_watermark_image_on_png shirt_with_webp
 tolerance off-by-one
-= novel-pulse-c8d51eb293:sea  x86_64-avx512  @8ca16e2d  human-verified
-~ elite-mace-1b22fb8dfd:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs novel-pulse-c8d51eb293:sea (zensim:98.42 (dissim 0.016), 11.1% pixels ±2, max-delta:[2,1,1], category:rounding, biased)
-
-## test_watermark_image_small webp_within_90pct
-tolerance off-by-one
-= oral-cliff-ee411f978a:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ elite-mace-1b22fb8dfd:sea  x86_64-avx512  @c4c85640  auto-accepted
 
 ## test_watermark_jpeg_over_pnga gamma_test_30pct
 tolerance off-by-one
-= damp-maple-85c54bb4a8:sea  x86_64-avx512  @8ca16e2d  human-verified
-~ damp-palm-cef4e7d314:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs damp-maple-85c54bb4a8:sea (zensim:98.65 (dissim 0.013), 7.6% pixels ±3, max-delta:[3,3,3], category:rounding, biased)
+~ damp-palm-cef4e7d314:sea  x86_64-avx512  @c4c85640  auto-accepted
+
+## test_watermark_image dice_fitcrop_90pct
+tolerance off-by-one
+~ extra-ark-0befdcb767:sea  x86_64-avx512  @c4c85640  auto-accepted
 
 ## test_watermark_image_command_string_with_bgcolor dice_aaeeff
 tolerance off-by-one
-= ripe-marsh-dd75ce382a:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ extra-ark-0befdcb767:sea  x86_64-avx512  @c4c85640  auto-accepted
+
+## test_watermark_image_command_string dice_fitcrop_90pct
+tolerance off-by-one
+~ extra-ark-0befdcb767:sea  x86_64-avx512  @c4c85640  auto-accepted
 
 ## test_watermark_image_pixel_margins webp_700px_offset
 tolerance off-by-one
-= mere-river-1c2f0751ed:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ lazy-colt-ab2ccbfaf3:sea  x86_64-avx512  @c4c85640  auto-accepted
+
+## test_watermark_image_small webp_within_90pct
+tolerance off-by-one
+~ grand-sloth-8c5b9b6295:sea  x86_64-avx512  @c4c85640  auto-accepted
