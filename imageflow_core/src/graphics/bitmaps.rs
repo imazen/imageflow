@@ -1562,10 +1562,8 @@ impl<'a> BitmapWindowMut<'a, u8> {
     }
 
     pub fn set_alpha_to_255(&mut self) -> Result<(), FlowError> {
-        for line in self.scanlines_bgra()? {
-            for pix in line.row {
-                pix.a = 255;
-            }
+        for mut line in self.scanlines() {
+            crate::graphics::swizzle::set_alpha_to_255(line.row_mut());
         }
         Ok(())
     }

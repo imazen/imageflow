@@ -10,6 +10,7 @@ pub mod lut;
 pub(crate) mod math;
 pub(crate) mod rounded_corners;
 pub mod scaling;
+pub(crate) mod swizzle;
 pub mod transpose;
 pub mod weights;
 pub mod whitespace;

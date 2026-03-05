@@ -938,6 +938,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "garb"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02fb4b910fea99b511df11b42ef02847853225d067c2cb7d5d9a0c27e7950110"
+dependencies = [
+ "archmage",
+ "bytemuck",
+ "safe_unaligned_simd",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1231,7 +1242,7 @@ dependencies = [
  "exr",
  "gif",
  "image-webp",
- "moxcms",
+ "moxcms 0.7.11",
  "num-traits",
  "png",
  "qoi",
@@ -1308,6 +1319,7 @@ dependencies = [
  "evalchroma",
  "flate2",
  "fs2",
+ "garb",
  "gif",
  "hex",
  "image",
@@ -1327,6 +1339,7 @@ dependencies = [
  "libwebp-sys",
  "libz-sys",
  "lodepng",
+ "moxcms 0.8.1",
  "mozjpeg",
  "mozjpeg-sys",
  "multiversion",
@@ -1767,6 +1780,15 @@ name = "moxcms"
 version = "0.7.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac9557c559cd6fc9867e122e20d2cbefc9ca29d80d027a8e39310920ed2f0a97"
+dependencies = [
+ "num-traits",
+ "pxfm",
+]
+
+[[package]]
+name = "moxcms"
+version = "0.8.1"
+source = "git+https://github.com/awxkee/moxcms.git?rev=c4affa1#c4affa196727d17f21a7f6f148a558867decb470"
 dependencies = [
  "num-traits",
  "pxfm",

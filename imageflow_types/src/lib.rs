@@ -1739,6 +1739,24 @@ pub enum DecoderCommand {
     DiscardColorProfile,
     #[serde(rename = "ignore_color_profile_errors")]
     IgnoreColorProfileErrors,
+    /// Honor gAMA and cHRM chunks in PNG files. When false (potentially the
+    /// future default), gAMA/cHRM are ignored and only iCCP/sRGB/cICP are used.
+    /// Useful because gAMA/cHRM metadata is often incorrect in web-scraped images.
+    ///
+    /// Hidden from the public API — internal use and tests only.
+    #[doc(hidden)]
+    #[serde(rename = "honor_gama_chrm", skip)]
+    HonorGamaChrm(bool),
+    /// Honor gAMA-only PNGs (gAMA without cHRM) by applying a color transform
+    /// with assumed sRGB primaries. Without this flag, gAMA-only PNGs are
+    /// treated as sRGB (legacy behavior, no transform). Enabling this matches
+    /// Chrome and Firefox behavior for non-neutral gamma values (e.g. gAMA=1.0
+    /// for linear-light images).
+    ///
+    /// Hidden from the public API — internal use and tests only.
+    #[doc(hidden)]
+    #[serde(rename = "honor_gama_only", skip)]
+    HonorGamaOnly(bool),
     #[serde(rename = "select_frame")]
     SelectFrame(i32),
 }
