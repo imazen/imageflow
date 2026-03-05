@@ -772,6 +772,13 @@ pub enum EncoderPreset {
     },
     WebPLossless,
     Gif,
+    /// JPEG XL lossy encoding. `distance` is butteraugli distance (0.0 = mathematically lossless,
+    /// 1.0 = high quality, higher = more compression). Default effort 7.
+    JxlLossy {
+        distance: f32,
+    },
+    /// JPEG XL lossless encoding (modular mode). Default effort 7.
+    JxlLossless,
 }
 
 impl EncoderPreset {

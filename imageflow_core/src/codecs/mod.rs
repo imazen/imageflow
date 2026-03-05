@@ -47,6 +47,8 @@ mod zenjpeg_decoder;
 #[cfg(feature = "zen-codecs")]
 mod zenjpeg_encoder;
 #[cfg(feature = "zen-codecs")]
+mod zenjxl_codec;
+#[cfg(feature = "zen-codecs")]
 mod zenwebp_codec;
 
 use crate::graphics::bitmaps::BitmapKey;
@@ -104,6 +106,8 @@ pub enum NamedDecoders {
     ZenWebPDecoder,
     #[cfg(feature = "zen-codecs")]
     ZenGifDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenJxlDecoder,
 }
 impl NamedDecoders {
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
@@ -135,6 +139,14 @@ impl NamedDecoders {
             #[cfg(feature = "zen-codecs")]
             NamedDecoders::ZenGifDecoder => {
                 bytes.starts_with(b"GIF89a") || bytes.starts_with(b"GIF87a")
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => {
+                // JXL bare codestream: 0xFF 0x0A
+                // JXL container: 0x00 0x00 0x00 0x0C 0x4A 0x58 0x4C 0x20 0x0D 0x0A 0x87 0x0A
+                bytes.starts_with(&[0xFF, 0x0A])
+                    || (bytes.len() >= 12
+                        && bytes.starts_with(&[0x00, 0x00, 0x00, 0x0C, 0x4A, 0x58, 0x4C, 0x20]))
             }
         }
     }
@@ -172,6 +184,10 @@ impl NamedDecoders {
             NamedDecoders::ZenGifDecoder => {
                 Ok(Box::new(zengif_codec::ZenGifDecoder::create(c, io, io_id)?))
             }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => {
+                Ok(Box::new(zenjxl_codec::ZenJxlDecoder::create(c, io, io_id)?))
+            }
         }
     }
 }
@@ -193,6 +209,8 @@ pub enum NamedEncoders {
     ZenWebPEncoder,
     #[cfg(feature = "zen-codecs")]
     ZenGifEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenJxlEncoder,
 }
 pub struct EnabledCodecs {
     pub decoders: ::smallvec::SmallVec<[NamedDecoders; 4]>,
@@ -222,6 +240,9 @@ impl Default for EnabledCodecs {
                 NamedDecoders::ZenGifDecoder,
                 #[cfg(not(feature = "zen-codecs"))]
                 NamedDecoders::GifRsDecoder,
+                // JXL decoder (zen-codecs only)
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenJxlDecoder,
             ]),
             encoders: smallvec::SmallVec::from_slice(&[
                 #[cfg(feature = "zen-codecs")]
@@ -242,6 +263,8 @@ impl Default for EnabledCodecs {
                 NamedEncoders::LodePngEncoder,
                 #[cfg(feature = "c-codecs")]
                 NamedEncoders::LibPngRsEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenJxlEncoder,
             ]),
         }
     }

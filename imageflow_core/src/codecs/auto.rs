@@ -236,6 +236,43 @@ pub(crate) fn create_encoder(
                 ));
             }
         }
+        s::EncoderPreset::JxlLossy { distance } => {
+            #[cfg(feature = "zen-codecs")]
+            {
+                Box::new(
+                    crate::codecs::zenjxl_codec::ZenJxlEncoder::create(
+                        c,
+                        io,
+                        Some(distance),
+                        false,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "zen-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "JXL encoder requires the 'zen-codecs' feature"
+                ));
+            }
+        }
+        s::EncoderPreset::JxlLossless => {
+            #[cfg(feature = "zen-codecs")]
+            {
+                Box::new(
+                    crate::codecs::zenjxl_codec::ZenJxlEncoder::create(c, io, None, true)
+                        .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "zen-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "JXL encoder requires the 'zen-codecs' feature"
+                ));
+            }
+        }
         s::EncoderPreset::WebPLossy { quality } => {
             // Prefer libwebp for lossy — zenwebp's lossy quality is significantly
             // worse at the same quality setting (quality-delta inversion bug).
@@ -325,9 +362,8 @@ fn create_encoder_auto(
             .map_err(|e| e.at(here!()))?,
         OutputImageFormat::Webp => create_webp_auto(ctx, io, bitmap_key, decoder_io_ids, details)
             .map_err(|e| e.at(here!()))?,
-        OutputImageFormat::Jxl => {
-            unimplemented!()
-        }
+        OutputImageFormat::Jxl => create_jxl_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+            .map_err(|e| e.at(here!()))?,
         OutputImageFormat::Avif => {
             unimplemented!()
         }
@@ -689,6 +725,43 @@ fn create_webp_auto(
     }
 }
 
+fn create_jxl_auto(
+    ctx: &Context,
+    io: IoProxy,
+    bitmap_key: BitmapKey,
+    _decoder_io_ids: &[i32],
+    details: AutoEncoderDetails,
+) -> Result<Box<dyn Encoder>> {
+    let profile_hints = details
+        .quality_profile
+        .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
+
+    let lossless = details.needs_lossless.unwrap_or(false);
+
+    #[cfg(feature = "zen-codecs")]
+    {
+        if lossless {
+            Ok(Box::new(
+                crate::codecs::zenjxl_codec::ZenJxlEncoder::create(ctx, io, None, true)
+                    .map_err(|e| e.at(here!()))?,
+            ))
+        } else {
+            let distance = profile_hints.map(|h| h.jxl).unwrap_or(1.0);
+            Ok(Box::new(
+                crate::codecs::zenjxl_codec::ZenJxlEncoder::create(ctx, io, Some(distance), false)
+                    .map_err(|e| e.at(here!()))?,
+            ))
+        }
+    }
+    #[cfg(not(feature = "zen-codecs"))]
+    {
+        return Err(nerror!(
+            ErrorKind::CodecDisabledError,
+            "JXL encoding requires the 'zen-codecs' feature"
+        ));
+    }
+}
+
 fn create_png_auto(
     ctx: &Context,
     io: IoProxy,
@@ -902,6 +975,10 @@ struct FeaturesImplemented {
     webp_animation: bool,
     jpegli: bool,
 }
+#[cfg(feature = "zen-codecs")]
+const FEATURES_IMPLEMENTED: FeaturesImplemented =
+    FeaturesImplemented { jxl: true, avif: false, webp_animation: false, jpegli: false };
+#[cfg(not(feature = "zen-codecs"))]
 const FEATURES_IMPLEMENTED: FeaturesImplemented =
     FeaturesImplemented { jxl: false, avif: false, webp_animation: false, jpegli: false };
 
