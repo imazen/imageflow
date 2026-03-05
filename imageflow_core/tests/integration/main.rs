@@ -9,3 +9,4 @@ mod sync;
 mod variation;
 mod visuals;
 mod weights;
+mod weights_params;
