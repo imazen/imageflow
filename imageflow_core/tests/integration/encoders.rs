@@ -170,7 +170,7 @@ fn test_encode_webp_lossy() {
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
         Constraints {
-            max_file_size: Some(450_000),
+            max_file_size: Some(425_000),
             similarity: Some(Similarity::MaxZdsim(0.40)), // measured zdsim: 0.267
         },
         steps,

@@ -228,10 +228,12 @@ pub(crate) fn create_encoder(
             }
         }
         s::EncoderPreset::WebPLossy { quality } => {
-            #[cfg(feature = "zen-codecs")]
+            // Prefer libwebp for lossy — zenwebp's lossy quality is significantly
+            // worse at the same quality setting (quality-delta inversion bug).
+            #[cfg(feature = "c-codecs")]
             {
                 Box::new(
-                    crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                    crate::codecs::webp::WebPEncoder::create(
                         c,
                         io,
                         Some(quality),
@@ -241,10 +243,10 @@ pub(crate) fn create_encoder(
                     .map_err(|e| e.at(here!()))?,
                 )
             }
-            #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
+            #[cfg(all(feature = "zen-codecs", not(feature = "c-codecs")))]
             {
                 Box::new(
-                    crate::codecs::webp::WebPEncoder::create(
+                    crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
                         c,
                         io,
                         Some(quality),
@@ -613,25 +615,49 @@ fn create_webp_auto(
         None
     };
 
-    #[cfg(feature = "zen-codecs")]
-    {
-        Ok(Box::new(
-            crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
-                ctx,
-                io,
-                quality,
-                Some(lossless),
-                matte,
-            )
-            .map_err(|e| e.at(here!()))?,
-        ))
-    }
-    #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
-    {
-        Ok(Box::new(
-            crate::codecs::webp::WebPEncoder::create(ctx, io, quality, Some(lossless), matte)
+    // Use zenwebp for lossless, libwebp for lossy (zenwebp lossy has quality issues).
+    if lossless {
+        #[cfg(feature = "zen-codecs")]
+        {
+            return Ok(Box::new(
+                crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                    ctx,
+                    io,
+                    quality,
+                    Some(true),
+                    matte,
+                )
                 .map_err(|e| e.at(here!()))?,
-        ))
+            ));
+        }
+        #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
+        {
+            return Ok(Box::new(
+                crate::codecs::webp::WebPEncoder::create(ctx, io, quality, Some(true), matte)
+                    .map_err(|e| e.at(here!()))?,
+            ));
+        }
+    } else {
+        #[cfg(feature = "c-codecs")]
+        {
+            return Ok(Box::new(
+                crate::codecs::webp::WebPEncoder::create(ctx, io, quality, Some(false), matte)
+                    .map_err(|e| e.at(here!()))?,
+            ));
+        }
+        #[cfg(all(feature = "zen-codecs", not(feature = "c-codecs")))]
+        {
+            return Ok(Box::new(
+                crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                    ctx,
+                    io,
+                    quality,
+                    Some(false),
+                    matte,
+                )
+                .map_err(|e| e.at(here!()))?,
+            ));
+        }
     }
     #[cfg(not(any(feature = "c-codecs", feature = "zen-codecs")))]
     {

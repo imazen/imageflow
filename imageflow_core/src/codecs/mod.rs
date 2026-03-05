@@ -212,11 +212,12 @@ impl Default for EnabledCodecs {
                 NamedEncoders::ZenJpegEncoder,
                 #[cfg(feature = "zen-codecs")]
                 NamedEncoders::ZenWebPEncoder,
-                // C-based encoders as fallback
+                // C-based WebP encoder always enabled for lossy (zenwebp lossy has quality issues)
+                #[cfg(feature = "c-codecs")]
+                NamedEncoders::WebPEncoder,
+                // C-based JPEG encoder as fallback
                 #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
                 NamedEncoders::MozJpegEncoder,
-                #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
-                NamedEncoders::WebPEncoder,
                 NamedEncoders::PngQuantEncoder,
                 NamedEncoders::LodePngEncoder,
                 #[cfg(feature = "c-codecs")]
