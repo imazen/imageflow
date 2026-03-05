@@ -55,7 +55,7 @@ moxcms = { git = "https://github.com/awxkee/moxcms.git", rev = "c4affa1", featur
 # --- Zen codec dependencies (pure Rust, default) ---
 # Using path deps until next publish cycle
 zenjpeg = { path = "../../zenjpeg/zenjpeg", features = ["decoder"], optional = true }
-zengif = { path = "../../zengif", optional = true }
+zengif = { path = "../../zengif", features = ["color_quant"], optional = true }
 zenwebp = { path = "../../zenwebp", optional = true }
 
 # Used for schema generation if feature enabled
