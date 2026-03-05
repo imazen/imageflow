@@ -34,9 +34,7 @@ impl LobeRatio {
         match self {
             LobeRatio::Natural => natural_ratio,
             LobeRatio::Exact(ratio) => (*ratio as f64).clamp(0.0, 1.0),
-            LobeRatio::SharpenPercent(pct) => {
-                1.0f64.min(natural_ratio.max(*pct as f64 / 100.0))
-            }
+            LobeRatio::SharpenPercent(pct) => 1.0f64.min(natural_ratio.max(*pct as f64 / 100.0)),
         }
     }
 }

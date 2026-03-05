@@ -891,7 +891,10 @@ fn decode_with_honor_gama_chrm_false(png_bytes: &[u8], decoder: NamedDecoders) -
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
         framewise: s::Framewise::Steps(vec![
-            s::Node::Decode { io_id: 0, commands: Some(vec![s::DecoderCommand::HonorGamaChrm(false)]) },
+            s::Node::Decode {
+                io_id: 0,
+                commands: Some(vec![s::DecoderCommand::HonorGamaChrm(false)]),
+            },
             s::Node::Encode {
                 io_id: 1,
                 preset: s::EncoderPreset::Libpng {
@@ -931,7 +934,10 @@ fn test_png_honor_gama_chrm_false_ignores_linear_gama() {
     let discarded_ipng =
         decode_to_rgba_with_commands(&png, NamedDecoders::ImageRsPngDecoder, both_cmds.clone());
     let delta_ipng = max_channel_delta(&input, &discarded_ipng);
-    assert!(delta_ipng <= 1, "honor_gama_chrm_false (image_png): delta {delta_ipng} (expected ≤ 1)");
+    assert!(
+        delta_ipng <= 1,
+        "honor_gama_chrm_false (image_png): delta {delta_ipng} (expected ≤ 1)"
+    );
     let discarded_lpng =
         decode_to_rgba_with_commands(&png, NamedDecoders::LibPngRsDecoder, both_cmds);
     let delta_lpng = max_channel_delta(&input, &discarded_lpng);

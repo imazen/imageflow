@@ -93,12 +93,12 @@ fn generate_param_weights() -> String {
         ParamVariation::Sharpen(5.0),
         ParamVariation::Sharpen(15.0),
         ParamVariation::Sharpen(50.0),
-        ParamVariation::Both(1.2, 15.0),  // widened kernel + moderate sharpen
-        ParamVariation::Both(0.8, 15.0),  // narrowed kernel + moderate sharpen
-        ParamVariation::Both(1.1, 50.0),  // slight blur + heavy sharpen
-        ParamVariation::LobeExact(0.0),   // eliminate all negative lobes
-        ParamVariation::LobeExact(0.05),  // suppress to 5% negative
-        ParamVariation::LobeExact(0.15),  // moderate negative lobes
+        ParamVariation::Both(1.2, 15.0), // widened kernel + moderate sharpen
+        ParamVariation::Both(0.8, 15.0), // narrowed kernel + moderate sharpen
+        ParamVariation::Both(1.1, 50.0), // slight blur + heavy sharpen
+        ParamVariation::LobeExact(0.0),  // eliminate all negative lobes
+        ParamVariation::LobeExact(0.05), // suppress to 5% negative
+        ParamVariation::LobeExact(0.15), // moderate negative lobes
     ];
 
     let mut output = String::from("filter, param, from_width, to_width, weights");
@@ -182,8 +182,5 @@ fn test_param_weights() {
 /// Guard: UPDATE_REFERENCE must not be committed as true.
 #[test]
 fn test_update_reference_is_false() {
-    assert!(
-        !UPDATE_REFERENCE,
-        "UPDATE_REFERENCE must be false in committed code"
-    );
+    assert!(!UPDATE_REFERENCE, "UPDATE_REFERENCE must be false in committed code");
 }

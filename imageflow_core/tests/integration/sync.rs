@@ -234,9 +234,7 @@ fn backfill_diff_stats() {
 }
 
 /// Load an image, guessing format from file content rather than extension.
-fn load_image_guessing_format(
-    path: &Path,
-) -> Result<image::RgbaImage, Box<dyn std::error::Error>> {
+fn load_image_guessing_format(path: &Path) -> Result<image::RgbaImage, Box<dyn std::error::Error>> {
     let data = std::fs::read(path)?;
     let format = image::guess_format(&data)?;
     let img = image::load_from_memory_with_format(&data, format)?;

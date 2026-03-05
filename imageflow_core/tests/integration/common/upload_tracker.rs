@@ -77,8 +77,7 @@ pub fn petname_to_local_paths(checksums_dir: &Path) -> BTreeMap<String, PathBuf>
                         } else {
                             format!("{}_{}", section.test_name, section.detail_name)
                         };
-                        let ref_path =
-                            images_dir.join(module).join(format!("{flat_name}.png"));
+                        let ref_path = images_dir.join(module).join(format!("{flat_name}.png"));
                         for entry in section.active_entries() {
                             map.insert(entry.name_hash.clone(), ref_path.clone());
                         }
@@ -116,10 +115,7 @@ pub struct SyncResult {
 /// 6. Returns result with any failures
 ///
 /// **Does not fail tests** — caller decides whether to panic on failures.
-pub fn sync_and_verify(
-    checksums_dir: &Path,
-    storage: &ReferenceStorage,
-) -> SyncResult {
+pub fn sync_and_verify(checksums_dir: &Path, storage: &ReferenceStorage) -> SyncResult {
     let petname_paths = petname_to_local_paths(checksums_dir);
     let mut uploaded = read_uploaded_log();
     let already_uploaded = uploaded.len();
@@ -191,4 +187,3 @@ fn sync_checksums_files(checksums_dir: &Path, storage: &ReferenceStorage) {
         }
     }
 }
-

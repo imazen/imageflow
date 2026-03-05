@@ -436,7 +436,9 @@ fn test_png_icc_lifetime() {
                 Ok(i) => {
                     println!(
                         "PNG info retrieved for {}: {}x{}",
-                        png_path.display(), i.image_width, i.image_height
+                        png_path.display(),
+                        i.image_width,
+                        i.image_height
                     );
                     println!("Note: Use valgrind/ASAN to detect lifetime issues");
                 }

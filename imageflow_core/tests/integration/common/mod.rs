@@ -737,9 +737,7 @@ pub fn compare_encoded(
         assert!(bytes.len() <= max, "Encoded size ({}) exceeds limit ({max})", bytes.len());
     }
 
-    let similarity = require
-        .similarity
-        .expect("compare_encoded requires a similarity threshold");
+    let similarity = require.similarity.expect("compare_encoded requires a similarity threshold");
     let tol_spec = similarity.to_tolerance_spec();
     check_visual_bytes(identity, detail, &bytes, &tol_spec)
 }
