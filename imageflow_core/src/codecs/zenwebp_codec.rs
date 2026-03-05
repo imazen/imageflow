@@ -208,16 +208,20 @@ impl Encoder for ZenWebPEncoder {
             _ => 4,
         };
         let row_bytes = w as usize * pixel_bytes;
+        let total_bytes = row_bytes * h as usize;
 
-        // Collect pixel data (handle stride)
-        let pixels: Vec<u8> = if src_stride == row_bytes {
-            window.get_slice().to_vec()
+        // Borrow directly when strides match; copy only when padding exists
+        let owned_buf: Vec<u8>;
+        let pixels: &[u8] = if src_stride == row_bytes {
+            &window.get_slice()[..total_bytes]
         } else {
-            let mut buf = Vec::with_capacity(row_bytes * h as usize);
-            for line in window.scanlines() {
-                buf.extend_from_slice(&line.row()[..row_bytes]);
+            let slice = window.get_slice();
+            let mut buf = Vec::with_capacity(total_bytes);
+            for y in 0..h as usize {
+                buf.extend_from_slice(&slice[y * src_stride..y * src_stride + row_bytes]);
             }
-            buf
+            owned_buf = buf;
+            &owned_buf
         };
 
         let lossless = self.lossless.unwrap_or(false);
@@ -225,14 +229,12 @@ impl Encoder for ZenWebPEncoder {
 
         let webp_bytes = if lossless {
             let config = zenwebp::LosslessConfig::new().with_quality(quality).with_method(6);
-            zenwebp::EncodeRequest::lossless(&config, &pixels, pixel_layout, w, h)
-                .encode()
-                .map_err(|e| {
-                    nerror!(ErrorKind::ImageEncodingError, "zenwebp lossless error: {}", e)
-                })?
+            zenwebp::EncodeRequest::lossless(&config, pixels, pixel_layout, w, h).encode().map_err(
+                |e| nerror!(ErrorKind::ImageEncodingError, "zenwebp lossless error: {}", e),
+            )?
         } else {
             let config = zenwebp::LossyConfig::new().with_quality(quality).with_method(4);
-            zenwebp::EncodeRequest::lossy(&config, &pixels, pixel_layout, w, h)
+            zenwebp::EncodeRequest::lossy(&config, pixels, pixel_layout, w, h)
                 .encode()
                 .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "zenwebp lossy error: {}", e))?
         };
