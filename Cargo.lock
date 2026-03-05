@@ -146,11 +146,11 @@ dependencies = [
 
 [[package]]
 name = "archmage"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffeedd6925c1a4a6790e2299d6873e91144eccab42700e58e7f881403c8cab8b"
+checksum = "1e470ca1f169b79284cc3bcdd61da7b16a17efaa1292bc949ab8b54456f90af0"
 dependencies = [
- "archmage-macros 0.9.1",
+ "archmage-macros 0.9.2",
  "safe_unaligned_simd",
 ]
 
@@ -167,9 +167,9 @@ dependencies = [
 
 [[package]]
 name = "archmage-macros"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a408ca22a6097871cac60710d9b0b7af51edb3a7138ff5508e14ad039e84d26d"
+checksum = "3ab8c78724345a30e13e885591bcca870bc778f47cd2bf9bf01be83e8fe55945"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1328,7 +1328,7 @@ name = "imageflow_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "archmage 0.9.1",
+ "archmage 0.9.2",
  "base64",
  "bytemuck",
  "colorutils-rs",
@@ -1754,11 +1754,11 @@ source = "git+https://github.com/DanielKeep/rust-custom-derive.git#1252f258cdb9b
 
 [[package]]
 name = "magetypes"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06cbec164a92d8c4236697aaebc6d45acd9e840590489046992ebf04905d32d6"
+checksum = "803ee0717e254afbe023ad6cfcc5af101771ffa38d22e2a218f5ec745c5a3edc"
 dependencies = [
- "archmage 0.9.1",
+ "archmage 0.9.2",
 ]
 
 [[package]]
@@ -3439,7 +3439,7 @@ dependencies = [
 name = "zensim"
 version = "0.1.0"
 dependencies = [
- "archmage 0.9.1",
+ "archmage 0.9.2",
  "bytemuck",
  "magetypes",
  "rayon",
