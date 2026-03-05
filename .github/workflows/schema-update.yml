@@ -11,7 +11,10 @@ jobs:
   check-schema:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Checkout zensim (sibling dependency)
+        run: git clone --depth 1 https://github.com/imazen/zensim.git ../zensim
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
