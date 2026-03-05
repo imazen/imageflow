@@ -117,8 +117,8 @@ impl InterpolationDetails {
     pub fn set_sharpen_percent_goal(&mut self, goal: f32) {
         self.sharpen_percent_goal = goal;
     }
-    /// Multiply the blur factor by the given value. >1 blurs, <1 sharpens.
-    pub fn multiply_blur(&mut self, factor: f64) {
+    /// Scale the kernel width. >1 widens (blurs), <1 narrows (sharpens).
+    pub fn set_kernel_width_scale(&mut self, factor: f64) {
         self.blur *= factor;
     }
     fn bicubic(window: f64, blur: f64, b: f64, c: f64) -> InterpolationDetails {

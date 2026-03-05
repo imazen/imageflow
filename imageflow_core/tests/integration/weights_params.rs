@@ -30,7 +30,7 @@ impl ParamVariation {
     fn apply(&self, details: &mut InterpolationDetails) {
         match self {
             ParamVariation::Default => {}
-            ParamVariation::Blur(factor) => details.multiply_blur(*factor),
+            ParamVariation::Blur(factor) => details.set_kernel_width_scale(*factor),
             ParamVariation::Sharpen(pct) => details.set_sharpen_percent_goal(*pct),
         }
     }
