@@ -1,5 +1,5 @@
 use crate::ffi;
-use crate::ffi::{wrap_jpeg_get_custom_state, WrapJpegSourceManager};
+use crate::ffi::{wrap_jpeg_get_custom_state, ColorProfileSource, WrapJpegSourceManager};
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::{Context, JsonResponse, Result};
 

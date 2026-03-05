@@ -1,3 +1,4 @@
+#![cfg_attr(not(any(feature = "c-codecs", feature = "ffi-nodes")), forbid(unsafe_code))]
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
@@ -5,6 +6,7 @@
 // Required to force linkage of native C library — the crate has no Rust API,
 // only provides C object files. `extern crate` is needed to prevent the linker
 // from stripping the unused (from Rust's perspective) native library.
+#[cfg(feature = "c-codecs")]
 extern crate imageflow_c_components;
 
 #[macro_use]

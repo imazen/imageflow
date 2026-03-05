@@ -7,33 +7,21 @@ use crate::graphics::bitmaps::{BitmapKey, BitmapWindowMut};
 use crate::{Context, ErrorKind, Result};
 use imageflow_types::{Color, PixelFormat};
 use rgb::Bgra;
-use std::mem::MaybeUninit;
 
-/// Creates an imagequant Image by reading BGRA rows on demand, converting to RGBA.
-/// Avoids allocating a contiguous RGBA copy of the entire image.
 fn image_from_bgra_window<'a>(
     attr: &'a imagequant::Attributes,
     window: &'a BitmapWindowMut<'a, Bgra<u8, u8>>,
-) -> Result<imagequant::Image<'a>> {
+) -> Result<imagequant::Image<'static>> {
     let (w, h) = window.size_usize();
-    // SAFETY: The closure initializes every MaybeUninit element. window.row()
-    // returns exactly `w` pixels, and zip pairs each with one MaybeUninit,
-    // so write() is called on every element in the row.
-    unsafe {
-        imagequant::Image::new_fn(
-            attr,
-            |row: &mut [MaybeUninit<imagequant::RGBA>], row_index: usize| {
-                let from = window.row(row_index).unwrap();
-                from.iter().zip(row).for_each(|(from, to)| {
-                    to.write(imagequant::RGBA { r: from.r, g: from.g, b: from.b, a: from.a });
-                });
-            },
-            w,
-            h,
-            0.0,
-        )
+    let mut rgba_buf: Vec<imagequant::RGBA> = Vec::with_capacity(w * h);
+    for y in 0..h {
+        let row = window.row(y).unwrap();
+        for px in row {
+            rgba_buf.push(imagequant::RGBA { r: px.r, g: px.g, b: px.b, a: px.a });
+        }
     }
-    .map_err(|e| crate::FlowError::from(e).at(here!()))
+    imagequant::Image::new(attr, rgba_buf, w, h, 0.0)
+        .map_err(|e| crate::FlowError::from(e).at(here!()))
 }
 
 pub struct PngquantEncoder {

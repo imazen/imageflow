@@ -1,3 +1,4 @@
+#[cfg(feature = "c-codecs")]
 use crate::ffi::{ColorProfileSource, DecoderColorInfo};
 
 /// CMS-agnostic description of an image's source color space.
@@ -188,6 +189,7 @@ impl SourceProfile {
     /// # Safety
     /// The `profile_buffer` pointer in `color` must be valid for `buffer_length` bytes
     /// if `source` is `ICCP` or `ICCP_GRAY`.
+    #[cfg(feature = "c-codecs")]
     pub unsafe fn from_decoder_color_info(color: &DecoderColorInfo) -> Self {
         match color.source {
             ColorProfileSource::Null | ColorProfileSource::sRGB => SourceProfile::Srgb,
