@@ -55,6 +55,7 @@ tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 ## test_transparent_png_to_jpeg shirt
 tolerance zensim:99 (dissim 0.01)
 ~ lame-moth-82ffa90c42:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ brave-lynx-0f66a5e956:sea  x86_64-avx512  @1bf391b1  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs lame-moth-82ffa90c42:sea (zensim:99.27 (dissim 0.0073))
 
 ## decode_cmyk_jpeg logo_passthrough
 tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%

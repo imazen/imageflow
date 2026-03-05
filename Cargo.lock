@@ -3544,6 +3544,7 @@ name = "zengif"
 version = "0.6.0"
 dependencies = [
  "bytemuck",
+ "color_quant",
  "enough",
  "gif",
  "linear-srgb",

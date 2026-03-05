@@ -74,11 +74,20 @@ pub(crate) fn create_encoder(
                 .map_err(|e| e.at(here!()))?
         }
         s::EncoderPreset::Gif => {
-            //TODO: enforce killbits - if c.enabled_codecs.encoders.contains()
-            Box::new(
-                crate::codecs::gif::GifEncoder::create(c, io, bitmap_key)
-                    .map_err(|e| e.at(here!()))?,
-            )
+            #[cfg(feature = "zen-codecs")]
+            {
+                Box::new(
+                    crate::codecs::zengif_codec::ZenGifEncoder::create(c, io, bitmap_key)
+                        .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "zen-codecs"))]
+            {
+                Box::new(
+                    crate::codecs::gif::GifEncoder::create(c, io, bitmap_key)
+                        .map_err(|e| e.at(here!()))?,
+                )
+            }
         }
         s::EncoderPreset::Pngquant { speed, quality, minimum_quality, maximum_deflate } => {
             Box::new(
@@ -292,10 +301,22 @@ fn create_encoder_auto(
 
     Ok(match final_format {
         OutputImageFormat::Keep => unreachable!(),
-        OutputImageFormat::Gif => Box::new(
-            crate::codecs::gif::GifEncoder::create(ctx, io, bitmap_key)
-                .map_err(|e| e.at(here!()))?,
-        ),
+        OutputImageFormat::Gif => {
+            #[cfg(feature = "zen-codecs")]
+            {
+                Box::new(
+                    crate::codecs::zengif_codec::ZenGifEncoder::create(ctx, io, bitmap_key)
+                        .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "zen-codecs"))]
+            {
+                Box::new(
+                    crate::codecs::gif::GifEncoder::create(ctx, io, bitmap_key)
+                        .map_err(|e| e.at(here!()))?,
+                )
+            }
+        }
         OutputImageFormat::Jpeg | OutputImageFormat::Jpg => {
             create_jpeg_auto(ctx, io, bitmap_key, decoder_io_ids, details)
                 .map_err(|e| e.at(here!()))?

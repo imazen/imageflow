@@ -41,6 +41,8 @@ mod webp;
 
 // Zen codec modules — pure Rust, require zen-codecs feature
 #[cfg(feature = "zen-codecs")]
+mod zengif_codec;
+#[cfg(feature = "zen-codecs")]
 mod zenjpeg_decoder;
 #[cfg(feature = "zen-codecs")]
 mod zenjpeg_encoder;
@@ -100,6 +102,8 @@ pub enum NamedDecoders {
     ZenJpegDecoder,
     #[cfg(feature = "zen-codecs")]
     ZenWebPDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenGifDecoder,
 }
 impl NamedDecoders {
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
@@ -127,6 +131,10 @@ impl NamedDecoders {
             #[cfg(feature = "zen-codecs")]
             NamedDecoders::ZenWebPDecoder => {
                 bytes.starts_with(b"RIFF") && bytes.len() >= 12 && bytes[8..12].starts_with(b"WEBP")
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => {
+                bytes.starts_with(b"GIF89a") || bytes.starts_with(b"GIF87a")
             }
         }
     }
@@ -160,6 +168,10 @@ impl NamedDecoders {
             NamedDecoders::ZenWebPDecoder => {
                 Ok(Box::new(zenwebp_codec::ZenWebPDecoder::create(c, io, io_id)?))
             }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => {
+                Ok(Box::new(zengif_codec::ZenGifDecoder::create(c, io, io_id)?))
+            }
         }
     }
 }
@@ -179,6 +191,8 @@ pub enum NamedEncoders {
     ZenJpegEncoder,
     #[cfg(feature = "zen-codecs")]
     ZenWebPEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenGifEncoder,
 }
 pub struct EnabledCodecs {
     pub decoders: ::smallvec::SmallVec<[NamedDecoders; 4]>,
@@ -203,9 +217,15 @@ impl Default for EnabledCodecs {
                 NamedDecoders::LibPngRsDecoder,
                 #[cfg(not(feature = "c-codecs"))]
                 NamedDecoders::ImageRsPngDecoder,
+                // Zen GIF decoder preferred when available
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenGifDecoder,
+                #[cfg(not(feature = "zen-codecs"))]
                 NamedDecoders::GifRsDecoder,
             ]),
             encoders: smallvec::SmallVec::from_slice(&[
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenGifEncoder,
                 NamedEncoders::GifEncoder,
                 // Zen (pure Rust) encoders preferred
                 #[cfg(feature = "zen-codecs")]

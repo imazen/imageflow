@@ -29,6 +29,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_icc_p3_to_jpeg_roundtrip p3_to_jpeg_q85
 tolerance zensim:95 (dissim 0.05)
 ~ sheer-stem-5d7316ceaf:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ rural-wasp-2e29c4efad:sea  x86_64-avx512  @1bf391b1  auto-accepted within tolerance (within zensim:95 (dissim 0.05)) vs sheer-stem-5d7316ceaf:sea (zensim:99.76 (dissim 0.0024))
 
 ## test_icc_display_p3_decode_2 p3_decode
 tolerance zensim:99 (dissim 0.01)
