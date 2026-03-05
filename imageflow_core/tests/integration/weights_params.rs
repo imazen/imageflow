@@ -14,6 +14,8 @@ enum ParamVariation {
     KernelScale(f64),
     /// Set sharpen percent goal (amplifies negative lobes).
     Sharpen(f32),
+    /// Both kernel scale and sharpen applied together.
+    Both(f64, f32),
 }
 
 impl fmt::Display for ParamVariation {
@@ -22,6 +24,7 @@ impl fmt::Display for ParamVariation {
             ParamVariation::Default => write!(f, "default"),
             ParamVariation::KernelScale(s) => write!(f, "kernel_scale={:.2}", s),
             ParamVariation::Sharpen(s) => write!(f, "sharpen={:.1}", s),
+            ParamVariation::Both(k, s) => write!(f, "kernel_scale={:.2}+sharpen={:.1}", k, s),
         }
     }
 }
@@ -32,6 +35,10 @@ impl ParamVariation {
             ParamVariation::Default => {}
             ParamVariation::KernelScale(factor) => details.set_kernel_width_scale(*factor),
             ParamVariation::Sharpen(pct) => details.set_sharpen_percent_goal(*pct),
+            ParamVariation::Both(factor, pct) => {
+                details.set_kernel_width_scale(*factor);
+                details.set_sharpen_percent_goal(*pct);
+            }
         }
     }
 }
@@ -80,6 +87,9 @@ fn generate_param_weights() -> String {
         ParamVariation::Sharpen(5.0),
         ParamVariation::Sharpen(15.0),
         ParamVariation::Sharpen(50.0),
+        ParamVariation::Both(1.2, 15.0),  // widened kernel + moderate sharpen
+        ParamVariation::Both(0.8, 15.0),  // narrowed kernel + moderate sharpen
+        ParamVariation::Both(1.1, 50.0),  // slight blur + heavy sharpen
     ];
 
     let mut output = String::from("filter, param, from_width, to_width, weights");
