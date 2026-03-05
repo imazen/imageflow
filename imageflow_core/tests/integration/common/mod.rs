@@ -676,7 +676,11 @@ pub fn check_visual_bytes(
     )
     .expect("BGRA bitmap invalid for zensim");
 
-    let result = global_manager().check_hash_with_image(
+    // Ensure reference image exists (for pixel comparison fallback on new platforms).
+    let manager = global_manager();
+    manager.save_reference_if_missing(identity.module, identity.func_name, detail, &actual_img);
+
+    let result = manager.check_hash_with_image(
         identity.module,
         identity.func_name,
         detail,

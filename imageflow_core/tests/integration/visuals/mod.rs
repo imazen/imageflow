@@ -1,6 +1,7 @@
 mod canvas;
 mod codec;
 mod color;
+mod icc;
 mod idct;
 mod orientation;
 mod scaling;

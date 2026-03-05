@@ -100,39 +100,27 @@ impl Decoder for JpegDecoder {
         let (w, h) = window.size_usize();
         let stride = window.t_stride();
 
-        //TODO: Shouldn't this be Bgr24
         match self.pixel_format.unwrap() {
             jpeg::PixelFormat::RGB24 => {
                 let from_stride = w * 3;
                 for mut line in window.scanlines_bgra().unwrap() {
-                    let from_slice =
-                        &pixels[line.y() * from_stride..line.y() * from_stride + from_stride];
-                    if from_slice.len() * 3 != line.row().len() {
-                        panic!("from_slice.len() * 3 != line.row().len()");
-                    }
-                    from_slice.chunks_exact(3).zip(line.row_mut()).for_each(|(from, to)| {
-                        to.r = from[0];
-                        to.b = from[1];
-                        to.g = from[2];
-                    });
+                    let y = line.y();
+                    let from_slice = &pixels[y * from_stride..y * from_stride + from_stride];
+                    let dst = bytemuck::cast_slice_mut::<BGRA8, u8>(line.row_mut());
+                    crate::graphics::swizzle::rgb_to_bgra(from_slice, dst);
                 }
             }
             jpeg::PixelFormat::L8 => {
                 let from_stride = w;
                 for mut line in window.scanlines_bgra().unwrap() {
-                    let from_slice =
-                        &pixels[line.y() * from_stride..line.y() * from_stride + from_stride];
-                    if from_slice.len() != line.row().len() {
-                        panic!("from_slice.len() != line.row().len()");
-                    }
-                    from_slice.iter().zip(line.row_mut()).for_each(|(from, to)| {
-                        *to = BGRA8 { r: *from, g: *from, b: *from, a: 255 };
-                    });
+                    let y = line.y();
+                    let from_slice = &pixels[y * from_stride..y * from_stride + from_stride];
+                    let dst = bytemuck::cast_slice_mut::<BGRA8, u8>(line.row_mut());
+                    crate::graphics::swizzle::gray_to_bgra(from_slice, dst);
                 }
             }
-
             _ => {
-                panic!("Unsupported jpeg type (grayscale or CMYK")
+                panic!("Unsupported jpeg type (grayscale or CMYK)")
             }
         }
         Ok(bitmap_key)

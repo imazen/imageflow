@@ -460,6 +460,10 @@ impl FlowError {
         }
     }
 
+    pub fn from_cms_error(e: moxcms::CmsError) -> Self {
+        FlowError::without_location(ErrorKind::ColorProfileError, format!("moxcms: {}", e))
+    }
+
     pub fn from_png_decoder(e: png::DecodingError) -> Self {
         match e {
             png::DecodingError::IoError(e) => {
