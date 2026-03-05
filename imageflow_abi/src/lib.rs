@@ -238,7 +238,6 @@
 //! ```
 //!
 #![crate_type = "cdylib"]
-#![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 
 // These functions are not for use from Rust, so marking them unsafe just reduces compile-time verification and safety
 //#![cfg_attr(feature = "cargo-clippy", allow(not_unsafe_ptr_arg_deref))]

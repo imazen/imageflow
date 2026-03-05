@@ -99,7 +99,6 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg"]
 
 [features]
 default = []
-nightly = []
 c_rendering = []
 neon = ["libwebp-sys/neon"]
 # Feature to enable OpenAPI schema generation capabilities

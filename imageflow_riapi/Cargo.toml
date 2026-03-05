@@ -21,4 +21,3 @@ difference = "2" # update to v2
 
 
 [features]
-nightly = ["imageflow_helpers/nightly"]

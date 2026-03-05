@@ -28,4 +28,3 @@ cbindgen = "0.29"
 regex-lite = { version = "0.1.6" }
 rayon = "1"
 [features]
-nightly = ["imageflow_core/nightly", "imageflow_helpers/nightly"]

@@ -55,6 +55,5 @@ mimalloc = { version = "*", features = ["secure"], optional = true }
 
 
 [features]
-nightly = []
 mimalloc = ["dep:mimalloc"]
 

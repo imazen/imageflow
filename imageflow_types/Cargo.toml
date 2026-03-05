@@ -30,7 +30,6 @@ chrono = "0.4"
 rayon = "1"
 
 [features]
-nightly = ["imageflow_helpers/nightly"]
 json-schema = ["dep:schemars"]
 schema-export = ["dep:utoipa"]
 

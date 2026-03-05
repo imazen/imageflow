@@ -1,7 +1,6 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
-#![cfg_attr(feature = "nightly", feature(portable_simd))]
 
 // Required to force linkage of native C library — the crate has no Rust API,
 // only provides C object files. `extern crate` is needed to prevent the linker
