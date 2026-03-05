@@ -5,13 +5,13 @@ use std::fmt;
 /// Must be set back to `false` before committing.
 const UPDATE_REFERENCE: bool = false;
 
-/// A blur or sharpen parameter variation to apply to a filter.
+/// A parameter variation to apply to a filter.
 #[derive(Clone, Copy)]
 enum ParamVariation {
-    /// Default filter parameters (blur=1.0, sharpen=0%)
+    /// Default filter parameters (kernel_scale=1.0, sharpen=0%)
     Default,
-    /// Multiply the filter's blur factor. >1.0 blurs, <1.0 sharpens.
-    Blur(f64),
+    /// Scale the kernel width. >1.0 widens (blurs), <1.0 narrows (sharpens).
+    KernelScale(f64),
     /// Set sharpen percent goal (amplifies negative lobes).
     Sharpen(f32),
 }
@@ -20,7 +20,7 @@ impl fmt::Display for ParamVariation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ParamVariation::Default => write!(f, "default"),
-            ParamVariation::Blur(b) => write!(f, "blur={:.2}", b),
+            ParamVariation::KernelScale(s) => write!(f, "kernel_scale={:.2}", s),
             ParamVariation::Sharpen(s) => write!(f, "sharpen={:.1}", s),
         }
     }
@@ -30,7 +30,7 @@ impl ParamVariation {
     fn apply(&self, details: &mut InterpolationDetails) {
         match self {
             ParamVariation::Default => {}
-            ParamVariation::Blur(factor) => details.set_kernel_width_scale(*factor),
+            ParamVariation::KernelScale(factor) => details.set_kernel_width_scale(*factor),
             ParamVariation::Sharpen(pct) => details.set_sharpen_percent_goal(*pct),
         }
     }
@@ -73,10 +73,10 @@ fn generate_param_weights() -> String {
 
     let variations = [
         ParamVariation::Default,
-        ParamVariation::Blur(0.8),
-        ParamVariation::Blur(0.9),
-        ParamVariation::Blur(1.1),
-        ParamVariation::Blur(1.2),
+        ParamVariation::KernelScale(0.8),
+        ParamVariation::KernelScale(0.9),
+        ParamVariation::KernelScale(1.1),
+        ParamVariation::KernelScale(1.2),
         ParamVariation::Sharpen(5.0),
         ParamVariation::Sharpen(15.0),
         ParamVariation::Sharpen(50.0),
