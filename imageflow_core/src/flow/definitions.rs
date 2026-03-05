@@ -514,12 +514,9 @@ impl From<s::Node> for Node {
                 Node::n(&nodes::CROP_WHITESPACE, NodeParams::Json(node))
             }
             s::Node::Decode { .. } => Node::n(&nodes::DECODER, NodeParams::Json(node)),
-            #[cfg(feature = "ffi-nodes")]
-            s::Node::FlowBitmapKeyPtr { .. } => {
-                Node::n(&nodes::BITMAP_KEY_POINTER, NodeParams::Json(node))
+            s::Node::CaptureBitmapKey { .. } => {
+                Node::n(&nodes::CAPTURE_BITMAP_KEY, NodeParams::Json(node))
             }
-            #[cfg(not(feature = "ffi-nodes"))]
-            s::Node::FlowBitmapKeyPtr { .. } => Node::n(&nodes::NO_OP, NodeParams::None),
             s::Node::CommandString { .. } => {
                 Node::n(&nodes::COMMAND_STRING, NodeParams::Json(node))
             }

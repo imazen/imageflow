@@ -1242,12 +1242,9 @@ pub enum Node {
     ColorMatrixSrgb { matrix: [[f32; 5]; 5] },
     #[serde(rename = "color_filter_srgb")]
     ColorFilterSrgb(ColorFilterSrgb),
-    // TODO: Block use except from FFI/unit test use
-    #[serde(rename = "flow_bitmap_key_ptr")]
-    FlowBitmapKeyPtr {
-        //TODO: Rename this
-        ptr_to_bitmap_key: usize,
-    },
+    #[doc(hidden)]
+    #[serde(skip)]
+    CaptureBitmapKey { capture_id: i32 },
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]

@@ -37,7 +37,7 @@ pub fn notify_graph_changed(
     {
         let mut f = File::create(&current_filename).unwrap();
         print_graph(c, &mut f, graph_ref, Some(&frame_prefix)).unwrap();
-        println!("Writing file {}", &current_filename);
+        // eprintln!("Writing graph debug file {}", &current_filename);
     }
     if prev_graph_version >= 0 {
         let prev_filename =

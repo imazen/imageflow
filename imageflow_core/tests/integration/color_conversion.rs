@@ -824,6 +824,7 @@ fn build_rgba_png(w: u32, h: u32, pixels: &[u8]) -> Vec<u8> {
 fn test_matte_compositing_no_double_division() {
     use imageflow_core::graphics::color::{ColorContext, WorkingFloatspace};
     use imageflow_core::Context;
+    crate::common::test_init();
 
     // Create a 10x10 RGBA image: solid red with alpha=128
     let w = 10u32;
@@ -985,6 +986,7 @@ fn test_matte_compositing_no_double_division() {
 #[test]
 fn test_matte_compositing_fully_transparent_pixels() {
     use imageflow_core::Context;
+    crate::common::test_init();
 
     // Create a 4x4 RGBA image: fully transparent (alpha=0)
     let w = 4u32;
@@ -1083,6 +1085,7 @@ fn test_matte_compositing_fully_transparent_pixels() {
 fn test_matte_compositing_mixed_alpha() {
     use imageflow_core::graphics::color::{ColorContext, WorkingFloatspace};
     use imageflow_core::Context;
+    crate::common::test_init();
 
     // 40x10 image with 4 bands of 10px each, green pixels at varying alpha
     let w = 40u32;

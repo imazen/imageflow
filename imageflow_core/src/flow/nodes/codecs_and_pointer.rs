@@ -1,66 +1,37 @@
 use super::internal_prelude::*;
-use crate::ErrorKind::BitmapKeyNotFound;
-use slotmap::{Key, KeyData};
 
-#[cfg(feature = "ffi-nodes")]
-pub static BITMAP_KEY_POINTER: BitmapKeyDef = BitmapKeyDef {};
-
+pub static CAPTURE_BITMAP_KEY: CaptureBitmapKeyDef = CaptureBitmapKeyDef {};
 pub static DECODER: DecoderDef = DecoderDef {};
 pub static ENCODE: EncoderDef = EncoderDef {};
 pub static PRIMITIVE_DECODER: DecoderPrimitiveDef = DecoderPrimitiveDef {};
 
-#[cfg(feature = "ffi-nodes")]
 #[derive(Debug, Clone)]
-pub struct BitmapKeyDef {}
+pub struct CaptureBitmapKeyDef {}
 
-#[cfg(feature = "ffi-nodes")]
-impl BitmapKeyDef {
-    fn get_key_ptr(&self, p: &NodeParams) -> Result<*mut BitmapKey> {
-        if let NodeParams::Json(s::Node::FlowBitmapKeyPtr { ptr_to_bitmap_key }) = *p {
-            let ptr: *mut BitmapKey = ptr_to_bitmap_key as *mut BitmapKey;
-            if ptr.is_null() {
-                Err(nerror!(crate::ErrorKind::InvalidNodeParams, "The pointer to the bitmap key is null! Must be a valid reference to a pointer's location."))
-            } else {
-                Ok(ptr)
-            }
+impl CaptureBitmapKeyDef {
+    fn get_capture_id(&self, p: &NodeParams) -> Result<i32> {
+        if let NodeParams::Json(s::Node::CaptureBitmapKey { capture_id }) = *p {
+            Ok(capture_id)
         } else {
-            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need FlowBitmapKeyPtr, got {:?}", p))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need CaptureBitmapKey, got {:?}", p))
         }
     }
 }
 
-#[cfg(feature = "ffi-nodes")]
-impl NodeDef for BitmapKeyDef {
+impl NodeDef for CaptureBitmapKeyDef {
     fn fqn(&self) -> &'static str {
-        "imazen.bitmap_bgra_pointer"
+        "imazen.capture_bitmap_key"
     }
-    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)> {
-        Ok((EdgesIn::OneOptionalInput, EdgesOut::Any))
+    fn edges_required(&self, _p: &NodeParams) -> Result<(EdgesIn, EdgesOut)> {
+        Ok((EdgesIn::OneInput, EdgesOut::Any))
     }
 
     fn validate_params(&self, p: &NodeParams) -> Result<()> {
-        self.get_key_ptr(p).map_err(|e| e.at(here!())).map(|_| ())
+        self.get_capture_id(p).map(|_| ())
     }
 
     fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
-        let params = &ctx.weight(ix).params;
-
-        let key_ptr = self.get_key_ptr(params).map_err(|e| e.at(here!()))?;
-
-        //This is the dangerous step, as the pointer may be invalid
-        let key: BitmapKey = unsafe { *key_ptr };
-
-        let bitmaps = ctx.c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
-
-        // TODO: make this faster by not calling try_borrow_mut which adds unnecessary error data
-        let bitmap_maybe = bitmaps.try_borrow_mut(key);
-
-        if let Ok(bitmap) = bitmap_maybe {
-            Ok(FrameEstimate::Some(bitmap.frame_info()))
-        } else {
-            let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
-            Ok(input)
-        }
+        ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))
     }
 
     fn can_execute(&self) -> bool {
@@ -68,25 +39,10 @@ impl NodeDef for BitmapKeyDef {
     }
 
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
-        let key_ptr = self.get_key_ptr(&ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
-
-        let parent_frame = ctx.first_parent_result_frame(ix, EdgeKind::Input);
-        if let Some(bitmap_key) = parent_frame {
-            ctx.consume_parent_result(ix, EdgeKind::Input)?;
-
-            // Also very dangerous, as invalid data can cause us to write this byte to arbitrary
-            // memory
-            unsafe {
-                *key_ptr = bitmap_key;
-            }
-            Ok(NodeResult::Frame(bitmap_key))
-        } else {
-            if key_ptr.is_null() || unsafe { *key_ptr }.is_null() {
-                return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapKeyPtr must point to a u64 (BitmapKey in ffi mode)."));
-            }
-            //Ok(NodeResult::Frame(*ptr))
-            Ok(NodeResult::Frame(BitmapKey::null()))
-        }
+        let capture_id = self.get_capture_id(&ctx.weight(ix).params)?;
+        let bitmap_key = ctx.bitmap_key_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+        ctx.c.insert_captured_bitmap_key(capture_id, bitmap_key);
+        Ok(NodeResult::Frame(bitmap_key))
     }
 }
 

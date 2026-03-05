@@ -98,7 +98,7 @@ impl Decoder for LibPngDecoder {
 
         let mut bitmap = bitmaps.try_borrow_mut(canvas_key).map_err(|e| e.at(here!()))?;
 
-        self.decoder.read_frame(&mut bitmap, c.cms_backend)?;
+        self.decoder.read_frame(&mut bitmap)?;
 
         Ok(canvas_key)
     }
@@ -307,11 +307,7 @@ impl PngDec {
         Ok((self.w, self.h, self.pixel_format, self.uses_palette))
     }
 
-    fn read_frame(
-        &mut self,
-        canvas: &mut Bitmap,
-        cms_backend: crate::codecs::cms::CmsBackend,
-    ) -> Result<()> {
+    fn read_frame(&mut self, canvas: &mut Bitmap) -> Result<()> {
         if self.c_state_disposed {
             return Err(nerror!(
                 ErrorKind::InvalidOperation,
@@ -378,9 +374,8 @@ impl PngDec {
                     profile = profile.without_gama_chrm();
                 }
                 if !profile.is_srgb() {
-                    let result =
-                        crate::codecs::cms::transform_to_srgb(&mut window, &profile, cms_backend)
-                            .map_err(|e| e.at(here!()));
+                    let result = crate::codecs::cms::transform_to_srgb(&mut window, &profile)
+                        .map_err(|e| e.at(here!()));
                     if result.is_err() && !self.ignore_color_profile_errors {
                         return result;
                     }

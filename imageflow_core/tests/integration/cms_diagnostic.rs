@@ -7,8 +7,7 @@
 //! - Rec. 2020 PQ (ICC v4.2 with CICP)
 //! - Apple Wide Color (Display P3)
 
-use crate::common::get_url_bytes_with_retry;
-use imageflow_core::CmsBackend;
+use crate::common::{get_url_bytes_with_retry, test_init};
 use imageflow_core::Context;
 use imageflow_types as s;
 
@@ -37,11 +36,11 @@ const CMYK_URL: &str =
 /// Decode CMYK JPEG with Both backend to verify moxcms and lcms2 don't panic.
 #[test]
 fn cms_cmyk_backend_divergence() {
+    test_init();
     let bytes = get_url_bytes_with_retry(CMYK_URL)
         .expect("Failed to download CMYK test file from S3 — test requires network");
 
     let mut ctx = Context::create().unwrap();
-    ctx.cms_backend = CmsBackend::Both;
     ctx.add_input_vector(0, bytes).unwrap();
     ctx.add_output_buffer(1).unwrap();
 
@@ -66,6 +65,7 @@ fn cms_cmyk_backend_divergence() {
 
 #[test]
 fn cms_dual_backend_regression() {
+    test_init();
     let mut cms_failures = Vec::new();
     let mut fetch_failures = Vec::new();
     let mut tested = 0usize;
@@ -83,7 +83,6 @@ fn cms_dual_backend_regression() {
         tested += 1;
 
         let mut ctx = Context::create().unwrap();
-        ctx.cms_backend = CmsBackend::Both;
 
         ctx.add_input_vector(0, bytes).unwrap();
         ctx.add_output_buffer(1).unwrap();

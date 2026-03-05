@@ -393,9 +393,8 @@ impl MzDec {
         };
 
         if (!self.ignore_color_profile || is_cmyk) && !profile.is_srgb() {
-            let result =
-                crate::codecs::cms::transform_to_srgb(&mut window, &profile, context.cms_backend)
-                    .map_err(|e| e.at(here!()));
+            let result = crate::codecs::cms::transform_to_srgb(&mut window, &profile)
+                .map_err(|e| e.at(here!()));
             if result.is_err() && !self.ignore_color_profile_errors {
                 return result;
             }

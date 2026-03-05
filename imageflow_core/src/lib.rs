@@ -1,4 +1,4 @@
-#![cfg_attr(not(any(feature = "c-codecs", feature = "ffi-nodes")), forbid(unsafe_code))]
+#![cfg_attr(not(feature = "c-codecs"), forbid(unsafe_code))]
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused_variables)]

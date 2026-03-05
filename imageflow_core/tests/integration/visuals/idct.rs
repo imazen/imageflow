@@ -48,6 +48,7 @@ fn run_idct_test(
         &imageflow_types::ImageInfo,
     ) -> (Option<imageflow_types::DecoderCommand>, Vec<Node>),
 ) {
+    test_init();
     let mut context = imageflow_core::Context::create().unwrap();
     IoTestTranslator {}.add(&mut context, 0, IoTestEnum::Url(source_url.to_owned())).unwrap();
 
@@ -60,8 +61,8 @@ fn run_idct_test(
         context.message("v1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
     }
 
-    let mut bit = BitmapBgraContainer::empty();
-    steps.push(unsafe { bit.as_mut().get_node() });
+    let capture_id = 0;
+    steps.push(imageflow_types::Node::CaptureBitmapKey { capture_id });
 
     let send_execute = imageflow_types::Execute001 {
         framewise: imageflow_types::Framewise::Steps(steps),
@@ -70,7 +71,7 @@ fn run_idct_test(
     };
     context.execute_1(send_execute).unwrap();
 
-    let bitmap_key = bit.bitmap_key(&context).unwrap();
+    let bitmap_key = context.get_captured_bitmap_key(capture_id).unwrap();
     let tolerance = Tolerance::off_by_one();
     let matched = check_visual_bitmap(identity, detail, &context, bitmap_key, &tolerance);
     context.destroy().unwrap();

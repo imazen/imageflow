@@ -4,7 +4,6 @@ use crate::codecs::moxcms_transform::MoxcmsTransformCache;
 use crate::codecs::source_profile::SourceProfile;
 use crate::graphics::bitmaps::BitmapWindowMut;
 use crate::Result;
-use std::sync::OnceLock;
 
 /// Selects which CMS backend to use for color profile transforms.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -21,53 +20,65 @@ pub enum CmsBackend {
     Both,
 }
 
-/// Cached result of the `CMS_BACKEND` env var, read once at first access.
-static CMS_BACKEND_ENV: OnceLock<Option<CmsBackend>> = OnceLock::new();
+/// Process-wide CMS backend override. Stored as u8 matching CmsBackend discriminants.
+/// 0 = no override (use default), 1 = Moxcms, 2 = Lcms2, 3 = Both.
+static CMS_BACKEND_OVERRIDE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+/// When true, CMS diagnostic messages (Both-mode divergence, warnings) print to stderr.
+/// Off by default. Enable via `CmsBackend::enable_stderr_diagnostics()`.
+static CMS_STDERR_ENABLED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+fn cms_eprintln(args: std::fmt::Arguments<'_>) {
+    if CMS_STDERR_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
+        eprintln!("{args}");
+    }
+}
 
 impl CmsBackend {
-    /// Read from `CMS_BACKEND` env var: "moxcms", "lcms2", or "both".
-    /// Falls back to the provided default if unset or unrecognized.
-    /// The env var is read once and cached for the process lifetime.
-    pub fn from_env_or(default: CmsBackend) -> CmsBackend {
-        let cached =
-            CMS_BACKEND_ENV.get_or_init(|| match std::env::var("CMS_BACKEND").as_deref() {
-                Ok("both") => Some(CmsBackend::Both),
-                Ok("lcms2") => Some(CmsBackend::Lcms2),
-                Ok("moxcms") => Some(CmsBackend::Moxcms),
-                Ok(other) if !other.is_empty() => {
-                    eprintln!(
-                        "[imageflow] WARNING: unrecognized CMS_BACKEND={other:?}, \
-                         expected \"moxcms\", \"lcms2\", or \"both\". Using default."
-                    );
-                    None
-                }
-                _ => None,
-            });
-        cached.unwrap_or(default)
+    /// Enable CMS diagnostic messages to stderr (Both-mode divergence, warnings).
+    pub fn enable_stderr_diagnostics() {
+        CMS_STDERR_ENABLED.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// Set the process-wide CMS backend. All subsequently created Contexts will use this.
+    pub fn set_process_default(backend: CmsBackend) {
+        let val = match backend {
+            CmsBackend::Moxcms => 1,
+            CmsBackend::Lcms2 => 2,
+            CmsBackend::Both => 3,
+        };
+        CMS_BACKEND_OVERRIDE.store(val, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// Returns the CMS backend for new Context instances.
+    pub(crate) fn default_for_context() -> CmsBackend {
+        match CMS_BACKEND_OVERRIDE.load(std::sync::atomic::Ordering::Relaxed) {
+            1 => CmsBackend::Moxcms,
+            2 => CmsBackend::Lcms2,
+            3 => CmsBackend::Both,
+            _ => Default::default(),
+        }
     }
 }
 
 /// Dispatch a source profile → sRGB transform to the selected backend.
 ///
 /// If the profile is sRGB, this is a no-op regardless of backend.
-pub fn transform_to_srgb(
-    frame: &mut BitmapWindowMut<u8>,
-    profile: &SourceProfile,
-    backend: CmsBackend,
-) -> Result<()> {
+pub fn transform_to_srgb(frame: &mut BitmapWindowMut<u8>, profile: &SourceProfile) -> Result<()> {
     if profile.is_srgb() {
         return Ok(());
     }
 
-    match backend {
+    match CmsBackend::default_for_context() {
         CmsBackend::Moxcms => MoxcmsTransformCache::transform_to_srgb(frame, profile),
         #[cfg(feature = "c-codecs")]
         CmsBackend::Lcms2 => Lcms2TransformCache::transform_to_srgb(frame, profile),
         #[cfg(not(feature = "c-codecs"))]
         CmsBackend::Lcms2 => {
-            eprintln!(
+            cms_eprintln(format_args!(
                 "[CMS] lcms2 backend requested but c-codecs feature is disabled, using moxcms"
-            );
+            ));
             MoxcmsTransformCache::transform_to_srgb(frame, profile)
         }
         #[cfg(feature = "c-codecs")]
@@ -128,10 +139,10 @@ pub fn transform_to_srgb(
                     );
                 }
                 Ok(Err(e)) => {
-                    eprintln!("[CMS Both] lcms2 error (moxcms result used): {e}");
+                    cms_eprintln(format_args!("[CMS Both] lcms2 error (moxcms result used): {e}"));
                 }
                 Err(_) => {
-                    eprintln!("[CMS Both] lcms2 panicked (moxcms result used)");
+                    cms_eprintln(format_args!("[CMS Both] lcms2 panicked (moxcms result used)"));
                 }
             }
 
@@ -149,7 +160,9 @@ pub fn transform_to_srgb(
         }
         #[cfg(not(feature = "c-codecs"))]
         CmsBackend::Both => {
-            eprintln!("[CMS] Both-mode requested but c-codecs feature is disabled, using moxcms");
+            cms_eprintln(format_args!(
+                "[CMS] Both-mode requested but c-codecs feature is disabled, using moxcms"
+            ));
             MoxcmsTransformCache::transform_to_srgb(frame, profile)
         }
     }
@@ -170,11 +183,11 @@ fn compare_results_against_frame(
     let total_bytes = row_bytes * h;
 
     if moxcms.len() != total_bytes {
-        eprintln!(
+        cms_eprintln(format_args!(
             "[CMS Both] WARNING: buffer length mismatch: moxcms={}, frame={}",
             moxcms.len(),
             total_bytes
-        );
+        ));
         return;
     }
 
@@ -261,7 +274,7 @@ fn compare_results_against_frame(
     let mean_r = sum_per_channel[2] as f64 / n;
 
     let desc = profile.describe();
-    eprintln!(
+    cms_eprintln(format_args!(
         "[CMS Both] WARNING: {profile_type} {divergent_pixels}/{total_pixels} diverge >{max_diff} \
          (max={max_observed} p99={p99} p95={p95} p50={p50} mean_bgr={mean_b:.2},{mean_g:.2},{mean_r:.2} \
          ch_max=B{}/G{}/R{}/A{}) profile={desc}",
@@ -269,12 +282,12 @@ fn compare_results_against_frame(
         max_per_channel[1],
         max_per_channel[2],
         max_per_channel[3],
-    );
+    ));
     if let Some((idx, m, l, diff)) = worst_pixel {
-        eprintln!(
+        cms_eprintln(format_args!(
             "[CMS Both]   worst pixel #{idx} (diff={diff}): \
              moxcms=[{},{},{},{}] lcms2=[{},{},{},{}]",
             m[0], m[1], m[2], m[3], l[0], l[1], l[2], l[3]
-        );
+        ));
     }
 }

@@ -3149,26 +3149,6 @@
                 "$ref": "#/components/schemas/ColorFilterSrgb"
               }
             }
-          },
-          {
-            "type": "object",
-            "required": [
-              "flow_bitmap_key_ptr"
-            ],
-            "properties": {
-              "flow_bitmap_key_ptr": {
-                "type": "object",
-                "required": [
-                  "ptr_to_bitmap_key"
-                ],
-                "properties": {
-                  "ptr_to_bitmap_key": {
-                    "type": "integer",
-                    "minimum": 0
-                  }
-                }
-              }
-            }
           }
         ],
         "description": "Represents a image operation. Currently used both externally (for JSON API) and internally.\nThe most important data type"

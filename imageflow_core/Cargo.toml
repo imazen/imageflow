@@ -89,8 +89,7 @@ seahash = "4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [features]
-default = ["c-codecs", "ffi-nodes"]
-c_rendering = []
+default = ["c-codecs"]
 neon = ["libwebp-sys/neon"]
 # All C library codecs: mozjpeg, libpng, libwebp, lcms2, and the C components library.
 c-codecs = [
@@ -102,8 +101,6 @@ c-codecs = [
     "dep:lcms2", "dep:lcms2-sys",
     "dep:libz-sys",
 ]
-# Enables FlowBitmapKeyPtr node (raw pointer FFI). When off, that node becomes a no-op.
-ffi-nodes = []
 # Feature to enable OpenAPI schema generation capabilities
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]
 # Enable schemars-based JSON Schema generation. Enables the corresponding feature in imageflow_types

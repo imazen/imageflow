@@ -349,7 +349,7 @@ fn test_jpeg_alpha_is_opaque() {
     );
 
     let mut context = Context::create().unwrap();
-    let mut bit = BitmapBgraContainer::empty();
+    let capture_id = 0;
     let steps = vec![
         Node::Decode { io_id: 0, commands: None },
         Node::Constrain(Constraint {
@@ -360,12 +360,12 @@ fn test_jpeg_alpha_is_opaque() {
             gravity: None,
             canvas_color: None,
         }),
-        unsafe { bit.as_mut().get_node() },
+        Node::CaptureBitmapKey { capture_id },
     ];
 
     build_steps(&mut context, &steps, vec![IoTestEnum::Url(source_url)], None, false).unwrap();
 
-    let bitmap_key = bit.bitmap_key(&context).expect("no bitmap produced");
+    let bitmap_key = context.get_captured_bitmap_key(capture_id).expect("no bitmap produced");
     let bitmaps = context.borrow_bitmaps().unwrap();
     let mut bm = bitmaps.try_borrow_mut(bitmap_key).unwrap();
     let mut window = bm.get_window_u8().unwrap();

@@ -200,8 +200,7 @@ impl Decoder for ImagePngDecoder {
                 profile = profile.without_gama_chrm();
             }
             if !profile.is_srgb() {
-                let result =
-                    crate::codecs::cms::transform_to_srgb(&mut canvas, &profile, c.cms_backend);
+                let result = crate::codecs::cms::transform_to_srgb(&mut canvas, &profile);
                 if let Err(e) = result {
                     if !self.ignore_color_profile_errors {
                         return Err(e.at(here!()));
