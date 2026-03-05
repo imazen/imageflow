@@ -345,8 +345,6 @@ pub fn scale_row_bgra_f32(
     }
 }
 
-// use std::simd::{f32x4, SimdFloat};
-
 // pub fn scale_rows_bgra_f32(
 //     source: &[f32],
 //     source_width: usize,
