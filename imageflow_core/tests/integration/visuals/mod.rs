@@ -1,3 +1,4 @@
+mod animation;
 mod canvas;
 mod codec;
 mod color;
