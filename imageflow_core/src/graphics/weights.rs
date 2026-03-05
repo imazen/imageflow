@@ -144,6 +144,10 @@ impl Default for InterpolationDetails {
 }
 
 impl InterpolationDetails {
+    /// Returns the filter's natural negative-to-positive weight area ratio.
+    pub fn natural_negative_ratio(&self) -> f64 {
+        self.calculate_percent_negative_weight()
+    }
     pub fn set_sharpen_percent_goal(&mut self, goal: f32) {
         self.lobe_ratio = LobeRatio::SharpenPercent(goal);
     }
