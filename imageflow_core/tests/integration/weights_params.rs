@@ -1,4 +1,4 @@
-use imageflow_core::graphics::weights::{Filter, InterpolationDetails, PixelRowWeights};
+use imageflow_core::graphics::weights::{Filter, InterpolationDetails, LobeRatio, PixelRowWeights};
 use std::fmt;
 
 /// Set to `true` to overwrite weights_params.txt with current output.
@@ -16,6 +16,8 @@ enum ParamVariation {
     Sharpen(f32),
     /// Both kernel scale and sharpen applied together.
     Both(f64, f32),
+    /// Set exact negative lobe ratio (bidirectional). 0.0 = eliminate negative lobes.
+    LobeExact(f32),
 }
 
 impl fmt::Display for ParamVariation {
@@ -25,6 +27,7 @@ impl fmt::Display for ParamVariation {
             ParamVariation::KernelScale(s) => write!(f, "kernel_scale={:.2}", s),
             ParamVariation::Sharpen(s) => write!(f, "sharpen={:.1}", s),
             ParamVariation::Both(k, s) => write!(f, "kernel_scale={:.2}+sharpen={:.1}", k, s),
+            ParamVariation::LobeExact(r) => write!(f, "lobe_exact={:.2}", r),
         }
     }
 }
@@ -38,6 +41,9 @@ impl ParamVariation {
             ParamVariation::Both(factor, pct) => {
                 details.set_kernel_width_scale(*factor);
                 details.set_sharpen_percent_goal(*pct);
+            }
+            ParamVariation::LobeExact(ratio) => {
+                details.set_lobe_ratio(LobeRatio::Exact(*ratio));
             }
         }
     }
@@ -90,6 +96,9 @@ fn generate_param_weights() -> String {
         ParamVariation::Both(1.2, 15.0),  // widened kernel + moderate sharpen
         ParamVariation::Both(0.8, 15.0),  // narrowed kernel + moderate sharpen
         ParamVariation::Both(1.1, 50.0),  // slight blur + heavy sharpen
+        ParamVariation::LobeExact(0.0),   // eliminate all negative lobes
+        ParamVariation::LobeExact(0.05),  // suppress to 5% negative
+        ParamVariation::LobeExact(0.15),  // moderate negative lobes
     ];
 
     let mut output = String::from("filter, param, from_width, to_width, weights");

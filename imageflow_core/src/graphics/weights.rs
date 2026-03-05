@@ -11,6 +11,36 @@ use std::f64;
 use crate::graphics::aligned_buffer::AlignedBuffer;
 use serde::{Deserialize, Serialize};
 
+/// Controls how negative weight lobes are adjusted during normalization.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum LobeRatio {
+    /// Use filter's natural negative/positive weight ratio (default).
+    Natural,
+    /// Set exact ratio (bidirectional). 0.0 = eliminate negative lobes, >natural = sharpen.
+    Exact(f32),
+    /// Imageflow-compatible: amplify only (one-way), percentage 0–100.
+    SharpenPercent(f32),
+}
+
+impl Default for LobeRatio {
+    fn default() -> Self {
+        LobeRatio::Natural
+    }
+}
+
+impl LobeRatio {
+    /// Resolve to a desired negative weight ratio given the filter's natural ratio.
+    fn resolve(&self, natural_ratio: f64) -> f64 {
+        match self {
+            LobeRatio::Natural => natural_ratio,
+            LobeRatio::Exact(ratio) => (*ratio as f64).clamp(0.0, 1.0),
+            LobeRatio::SharpenPercent(pct) => {
+                1.0f64.min(natural_ratio.max(*pct as f64 / 100.0))
+            }
+        }
+    }
+}
+
 /// Named interpolation function+configuration presets
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
@@ -92,8 +122,8 @@ pub struct InterpolationDetails {
     /// Blurring factor when > 1, sharpening factor when < 1. Applied to weights.
     blur: f64,
     pub filter: fn(&InterpolationDetails, f64) -> f64,
-    /// How much sharpening we are requesting
-    sharpen_percent_goal: f32,
+    /// Controls negative lobe adjustment during weight normalization.
+    lobe_ratio: LobeRatio,
 }
 impl Default for InterpolationDetails {
     fn default() -> InterpolationDetails {
@@ -108,14 +138,17 @@ impl Default for InterpolationDetails {
             q4: 1f64,
             blur: 1f64,
             filter: filter_box,
-            sharpen_percent_goal: 0.0,
+            lobe_ratio: LobeRatio::Natural,
         }
     }
 }
 
 impl InterpolationDetails {
     pub fn set_sharpen_percent_goal(&mut self, goal: f32) {
-        self.sharpen_percent_goal = goal;
+        self.lobe_ratio = LobeRatio::SharpenPercent(goal);
+    }
+    pub fn set_lobe_ratio(&mut self, ratio: LobeRatio) {
+        self.lobe_ratio = ratio;
     }
     /// Scale the kernel width. >1 widens (blurs), <1 narrows (sharpens).
     pub fn set_kernel_width_scale(&mut self, factor: f64) {
@@ -134,7 +167,7 @@ impl InterpolationDetails {
             q2: -8.0 * c - bx2,
             q3: b + 5.0 * c,
             q4: (-1.0 / 6.0) * b - c,
-            sharpen_percent_goal: 0.0,
+            lobe_ratio: LobeRatio::Natural,
         }
     }
 
@@ -650,8 +683,7 @@ pub fn populate_weights<T: WeightContainer>(
     details: &InterpolationDetails,
 ) -> Result<(), WeightsError> {
     let sharpen_ratio: f64 = details.calculate_percent_negative_weight();
-    let desired_sharpen_ratio: f64 =
-        1.0f64.min(sharpen_ratio.max(details.sharpen_percent_goal as f64 / 100.0f64));
+    let desired_sharpen_ratio: f64 = details.lobe_ratio.resolve(sharpen_ratio);
     let scale_factor: f64 = output_line_size as f64 / input_line_size as f64;
     let downscale_factor: f64 = 1.0f64.min(scale_factor);
     let half_source_window: f64 = (details.window + 0.5f64) / downscale_factor;
@@ -706,7 +738,7 @@ pub fn populate_weights<T: WeightContainer>(
         let mut pos_factor = neg_factor;
         //printf("cur= %f cur+= %f cur-= %f desired_sharpen_ratio=%f sharpen_ratio-=%f\n", total_weight, total_positive_weight, total_negative_weight, desired_sharpen_ratio, sharpen_ratio);
 
-        if total_weight <= 0.0f64 || desired_sharpen_ratio > sharpen_ratio {
+        if total_weight <= 0.0f64 || (desired_sharpen_ratio - sharpen_ratio).abs() > 1e-10 {
             if total_negative_weight < 0.0f64 {
                 if desired_sharpen_ratio < 1.0f64 {
                     let target_positive_weight: f64 = 1.0f64 / (1.0f64 - desired_sharpen_ratio);
