@@ -95,7 +95,20 @@ pub(crate) fn create_encoder(
             )
         }
         s::EncoderPreset::Mozjpeg { quality, progressive, ref matte } => {
-            #[cfg(feature = "c-codecs")]
+            #[cfg(feature = "zen-codecs")]
+            {
+                Box::new(
+                    crate::codecs::zenjpeg_encoder::ZenJpegEncoder::create(
+                        c,
+                        quality,
+                        progressive,
+                        matte.clone(),
+                        io,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
             {
                 Box::new(
                     crate::codecs::mozjpeg::MozjpegEncoder::create(
@@ -108,11 +121,11 @@ pub(crate) fn create_encoder(
                     .map_err(|e| e.at(here!()))?,
                 )
             }
-            #[cfg(not(feature = "c-codecs"))]
+            #[cfg(not(any(feature = "c-codecs", feature = "zen-codecs")))]
             {
                 return Err(nerror!(
                     ErrorKind::CodecDisabledError,
-                    "Mozjpeg encoder requires the 'c-codecs' feature"
+                    "JPEG encoder requires the 'c-codecs' or 'zen-codecs' feature"
                 ));
             }
         }
@@ -122,7 +135,22 @@ pub(crate) fn create_encoder(
             optimize_huffman_coding,
             ref matte,
         } => {
-            #[cfg(feature = "c-codecs")]
+            #[cfg(feature = "zen-codecs")]
+            {
+                // ZenJpeg doesn't have a "classic" mode; use standard encoding
+                let _ = optimize_huffman_coding; // not applicable to zenjpeg
+                Box::new(
+                    crate::codecs::zenjpeg_encoder::ZenJpegEncoder::create(
+                        c,
+                        quality.map(|q| q as u8),
+                        progressive,
+                        matte.clone(),
+                        io,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
             {
                 Box::new(
                     crate::codecs::mozjpeg::MozjpegEncoder::create_classic(
@@ -136,11 +164,11 @@ pub(crate) fn create_encoder(
                     .map_err(|e| e.at(here!()))?,
                 )
             }
-            #[cfg(not(feature = "c-codecs"))]
+            #[cfg(not(any(feature = "c-codecs", feature = "zen-codecs")))]
             {
                 return Err(nerror!(
                     ErrorKind::CodecDisabledError,
-                    "LibjpegTurbo encoder requires the 'c-codecs' feature"
+                    "JPEG encoder requires the 'c-codecs' or 'zen-codecs' feature"
                 ));
             }
         }
@@ -171,22 +199,37 @@ pub(crate) fn create_encoder(
             }
         }
         s::EncoderPreset::WebPLossless => {
-            #[cfg(feature = "c-codecs")]
+            #[cfg(feature = "zen-codecs")]
+            {
+                Box::new(
+                    crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                        c,
+                        io,
+                        None,
+                        Some(true),
+                        None,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
             {
                 Box::new(
                     crate::codecs::webp::WebPEncoder::create(c, io, None, Some(true), None)
                         .map_err(|e| e.at(here!()))?,
                 )
             }
-            #[cfg(not(feature = "c-codecs"))]
+            #[cfg(not(any(feature = "c-codecs", feature = "zen-codecs")))]
             {
                 return Err(nerror!(
                     ErrorKind::CodecDisabledError,
-                    "WebP encoder requires the 'c-codecs' feature"
+                    "WebP encoder requires the 'c-codecs' or 'zen-codecs' feature"
                 ));
             }
         }
         s::EncoderPreset::WebPLossy { quality } => {
+            // Prefer libwebp for lossy — zenwebp's lossy quality is significantly
+            // worse at the same quality setting (quality-delta inversion bug).
             #[cfg(feature = "c-codecs")]
             {
                 Box::new(
@@ -200,11 +243,24 @@ pub(crate) fn create_encoder(
                     .map_err(|e| e.at(here!()))?,
                 )
             }
-            #[cfg(not(feature = "c-codecs"))]
+            #[cfg(all(feature = "zen-codecs", not(feature = "c-codecs")))]
+            {
+                Box::new(
+                    crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                        c,
+                        io,
+                        Some(quality),
+                        Some(false),
+                        None,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(any(feature = "c-codecs", feature = "zen-codecs")))]
             {
                 return Err(nerror!(
                     ErrorKind::CodecDisabledError,
-                    "WebP encoder requires the 'c-codecs' feature"
+                    "WebP encoder requires the 'c-codecs' or 'zen-codecs' feature"
                 ));
             }
         }
@@ -241,35 +297,13 @@ fn create_encoder_auto(
                 .map_err(|e| e.at(here!()))?,
         ),
         OutputImageFormat::Jpeg | OutputImageFormat::Jpg => {
-            #[cfg(feature = "c-codecs")]
-            {
-                create_jpeg_auto(ctx, io, bitmap_key, decoder_io_ids, details)
-                    .map_err(|e| e.at(here!()))?
-            }
-            #[cfg(not(feature = "c-codecs"))]
-            {
-                return Err(nerror!(
-                    ErrorKind::CodecDisabledError,
-                    "JPEG encoding requires the 'c-codecs' feature"
-                ));
-            }
+            create_jpeg_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+                .map_err(|e| e.at(here!()))?
         }
         OutputImageFormat::Png => create_png_auto(ctx, io, bitmap_key, decoder_io_ids, details)
             .map_err(|e| e.at(here!()))?,
-        OutputImageFormat::Webp => {
-            #[cfg(feature = "c-codecs")]
-            {
-                create_webp_auto(ctx, io, bitmap_key, decoder_io_ids, details)
-                    .map_err(|e| e.at(here!()))?
-            }
-            #[cfg(not(feature = "c-codecs"))]
-            {
-                return Err(nerror!(
-                    ErrorKind::CodecDisabledError,
-                    "WebP encoding requires the 'c-codecs' feature"
-                ));
-            }
-        }
+        OutputImageFormat::Webp => create_webp_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+            .map_err(|e| e.at(here!()))?,
         OutputImageFormat::Jxl => {
             unimplemented!()
         }
@@ -456,7 +490,6 @@ fn get_quality_hints_by_ssim2(ssim2: f32) -> QualityProfileHints {
     }
 }
 
-#[cfg(feature = "c-codecs")]
 fn create_jpeg_auto(
     ctx: &Context,
     io: IoProxy,
@@ -496,37 +529,60 @@ fn create_jpeg_auto(
     let style =
         manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(JpegEncoderStyle::Default);
 
-    match style {
-        JpegEncoderStyle::LibjpegTurbo => {
-            let optimize_coding = progressive;
-            Ok(Box::new(
-                crate::codecs::mozjpeg::MozjpegEncoder::create_classic(
-                    ctx,
-                    Some(moz_quality),
-                    Some(progressive),
-                    Some(optimize_coding),
-                    matte,
-                    io,
-                )
-                .map_err(|e| e.at(here!()))?,
-            ))
-        }
-        JpegEncoderStyle::Default | JpegEncoderStyle::Mozjpeg | JpegEncoderStyle::Jpegli => {
-            //TODO: expand when we get jpegli
-            Ok(Box::new(
-                crate::codecs::mozjpeg::MozjpegEncoder::create(
-                    ctx,
-                    Some(moz_quality),
-                    Some(progressive),
-                    matte,
-                    io,
-                )
-                .map_err(|e| e.at(here!()))?,
-            ))
+    #[cfg(feature = "zen-codecs")]
+    {
+        // ZenJpeg handles all styles; no separate "classic" mode needed
+        let _ = style;
+        Ok(Box::new(
+            crate::codecs::zenjpeg_encoder::ZenJpegEncoder::create(
+                ctx,
+                Some(moz_quality),
+                Some(progressive),
+                matte,
+                io,
+            )
+            .map_err(|e| e.at(here!()))?,
+        ))
+    }
+    #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
+    {
+        match style {
+            JpegEncoderStyle::LibjpegTurbo => {
+                let optimize_coding = progressive;
+                Ok(Box::new(
+                    crate::codecs::mozjpeg::MozjpegEncoder::create_classic(
+                        ctx,
+                        Some(moz_quality),
+                        Some(progressive),
+                        Some(optimize_coding),
+                        matte,
+                        io,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ))
+            }
+            JpegEncoderStyle::Default | JpegEncoderStyle::Mozjpeg | JpegEncoderStyle::Jpegli => {
+                Ok(Box::new(
+                    crate::codecs::mozjpeg::MozjpegEncoder::create(
+                        ctx,
+                        Some(moz_quality),
+                        Some(progressive),
+                        matte,
+                        io,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ))
+            }
         }
     }
+    #[cfg(not(any(feature = "c-codecs", feature = "zen-codecs")))]
+    {
+        return Err(nerror!(
+            ErrorKind::CodecDisabledError,
+            "JPEG encoding requires the 'c-codecs' or 'zen-codecs' feature"
+        ));
+    }
 }
-#[cfg(feature = "c-codecs")]
 fn create_webp_auto(
     ctx: &Context,
     io: IoProxy,
@@ -559,10 +615,57 @@ fn create_webp_auto(
         None
     };
 
-    Ok(Box::new(
-        crate::codecs::webp::WebPEncoder::create(ctx, io, quality, Some(lossless), matte)
-            .map_err(|e| e.at(here!()))?,
-    ))
+    // Use zenwebp for lossless, libwebp for lossy (zenwebp lossy has quality issues).
+    if lossless {
+        #[cfg(feature = "zen-codecs")]
+        {
+            return Ok(Box::new(
+                crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                    ctx,
+                    io,
+                    quality,
+                    Some(true),
+                    matte,
+                )
+                .map_err(|e| e.at(here!()))?,
+            ));
+        }
+        #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
+        {
+            return Ok(Box::new(
+                crate::codecs::webp::WebPEncoder::create(ctx, io, quality, Some(true), matte)
+                    .map_err(|e| e.at(here!()))?,
+            ));
+        }
+    } else {
+        #[cfg(feature = "c-codecs")]
+        {
+            return Ok(Box::new(
+                crate::codecs::webp::WebPEncoder::create(ctx, io, quality, Some(false), matte)
+                    .map_err(|e| e.at(here!()))?,
+            ));
+        }
+        #[cfg(all(feature = "zen-codecs", not(feature = "c-codecs")))]
+        {
+            return Ok(Box::new(
+                crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                    ctx,
+                    io,
+                    quality,
+                    Some(false),
+                    matte,
+                )
+                .map_err(|e| e.at(here!()))?,
+            ));
+        }
+    }
+    #[cfg(not(any(feature = "c-codecs", feature = "zen-codecs")))]
+    {
+        return Err(nerror!(
+            ErrorKind::CodecDisabledError,
+            "WebP encoding requires the 'c-codecs' or 'zen-codecs' feature"
+        ));
+    }
 }
 
 fn create_png_auto(
