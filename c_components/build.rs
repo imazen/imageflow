@@ -90,8 +90,8 @@ fn main() {
         cc.flag("-Wc++-compat");
     }
 
-    // Step 7: Gather source files, conditionally excluding graphics.c if not c_rendering
-    // Goal: Add each .c file to the build, except for the optional skip.
+    // Step 7: Gather source files
+    // Goal: Add each .c file to the build.
     for file in glob::glob("lib/*.c").unwrap() {
         let path = file.unwrap();
         cc.file(path);

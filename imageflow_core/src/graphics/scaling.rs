@@ -103,9 +103,6 @@ fn render_safe(
     canvas_window: &mut BitmapWindowMut<u8>,
     params: &ScaleAndRenderParams,
 ) -> Result<(), FlowError> {
-    // for benchmarking
-    // $env:RUSTFLAGS='-C target-cpu=native'; cargo bench --features c_rendering
-
     let buffer_color_space = if params.scale_in_colorspace == WorkingFloatspace::LinearRGB {
         ColorSpace::LinearRGB
     } else {

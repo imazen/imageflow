@@ -10,20 +10,28 @@ pub mod upload_tracker;
 use imageflow_core::graphics::bitmaps::BitmapWindowMut;
 use imageflow_core::{Context, ErrorKind, FlowError};
 use std::io::Write as _;
-use std::marker::PhantomPinned;
 use std::path::Path;
 
 use imageflow_core;
 use std::path::PathBuf;
-use std::pin::Pin;
 use std::{self, panic};
 
 use imageflow_core::BitmapKey;
 use imageflow_types::ResponsePayload;
-use slotmap::Key;
 use std::time::Duration;
 use zensim_regress::checksums::{CheckResult, ChecksumManager};
 pub use zensim_regress::Tolerance;
+
+/// Process-wide test init. Called lazily before any test needs a Context.
+/// Sets CMS to Both mode so moxcms and lcms2 are compared on every transform.
+pub fn test_init() {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        imageflow_core::CmsBackend::set_process_default(imageflow_core::CmsBackend::Both);
+        imageflow_core::CmsBackend::enable_stderr_diagnostics();
+    });
+}
 
 /// Global `ChecksumManager`, shared across all test threads.
 ///
@@ -204,6 +212,7 @@ pub fn build_framewise(
     security: Option<imageflow_types::ExecutionSecurity>,
     debug: bool,
 ) -> Result<ResponsePayload, FlowError> {
+    test_init();
     for (ix, val) in io.into_iter().enumerate() {
         IoTestTranslator {}.add(context, ix as i32, val)?;
     }
@@ -220,19 +229,21 @@ pub fn build_framewise(
 /// Returns the width and height of the resulting frame.
 /// Steps must be open-ended - they cannot be terminated with an encoder.
 pub fn get_result_dimensions(steps: &[s::Node], io: Vec<IoTestEnum>, debug: bool) -> (u32, u32) {
-    let mut bit = BitmapBgraContainer::empty();
+    let capture_id = 0;
     let mut steps = steps.to_vec();
-    steps.push(unsafe { bit.as_mut().get_node() });
+    steps.push(s::Node::CaptureBitmapKey { capture_id });
 
     let mut context = Context::create().unwrap();
 
     let result = build_steps(&mut context, &steps, io, None, debug).unwrap();
 
-    if let Some((w, h)) = bit.bitmap_size(&context) {
-        (w as u32, h as u32)
-    } else {
-        panic!("execution failed: {:?}", result);
-    }
+    let bitmap_key = context
+        .get_captured_bitmap_key(capture_id)
+        .unwrap_or_else(|| panic!("execution failed: {:?}", result));
+    let bitmaps = context.borrow_bitmaps().unwrap();
+    let bm = bitmaps.try_borrow_mut(bitmap_key).unwrap();
+    let (w, h) = bm.size();
+    (w as u32, h as u32)
 }
 
 /// Just validates that no errors are thrown during job execution
@@ -299,32 +310,33 @@ pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
 
 /// Decode an input image, returning None on failure instead of panicking.
 fn try_decode_image(c: &mut Context, io_id: i32) -> Option<BitmapKey> {
-    let mut bit = BitmapBgraContainer::empty();
+    let capture_id = 0;
     let result = c.execute_1(s::Execute001 {
         graph_recording: None,
         security: None,
-        framewise: s::Framewise::Steps(vec![s::Node::Decode { io_id, commands: None }, unsafe {
-            bit.as_mut().get_node()
-        }]),
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id, commands: None },
+            s::Node::CaptureBitmapKey { capture_id },
+        ]),
     });
 
     result.ok()?;
-    bit.bitmap_key(c)
+    c.get_captured_bitmap_key(capture_id)
 }
 
 pub fn decode_input(c: &mut Context, input: IoTestEnum) -> BitmapKey {
-    let mut bit = BitmapBgraContainer::empty();
+    let capture_id = 0;
 
     let _result = build_steps(
         c,
-        &[s::Node::Decode { io_id: 0, commands: None }, unsafe { bit.as_mut().get_node() }],
+        &[s::Node::Decode { io_id: 0, commands: None }, s::Node::CaptureBitmapKey { capture_id }],
         vec![input],
         None,
         false,
     )
     .unwrap();
 
-    bit.bitmap_key(c).unwrap()
+    c.get_captured_bitmap_key(capture_id).unwrap()
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -547,6 +559,7 @@ pub fn compare_with(
     require: Constraints,
     do_panic: bool,
 ) -> bool {
+    test_init();
     // Check file size
     if let Some(max) = require.max_file_size {
         if actual_bytes.len() > max {
@@ -652,6 +665,7 @@ pub fn check_visual_bytes(
     bytes: &[u8],
     tolerance: &Tolerance,
 ) -> bool {
+    test_init();
     let hash = checksum_bytes(bytes);
 
     // Decode encoded output to BGRA bitmap for pixel comparison
@@ -754,14 +768,15 @@ pub fn compare_bitmap(
     mut steps: Vec<s::Node>,
     tolerance: &Tolerance,
 ) -> bool {
+    let capture_id = 0;
     let mut context = Context::create().unwrap();
-    let mut bit = BitmapBgraContainer::empty();
-    steps.push(unsafe { bit.as_mut().get_node() });
+    steps.push(s::Node::CaptureBitmapKey { capture_id });
 
     let response = build_steps(&mut context, &steps, inputs, None, false).unwrap();
 
-    let bitmap_key =
-        bit.bitmap_key(&context).unwrap_or_else(|| panic!("execution failed {:?}", response));
+    let bitmap_key = context
+        .get_captured_bitmap_key(capture_id)
+        .unwrap_or_else(|| panic!("execution failed {:?}", response));
 
     check_visual_bitmap(identity, detail, &context, bitmap_key, tolerance)
 }
@@ -771,47 +786,5 @@ pub fn default_graph_recording(debug: bool) -> Option<imageflow_types::Build001G
         Some(s::Build001GraphRecording::debug_defaults())
     } else {
         None
-    }
-}
-
-/// Simplifies access to raw bitmap data from Imageflow (when using imageflow_types::Node)
-/// Consider this an unmovable type. If you move it, you will corrupt the heap.
-pub struct BitmapBgraContainer {
-    dest_bitmap: BitmapKey,
-    _marker: PhantomPinned,
-}
-impl BitmapBgraContainer {
-    pub fn empty() -> Pin<Box<Self>> {
-        Box::pin(BitmapBgraContainer { dest_bitmap: BitmapKey::null(), _marker: PhantomPinned })
-    }
-    /// Creates an operation node containing a pointer to self. Do not move self!
-    pub unsafe fn get_node(self: Pin<&mut Self>) -> s::Node {
-        let key = unsafe {
-            let this = self.get_unchecked_mut();
-            &mut this.dest_bitmap
-        };
-
-        let ptr_to_key = key as *mut BitmapKey;
-        s::Node::FlowBitmapKeyPtr { ptr_to_bitmap_key: ptr_to_key as usize }
-    }
-
-    /// Reads back the bitmap key written by the graph engine.
-    /// Safe because `dest_bitmap` is `Copy` and read through `&self`.
-    pub fn bitmap_key(&self, _c: &Context) -> Option<BitmapKey> {
-        if self.dest_bitmap.is_null() {
-            None
-        } else {
-            Some(self.dest_bitmap)
-        }
-    }
-
-    /// Returns a reference the bitmap
-    /// This reference is only valid for the duration of the context it was created within
-    pub fn bitmap_size(&self, c: &Context) -> Option<(usize, usize)> {
-        if self.dest_bitmap.is_null() {
-            None
-        } else {
-            Some(c.borrow_bitmaps().unwrap().try_borrow_mut(self.dest_bitmap).unwrap().size())
-        }
     }
 }

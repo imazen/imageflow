@@ -38,8 +38,7 @@ pub use self::clone_crop_fill_expand::EXPAND_CANVAS;
 pub use self::clone_crop_fill_expand::FILL_RECT;
 pub use self::clone_crop_fill_expand::REGION;
 pub use self::clone_crop_fill_expand::REGION_PERCENT;
-#[cfg(feature = "ffi-nodes")]
-pub use self::codecs_and_pointer::BITMAP_KEY_POINTER;
+pub use self::codecs_and_pointer::CAPTURE_BITMAP_KEY;
 pub use self::codecs_and_pointer::DECODER;
 pub use self::codecs_and_pointer::ENCODE;
 pub use self::codecs_and_pointer::PRIMITIVE_DECODER;

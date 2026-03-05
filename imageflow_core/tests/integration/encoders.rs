@@ -198,6 +198,7 @@ pub fn compare_encoded_to_source(
     require: Constraints,
     steps: Vec<s::Node>,
 ) -> bool {
+    test_init();
     let input_copy = input.clone();
 
     let execute = s::Execute001 {

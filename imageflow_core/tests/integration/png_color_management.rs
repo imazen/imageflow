@@ -148,6 +148,7 @@ fn decode_to_rgba_with_commands(
     decoder: NamedDecoders,
     commands: Option<Vec<s::DecoderCommand>>,
 ) -> Vec<u8> {
+    crate::common::test_init();
     let mut ctx = Context::create().unwrap();
     ctx.enabled_codecs.prefer_decoder(decoder);
     ctx.add_input_vector(0, png_bytes.to_vec()).unwrap();
@@ -882,6 +883,7 @@ fn test_png_outside_neutral_gamma_transforms() {
 
 /// Decode with HonorGamaChrm(false) and a specific decoder backend.
 fn decode_with_honor_gama_chrm_false(png_bytes: &[u8], decoder: NamedDecoders) -> Vec<u8> {
+    crate::common::test_init();
     let mut ctx = Context::create().unwrap();
     ctx.enabled_codecs.prefer_decoder(decoder);
     ctx.add_input_vector(0, png_bytes.to_vec()).unwrap();

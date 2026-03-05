@@ -44,8 +44,8 @@ pub struct Context {
 
     pub allocations: RefCell<AllocationContainer>,
 
-    /// Which CMS backend to use for color profile transforms. Default: Moxcms.
-    pub cms_backend: crate::codecs::cms::CmsBackend,
+    /// Bitmap keys captured by CaptureBitmapKey nodes during graph execution.
+    captured_bitmap_keys: Option<Box<std::collections::HashMap<i32, BitmapKey>>>,
 }
 
 // This token is the shared state.
@@ -298,7 +298,8 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-            cms_backend: crate::codecs::cms::CmsBackend::from_env_or(Default::default()),
+
+            captured_bitmap_keys: None,
         }))
     }
     fn default_codecs_capacity() -> usize {
@@ -320,7 +321,8 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-            cms_backend: crate::codecs::cms::CmsBackend::from_env_or(Default::default()),
+
+            captured_bitmap_keys: None,
         })
     }
     fn create_with_cancellation_token_and_can_panic(
@@ -341,7 +343,8 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-            cms_backend: crate::codecs::cms::CmsBackend::from_env_or(Default::default()),
+
+            captured_bitmap_keys: None,
         }))
     }
 
@@ -419,6 +422,18 @@ impl Context {
     pub fn get_output_buffer_ptr(&mut self, io_id: i32) -> Result<(*const u8, usize)> {
         let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
         codec.output_buffer_raw_parts().map_err(|e| e.at(here!()))
+    }
+
+    /// Retrieve a BitmapKey captured by a CaptureBitmapKey node during execution.
+    pub fn get_captured_bitmap_key(&self, capture_id: i32) -> Option<BitmapKey> {
+        self.captured_bitmap_keys.as_ref()?.get(&capture_id).copied()
+    }
+
+    /// Insert a captured BitmapKey (called by CaptureBitmapKey node during execution).
+    pub fn insert_captured_bitmap_key(&mut self, capture_id: i32, key: BitmapKey) {
+        self.captured_bitmap_keys
+            .get_or_insert_with(|| Box::new(std::collections::HashMap::new()))
+            .insert(capture_id, key);
     }
 
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
@@ -954,10 +969,10 @@ fn test_calculate_context_heap_size() {
     // Fail if this grows so we can notice it
     // Windows has larger RwLock/Mutex, so allow a few extra bytes
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 984);
+    assert!(context_bytes <= 992);
 
     assert!(context_allocs <= 6);
-    assert!(thread_safe_bytes <= 1168);
+    assert!(thread_safe_bytes <= 1176);
 }
 
 #[test]
