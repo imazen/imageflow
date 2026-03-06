@@ -641,6 +641,38 @@ impl Context {
         if let Some(encode) = s.max_encode_size {
             self.security.max_encode_size = Some(encode);
         }
+        // Per-format decoder kill bits
+        if s.enable_jpeg_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_jpeg());
+        }
+        if s.enable_png_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_png());
+        }
+        if s.enable_gif_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_gif());
+        }
+        if s.enable_webp_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_webp());
+        }
+        if s.enable_jxl_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_jxl());
+        }
+        // Per-format encoder kill bits
+        if s.enable_jpeg_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_jpeg());
+        }
+        if s.enable_png_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_png());
+        }
+        if s.enable_gif_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_gif());
+        }
+        if s.enable_webp_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_webp());
+        }
+        if s.enable_jxl_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_jxl());
+        }
     }
 
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
@@ -934,14 +966,14 @@ impl Drop for Context {
 #[test]
 fn test_context_size() {
     eprintln!("std::mem::sizeof(Context) = {}", std::mem::size_of::<Context>());
-    assert!(std::mem::size_of::<Context>() < 340);
+    assert!(std::mem::size_of::<Context>() < 360);
 }
 
 #[test]
 fn test_thread_safe_context_size() {
     println!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
     eprintln!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
-    assert!(std::mem::size_of::<ThreadSafeContext>() <= 520);
+    assert!(std::mem::size_of::<ThreadSafeContext>() <= 540);
 }
 
 #[test]
@@ -969,10 +1001,10 @@ fn test_calculate_context_heap_size() {
     // Fail if this grows so we can notice it
     // Windows has larger RwLock/Mutex, so allow a few extra bytes
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 992);
+    assert!(context_bytes <= 1024);
 
     assert!(context_allocs <= 6);
-    assert!(thread_safe_bytes <= 1176);
+    assert!(thread_safe_bytes <= 1208);
 }
 
 #[test]

@@ -1134,6 +1134,30 @@ pub struct ExecutionSecurity {
     pub max_decode_size: Option<FrameSizeLimit>,
     pub max_frame_size: Option<FrameSizeLimit>,
     pub max_encode_size: Option<FrameSizeLimit>,
+
+    /// Per-format decoder kill bits. `Some(false)` disables all decoders for that format.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_jpeg_decoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_png_decoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_gif_decoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_webp_decoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_jxl_decoding: Option<bool>,
+
+    /// Per-format encoder kill bits. `Some(false)` disables all encoders for that format.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_jpeg_encoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_png_encoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_gif_encoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_webp_encoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_jxl_encoding: Option<bool>,
 }
 
 impl ExecutionSecurity {
@@ -1144,10 +1168,34 @@ impl ExecutionSecurity {
             max_decode_size: Some(FrameSizeLimit { w: 12000, h: 12000, megapixels: 100f32 }),
             max_frame_size: Some(FrameSizeLimit { w: 10000, h: 10000, megapixels: 100f32 }),
             max_encode_size: None,
+            enable_jpeg_decoding: None,
+            enable_png_decoding: None,
+            enable_gif_decoding: None,
+            enable_webp_decoding: None,
+            enable_jxl_decoding: None,
+            enable_jpeg_encoding: None,
+            enable_png_encoding: None,
+            enable_gif_encoding: None,
+            enable_webp_encoding: None,
+            enable_jxl_encoding: None,
         }
     }
     pub fn unspecified() -> Self {
-        ExecutionSecurity { max_decode_size: None, max_frame_size: None, max_encode_size: None }
+        ExecutionSecurity {
+            max_decode_size: None,
+            max_frame_size: None,
+            max_encode_size: None,
+            enable_jpeg_decoding: None,
+            enable_png_decoding: None,
+            enable_gif_decoding: None,
+            enable_webp_decoding: None,
+            enable_jxl_decoding: None,
+            enable_jpeg_encoding: None,
+            enable_png_encoding: None,
+            enable_gif_encoding: None,
+            enable_webp_encoding: None,
+            enable_jxl_encoding: None,
+        }
     }
 }
 

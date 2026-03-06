@@ -271,6 +271,7 @@ fn test_max_encode_dimensions() {
                 h: 1,
                 megapixels: 100.0,
             }),
+            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
@@ -300,6 +301,7 @@ fn test_max_decode_dimensions() {
             }),
             max_frame_size: None,
             max_encode_size: None,
+            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
@@ -328,6 +330,7 @@ fn test_max_frame_dimensions() {
             }),
             max_decode_size: None,
             max_encode_size: None,
+            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
