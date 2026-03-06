@@ -34,7 +34,7 @@ fn test_encode_pngquant() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(280_000),
-            similarity: Some(Similarity::MaxZdsim(0.30)), // measured zdsim: 0.189
+            similarity: Some(Similarity::MaxZdsim(0.45)), // measured zdsim: ~0.42 (v0.2 weights)
         },
         steps,
     );
@@ -48,7 +48,7 @@ fn test_encode_pngquant_command() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(280_000),
-            similarity: Some(Similarity::MaxZdsim(0.30)), // measured zdsim: 0.189
+            similarity: Some(Similarity::MaxZdsim(0.45)), // measured zdsim: ~0.42 (v0.2 weights)
         },
         steps,
     );
@@ -171,7 +171,7 @@ fn test_encode_webp_lossy() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(425_000),
-            similarity: Some(Similarity::MaxZdsim(0.40)), // measured zdsim: 0.267
+            similarity: Some(Similarity::MaxZdsim(0.55)), // measured zdsim: ~0.53 (v0.2 weights)
         },
         steps,
     );
@@ -299,7 +299,7 @@ fn test_roundtrip_gif_to_jxl_lossy() {
         s::EncoderPreset::Gif,
         s::EncoderPreset::JxlLossy { distance: 1.0 },
         // GIF quantizes to 256 colors, JXL lossy adds minor additional loss
-        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.60)) },
+        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.80)) },
     );
 }
 
