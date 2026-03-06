@@ -3648,6 +3648,7 @@ dependencies = [
  "magetypes 0.9.3",
  "multiversed",
  "multiversion",
+ "rayon",
  "rgb",
  "safe_unaligned_simd",
  "thiserror",

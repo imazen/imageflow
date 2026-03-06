@@ -1669,6 +1669,15 @@
               }
             ]
           },
+          "max_encoder_threads": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Maximum threads for parallel encoding operations.\n`Some(1)` disables parallelism. `None` = codec default (typically auto-detect cores).",
+            "minimum": 0
+          },
           "max_frame_size": {
             "oneOf": [
               {

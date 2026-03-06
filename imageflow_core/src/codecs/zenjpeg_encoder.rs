@@ -75,9 +75,16 @@ impl Encoder for ZenJpegEncoder {
         };
 
         // Use ApproxMozjpeg quality mapping for backward compat with existing quality profiles
-        let config = EncoderConfig::ycbcr(Quality::ApproxMozjpeg(q), subsampling)
+        let mut config = EncoderConfig::ycbcr(Quality::ApproxMozjpeg(q), subsampling)
             .auto_optimize(true)
             .progressive(self.progressive.unwrap_or(true));
+
+        // Enable parallel encoding when explicitly requested via max_encoder_threads > 1
+        if let Some(threads) = c.security.max_encoder_threads {
+            if threads > 1 {
+                config = config.parallel(zenjpeg::encoder::ParallelEncoding::Auto);
+            }
+        }
 
         let pixel_layout = match window.pixel_format() {
             PixelFormat::Bgra32 => PixelLayout::Bgra8Srgb,
