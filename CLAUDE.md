@@ -19,16 +19,20 @@ Always commit `cargo fmt` changes as a separate commit from code changes.
 All integration tests live in `imageflow_core/tests/integration/` as a single binary.
 
 ```bash
-just test              # run all tests with nextest
-just test-filter NAME  # run tests matching NAME
-just test-update       # run tests, auto-accept checksums within tolerance
-just test-replace      # reset all checksum baselines to current output
-just test-list         # list all test names
-just test-build        # compile-check tests without running
+just test                    # run all tests with nextest
+just test-filter NAME        # run tests matching NAME
+just test-create-baselines   # run tests, create baselines for NEW tests only
+just test-list               # list all test names
+just test-build              # compile-check tests without running
 ```
 
-Checksum TOML files: `imageflow_core/tests/visuals/checksums/`
-Reference images: `imageflow_core/tests/visuals/checksums/images/`
+**There is no replace/update command.** Checksums are append-only. Existing baselines
+are never overwritten. Tests pass if the hash matches OR the output is within the
+section's declared tolerance (via zensim pixel comparison). New baselines are only
+created for tests that have no existing section in the checksums file.
+
+Checksum files: `imageflow_core/tests/integration/visuals/*.checksums`
+Reference images: `imageflow_core/tests/integration/visuals/images/`
 
 ## Delayed TODOs
 

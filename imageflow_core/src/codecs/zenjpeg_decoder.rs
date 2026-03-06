@@ -111,6 +111,7 @@ impl Decoder for ZenJpegDecoder {
         let decoder = zenjpeg::decoder::Decoder::new()
             .output_format(zenjpeg::decoder::PixelFormat::Bgra)
             .apply_icc(false)
+            .auto_orient(false) // imageflow handles EXIF rotation in its pipeline
             .preserve_all();
 
         let result = decoder
