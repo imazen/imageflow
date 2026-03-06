@@ -107,9 +107,9 @@ impl Decoder for ZenJxlDecoder {
         let h = output.info.height;
         let has_alpha = output.info.has_alpha;
 
-        // Get raw pixel bytes
-        let pixel_bytes = output.pixels.copy_to_contiguous_bytes();
-        let desc = output.pixels.descriptor();
+        // Borrow decoded pixels directly — no intermediate copy
+        let src = output.pixels.as_slice();
+        let desc = src.descriptor();
 
         // Check if we got BGRA8 as requested
         let is_bgra = desc.layout() == zenpixels::ChannelLayout::Bgra
@@ -135,40 +135,34 @@ impl Decoder for ZenJxlDecoder {
             let dst = window.slice_mut();
 
             if is_bgra {
-                // Direct copy — decoder already produced BGRA8
-                let src_stride = w as usize * 4;
-                if dst_stride == src_stride {
-                    dst[..pixel_bytes.len()].copy_from_slice(&pixel_bytes);
-                } else {
-                    for y in 0..h as usize {
-                        let src_row = &pixel_bytes[y * src_stride..(y + 1) * src_stride];
-                        let dst_row = &mut dst[y * dst_stride..y * dst_stride + src_stride];
-                        dst_row.copy_from_slice(src_row);
-                    }
+                // Direct row copy — decoder already produced BGRA8
+                let src_row_bytes = w as usize * 4;
+                for y in 0..h as usize {
+                    let src_row = src.row(y as u32);
+                    let dst_row = &mut dst[y * dst_stride..y * dst_stride + src_row_bytes];
+                    dst_row.copy_from_slice(src_row);
                 }
             } else {
-                // Fallback: convert RGBA→BGRA (or RGB→BGRA)
+                // Fallback: convert RGBA→BGRA (or RGB→BGRA) row by row
                 let channels = desc.channels() as usize;
-                let src_stride = w as usize * channels;
                 for y in 0..h as usize {
+                    let src_row = src.row(y as u32);
+                    let dst_row_start = y * dst_stride;
                     for x in 0..w as usize {
-                        let si = y * src_stride + x * channels;
-                        let di = y * dst_stride + x * 4;
+                        let si = x * channels;
+                        let di = dst_row_start + x * 4;
                         if channels >= 4 {
-                            // RGBA → BGRA
-                            dst[di] = pixel_bytes[si + 2]; // B
-                            dst[di + 1] = pixel_bytes[si + 1]; // G
-                            dst[di + 2] = pixel_bytes[si]; // R
-                            dst[di + 3] = pixel_bytes[si + 3]; // A
+                            dst[di] = src_row[si + 2];     // B
+                            dst[di + 1] = src_row[si + 1]; // G
+                            dst[di + 2] = src_row[si];     // R
+                            dst[di + 3] = src_row[si + 3]; // A
                         } else if channels == 3 {
-                            // RGB → BGRA
-                            dst[di] = pixel_bytes[si + 2]; // B
-                            dst[di + 1] = pixel_bytes[si + 1]; // G
-                            dst[di + 2] = pixel_bytes[si]; // R
-                            dst[di + 3] = 255; // A
+                            dst[di] = src_row[si + 2];     // B
+                            dst[di + 1] = src_row[si + 1]; // G
+                            dst[di + 2] = src_row[si];     // R
+                            dst[di + 3] = 255;
                         } else {
-                            // Gray → BGRA
-                            let v = pixel_bytes[si];
+                            let v = src_row[si];
                             dst[di] = v;
                             dst[di + 1] = v;
                             dst[di + 2] = v;
@@ -235,34 +229,39 @@ impl Encoder for ZenJxlEncoder {
 
         let slice = window.get_slice();
 
-        // Build contiguous BGRA pixel buffer for encoding
-        let row_bytes = w as usize * 4;
-        let bgra_pixels: Vec<rgb::alt::BGRA<u8>> = match fmt {
-            crate::ffi::PixelFormat::Bgra32 | crate::ffi::PixelFormat::Bgr32 => {
-                let mut pixels = Vec::with_capacity(w as usize * h as usize);
-                for y in 0..h as usize {
-                    let row = &slice[y * stride..y * stride + row_bytes];
-                    for pix in row.chunks_exact(4) {
-                        pixels.push(rgb::alt::BGRA {
-                            b: pix[0],
-                            g: pix[1],
-                            r: pix[2],
-                            a: if fmt == crate::ffi::PixelFormat::Bgra32 { pix[3] } else { 255 },
-                        });
-                    }
-                }
-                pixels
+        // Build BGRA pixel reference for encoding.
+        // BGRA32: zero-copy reinterpret via bytemuck (identical byte layout).
+        // BGR32: must set alpha=255. BGR24: must expand to 4-channel.
+        let stride_pixels = stride / 4; // stride in BGRA pixels
+        let owned_pixels: Vec<rgb::alt::BGRA<u8>>;
+        let img: imgref::ImgRef<'_, rgb::alt::BGRA<u8>> = match fmt {
+            crate::ffi::PixelFormat::Bgra32 => {
+                // Zero-copy: reinterpret &[u8] as &[BGRA<u8>] — identical layout
+                let bgra_slice: &[rgb::alt::BGRA<u8>] = bytemuck::cast_slice(slice);
+                imgref::Img::new_stride(bgra_slice, w as usize, h as usize, stride_pixels)
+            }
+            crate::ffi::PixelFormat::Bgr32 => {
+                // Must set alpha=255 on each pixel — single-pass copy
+                let row_bytes = w as usize * 4;
+                owned_pixels = (0..h as usize)
+                    .flat_map(|y| {
+                        slice[y * stride..y * stride + row_bytes]
+                            .chunks_exact(4)
+                            .map(|pix| rgb::alt::BGRA { b: pix[0], g: pix[1], r: pix[2], a: 255 })
+                    })
+                    .collect();
+                imgref::ImgRef::new(&owned_pixels, w as usize, h as usize)
             }
             crate::ffi::PixelFormat::Bgr24 => {
                 let row_bytes_24 = w as usize * 3;
-                let mut pixels = Vec::with_capacity(w as usize * h as usize);
-                for y in 0..h as usize {
-                    let row = &slice[y * stride..y * stride + row_bytes_24];
-                    for pix in row.chunks_exact(3) {
-                        pixels.push(rgb::alt::BGRA { b: pix[0], g: pix[1], r: pix[2], a: 255 });
-                    }
-                }
-                pixels
+                owned_pixels = (0..h as usize)
+                    .flat_map(|y| {
+                        slice[y * stride..y * stride + row_bytes_24]
+                            .chunks_exact(3)
+                            .map(|pix| rgb::alt::BGRA { b: pix[0], g: pix[1], r: pix[2], a: 255 })
+                    })
+                    .collect();
+                imgref::ImgRef::new(&owned_pixels, w as usize, h as usize)
             }
             other => {
                 return Err(nerror!(
@@ -272,8 +271,6 @@ impl Encoder for ZenJxlEncoder {
                 ));
             }
         };
-
-        let img = imgref::ImgRef::new(&bgra_pixels, w as usize, h as usize);
 
         let jxl_bytes = if self.lossless {
             let config = zenjxl::LosslessConfig::new();
