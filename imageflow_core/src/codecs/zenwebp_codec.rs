@@ -229,11 +229,9 @@ impl Encoder for ZenWebPEncoder {
 
         let webp_bytes = if lossless {
             let config = zenwebp::LosslessConfig::new().with_quality(quality).with_method(6);
-            zenwebp::EncodeRequest::lossless(&config, pixels, pixel_layout, w, h)
-                .encode()
-                .map_err(|e| {
-                    nerror!(ErrorKind::ImageEncodingError, "zenwebp lossless error: {}", e)
-                })?
+            zenwebp::EncodeRequest::lossless(&config, pixels, pixel_layout, w, h).encode().map_err(
+                |e| nerror!(ErrorKind::ImageEncodingError, "zenwebp lossless error: {}", e),
+            )?
         } else {
             let config = zenwebp::LossyConfig::new().with_quality(quality).with_method(4);
             zenwebp::EncodeRequest::lossy(&config, pixels, pixel_layout, w, h)

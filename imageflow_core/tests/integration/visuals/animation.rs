@@ -1,8 +1,6 @@
 use crate::common::*;
 use imageflow_core::Context;
-use imageflow_types::{
-    CommandStringKind, EncoderPreset, Execute001, Framewise, Node,
-};
+use imageflow_types::{CommandStringKind, EncoderPreset, Execute001, Framewise, Node};
 
 /// Build a minimal animated GIF with the given frame colors (RGBA hex strings).
 /// Each frame is `w`x`h` pixels, solid color, with the given delay in centiseconds.
@@ -53,15 +51,9 @@ fn decode_png_pixel(bytes: &[u8]) -> (u8, u8, u8, u8) {
 
 /// Run an animated GIF through a pipeline with the given encoder preset.
 /// Returns the encoded output bytes.
-fn roundtrip_animated_gif(
-    gif_bytes: Vec<u8>,
-    preset: EncoderPreset,
-) -> Vec<u8> {
+fn roundtrip_animated_gif(gif_bytes: Vec<u8>, preset: EncoderPreset) -> Vec<u8> {
     test_init();
-    let steps = vec![
-        Node::Decode { io_id: 0, commands: None },
-        Node::Encode { io_id: 1, preset },
-    ];
+    let steps = vec![Node::Decode { io_id: 0, commands: None }, Node::Encode { io_id: 1, preset }];
     let mut ctx = Context::create().unwrap();
     ctx.add_input_vector(0, gif_bytes).unwrap();
     ctx.add_output_buffer(1).unwrap();
@@ -126,7 +118,10 @@ fn test_gif_select_frame_to_png() {
     let output = ctx.take_output_buffer(1).unwrap();
     assert_eq!(&output[1..4], b"PNG", "Output should be PNG");
     let (r, g, b, _a) = decode_png_pixel(&output);
-    assert!(g > 200 && r < 50 && b < 50, "Expected green pixel from frame 1, got r={r} g={g} b={b}");
+    assert!(
+        g > 200 && r < 50 && b < 50,
+        "Expected green pixel from frame 1, got r={r} g={g} b={b}"
+    );
 }
 
 #[test]
@@ -166,7 +161,10 @@ fn test_gif_select_frame_to_webp_lossy() {
     .unwrap();
     let png_bytes = ctx2.take_output_buffer(1).unwrap();
     let (r, g, b, _a) = decode_png_pixel(&png_bytes);
-    assert!(b > 150 && r < 100 && g < 100, "Expected blue-ish pixel from frame 2, got r={r} g={g} b={b}");
+    assert!(
+        b > 150 && r < 100 && g < 100,
+        "Expected blue-ish pixel from frame 2, got r={r} g={g} b={b}"
+    );
 }
 
 #[test]
@@ -265,7 +263,10 @@ fn test_gif_select_frame_to_jxl_lossless() {
     .unwrap();
     let png_bytes = ctx2.take_output_buffer(1).unwrap();
     let (r, g, b, _a) = decode_png_pixel(&png_bytes);
-    assert!(b > 200 && r < 50 && g < 50, "Expected blue pixel from JXL lossless, got r={r} g={g} b={b}");
+    assert!(
+        b > 200 && r < 50 && g < 50,
+        "Expected blue pixel from JXL lossless, got r={r} g={g} b={b}"
+    );
 }
 
 #[test]
@@ -305,7 +306,10 @@ fn test_gif_select_frame_to_webp_lossless() {
     .unwrap();
     let png_bytes = ctx2.take_output_buffer(1).unwrap();
     let (r, g, b, _a) = decode_png_pixel(&png_bytes);
-    assert!(r > 200 && g < 50 && b < 50, "Expected red pixel from WebP lossless, got r={r} g={g} b={b}");
+    assert!(
+        r > 200 && g < 50 && b < 50,
+        "Expected red pixel from WebP lossless, got r={r} g={g} b={b}"
+    );
 }
 
 // ============================================================================
@@ -373,7 +377,10 @@ fn test_animated_gif_resize_roundtrip() {
         Node::Resample2D {
             w: 8,
             h: 8,
-            hints: Some(imageflow_types::ResampleHints::new().with_bi_filter(imageflow_types::Filter::Hermite)),
+            hints: Some(
+                imageflow_types::ResampleHints::new()
+                    .with_bi_filter(imageflow_types::Filter::Hermite),
+            ),
         },
         Node::Encode { io_id: 1, preset: EncoderPreset::Gif },
     ];

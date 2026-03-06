@@ -152,14 +152,14 @@ impl Decoder for ZenJxlDecoder {
                         let si = x * channels;
                         let di = dst_row_start + x * 4;
                         if channels >= 4 {
-                            dst[di] = src_row[si + 2];     // B
+                            dst[di] = src_row[si + 2]; // B
                             dst[di + 1] = src_row[si + 1]; // G
-                            dst[di + 2] = src_row[si];     // R
+                            dst[di + 2] = src_row[si]; // R
                             dst[di + 3] = src_row[si + 3]; // A
                         } else if channels == 3 {
-                            dst[di] = src_row[si + 2];     // B
+                            dst[di] = src_row[si + 2]; // B
                             dst[di + 1] = src_row[si + 1]; // G
-                            dst[di + 2] = src_row[si];     // R
+                            dst[di + 2] = src_row[si]; // R
                             dst[di + 3] = 255;
                         } else {
                             let v = src_row[si];
