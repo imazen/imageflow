@@ -284,6 +284,7 @@ impl CmdBuild {
                 max_decode_size: Some(unlimited_frame_size),
                 max_frame_size: Some(unlimited_frame_size),
                 max_encode_size: Some(unlimited_frame_size),
+                ..s::ExecutionSecurity::unspecified()
             })
         } else {
             let mut max_frame_size = unlimited_frame_size;
