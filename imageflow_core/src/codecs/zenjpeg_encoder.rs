@@ -95,13 +95,14 @@ impl Encoder for ZenJpegEncoder {
             .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "zenjpeg config error: {}", e))?;
 
         // Push scanlines (handles stride differences)
+        let stop = c.stop();
         if w * window.pixel_format().bytes() == src_stride {
-            encoder.push_packed(window.get_slice(), zenjpeg::encoder::Unstoppable).map_err(
-                |e| nerror!(ErrorKind::ImageEncodingError, "zenjpeg encode error: {}", e),
-            )?;
+            encoder.push_packed(window.get_slice(), stop).map_err(|e| {
+                nerror!(ErrorKind::ImageEncodingError, "zenjpeg encode error: {}", e)
+            })?;
         } else {
             for line in window.scanlines() {
-                encoder.push_packed(line.row(), zenjpeg::encoder::Unstoppable).map_err(|e| {
+                encoder.push_packed(line.row(), stop).map_err(|e| {
                     nerror!(ErrorKind::ImageEncodingError, "zenjpeg encode error: {}", e)
                 })?;
             }

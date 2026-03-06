@@ -1678,6 +1678,36 @@
                 "$ref": "#/components/schemas/FrameSizeLimit"
               }
             ]
+          },
+          "prefer_c_codecs": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Prefer C library codecs over pure-Rust when both are available.\nDefault: `None` (false — prefer pure-Rust)."
+          },
+          "process_timeout_ms": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Processing timeout in milliseconds. Operations exceeding this are cancelled.\nDefault: 30000 (30 seconds). `None` = no timeout.",
+            "minimum": 0
+          },
+          "use_c_codecs": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Allow C library codecs (mozjpeg, libpng, libwebp). `Some(false)` disables all C codecs.\nDefault: `None` (use compile-time defaults)."
+          },
+          "use_safe_codecs": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Allow pure-Rust codecs (zenjpeg, zenwebp, zengif, zenjxl). `Some(false)` disables all.\nDefault: `None` (use compile-time defaults)."
           }
         }
       },
