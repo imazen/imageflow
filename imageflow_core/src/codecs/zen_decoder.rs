@@ -10,8 +10,9 @@ use imageflow_types::PixelLayout;
 use std::any::Any;
 use std::borrow::Cow;
 
-use zc::decode::{DecodeFrame, DecodeRowSink, DynDecoderConfig, DynFrameDecoder};
+use zc::decode::{DecodeRowSink, DynDecoderConfig, DynFullFrameDecoder, SinkError};
 use zc::ImageInfo as ZenImageInfo;
+use zc::OwnedFullFrame;
 
 /// Format-specific metadata needed by the unified decoder.
 struct FormatMeta {
@@ -95,8 +96,8 @@ enum DecodeMode {
 
 /// Unified decoder for all zen codec formats.
 ///
-/// Uses zencodec-types dyn dispatch to handle WebP, GIF, JXL (and
-/// eventually AVIF, PNG) through a single adapter.
+/// Uses zencodec-types dyn dispatch to handle WebP, GIF, JXL, AVIF, HEIC
+/// through a single adapter.
 /// JPEG uses the native zenjpeg API for exact backward compatibility.
 pub struct ZenDecoder {
     mode: DecodeMode,
@@ -106,10 +107,10 @@ pub struct ZenDecoder {
     cached_info: Option<ZenImageInfo>,
     cached_jpeg_info: Option<zenjpeg::decoder::JpegInfo>,
     // Persistent frame decoder for animation
-    frame_dec: Option<Box<dyn DynFrameDecoder>>,
+    frame_dec: Option<Box<dyn DynFullFrameDecoder>>,
     frame_index: u32,
     // Peeked next frame (used for has_more_frames detection)
-    peeked_frame: Option<DecodeFrame>,
+    peeked_frame: Option<OwnedFullFrame>,
     // Animation metadata from last decoded frame
     last_delay_ms: u32,
     loop_count: Option<u32>,
@@ -323,10 +324,22 @@ impl ZenDecoder {
 
         SourceProfile::Srgb
     }
+
+    /// Create a DynDecodeJob with resource limits applied.
+    fn make_job(&self) -> Box<dyn zc::decode::DynDecodeJob<'_> + '_> {
+        let config = match &self.mode {
+            DecodeMode::Zencodec(config) => config,
+            _ => unreachable!(),
+        };
+        let mut job = config.dyn_job();
+        if let Some(ref limits) = self.resource_limits {
+            job.set_limits(limits.clone());
+        }
+        job
+    }
 }
 
 /// Copy decoded pixels from a PixelSlice into a bitmap, handling stride and BGRA swizzle.
-/// Used only for the animation frame path where we get a PixelSlice from the frame decoder.
 fn copy_pixel_slice_to_bitmap(dst: &mut [u8], dst_stride: usize, ps: &zenpixels::PixelSlice<'_>) {
     let w = ps.width();
     let h = ps.rows();
@@ -340,14 +353,12 @@ fn copy_pixel_slice_to_bitmap(dst: &mut [u8], dst_stride: usize, ps: &zenpixels:
     let row_bytes = w as usize * 4;
 
     if is_bgra {
-        // Direct copy, row by row
         for y in 0..h {
             let src_row = ps.row(y);
             let dst_start = y as usize * dst_stride;
             dst[dst_start..dst_start + row_bytes].copy_from_slice(&src_row[..row_bytes]);
         }
     } else if is_rgba {
-        // Copy row by row, then swizzle RGBA→BGRA in-place
         for y in 0..h {
             let src_row = ps.row(y);
             let dst_start = y as usize * dst_stride;
@@ -355,7 +366,7 @@ fn copy_pixel_slice_to_bitmap(dst: &mut [u8], dst_stride: usize, ps: &zenpixels:
         }
         let _ = garb::bytes::rgba_to_bgra_inplace_strided(dst, w as usize, h as usize, dst_stride);
     } else {
-        // Fallback: per-pixel conversion for other formats
+        // Fallback: per-pixel conversion for other U8 formats
         let channels = descriptor.channels() as usize;
         for y in 0..h {
             let src_row = ps.row(y);
@@ -385,30 +396,30 @@ fn copy_pixel_slice_to_bitmap(dst: &mut [u8], dst_stride: usize, ps: &zenpixels:
     }
 }
 
+// ─── BitmapRowSink ───────────────────────────────────────────────────────────
+
 /// Row sink that writes decoded strips directly into a bitmap's BGRA strided buffer.
 ///
 /// For 8-bit 4bpp formats (BGRA, RGBA): writes directly into the bitmap buffer
-/// using the bitmap stride. After decode, RGBA is swizzled to BGRA in-place via garb.
+/// using the bitmap stride. RGBA is swizzled to BGRA in `finish()`.
 ///
 /// For 8-bit non-4bpp formats (RGB, Gray): uses a temporary buffer per strip,
 /// then converts into the bitmap with pixel expansion.
 ///
-/// For non-U8 formats (e.g., 16-bit RGB): signals rejection so the caller can
-/// fall back to the `into_decoder` path with format negotiation.
+/// Non-U8 formats (e.g., 16-bit RGB) are rejected in `begin()` before any
+/// decode work happens. The caller falls back to `into_decoder` with format
+/// negotiation.
 struct BitmapRowSink<'a> {
-    /// The bitmap's pixel buffer (BGRA, strided).
     data: &'a mut [u8],
-    /// Byte stride between rows in the bitmap.
     stride: usize,
-    /// Temporary buffer for non-4bpp format conversion.
+    width: u32,
+    height: u32,
     temp: Vec<u8>,
-    /// Whether the codec is producing a 4bpp U8 format (detected on first demand).
-    is_4bpp: Option<bool>,
-    /// True if the codec produces a format we can't handle (non-U8).
-    rejected: bool,
-    /// Descriptor from first demand call (for post-decode swizzle decision).
-    output_descriptor: Option<zenpixels::PixelDescriptor>,
-    /// Metadata of the previous strip (for deferred non-4bpp conversion).
+    /// True for 4bpp U8 (BGRA/RGBA) — writes directly into bitmap.
+    is_4bpp: bool,
+    /// True if output is RGBA and needs BGRA swizzle in finish().
+    needs_swizzle: bool,
+    /// Metadata of the previous non-4bpp strip (for deferred conversion).
     prev_strip: Option<StripMeta>,
 }
 
@@ -421,6 +432,19 @@ struct StripMeta {
 }
 
 impl BitmapRowSink<'_> {
+    fn new(data: &mut [u8], stride: usize) -> BitmapRowSink<'_> {
+        BitmapRowSink {
+            data,
+            stride,
+            width: 0,
+            height: 0,
+            temp: Vec::new(),
+            is_4bpp: false,
+            needs_swizzle: false,
+            prev_strip: None,
+        }
+    }
+
     /// Convert a non-4bpp U8 strip from `self.temp` into the bitmap.
     fn convert_strip(&mut self, meta: StripMeta) {
         let bpp = meta.descriptor.bytes_per_pixel();
@@ -449,79 +473,41 @@ impl BitmapRowSink<'_> {
             }
         }
     }
-
-    /// Flush any pending non-4bpp strip.
-    fn flush(&mut self) {
-        if let Some(meta) = self.prev_strip.take() {
-            self.convert_strip(meta);
-        }
-    }
-
-    /// Post-decode: swizzle RGBA→BGRA in-place if needed. Returns true if successful.
-    fn finish(&mut self, w: u32, h: u32) -> bool {
-        if self.rejected {
-            return false;
-        }
-        self.flush();
-        if let Some(desc) = self.output_descriptor {
-            let is_rgba = desc.layout() == zenpixels::ChannelLayout::Rgba
-                && desc.channel_type() == zenpixels::ChannelType::U8;
-            if is_rgba {
-                let _ = garb::bytes::rgba_to_bgra_inplace_strided(
-                    self.data,
-                    w as usize,
-                    h as usize,
-                    self.stride,
-                );
-            }
-        }
-        true
-    }
 }
 
 impl DecodeRowSink for BitmapRowSink<'_> {
-    fn demand(
+    fn begin(
+        &mut self,
+        width: u32,
+        height: u32,
+        descriptor: zenpixels::PixelDescriptor,
+    ) -> std::result::Result<(), SinkError> {
+        if descriptor.channel_type() != zenpixels::ChannelType::U8 {
+            return Err(format!("BitmapRowSink requires U8 channels, got {:?}", descriptor).into());
+        }
+        self.width = width;
+        self.height = height;
+        self.is_4bpp = descriptor.bytes_per_pixel() == 4;
+        self.needs_swizzle = descriptor.layout() == zenpixels::ChannelLayout::Rgba;
+        Ok(())
+    }
+
+    fn provide_next_buffer(
         &mut self,
         y: u32,
         height: u32,
         width: u32,
         descriptor: zenpixels::PixelDescriptor,
-    ) -> zenpixels::PixelSliceMut<'_> {
-        if self.output_descriptor.is_none() {
-            self.output_descriptor = Some(descriptor);
-        }
-
-        // Reject non-U8 formats (e.g., 16-bit) — caller must fall back to into_decoder
-        if descriptor.channel_type() != zenpixels::ChannelType::U8 {
-            self.rejected = true;
-            // Still must return a valid buffer for the codec to write into
-            let bpp = descriptor.bytes_per_pixel();
-            let src_stride = width as usize * bpp;
-            let needed = height as usize * src_stride;
-            self.temp.resize(needed, 0);
-            return zenpixels::PixelSliceMut::new(
-                &mut self.temp,
-                width,
-                height,
-                src_stride,
-                descriptor,
-            )
-            .expect("bitmap sink: reject buffer sized correctly");
-        }
-
-        // 4bpp U8 formats (BGRA, RGBA) share stride with the bitmap — write directly
-        let is_4bpp = *self.is_4bpp.get_or_insert_with(|| descriptor.bytes_per_pixel() == 4);
-
-        if is_4bpp {
-            // Write directly into bitmap at the correct row offset.
-            // For RGBA this writes RGBA bytes; we swizzle to BGRA in finish().
+    ) -> std::result::Result<zenpixels::PixelSliceMut<'_>, SinkError> {
+        if self.is_4bpp {
+            // 4bpp (BGRA/RGBA): write directly into bitmap at the correct row offset.
             let row_start = y as usize * self.stride;
             let row_bytes = width as usize * 4;
             let needed =
                 if height > 0 { (height as usize - 1) * self.stride + row_bytes } else { 0 };
             let slice = &mut self.data[row_start..row_start + needed];
-            zenpixels::PixelSliceMut::new(slice, width, height, self.stride, descriptor)
-                .expect("bitmap sink: 4bpp buffer sized correctly")
+            PixelSliceMut::new(slice, width, height, self.stride, descriptor)
+                .map_err(|e| -> SinkError { format!("{e}").into() })
         } else {
             // Non-4bpp U8: convert the previous strip before reusing temp buffer
             if let Some(meta) = self.prev_strip.take() {
@@ -535,11 +521,32 @@ impl DecodeRowSink for BitmapRowSink<'_> {
 
             self.prev_strip = Some(StripMeta { y, height, width, descriptor });
 
-            zenpixels::PixelSliceMut::new(&mut self.temp, width, height, src_stride, descriptor)
-                .expect("bitmap sink: temp buffer sized correctly")
+            PixelSliceMut::new(&mut self.temp, width, height, src_stride, descriptor)
+                .map_err(|e| -> SinkError { format!("{e}").into() })
         }
     }
+
+    fn finish(&mut self) -> std::result::Result<(), SinkError> {
+        // Flush last non-4bpp strip
+        if let Some(meta) = self.prev_strip.take() {
+            self.convert_strip(meta);
+        }
+        // Swizzle RGBA→BGRA in-place
+        if self.needs_swizzle {
+            let _ = garb::bytes::rgba_to_bgra_inplace_strided(
+                self.data,
+                self.width as usize,
+                self.height as usize,
+                self.stride,
+            );
+        }
+        Ok(())
+    }
 }
+
+// ─── Decoder trait impl ──────────────────────────────────────────────────────
+
+use zenpixels::PixelSliceMut;
 
 impl ZenDecoder {
     /// Get frame delay in centiseconds (GIF convention) from milliseconds.
@@ -589,9 +596,6 @@ impl Decoder for ZenDecoder {
                     preferred_mime_type: self.meta.preferred_mime_type.to_owned(),
                     preferred_extension: self.meta.preferred_extension.to_owned(),
                     lossless: false, // conservative default
-                    // Use may_have_animation from format metadata since probe()
-                    // doesn't scan frames. The actual frame count is determined
-                    // during decode via the frame decoder.
                     multiple_frames: self.meta.may_have_animation,
                 })
             }
@@ -723,30 +727,27 @@ impl Decoder for ZenDecoder {
             return Ok(bitmap_key);
         }
 
-        // ── Zencodec path (WebP, GIF, JXL, etc.) ──
+        // ── Zencodec path (WebP, GIF, JXL, AVIF, HEIC) ──
         let info = self.cached_info.as_ref().unwrap().clone();
         let source_profile = self.source_profile_from_info(&info);
         let has_alpha = info.has_alpha;
         let preferred = [zenpixels::PixelDescriptor::BGRA8_SRGB];
 
-        // Animation path: use persistent frame decoder
-        // - always_use_frame_decoder: GIF (probe can't detect animation)
-        // - info.has_animation: WebP/JXL (probe reports animation accurately)
-        // - frame_dec.is_some(): already in animation mode from prior call
+        // Animation path: use persistent full-frame decoder
         if self.meta.always_use_frame_decoder || info.has_animation || self.frame_dec.is_some() {
             if self.frame_dec.is_none() {
-                // Create frame decoder on first call
                 let data = self.data.take().unwrap();
-                let config = match &self.mode {
-                    DecodeMode::Zencodec(config) => config,
-                    _ => unreachable!(),
-                };
-                let mut job = config.dyn_job();
-                if let Some(ref limits) = self.resource_limits {
-                    job.set_limits(limits.clone());
+                let target = self.target_frame;
+                if let Some(t) = target {
+                    self.frame_index = t;
+                }
+                let mut job = self.make_job();
+                // Use set_start_frame_index to let the codec skip internally
+                if let Some(t) = target {
+                    job.set_start_frame_index(t);
                 }
                 let frame_dec =
-                    job.into_frame_decoder(Cow::Owned(data), &preferred).map_err(|e| {
+                    job.into_full_frame_decoder(Cow::Owned(data), &preferred).map_err(|e| {
                         nerror!(
                             ErrorKind::ImageDecodingError,
                             "{} frame decoder error: {}",
@@ -760,37 +761,14 @@ impl Decoder for ZenDecoder {
 
             let frame_dec = self.frame_dec.as_mut().unwrap();
 
-            // Helper: get next frame from peeked buffer or from decoder
-            let get_next = |peeked: &mut Option<DecodeFrame>,
-                            dec: &mut Box<dyn DynFrameDecoder>|
-             -> Result<Option<DecodeFrame>> {
-                if let Some(f) = peeked.take() {
-                    Ok(Some(f))
-                } else {
-                    dec.next_frame().map_err(|e| {
-                        nerror!(ErrorKind::ImageDecodingError, "frame decode error: {}", e)
-                    })
-                }
+            // Get next frame from peeked buffer or from decoder
+            let frame = if let Some(f) = self.peeked_frame.take() {
+                Some(f)
+            } else {
+                frame_dec.render_next_frame_owned().map_err(|e| {
+                    nerror!(ErrorKind::ImageDecodingError, "frame decode error: {}", e)
+                })?
             };
-
-            // Skip frames to reach target
-            if let Some(target) = self.target_frame {
-                while self.frame_index < target {
-                    let skipped = get_next(&mut self.peeked_frame, frame_dec)?;
-                    if skipped.is_none() {
-                        return Err(nerror!(
-                            ErrorKind::InvalidArgument,
-                            "frame={} requested but {} only has {} frames",
-                            target,
-                            self.meta.preferred_extension,
-                            self.frame_index
-                        ));
-                    }
-                    self.frame_index += 1;
-                }
-            }
-
-            let frame = get_next(&mut self.peeked_frame, frame_dec)?;
 
             let frame = frame
                 .ok_or_else(|| nerror!(ErrorKind::InvalidOperation, "No more frames available"))?;
@@ -826,12 +804,10 @@ impl Decoder for ZenDecoder {
 
             // Determine if more frames remain
             if self.target_frame.is_some() {
-                // SelectFrame → only one frame output
                 self.has_more = Some(false);
             } else {
-                // Peek at the next frame to know if there are more
                 let frame_dec = self.frame_dec.as_mut().unwrap();
-                match frame_dec.next_frame() {
+                match frame_dec.render_next_frame_owned() {
                     Ok(Some(next)) => {
                         self.peeked_frame = Some(next);
                         self.has_more = Some(true);
@@ -848,8 +824,9 @@ impl Decoder for ZenDecoder {
             return Ok(bitmap_key);
         }
 
-        // Single-frame path: try push_decode directly into bitmap buffer.
-        // Falls back to into_decoder if the codec produces non-U8 data.
+        // ── Single-frame path ──
+        // Try push_decode with BitmapRowSink. If begin() rejects the format
+        // (non-U8), fall back to into_decoder which does format negotiation.
         let data = self.data.as_ref().unwrap();
         let w = info.width;
         let h = info.height;
@@ -867,75 +844,46 @@ impl Decoder for ZenDecoder {
             )
             .map_err(|e| e.at(here!()))?;
 
-        let push_ok = {
+        let push_result = {
             let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
             let mut window = bitmap.get_window_u8().unwrap();
             let dst_stride = window.info().t_stride() as usize;
-
-            let config = match &self.mode {
-                DecodeMode::Zencodec(config) => config,
-                _ => unreachable!(),
-            };
-            let mut job = config.dyn_job();
-            if let Some(ref limits) = self.resource_limits {
-                job.set_limits(limits.clone());
-            }
-
             let dst = window.slice_mut();
-            let mut sink = BitmapRowSink {
-                data: dst,
-                stride: dst_stride,
-                temp: Vec::new(),
-                is_4bpp: None,
-                rejected: false,
-                output_descriptor: None,
-                prev_strip: None,
-            };
-            job.push_decode(Cow::Borrowed(data), &mut sink, &preferred).map_err(|e| {
-                nerror!(
-                    ErrorKind::ImageDecodingError,
-                    "{} decode error: {}",
-                    self.meta.preferred_extension,
-                    e
-                )
-            })?;
 
-            sink.finish(w, h)
+            let mut sink = BitmapRowSink::new(dst, dst_stride);
+            let job = self.make_job();
+            job.push_decode(Cow::Borrowed(data), &mut sink, &preferred)
         };
 
-        // Fallback: codec produced non-U8 data; re-decode with format negotiation
-        if !push_ok {
-            let config = match &self.mode {
-                DecodeMode::Zencodec(config) => config,
-                _ => unreachable!(),
-            };
-            let mut job = config.dyn_job();
-            if let Some(ref limits) = self.resource_limits {
-                job.set_limits(limits.clone());
-            }
-            let dec = job.into_decoder(Cow::Borrowed(data), &preferred).map_err(|e| {
-                nerror!(
-                    ErrorKind::ImageDecodingError,
-                    "{} fallback decoder error: {}",
-                    self.meta.preferred_extension,
-                    e
-                )
-            })?;
-            let output = dec.decode().map_err(|e| {
-                nerror!(
-                    ErrorKind::ImageDecodingError,
-                    "{} fallback decode error: {}",
-                    self.meta.preferred_extension,
-                    e
-                )
-            })?;
-            let ps = output.pixels();
+        match push_result {
+            Ok(_) => { /* sink.finish() was called by codec — swizzle done */ }
+            Err(_) => {
+                // Format rejected or codec error — fall back to into_decoder
+                let job = self.make_job();
+                let dec = job.into_decoder(Cow::Borrowed(data), &preferred).map_err(|e| {
+                    nerror!(
+                        ErrorKind::ImageDecodingError,
+                        "{} decode error: {}",
+                        self.meta.preferred_extension,
+                        e
+                    )
+                })?;
+                let output = dec.decode().map_err(|e| {
+                    nerror!(
+                        ErrorKind::ImageDecodingError,
+                        "{} decode error: {}",
+                        self.meta.preferred_extension,
+                        e
+                    )
+                })?;
+                let ps = output.pixels();
 
-            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
-            let mut window = bitmap.get_window_u8().unwrap();
-            let dst_stride = window.info().t_stride() as usize;
-            let dst = window.slice_mut();
-            copy_pixel_slice_to_bitmap(dst, dst_stride, &ps);
+                let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
+                let mut window = bitmap.get_window_u8().unwrap();
+                let dst_stride = window.info().t_stride() as usize;
+                let dst = window.slice_mut();
+                copy_pixel_slice_to_bitmap(dst, dst_stride, &ps);
+            }
         }
 
         // Apply CMS transform if needed

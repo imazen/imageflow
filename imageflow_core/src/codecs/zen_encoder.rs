@@ -7,7 +7,7 @@ use crate::{Context, ErrorKind, FlowError, Result};
 use imageflow_types::PixelFormat;
 use std::io::Write;
 
-use zc::encode::{DynEncoderConfig, DynFrameEncoder};
+use zc::encode::{DynEncoderConfig, DynFullFrameEncoder};
 
 use super::zen_decoder::ZenDecoder;
 
@@ -28,7 +28,7 @@ pub struct ZenEncoder {
     io: IoProxy,
     matte: Option<imageflow_types::Color>,
     // Persistent frame encoder for animation
-    frame_enc: Option<Box<dyn DynFrameEncoder>>,
+    frame_enc: Option<Box<dyn DynFullFrameEncoder>>,
     // Whether this format supports animation (GIF, WebP, JXL)
     supports_animation: bool,
     // Format metadata
@@ -335,8 +335,23 @@ impl Encoder for ZenEncoder {
                 EncodeMode::Zencodec(config) => config,
                 _ => unreachable!(),
             };
-            let job = config.dyn_job();
-            let mut frame_enc = job.into_frame_encoder().map_err(|e| {
+            let mut job = config.dyn_job();
+
+            // Try to get loop count from decoder and set on the job
+            for io_id in decoder_io_ids {
+                if let Ok(mut codec) = c.get_codec(*io_id) {
+                    if let Ok(decoder) = codec.get_decoder() {
+                        if let Some(d) = decoder.as_any().downcast_ref::<ZenDecoder>() {
+                            if let Some(lc) = d.get_loop_count() {
+                                job.set_loop_count(Some(lc));
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            let frame_enc = job.into_full_frame_encoder().map_err(|e| {
                 nerror!(
                     ErrorKind::ImageEncodingError,
                     "{} frame encoder create error: {}",
@@ -344,20 +359,6 @@ impl Encoder for ZenEncoder {
                     e
                 )
             })?;
-
-            // Try to get loop count from decoder
-            for io_id in decoder_io_ids {
-                if let Ok(mut codec) = c.get_codec(*io_id) {
-                    if let Ok(decoder) = codec.get_decoder() {
-                        if let Some(d) = decoder.as_any().downcast_ref::<ZenDecoder>() {
-                            if let Some(lc) = d.get_loop_count() {
-                                frame_enc.set_loop_count(Some(lc));
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
 
             self.frame_enc = Some(frame_enc);
         }
