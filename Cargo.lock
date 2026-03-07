@@ -136,33 +136,12 @@ checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
 
 [[package]]
 name = "archmage"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61bd463aee29794a0318115ab857c2486842b28956c3f75365b304f1047b4758"
-dependencies = [
- "archmage-macros 0.7.0",
- "safe_unaligned_simd",
-]
-
-[[package]]
-name = "archmage"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c06fce4ba08fb97a48343135a4a3a1306a402137650ce7f2e2d377af19135b6f"
 dependencies = [
- "archmage-macros 0.9.3",
+ "archmage-macros",
  "safe_unaligned_simd",
-]
-
-[[package]]
-name = "archmage-macros"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02b01e2d131ffadba47bdff5d5e1d5d8a3b9743dc6b3d6ce4847ae2d6d306058"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -780,12 +759,6 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "enough"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65641ff0923e45cf34a4cb0115080cb7fc8bf4fd419c2207670d5722bab4c581"
-
-[[package]]
-name = "enough"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "177a59811828ea5dbc8927662d444ffee7b55a44696486f1b1a245ae9e652533"
@@ -994,7 +967,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d588075922ffd9b8269a191fcfde64b9ce5c4e58ad239e191b05dd6660decf1"
 dependencies = [
- "archmage 0.9.3",
+ "archmage",
  "bytemuck",
 ]
 
@@ -1360,7 +1333,7 @@ name = "imageflow_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "archmage 0.9.3",
+ "archmage",
  "base64",
  "bytemuck",
  "colorutils-rs",
@@ -1368,7 +1341,7 @@ dependencies = [
  "csv",
  "daggy",
  "dashmap",
- "enough 0.4.0",
+ "enough",
  "evalchroma",
  "flate2",
  "fs2",
@@ -1412,6 +1385,7 @@ dependencies = [
  "utoipa",
  "uuid",
  "walkdir",
+ "zencodec-types",
  "zengif",
  "zenjpeg",
  "zenjxl",
@@ -1637,13 +1611,11 @@ dependencies = [
 
 [[package]]
 name = "jxl-encoder"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0925f41cdcc51570d14d058ae45e17f2ed08a852e82cc7708adaa7489e3b6e8f"
+version = "0.2.0"
 dependencies = [
- "archmage 0.7.0",
+ "archmage",
  "bytemuck",
- "enough 0.3.1",
+ "enough",
  "hashbrown 0.16.1",
  "jxl-encoder-simd",
  "once_cell",
@@ -1653,12 +1625,10 @@ dependencies = [
 
 [[package]]
 name = "jxl-encoder-simd"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79f4e84d9956c1ffe6bc7cdc1718f14faaf922f560403aba178d630af2e39c8e"
+version = "0.2.0"
 dependencies = [
- "archmage 0.7.0",
- "magetypes 0.7.0",
+ "archmage",
+ "magetypes",
 ]
 
 [[package]]
@@ -1770,13 +1740,13 @@ dependencies = [
 
 [[package]]
 name = "linear-srgb"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40c9a589797e9ba985551ca1f2725358439d7d3ef8cd92aa1d41c925ff2becea"
+checksum = "ad4cadc069dae2158d5f87814de8958b88985b7bd1afe36f3bc9c1f607418fd5"
 dependencies = [
- "archmage 0.9.3",
+ "archmage",
  "bytemuck",
- "magetypes 0.9.3",
+ "magetypes",
  "num-traits",
 ]
 
@@ -1835,20 +1805,11 @@ source = "git+https://github.com/DanielKeep/rust-custom-derive.git#1252f258cdb9b
 
 [[package]]
 name = "magetypes"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d55dd4e83507ff9fe129b01669adca1e302ef346dac252ef59139c78def312a"
-dependencies = [
- "archmage 0.7.0",
-]
-
-[[package]]
-name = "magetypes"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06ba39f70cdfbbaea85cf5d82bfe84c83c8c00f0cc80243bee241c6a5227c3dd"
 dependencies = [
- "archmage 0.9.3",
+ "archmage",
 ]
 
 [[package]]
@@ -3612,13 +3573,8 @@ dependencies = [
 name = "zencodec-types"
 version = "0.1.0"
 dependencies = [
- "bytemuck",
- "enough 0.4.0",
- "imgref",
- "rgb",
- "whereat",
+ "enough",
  "zenpixels",
- "zenpixels-convert",
 ]
 
 [[package]]
@@ -3627,10 +3583,11 @@ version = "0.6.0"
 dependencies = [
  "bytemuck",
  "color_quant",
- "enough 0.4.0",
+ "enough",
  "gif",
  "linear-srgb",
  "rgb",
+ "thiserror",
  "whereat",
  "zencodec-types",
  "zenpixels",
@@ -3641,11 +3598,11 @@ name = "zenjpeg"
 version = "0.6.1"
 dependencies = [
  "aligned-vec",
- "archmage 0.9.3",
+ "archmage",
  "bytemuck",
- "enough 0.4.0",
+ "enough",
  "imgref",
- "magetypes 0.9.3",
+ "magetypes",
  "multiversed",
  "multiversion",
  "rayon",
@@ -3665,12 +3622,13 @@ name = "zenjxl"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "enough 0.4.0",
+ "enough",
  "imgref",
  "jxl-encoder",
  "linear-srgb",
  "rgb",
  "thiserror",
+ "whereat",
  "zencodec-types",
  "zenjxl-decoder",
  "zenpixels",
@@ -3685,7 +3643,7 @@ dependencies = [
  "atomic_refcell",
  "bytemuck",
  "byteorder",
- "enough 0.4.0",
+ "enough",
  "num-derive",
  "num-traits",
  "paste",
@@ -3709,7 +3667,7 @@ dependencies = [
 name = "zenjxl-decoder-simd"
 version = "0.3.0"
 dependencies = [
- "archmage 0.9.3",
+ "archmage",
  "paste",
 ]
 
@@ -3725,26 +3683,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "zenpixels-convert"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bb9b620ebbacfdeb7ef943212c9ac4cbfa7d9f3e2ea1bdcc03d3ec7e1db3471"
-dependencies = [
- "bytemuck",
- "linear-srgb",
- "rgb",
- "zenpixels",
-]
-
-[[package]]
 name = "zensim"
 version = "0.1.0"
 dependencies = [
- "archmage 0.9.3",
+ "archmage",
  "bytemuck",
  "imgref",
  "linear-srgb",
- "magetypes 0.9.3",
+ "magetypes",
  "rayon",
  "rgb",
  "thiserror",
@@ -3766,18 +3712,19 @@ dependencies = [
 name = "zenwebp"
 version = "0.3.2"
 dependencies = [
- "archmage 0.9.3",
+ "archmage",
  "byteorder-lite",
- "enough 0.4.0",
+ "enough",
  "hashbrown 0.16.1",
  "libm",
  "linear-srgb",
- "magetypes 0.9.3",
+ "magetypes",
  "rgb",
  "thiserror",
  "whereat",
  "yuv",
  "zencodec-types",
+ "zenpixels",
 ]
 
 [[package]]

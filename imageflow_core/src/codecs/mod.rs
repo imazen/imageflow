@@ -39,17 +39,11 @@ mod mozjpeg_decoder_helpers;
 #[cfg(feature = "c-codecs")]
 mod webp;
 
-// Zen codec modules — pure Rust, require zen-codecs feature
+// Unified zen codec adapters (zencodec-types dyn dispatch)
 #[cfg(feature = "zen-codecs")]
-mod zengif_codec;
+pub(crate) mod zen_decoder;
 #[cfg(feature = "zen-codecs")]
-mod zenjpeg_decoder;
-#[cfg(feature = "zen-codecs")]
-mod zenjpeg_encoder;
-#[cfg(feature = "zen-codecs")]
-mod zenjxl_codec;
-#[cfg(feature = "zen-codecs")]
-mod zenwebp_codec;
+pub(crate) mod zen_encoder;
 
 use crate::graphics::bitmaps::BitmapKey;
 
@@ -237,19 +231,19 @@ impl NamedDecoders {
             NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
             #[cfg(feature = "zen-codecs")]
             NamedDecoders::ZenJpegDecoder => {
-                Ok(Box::new(zenjpeg_decoder::ZenJpegDecoder::create(c, io, io_id)?))
+                Ok(Box::new(zen_decoder::ZenDecoder::create_jpeg(c, io, io_id)?))
             }
             #[cfg(feature = "zen-codecs")]
             NamedDecoders::ZenWebPDecoder => {
-                Ok(Box::new(zenwebp_codec::ZenWebPDecoder::create(c, io, io_id)?))
+                Ok(Box::new(zen_decoder::ZenDecoder::create_webp(c, io, io_id)?))
             }
             #[cfg(feature = "zen-codecs")]
             NamedDecoders::ZenGifDecoder => {
-                Ok(Box::new(zengif_codec::ZenGifDecoder::create(c, io, io_id)?))
+                Ok(Box::new(zen_decoder::ZenDecoder::create_gif(c, io, io_id)?))
             }
             #[cfg(feature = "zen-codecs")]
             NamedDecoders::ZenJxlDecoder => {
-                Ok(Box::new(zenjxl_codec::ZenJxlDecoder::create(c, io, io_id)?))
+                Ok(Box::new(zen_decoder::ZenDecoder::create_jxl(c, io, io_id)?))
             }
         }
     }
