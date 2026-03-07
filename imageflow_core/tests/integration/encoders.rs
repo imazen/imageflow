@@ -416,3 +416,43 @@ pub fn compare_encoded_to_source(
 
     compare_with(context2, bitmap_key, &bytes, require, true)
 }
+
+// ============================================================================
+// AVIF encoder tests
+// ============================================================================
+
+fn avif_format_preset() -> s::EncoderPreset {
+    s::EncoderPreset::Format {
+        format: s::OutputImageFormat::Avif,
+        quality_profile: Some(s::QualityProfile::Good),
+        quality_profile_dpr: None,
+        matte: None,
+        lossless: None,
+        allow: Some(s::AllowedFormats::avif()),
+        encoder_hints: None,
+    }
+}
+
+#[test]
+fn test_encode_avif_lossy() {
+    let steps = reencode_with(avif_format_preset());
+
+    compare_encoded_to_source(
+        IoTestEnum::Url(FRYMIRE_URL.to_owned()),
+        DEBUG_GRAPH,
+        Constraints { max_file_size: Some(800_000), similarity: Some(Similarity::MaxZdsim(0.55)) },
+        steps,
+    );
+}
+
+#[test]
+fn test_roundtrip_png_to_avif_lossy() {
+    let steps = reencode_with(avif_format_preset());
+
+    compare_encoded_to_source(
+        IoTestEnum::Url(FRYMIRE_URL.to_owned()),
+        DEBUG_GRAPH,
+        Constraints { max_file_size: Some(800_000), similarity: Some(Similarity::MaxZdsim(0.55)) },
+        steps,
+    );
+}

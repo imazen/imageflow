@@ -67,6 +67,24 @@ const JXL_META: FormatMeta = FormatMeta {
     always_use_frame_decoder: false,
 };
 
+const AVIF_META: FormatMeta = FormatMeta {
+    preferred_extension: "avif",
+    preferred_mime_type: "image/avif",
+    has_exif_orientation: false,
+    may_have_cmyk: false,
+    may_have_animation: true,
+    always_use_frame_decoder: false,
+};
+
+const HEIC_META: FormatMeta = FormatMeta {
+    preferred_extension: "heic",
+    preferred_mime_type: "image/heic",
+    has_exif_orientation: false,
+    may_have_cmyk: false,
+    may_have_animation: false,
+    always_use_frame_decoder: false,
+};
+
 /// Decoding strategy — native JPEG path for backward compat, zencodec for everything else.
 enum DecodeMode {
     /// Zencodec dyn dispatch (WebP, GIF, JXL, etc.)
@@ -178,6 +196,16 @@ impl ZenDecoder {
     pub fn create_jxl(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zenjxl::JxlDecoderConfig::new();
         Ok(Self::new_zencodec(Box::new(config), io, JXL_META))
+    }
+
+    pub fn create_avif(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
+        let config = zenavif::AvifDecoderConfig::new();
+        Ok(Self::new_zencodec(Box::new(config), io, AVIF_META))
+    }
+
+    pub fn create_heic(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
+        let config = heic_decoder::HeicDecoderConfig::new();
+        Ok(Self::new_zencodec(Box::new(config), io, HEIC_META))
     }
 
     fn ensure_data_buffered(&mut self) -> Result<()> {

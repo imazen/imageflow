@@ -21,7 +21,7 @@ enum EncodeMode {
 
 /// Unified encoder for all zen codec formats.
 ///
-/// Uses zencodec-types dyn dispatch for WebP, GIF, JXL (and eventually AVIF, PNG).
+/// Uses zencodec-types dyn dispatch for WebP, GIF, JXL, AVIF (and eventually PNG).
 /// JPEG uses the native zenjpeg streaming API for exact backward compatibility.
 pub struct ZenEncoder {
     mode: EncodeMode,
@@ -152,6 +152,43 @@ impl ZenEncoder {
             true, // GIF always supports animation
             "gif",
             "image/gif",
+        ))
+    }
+
+    pub(crate) fn create_avif(
+        c: &Context,
+        io: IoProxy,
+        quality: Option<f32>,
+        speed: Option<u8>,
+        lossless: bool,
+        matte: Option<imageflow_types::Color>,
+    ) -> Result<Self> {
+        if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::ZenAvifEncoder) {
+            return Err(nerror!(
+                ErrorKind::CodecDisabledError,
+                "The ZenAvif encoder has been disabled"
+            ));
+        }
+        use zc::encode::EncoderConfig as _;
+        let mut config = zenavif::AvifEncoderConfig::new();
+        if lossless {
+            config = config.with_lossless(true);
+        } else {
+            let q = quality.unwrap_or(75.0).clamp(0.0, 100.0);
+            config = config.with_generic_quality(q);
+        }
+        if let Some(s) = speed {
+            config = config.with_effort_u32(s as u32);
+        }
+
+        // AVIF doesn't support alpha in lossy mode without extra work — apply matte if set
+        Ok(Self::new_zencodec(
+            Box::new(config),
+            io,
+            matte,
+            false, // AVIF animation not yet supported
+            "avif",
+            "image/avif",
         ))
     }
 

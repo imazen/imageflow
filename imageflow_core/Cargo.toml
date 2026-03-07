@@ -58,6 +58,8 @@ zenjpeg = { path = "../../zenjpeg/zenjpeg", features = ["decoder", "parallel", "
 zengif = { path = "../../zengif", features = ["color_quant", "zencodec"], optional = true }
 zenwebp = { path = "../../zenwebp", features = ["zencodec"], optional = true }
 zenjxl = { path = "../../zenjxl", features = ["zencodec"], optional = true }
+zenavif = { path = "../../zenavif", features = ["zencodec", "encode"], optional = true }
+heic-decoder = { path = "../../heic-decoder-rs", features = ["zencodec"], optional = true }
 zenpixels = { version = "0.1", default-features = false, features = ["buffer"], optional = true }
 zc = { path = "../../zencodec-types", package = "zencodec-types", optional = true }
 
@@ -116,6 +118,8 @@ zen-codecs = [
     "dep:zengif",
     "dep:zenwebp",
     "dep:zenjxl",
+    "dep:zenavif",
+    "dep:heic-decoder",
     "dep:zenpixels",
     "dep:zc",
 ]

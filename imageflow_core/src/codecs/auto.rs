@@ -364,9 +364,8 @@ fn create_encoder_auto(
             .map_err(|e| e.at(here!()))?,
         OutputImageFormat::Jxl => create_jxl_auto(ctx, io, bitmap_key, decoder_io_ids, details)
             .map_err(|e| e.at(here!()))?,
-        OutputImageFormat::Avif => {
-            unimplemented!()
-        }
+        OutputImageFormat::Avif => create_avif_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+            .map_err(|e| e.at(here!()))?,
     })
     //libpng depth is 32 if alpha, 24 otherwise, zlib=9 if png_max_deflate=true, otherwise none
     //pngquant quality is 100 if png_quality is none
@@ -725,6 +724,49 @@ fn create_webp_auto(
     }
 }
 
+fn create_avif_auto(
+    ctx: &Context,
+    io: IoProxy,
+    _bitmap_key: BitmapKey,
+    _decoder_io_ids: &[i32],
+    details: AutoEncoderDetails,
+) -> Result<Box<dyn Encoder>> {
+    let profile_hints = details
+        .quality_profile
+        .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
+
+    let lossless = details.needs_lossless.unwrap_or(false);
+    let matte = details.matte;
+
+    #[cfg(feature = "zen-codecs")]
+    {
+        if lossless {
+            Ok(Box::new(
+                crate::codecs::zen_encoder::ZenEncoder::create_avif(
+                    ctx, io, None, None, true, matte,
+                )
+                .map_err(|e| e.at(here!()))?,
+            ))
+        } else {
+            let quality = profile_hints.map(|h| h.avif);
+            let speed = profile_hints.map(|h| h.avif_s);
+            Ok(Box::new(
+                crate::codecs::zen_encoder::ZenEncoder::create_avif(
+                    ctx, io, quality, speed, false, matte,
+                )
+                .map_err(|e| e.at(here!()))?,
+            ))
+        }
+    }
+    #[cfg(not(feature = "zen-codecs"))]
+    {
+        return Err(nerror!(
+            ErrorKind::CodecDisabledError,
+            "AVIF encoding requires the 'zen-codecs' feature"
+        ));
+    }
+}
+
 fn create_jxl_auto(
     ctx: &Context,
     io: IoProxy,
@@ -977,7 +1019,7 @@ struct FeaturesImplemented {
 }
 #[cfg(feature = "zen-codecs")]
 const FEATURES_IMPLEMENTED: FeaturesImplemented =
-    FeaturesImplemented { jxl: true, avif: false, webp_animation: false, jpegli: false };
+    FeaturesImplemented { jxl: true, avif: true, webp_animation: false, jpegli: false };
 #[cfg(not(feature = "zen-codecs"))]
 const FEATURES_IMPLEMENTED: FeaturesImplemented =
     FeaturesImplemented { jxl: false, avif: false, webp_animation: false, jpegli: false };

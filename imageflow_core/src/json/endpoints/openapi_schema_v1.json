@@ -1587,6 +1587,18 @@
       "ExecutionSecurity": {
         "type": "object",
         "properties": {
+          "enable_avif_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_avif_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "enable_gif_decoding": {
             "type": [
               "boolean",
@@ -1594,6 +1606,12 @@
             ]
           },
           "enable_gif_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_heic_decoding": {
             "type": [
               "boolean",
               "null"
