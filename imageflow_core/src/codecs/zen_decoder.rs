@@ -339,6 +339,32 @@ impl ZenDecoder {
     }
 }
 
+/// Convert one row of arbitrary U8 pixels into BGRA.
+#[inline]
+fn row_to_bgra(dst: &mut [u8], src: &[u8], width: usize, channels: usize) {
+    for x in 0..width {
+        let si = x * channels;
+        let di = x * 4;
+        if channels >= 4 {
+            dst[di] = src[si + 2]; // B
+            dst[di + 1] = src[si + 1]; // G
+            dst[di + 2] = src[si]; // R
+            dst[di + 3] = src[si + 3]; // A
+        } else if channels >= 3 {
+            dst[di] = src[si + 2]; // B
+            dst[di + 1] = src[si + 1]; // G
+            dst[di + 2] = src[si]; // R
+            dst[di + 3] = 255;
+        } else {
+            let v = src[si];
+            dst[di] = v;
+            dst[di + 1] = v;
+            dst[di + 2] = v;
+            dst[di + 3] = 255;
+        }
+    }
+}
+
 /// Copy decoded pixels from a PixelSlice into a bitmap, handling stride and BGRA swizzle.
 fn copy_pixel_slice_to_bitmap(dst: &mut [u8], dst_stride: usize, ps: &zenpixels::PixelSlice<'_>) {
     let w = ps.width();
@@ -366,32 +392,16 @@ fn copy_pixel_slice_to_bitmap(dst: &mut [u8], dst_stride: usize, ps: &zenpixels:
         }
         let _ = garb::bytes::rgba_to_bgra_inplace_strided(dst, w as usize, h as usize, dst_stride);
     } else {
-        // Fallback: per-pixel conversion for other U8 formats
         let channels = descriptor.channels() as usize;
         for y in 0..h {
             let src_row = ps.row(y);
             let dst_start = y as usize * dst_stride;
-            for x in 0..w as usize {
-                let si = x * channels;
-                let di = dst_start + x * 4;
-                if channels >= 4 {
-                    dst[di] = src_row[si + 2]; // B
-                    dst[di + 1] = src_row[si + 1]; // G
-                    dst[di + 2] = src_row[si]; // R
-                    dst[di + 3] = src_row[si + 3]; // A
-                } else if channels == 3 {
-                    dst[di] = src_row[si + 2]; // B
-                    dst[di + 1] = src_row[si + 1]; // G
-                    dst[di + 2] = src_row[si]; // R
-                    dst[di + 3] = 255;
-                } else {
-                    let v = src_row[si];
-                    dst[di] = v;
-                    dst[di + 1] = v;
-                    dst[di + 2] = v;
-                    dst[di + 3] = 255;
-                }
-            }
+            row_to_bgra(
+                &mut dst[dst_start..dst_start + w as usize * 4],
+                src_row,
+                w as usize,
+                channels,
+            );
         }
     }
 }
@@ -450,27 +460,17 @@ impl BitmapRowSink<'_> {
         let bpp = meta.descriptor.bytes_per_pixel();
         let src_stride = meta.width as usize * bpp;
         let channels = meta.descriptor.channels() as usize;
-        let dst_stride = self.stride;
 
         for row in 0..meta.height as usize {
             let src_start = row * src_stride;
-            let dst_start = (meta.y as usize + row) * dst_stride;
-            for x in 0..meta.width as usize {
-                let si = src_start + x * channels;
-                let di = dst_start + x * 4;
-                if channels >= 3 {
-                    self.data[di] = self.temp[si + 2]; // B
-                    self.data[di + 1] = self.temp[si + 1]; // G
-                    self.data[di + 2] = self.temp[si]; // R
-                    self.data[di + 3] = 255;
-                } else {
-                    let v = self.temp[si];
-                    self.data[di] = v;
-                    self.data[di + 1] = v;
-                    self.data[di + 2] = v;
-                    self.data[di + 3] = 255;
-                }
-            }
+            let dst_start = (meta.y as usize + row) * self.stride;
+            let w = meta.width as usize;
+            row_to_bgra(
+                &mut self.data[dst_start..dst_start + w * 4],
+                &self.temp[src_start..src_start + w * channels],
+                w,
+                channels,
+            );
         }
     }
 }
@@ -731,7 +731,12 @@ impl Decoder for ZenDecoder {
         let info = self.cached_info.as_ref().unwrap().clone();
         let source_profile = self.source_profile_from_info(&info);
         let has_alpha = info.has_alpha;
-        let preferred = [zenpixels::PixelDescriptor::BGRA8_SRGB];
+        let preferred = [
+            zenpixels::PixelDescriptor::BGRA8_SRGB,
+            zenpixels::PixelDescriptor::RGBA8_SRGB,
+            zenpixels::PixelDescriptor::RGB8_SRGB,
+            zenpixels::PixelDescriptor::GRAY8_SRGB,
+        ];
 
         // Animation path: use persistent full-frame decoder
         if self.meta.always_use_frame_decoder || info.has_animation || self.frame_dec.is_some() {
