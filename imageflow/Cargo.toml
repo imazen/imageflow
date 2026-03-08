@@ -1,18 +1,17 @@
 [package]
 name = "imageflow"
-version = "0.1.0"
-authors = ["Lilith River <lilith@imazen.io>"]
-edition = "2021"
-workspace = "../"
+version = "4.0.0-alpha.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "High-level Rust API for imageflow image processing"
 
 [lib]
 name = "imageflow_api"
 doc = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-imageflow_types = { path = "../imageflow_types", version = "*" }
-imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
-imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
-imageflow_core = { path = "../imageflow_core", version = "*" }
+imageflow_types = { path = "../imageflow_types" }
+imageflow_core = { path = "../imageflow_core" }
+serde_json = { workspace = true }

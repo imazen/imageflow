@@ -1,41 +1,19 @@
 [package]
-name = "imageflow_tool_lib"
-version = "0.1.0"
-authors = ["Lilith River <lilith@imazen.io>"]
-workspace = "../"
-edition = "2021"
-
-description = "A command-line tool for interacting with the Imageflow library, primarily for testing and debugging."
-homepage = "https://imageflow.io"
-repository = "https://github.com/imazen/imageflow"
-readme = "README.md"
-keywords = ["image", "imaging", "resizing", "graphics", "server"]
-categories = ["multimedia::images", "command-line-utilities"]
-
-[dependencies]
-imageflow_core = { path = "../imageflow_core", version = "*" }
-imageflow_types = { path = "../imageflow_types", version = "*" }
-libc = "0.2"
-clap = "4"
-time = "0.3"
-threadpool = "1"
-serde = "1"
-serde_json = "1"
-imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
-imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
-zip = { version = "8", default-features = false }
-smallvec = "1"
-bytes = "1"
-utoipa = { version = "5.3.1", features = [], optional = true }
-
-[features]
-default = ["schema-export", "json-schema"]
-schema-export = ["dep:utoipa", "imageflow_types/schema-export", "imageflow_core/schema-export"]
-json-schema = ["imageflow_types/json-schema", "imageflow_core/json-schema"]
+name = "imageflow_tool"
+version = "4.0.0-alpha.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "CLI tool for imageflow image processing"
 
 [[bin]]
 name = "imageflow_tool"
 path = "src/main.rs"
 doc = false
 
-[dev-dependencies]
+[dependencies]
+imageflow_core = { path = "../imageflow_core" }
+imageflow_types = { path = "../imageflow_types" }
+serde_json = { workspace = true }
+clap = "4"

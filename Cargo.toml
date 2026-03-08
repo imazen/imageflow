@@ -2,11 +2,10 @@
 members = [
     "imageflow_types",
     "imageflow_core",
+    "imageflow_abi",
+    "imageflow",
+    "imageflow_tool",
 ]
-# Will re-add once core compiles:
-# "imageflow_abi",
-# "imageflow",
-# "imageflow_tool",
 # Old crates preserved for reference but excluded from build:
 # append_only_set, imageflow_helpers, imageflow_http_helpers,
 # imageflow_riapi, c_components

@@ -1,29 +1,17 @@
 [package]
 name = "imageflow_abi"
-version = "0.1.0"
-authors = ["Lilith River <lilith@imazen.io>"]
-workspace = "../"
-build = "build.rs"
-edition = "2021"
+version = "4.0.0-alpha.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "C ABI for imageflow image processing"
 
 [lib]
 name = "imageflow"
 doc = true
-# Default crate type for non-musl targets
 crate-type = ["cdylib"]
 doctest = false
 
-
-
 [dependencies]
-libc = "0.2"
-imageflow_core = { path = "../imageflow_core", version = "*"}
-backtrace = "*"
-smallvec="*"
-base64="0.22"
-
-[build-dependencies]
-imageflow_helpers = { path = "../imageflow_helpers", version = "*"}
-cbindgen = "0.29"
-regex-lite = { version = "0.1.6" }
-rayon = "1"
+imageflow_core = { path = "../imageflow_core" }
