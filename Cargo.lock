@@ -136,12 +136,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "array-init"
-version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d62b7694a562cdf5a74227903507c56ab2cc8bdd1f781ed5cb4cf9c9f810bfc"
-
-[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -161,12 +155,6 @@ name = "assert_matches"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
-
-[[package]]
-name = "atomic_refcell"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41e67cd8309bbd06cd603a9e693a784ac2e5d1e955f11286e355089fcab3047c"
 
 [[package]]
 name = "atomig"
@@ -538,6 +526,7 @@ dependencies = [
  "enough",
  "imageflow_types",
  "imgref",
+ "linear-srgb",
  "moxcms",
  "rgb",
  "serde",
@@ -616,28 +605,6 @@ checksum = "9afb3de4395d6b3e67a780b6de64b51c978ecf11cb9a462c66be7d4ca9039d33"
 dependencies = [
  "getrandom",
  "libc",
-]
-
-[[package]]
-name = "jxl-encoder"
-version = "0.2.0"
-dependencies = [
- "archmage 0.9.3",
- "bytemuck",
- "enough",
- "hashbrown",
- "jxl-encoder-simd",
- "once_cell",
- "thiserror",
- "whereat",
-]
-
-[[package]]
-name = "jxl-encoder-simd"
-version = "0.2.0"
-dependencies = [
- "archmage 0.9.3",
- "magetypes",
 ]
 
 [[package]]
@@ -907,28 +874,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proc-macro-error-attr2"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96de42df36bb9bba5542fe9f1a054b8cc87e172759a1868aa05c1f3acc89dfc5"
-dependencies = [
- "proc-macro2",
- "quote",
-]
-
-[[package]]
-name = "proc-macro-error2"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11ec05c52be0a07b08061f7dd003e7d7092e0472bc731b4af7bb1ef876109802"
-dependencies = [
- "proc-macro-error-attr2",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1120,6 +1065,12 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "self_cell"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b12e76d157a900eb52e81bc6e9f3069344290341720e9178cde2407113ac8d89"
 
 [[package]]
 name = "serde"
@@ -1507,7 +1458,6 @@ dependencies = [
  "zencodec-types",
  "zengif",
  "zenjpeg",
- "zenjxl",
  "zenpixels",
  "zenpixels-convert",
  "zenwebp",
@@ -1549,60 +1499,6 @@ dependencies = [
  "yuv",
  "zencodec-types",
  "zenpixels",
-]
-
-[[package]]
-name = "zenjxl"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "enough",
- "imgref",
- "jxl-encoder",
- "linear-srgb",
- "rgb",
- "thiserror",
- "whereat",
- "zencodec-types",
- "zenjxl-decoder",
- "zenpixels",
-]
-
-[[package]]
-name = "zenjxl-decoder"
-version = "0.3.0"
-dependencies = [
- "aligned-vec",
- "array-init",
- "atomic_refcell",
- "bytemuck",
- "byteorder",
- "enough",
- "num-derive",
- "num-traits",
- "paste",
- "smallvec",
- "thiserror",
- "zenjxl-decoder-macros",
- "zenjxl-decoder-simd",
-]
-
-[[package]]
-name = "zenjxl-decoder-macros"
-version = "0.3.0"
-dependencies = [
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "zenjxl-decoder-simd"
-version = "0.3.0"
-dependencies = [
- "archmage 0.9.3",
- "paste",
 ]
 
 [[package]]
@@ -1702,6 +1598,7 @@ dependencies = [
  "linear-srgb",
  "magetypes",
  "rgb",
+ "self_cell",
  "thiserror",
  "whereat",
  "yuv",

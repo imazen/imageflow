@@ -26,7 +26,8 @@ serde_json = "1"
 zenpixels = { version = "0.1", default-features = false, features = ["buffer", "planar"] }
 zenpixels-convert = { path = "../zenpixels/zenpixels-convert", default-features = false, features = ["std", "buffer", "codec"] }
 # TODO: re-enable "png" once zenpng compiles (has uncommitted WIP changes against updated zencodec-types)
-zencodecs = { path = "../zencodecs", default-features = false, features = ["jpeg", "webp", "gif", "avif-decode", "avif-encode", "jxl-decode", "jxl-encode", "heic-decode", "bitmaps-bmp"] }
+# TODO: re-enable "jxl-decode", "jxl-encode" once zenjxl-decoder merge conflict is resolved
+zencodecs = { path = "../zencodecs", default-features = false, features = ["jpeg", "webp", "gif", "avif-decode", "avif-encode", "heic-decode", "bitmaps-bmp"] }
 zenlayout = { path = "../zenlayout", default-features = false, features = ["std", "riapi"] }
 zenresize = { path = "../zenresize", default-features = false, features = ["std", "layout"] }
 zenjpeg = { path = "../zenjpeg/zenjpeg", features = ["decoder"] }
@@ -42,6 +43,7 @@ enough = { version = "0.4", features = ["std"] }
 
 # Core utilities
 rgb = { version = "0.8", features = ["as-bytes"] }
+linear-srgb = { version = "0.6", default-features = false, features = ["std"] }
 imgref = "1.12"
 bytemuck = { version = "1.14", features = ["derive"] }
 

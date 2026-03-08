@@ -42,6 +42,9 @@ rgb = { workspace = true }
 imgref = { workspace = true }
 bytemuck = { workspace = true }
 
+# Color space conversion
+linear-srgb = { workspace = true }
+
 # Utilities
 base64 = "0.22"
 
