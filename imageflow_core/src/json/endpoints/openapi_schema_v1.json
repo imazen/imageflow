@@ -1587,6 +1587,68 @@
       "ExecutionSecurity": {
         "type": "object",
         "properties": {
+          "enable_gif_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_gif_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_jpeg_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Per-format decoder kill bits. `Some(false)` disables all decoders for that format."
+          },
+          "enable_jpeg_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Per-format encoder kill bits. `Some(false)` disables all encoders for that format."
+          },
+          "enable_jxl_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_jxl_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_png_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_png_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_webp_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_webp_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "max_decode_size": {
             "oneOf": [
               {
