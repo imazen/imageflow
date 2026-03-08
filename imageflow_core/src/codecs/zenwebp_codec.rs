@@ -82,6 +82,7 @@ impl Decoder for ZenWebPDecoder {
     }
 
     fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
+        return_if_cancelled!(c);
         self.ensure_data_buffered()?;
         let data = self.data.as_ref().unwrap();
 
@@ -177,6 +178,7 @@ impl Encoder for ZenWebPEncoder {
         bitmap_key: BitmapKey,
         _decoder_io_ids: &[i32],
     ) -> Result<s::EncodeResult> {
+        return_if_cancelled!(c);
         let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 

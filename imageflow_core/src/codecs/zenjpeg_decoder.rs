@@ -114,7 +114,7 @@ impl Decoder for ZenJpegDecoder {
             .preserve_all();
 
         let result = decoder
-            .decode(data, zenjpeg::encoder::Unstoppable)
+            .decode(data, c.stop())
             .map_err(|e| nerror!(ErrorKind::ImageDecodingError, "zenjpeg decode error: {}", e))?;
 
         let w = result.width();

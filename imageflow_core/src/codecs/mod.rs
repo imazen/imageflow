@@ -152,6 +152,27 @@ impl NamedDecoders {
         }
     }
 
+    pub fn is_c_codec(&self) -> bool {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            Self::MozJpegRsDecoder
+            | Self::ImageRsJpegDecoder
+            | Self::LibPngRsDecoder
+            | Self::WebPDecoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_zen_codec(&self) -> bool {
+        match self {
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJpegDecoder
+            | Self::ZenWebPDecoder
+            | Self::ZenGifDecoder
+            | Self::ZenJxlDecoder => true,
+            _ => false,
+        }
+    }
+
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
         match self {
             #[cfg(feature = "c-codecs")]
@@ -293,6 +314,23 @@ impl NamedEncoders {
         match self {
             #[cfg(feature = "zen-codecs")]
             Self::ZenJxlEncoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_c_codec(&self) -> bool {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            Self::MozJpegEncoder | Self::WebPEncoder | Self::LibPngRsEncoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_zen_codec(&self) -> bool {
+        match self {
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJpegEncoder
+            | Self::ZenWebPEncoder
+            | Self::ZenGifEncoder
+            | Self::ZenJxlEncoder => true,
             _ => false,
         }
     }

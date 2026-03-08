@@ -2,33 +2,7 @@ use crate::common::*;
 use imageflow_core::Context;
 use imageflow_types::{CommandStringKind, EncoderPreset, Execute001, Framewise, Node};
 
-/// Build a minimal animated GIF with the given frame colors (RGBA hex strings).
-/// Each frame is `w`x`h` pixels, solid color, with the given delay in centiseconds.
-fn build_animated_gif(w: u16, h: u16, colors: &[&str], delay: u16) -> Vec<u8> {
-    let mut buf = Vec::new();
-    {
-        let mut encoder = gif::Encoder::new(&mut buf, w, h, &[]).unwrap();
-        encoder.set_repeat(gif::Repeat::Infinite).unwrap();
-        for color_hex in colors {
-            let r = u8::from_str_radix(&color_hex[0..2], 16).unwrap();
-            let g = u8::from_str_radix(&color_hex[2..4], 16).unwrap();
-            let b = u8::from_str_radix(&color_hex[4..6], 16).unwrap();
-            let a = if color_hex.len() == 8 {
-                u8::from_str_radix(&color_hex[6..8], 16).unwrap()
-            } else {
-                255
-            };
-            let mut pixels = vec![[r, g, b, a]; (w as usize) * (h as usize)]
-                .into_iter()
-                .flatten()
-                .collect::<Vec<u8>>();
-            let mut frame = gif::Frame::from_rgba(w, h, &mut pixels);
-            frame.delay = delay;
-            encoder.write_frame(&frame).unwrap();
-        }
-    }
-    buf
-}
+use super::smoke::build_animated_gif;
 
 /// Count frames in a GIF byte buffer using the gif crate decoder.
 fn count_gif_frames(bytes: &[u8]) -> usize {
