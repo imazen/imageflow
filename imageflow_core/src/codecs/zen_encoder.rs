@@ -397,7 +397,7 @@ impl Encoder for ZenEncoder {
             let ps = zenpixels::PixelSlice::new(slice, w, h, stride, desc)
                 .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "pixel slice error: {}", e))?;
 
-            frame_enc.push_frame(ps, delay_ms).map_err(|e| {
+            frame_enc.push_frame(ps, delay_ms, None).map_err(|e| {
                 nerror!(
                     ErrorKind::ImageEncodingError,
                     "{} frame encode error: {}",
@@ -463,7 +463,7 @@ impl Encoder for ZenEncoder {
 
     fn into_io(self: Box<Self>) -> Result<IoProxy> {
         if let Some(frame_enc) = self.frame_enc {
-            let output = frame_enc.finish().map_err(|e| {
+            let output = frame_enc.finish(None).map_err(|e| {
                 nerror!(
                     ErrorKind::ImageEncodingError,
                     "{} finish error: {}",

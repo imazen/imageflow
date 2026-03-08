@@ -499,12 +499,30 @@ impl DecodeRowSink for BitmapRowSink<'_> {
         width: u32,
         descriptor: zenpixels::PixelDescriptor,
     ) -> std::result::Result<zenpixels::PixelSliceMut<'_>, SinkError> {
+        // Bounds check: ensure strip fits within allocated bitmap
+        let end_row = y as usize + height as usize;
+        if end_row > self.height as usize || width as usize > self.width as usize {
+            return Err(format!(
+                "strip y={y} h={height} w={width} exceeds bitmap {}x{}",
+                self.width, self.height
+            )
+            .into());
+        }
+
         if self.is_4bpp {
             // 4bpp (BGRA/RGBA): write directly into bitmap at the correct row offset.
             let row_start = y as usize * self.stride;
             let row_bytes = width as usize * 4;
             let needed =
                 if height > 0 { (height as usize - 1) * self.stride + row_bytes } else { 0 };
+            if row_start + needed > self.data.len() {
+                return Err(format!(
+                    "strip at y={y} needs {} bytes but bitmap has {}",
+                    row_start + needed,
+                    self.data.len()
+                )
+                .into());
+            }
             let slice = &mut self.data[row_start..row_start + needed];
             PixelSliceMut::new(slice, width, height, self.stride, descriptor)
                 .map_err(|e| -> SinkError { format!("{e}").into() })
@@ -770,7 +788,7 @@ impl Decoder for ZenDecoder {
             let frame = if let Some(f) = self.peeked_frame.take() {
                 Some(f)
             } else {
-                frame_dec.render_next_frame_owned().map_err(|e| {
+                frame_dec.render_next_frame_owned(None).map_err(|e| {
                     nerror!(ErrorKind::ImageDecodingError, "frame decode error: {}", e)
                 })?
             };
@@ -812,7 +830,7 @@ impl Decoder for ZenDecoder {
                 self.has_more = Some(false);
             } else {
                 let frame_dec = self.frame_dec.as_mut().unwrap();
-                match frame_dec.render_next_frame_owned() {
+                match frame_dec.render_next_frame_owned(None) {
                     Ok(Some(next)) => {
                         self.peeked_frame = Some(next);
                         self.has_more = Some(true);
@@ -882,6 +900,19 @@ impl Decoder for ZenDecoder {
                     )
                 })?;
                 let ps = output.pixels();
+
+                // Verify decoded dimensions match what we allocated
+                if ps.width() != w || ps.rows() != h {
+                    return Err(nerror!(
+                        ErrorKind::ImageDecodingError,
+                        "{} decoded {}x{} but info reported {}x{}",
+                        self.meta.preferred_extension,
+                        ps.width(),
+                        ps.rows(),
+                        w,
+                        h
+                    ));
+                }
 
                 let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
                 let mut window = bitmap.get_window_u8().unwrap();
