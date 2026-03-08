@@ -150,7 +150,10 @@ fn smoke_test_corrupt_jpeg() {
         watermarks: None,
     }];
 
-    smoke_test(
+    // Some decoders (e.g., zenjpeg) can recover from corrupt data, while others
+    // (e.g., mozjpeg) produce errors. Either outcome is acceptable — the key
+    // invariant is that we don't crash.
+    let _ = smoke_test(
         Some(IoTestEnum::Url(
             "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/corrupt.jpg"
                 .to_owned(),
@@ -159,8 +162,7 @@ fn smoke_test_corrupt_jpeg() {
         None,
         DEBUG_GRAPH,
         steps,
-    )
-    .expect_err("Should fail without crashing process");
+    );
 }
 
 #[test]
@@ -269,6 +271,7 @@ fn test_max_encode_dimensions() {
                 h: 1,
                 megapixels: 100.0,
             }),
+            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
@@ -298,6 +301,7 @@ fn test_max_decode_dimensions() {
             }),
             max_frame_size: None,
             max_encode_size: None,
+            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
@@ -326,6 +330,7 @@ fn test_max_frame_dimensions() {
             }),
             max_decode_size: None,
             max_encode_size: None,
+            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
@@ -596,7 +601,7 @@ fn test_detect_whitespace_all_small_images() {
 
 /// Build a minimal animated GIF with the given frame colors (RGBA hex strings).
 /// Each frame is `w`x`h` pixels, solid color, with the given delay in centiseconds.
-fn build_animated_gif(w: u16, h: u16, colors: &[&str], delay: u16) -> Vec<u8> {
+pub(super) fn build_animated_gif(w: u16, h: u16, colors: &[&str], delay: u16) -> Vec<u8> {
     let mut buf = Vec::new();
     {
         let mut encoder = gif::Encoder::new(&mut buf, w, h, &[]).unwrap();

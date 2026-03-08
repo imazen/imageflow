@@ -248,7 +248,7 @@ impl WebPEncoder {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::WebPEncoder) {
             return Err(nerror!(
                 ErrorKind::CodecDisabledError,
-                "The LodePNG encoder has been disabled"
+                "The WebP encoder has been disabled"
             ));
         }
         if lossless == Some(true) && quality.is_some() {

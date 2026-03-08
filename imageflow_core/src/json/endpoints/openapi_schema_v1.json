@@ -1494,6 +1494,35 @@
             "enum": [
               "gif"
             ]
+          },
+          {
+            "type": "object",
+            "description": "JPEG XL lossy encoding. `distance` is butteraugli distance (0.0 = mathematically lossless,\n1.0 = high quality, higher = more compression). Default effort 7.",
+            "required": [
+              "jxllossy"
+            ],
+            "properties": {
+              "jxllossy": {
+                "type": "object",
+                "description": "JPEG XL lossy encoding. `distance` is butteraugli distance (0.0 = mathematically lossless,\n1.0 = high quality, higher = more compression). Default effort 7.",
+                "required": [
+                  "distance"
+                ],
+                "properties": {
+                  "distance": {
+                    "type": "number",
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "string",
+            "description": "JPEG XL lossless encoding (modular mode). Default effort 7.",
+            "enum": [
+              "jxllossless"
+            ]
           }
         ],
         "description": "Encoder presets (each with optional configuration). These are exposed by the JSON API."
@@ -1558,6 +1587,68 @@
       "ExecutionSecurity": {
         "type": "object",
         "properties": {
+          "enable_gif_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_gif_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_jpeg_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Per-format decoder kill bits. `Some(false)` disables all decoders for that format."
+          },
+          "enable_jpeg_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Per-format encoder kill bits. `Some(false)` disables all encoders for that format."
+          },
+          "enable_jxl_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_jxl_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_png_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_png_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_webp_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_webp_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "max_decode_size": {
             "oneOf": [
               {
@@ -1578,6 +1669,15 @@
               }
             ]
           },
+          "max_encoder_threads": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Maximum threads for parallel encoding operations.\n`Some(1)` disables parallelism. `None` = codec default (typically auto-detect cores).",
+            "minimum": 0
+          },
           "max_frame_size": {
             "oneOf": [
               {
@@ -1587,6 +1687,36 @@
                 "$ref": "#/components/schemas/FrameSizeLimit"
               }
             ]
+          },
+          "prefer_c_codecs": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Prefer C library codecs over pure-Rust when both are available.\nDefault: `None` (false — prefer pure-Rust)."
+          },
+          "process_timeout_ms": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Processing timeout in milliseconds. Operations exceeding this are cancelled.\nDefault: 30000 (30 seconds). `None` = no timeout.",
+            "minimum": 0
+          },
+          "use_c_codecs": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Allow C library codecs (mozjpeg, libpng, libwebp). `Some(false)` disables all C codecs.\nDefault: `None` (use compile-time defaults)."
+          },
+          "use_safe_codecs": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Allow pure-Rust codecs (zenjpeg, zenwebp, zengif, zenjxl). `Some(false)` disables all.\nDefault: `None` (use compile-time defaults)."
           }
         }
       },

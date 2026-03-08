@@ -10,7 +10,7 @@ use std::any::Any;
 #[cfg(debug_assertions)]
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicUsize};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU64, AtomicUsize};
 use std::sync::Arc;
 use std::sync::*;
 
@@ -48,80 +48,109 @@ pub struct Context {
     captured_bitmap_keys: Option<Box<std::collections::HashMap<i32, BitmapKey>>>,
 }
 
-// This token is the shared state.
-#[derive(Default)]
-struct CancellationToken {
-    flag: Arc<AtomicBool>,
+struct CancellationTokenInner {
+    flag: AtomicBool,
+    /// Deadline as nanos elapsed since `created_at`. u64::MAX = no deadline.
+    deadline_nanos: AtomicU64,
+    created_at: std::time::Instant,
     #[cfg(debug_assertions)]
-    poll_countdown: Arc<AtomicI64>,
+    poll_countdown: AtomicI64,
+}
+
+/// Shared cancellation/timeout token. Clone shares state via Arc.
+#[derive(Clone)]
+struct CancellationToken {
+    inner: Arc<CancellationTokenInner>,
+}
+
+impl Default for CancellationToken {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CancellationToken {
-    // The blocking task will call this.
+    pub fn new() -> Self {
+        CancellationToken {
+            inner: Arc::new(CancellationTokenInner {
+                flag: AtomicBool::new(false),
+                deadline_nanos: AtomicU64::new(u64::MAX),
+                created_at: std::time::Instant::now(),
+                #[cfg(debug_assertions)]
+                poll_countdown: AtomicI64::new(i64::MAX),
+            }),
+        }
+    }
+
+    /// Set a deadline relative to token creation time.
+    pub fn set_timeout(&self, duration: std::time::Duration) {
+        let nanos = duration.as_nanos().min(u64::MAX as u128) as u64;
+        self.inner.deadline_nanos.store(nanos, Ordering::Relaxed);
+    }
+
     #[cfg(debug_assertions)]
     #[inline]
     pub fn cancellation_requested(&self) -> bool {
-        if self.flag.load(Ordering::Relaxed) {
+        if self.inner.flag.load(Ordering::Relaxed) {
             return true;
         }
-        if self.poll_countdown.load(Ordering::Relaxed) == i64::MAX {
-            return false; // No need to mutate, it's not been set
+        let deadline = self.inner.deadline_nanos.load(Ordering::Relaxed);
+        if deadline != u64::MAX && self.inner.created_at.elapsed().as_nanos() as u64 >= deadline {
+            return true;
         }
-        self.poll_countdown.fetch_sub(1, Ordering::Relaxed) < 1
+        if self.inner.poll_countdown.load(Ordering::Relaxed) == i64::MAX {
+            return false;
+        }
+        self.inner.poll_countdown.fetch_sub(1, Ordering::Relaxed) < 1
     }
 
     #[inline]
     #[cfg(not(debug_assertions))]
     pub fn cancellation_requested(&self) -> bool {
-        self.flag.load(Ordering::Relaxed)
+        if self.inner.flag.load(Ordering::Relaxed) {
+            return true;
+        }
+        let deadline = self.inner.deadline_nanos.load(Ordering::Relaxed);
+        if deadline != u64::MAX && self.inner.created_at.elapsed().as_nanos() as u64 >= deadline {
+            return true;
+        }
+        false
     }
 
     fn cancel_internal(&self) {
-        self.flag.store(true, Ordering::Relaxed);
+        self.inner.flag.store(true, Ordering::Relaxed);
     }
 
-    #[cfg(not(debug_assertions))]
-    pub fn new() -> CancellationToken {
-        CancellationToken { flag: Arc::new(AtomicBool::new(false)) }
-    }
-
-    #[cfg(debug_assertions)]
-    pub fn new() -> CancellationToken {
-        CancellationToken {
-            flag: Arc::new(AtomicBool::new(false)),
-            poll_countdown: Arc::new(AtomicI64::new(i64::MAX)),
-        }
-    }
     #[cfg(debug_assertions)]
     pub fn request_cancellation_after_n_polls(&self, cancel_after_polls: i64) {
-        self.poll_countdown.store(cancel_after_polls, Ordering::SeqCst);
-        // eprintln!("Requesting cancellation after {} polls", cancel_after_polls);
-        // eprintln!("Poll count remaining: {}", self.poll_countdown.load(Ordering::SeqCst));
+        self.inner.poll_countdown.store(cancel_after_polls, Ordering::SeqCst);
     }
     #[cfg(debug_assertions)]
     pub fn request_cancellation_after_n_polls_remaining(&self) -> i64 {
-        self.poll_countdown.load(Ordering::SeqCst)
-    }
-}
-
-impl Clone for CancellationToken {
-    fn clone(&self) -> Self {
-        Self {
-            flag: self.flag.clone(),
-            #[cfg(debug_assertions)]
-            poll_countdown: self.poll_countdown.clone(),
-        }
+        self.inner.poll_countdown.load(Ordering::SeqCst)
     }
 }
 
 impl Stop for CancellationToken {
     #[inline]
     fn check(&self) -> std::result::Result<(), StopReason> {
-        if self.cancellation_requested() {
-            Err(StopReason::Cancelled)
-        } else {
-            Ok(())
+        if self.inner.flag.load(Ordering::Relaxed) {
+            return Err(StopReason::Cancelled);
         }
+        let deadline = self.inner.deadline_nanos.load(Ordering::Relaxed);
+        if deadline != u64::MAX && self.inner.created_at.elapsed().as_nanos() as u64 >= deadline {
+            return Err(StopReason::TimedOut);
+        }
+        #[cfg(debug_assertions)]
+        {
+            let countdown = self.inner.poll_countdown.load(Ordering::Relaxed);
+            if countdown != i64::MAX
+                && self.inner.poll_countdown.fetch_sub(1, Ordering::Relaxed) < 1
+            {
+                return Err(StopReason::Cancelled);
+            }
+        }
+        Ok(())
     }
 
     #[inline]
@@ -641,6 +670,79 @@ impl Context {
         if let Some(encode) = s.max_encode_size {
             self.security.max_encode_size = Some(encode);
         }
+        // Timeout
+        if let Some(timeout_ms) = s.process_timeout_ms {
+            self.cancellation_token.set_timeout(std::time::Duration::from_millis(timeout_ms));
+        }
+        // Backend selection — applied before per-format kill bits
+        if s.use_c_codecs == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_c_codec());
+            self.enabled_codecs.encoders.retain(|e| !e.is_c_codec());
+        }
+        if s.use_safe_codecs == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_zen_codec());
+            self.enabled_codecs.encoders.retain(|e| !e.is_zen_codec());
+        }
+        if s.prefer_c_codecs == Some(true) {
+            // Move C codecs before zen codecs by stable-partitioning
+            let mut decoders = std::mem::take(&mut self.enabled_codecs.decoders);
+            let mut c_decoders: smallvec::SmallVec<[_; 4]> = smallvec::SmallVec::new();
+            let mut other_decoders: smallvec::SmallVec<[_; 4]> = smallvec::SmallVec::new();
+            for d in decoders.drain(..) {
+                if d.is_c_codec() {
+                    c_decoders.push(d);
+                } else {
+                    other_decoders.push(d);
+                }
+            }
+            c_decoders.extend(other_decoders);
+            self.enabled_codecs.decoders = c_decoders;
+
+            let mut encoders = std::mem::take(&mut self.enabled_codecs.encoders);
+            let mut c_encoders: smallvec::SmallVec<[_; 8]> = smallvec::SmallVec::new();
+            let mut other_encoders: smallvec::SmallVec<[_; 8]> = smallvec::SmallVec::new();
+            for e in encoders.drain(..) {
+                if e.is_c_codec() {
+                    c_encoders.push(e);
+                } else {
+                    other_encoders.push(e);
+                }
+            }
+            c_encoders.extend(other_encoders);
+            self.enabled_codecs.encoders = c_encoders;
+        }
+        // Per-format decoder kill bits
+        if s.enable_jpeg_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_jpeg());
+        }
+        if s.enable_png_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_png());
+        }
+        if s.enable_gif_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_gif());
+        }
+        if s.enable_webp_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_webp());
+        }
+        if s.enable_jxl_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_jxl());
+        }
+        // Per-format encoder kill bits
+        if s.enable_jpeg_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_jpeg());
+        }
+        if s.enable_png_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_png());
+        }
+        if s.enable_gif_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_gif());
+        }
+        if s.enable_webp_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_webp());
+        }
+        if s.enable_jxl_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_jxl());
+        }
     }
 
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
@@ -657,6 +759,13 @@ impl Context {
         }
         if let Some(s) = what.security {
             self.configure_security(s);
+        }
+        // Apply default timeout from context security if not already set by user
+        if let Some(timeout_ms) = self.security.process_timeout_ms {
+            // Only set if no deadline has been configured yet (u64::MAX = no deadline)
+            if self.cancellation_token.inner.deadline_nanos.load(Ordering::Relaxed) == u64::MAX {
+                self.cancellation_token.set_timeout(std::time::Duration::from_millis(timeout_ms));
+            }
         }
 
         let decodes = self.get_image_decodes();
@@ -934,14 +1043,14 @@ impl Drop for Context {
 #[test]
 fn test_context_size() {
     eprintln!("std::mem::sizeof(Context) = {}", std::mem::size_of::<Context>());
-    assert!(std::mem::size_of::<Context>() < 340);
+    assert!(std::mem::size_of::<Context>() < 360);
 }
 
 #[test]
 fn test_thread_safe_context_size() {
     println!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
     eprintln!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
-    assert!(std::mem::size_of::<ThreadSafeContext>() <= 520);
+    assert!(std::mem::size_of::<ThreadSafeContext>() <= 540);
 }
 
 #[test]
@@ -969,10 +1078,10 @@ fn test_calculate_context_heap_size() {
     // Fail if this grows so we can notice it
     // Windows has larger RwLock/Mutex, so allow a few extra bytes
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 992);
+    assert!(context_bytes <= 1024);
 
     assert!(context_allocs <= 6);
-    assert!(thread_safe_bytes <= 1176);
+    assert!(thread_safe_bytes <= 1208);
 }
 
 #[test]

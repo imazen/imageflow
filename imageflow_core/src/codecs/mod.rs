@@ -39,6 +39,18 @@ mod mozjpeg_decoder_helpers;
 #[cfg(feature = "c-codecs")]
 mod webp;
 
+// Zen codec modules — pure Rust, require zen-codecs feature
+#[cfg(feature = "zen-codecs")]
+mod zengif_codec;
+#[cfg(feature = "zen-codecs")]
+mod zenjpeg_decoder;
+#[cfg(feature = "zen-codecs")]
+mod zenjpeg_encoder;
+#[cfg(feature = "zen-codecs")]
+mod zenjxl_codec;
+#[cfg(feature = "zen-codecs")]
+mod zenwebp_codec;
+
 use crate::graphics::bitmaps::BitmapKey;
 
 pub trait DecoderFactory {
@@ -88,8 +100,79 @@ pub enum NamedDecoders {
     GifRsDecoder,
     #[cfg(feature = "c-codecs")]
     WebPDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenJpegDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenWebPDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenGifDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenJxlDecoder,
 }
 impl NamedDecoders {
+    pub fn is_jpeg(&self) -> bool {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            Self::MozJpegRsDecoder | Self::ImageRsJpegDecoder => true,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJpegDecoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_png(&self) -> bool {
+        match self {
+            Self::ImageRsPngDecoder => true,
+            #[cfg(feature = "c-codecs")]
+            Self::LibPngRsDecoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_gif(&self) -> bool {
+        match self {
+            Self::GifRsDecoder => true,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenGifDecoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_webp(&self) -> bool {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            Self::WebPDecoder => true,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenWebPDecoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_jxl(&self) -> bool {
+        match self {
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJxlDecoder => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_c_codec(&self) -> bool {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            Self::MozJpegRsDecoder
+            | Self::ImageRsJpegDecoder
+            | Self::LibPngRsDecoder
+            | Self::WebPDecoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_zen_codec(&self) -> bool {
+        match self {
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJpegDecoder
+            | Self::ZenWebPDecoder
+            | Self::ZenGifDecoder
+            | Self::ZenJxlDecoder => true,
+            _ => false,
+        }
+    }
+
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
         match self {
             #[cfg(feature = "c-codecs")]
@@ -108,7 +191,25 @@ impl NamedDecoders {
             }
             #[cfg(feature = "c-codecs")]
             NamedDecoders::WebPDecoder => {
-                bytes.starts_with(b"RIFF") && bytes[8..12].starts_with(b"WEBP")
+                bytes.starts_with(b"RIFF") && bytes.len() >= 12 && bytes[8..12].starts_with(b"WEBP")
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder => bytes.starts_with(b"\xFF\xD8\xFF"),
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenWebPDecoder => {
+                bytes.starts_with(b"RIFF") && bytes.len() >= 12 && bytes[8..12].starts_with(b"WEBP")
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => {
+                bytes.starts_with(b"GIF89a") || bytes.starts_with(b"GIF87a")
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => {
+                // JXL bare codestream: 0xFF 0x0A
+                // JXL container: 0x00 0x00 0x00 0x0C 0x4A 0x58 0x4C 0x20 0x0D 0x0A 0x87 0x0A
+                bytes.starts_with(&[0xFF, 0x0A])
+                    || (bytes.len() >= 12
+                        && bytes.starts_with(&[0x00, 0x00, 0x00, 0x0C, 0x4A, 0x58, 0x4C, 0x20]))
             }
         }
     }
@@ -134,6 +235,22 @@ impl NamedDecoders {
             }
             #[cfg(feature = "c-codecs")]
             NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder => {
+                Ok(Box::new(zenjpeg_decoder::ZenJpegDecoder::create(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenWebPDecoder => {
+                Ok(Box::new(zenwebp_codec::ZenWebPDecoder::create(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => {
+                Ok(Box::new(zengif_codec::ZenGifDecoder::create(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => {
+                Ok(Box::new(zenjxl_codec::ZenJxlDecoder::create(c, io, io_id)?))
+            }
         }
     }
 }
@@ -149,6 +266,74 @@ pub enum NamedEncoders {
     WebPEncoder,
     #[cfg(feature = "c-codecs")]
     LibPngRsEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenJpegEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenWebPEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenGifEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenJxlEncoder,
+}
+impl NamedEncoders {
+    pub fn is_jpeg(&self) -> bool {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            Self::MozJpegEncoder => true,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJpegEncoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_png(&self) -> bool {
+        match self {
+            Self::PngQuantEncoder | Self::LodePngEncoder => true,
+            #[cfg(feature = "c-codecs")]
+            Self::LibPngRsEncoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_gif(&self) -> bool {
+        match self {
+            Self::GifEncoder => true,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenGifEncoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_webp(&self) -> bool {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            Self::WebPEncoder => true,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenWebPEncoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_jxl(&self) -> bool {
+        match self {
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJxlEncoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_c_codec(&self) -> bool {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            Self::MozJpegEncoder | Self::WebPEncoder | Self::LibPngRsEncoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_zen_codec(&self) -> bool {
+        match self {
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJpegEncoder
+            | Self::ZenWebPEncoder
+            | Self::ZenGifEncoder
+            | Self::ZenJxlEncoder => true,
+            _ => false,
+        }
+    }
 }
 pub struct EnabledCodecs {
     pub decoders: ::smallvec::SmallVec<[NamedDecoders; 4]>,
@@ -158,26 +343,51 @@ impl Default for EnabledCodecs {
     fn default() -> Self {
         EnabledCodecs {
             decoders: smallvec::SmallVec::from_slice(&[
-                #[cfg(feature = "c-codecs")]
+                // Zen (pure Rust) decoders preferred when available
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenJpegDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenWebPDecoder,
+                // C-based decoders as fallback
+                #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
                 NamedDecoders::MozJpegRsDecoder,
-                #[cfg(not(feature = "c-codecs"))]
-                NamedDecoders::ImageRsPngDecoder,
+                #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
+                NamedDecoders::WebPDecoder,
+                // PNG: prefer libpng (c-codecs) if available, else image-rs
                 #[cfg(feature = "c-codecs")]
                 NamedDecoders::LibPngRsDecoder,
+                #[cfg(not(feature = "c-codecs"))]
+                NamedDecoders::ImageRsPngDecoder,
+                // Zen GIF decoder preferred when available
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenGifDecoder,
+                #[cfg(not(feature = "zen-codecs"))]
                 NamedDecoders::GifRsDecoder,
-                #[cfg(feature = "c-codecs")]
-                NamedDecoders::WebPDecoder,
+                // JXL decoder (zen-codecs only)
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenJxlDecoder,
             ]),
             encoders: smallvec::SmallVec::from_slice(&[
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenGifEncoder,
                 NamedEncoders::GifEncoder,
+                // Zen (pure Rust) encoders preferred
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenJpegEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenWebPEncoder,
+                // C-based WebP encoder always enabled for lossy (zenwebp lossy has quality issues)
                 #[cfg(feature = "c-codecs")]
+                NamedEncoders::WebPEncoder,
+                // C-based JPEG encoder as fallback
+                #[cfg(all(feature = "c-codecs", not(feature = "zen-codecs")))]
                 NamedEncoders::MozJpegEncoder,
                 NamedEncoders::PngQuantEncoder,
                 NamedEncoders::LodePngEncoder,
                 #[cfg(feature = "c-codecs")]
-                NamedEncoders::WebPEncoder,
-                #[cfg(feature = "c-codecs")]
                 NamedEncoders::LibPngRsEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenJxlEncoder,
             ]),
         }
     }

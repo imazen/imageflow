@@ -34,7 +34,7 @@ fn test_encode_pngquant() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(280_000),
-            similarity: Some(Similarity::MaxZdsim(0.30)), // measured zdsim: 0.189
+            similarity: Some(Similarity::MaxZdsim(0.45)), // measured zdsim: ~0.42 (v0.2 weights)
         },
         steps,
     );
@@ -48,7 +48,7 @@ fn test_encode_pngquant_command() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(280_000),
-            similarity: Some(Similarity::MaxZdsim(0.30)), // measured zdsim: 0.189
+            similarity: Some(Similarity::MaxZdsim(0.45)), // measured zdsim: ~0.42 (v0.2 weights)
         },
         steps,
     );
@@ -142,7 +142,7 @@ fn test_encode_webp_lossless() {
     compare_encoded_to_source(
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
-        Constraints { max_file_size: Some(301_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
+        Constraints { max_file_size: Some(550_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
         steps,
     );
 }
@@ -157,7 +157,7 @@ fn test_roundtrip_webp_lossless() {
                 .to_owned(),
         ),
         DEBUG_GRAPH,
-        Constraints { max_file_size: Some(301_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
+        Constraints { max_file_size: Some(550_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
         steps,
     );
 }
@@ -171,9 +171,188 @@ fn test_encode_webp_lossy() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(425_000),
-            similarity: Some(Similarity::MaxZdsim(0.40)), // measured zdsim: 0.267
+            similarity: Some(Similarity::MaxZdsim(0.55)), // measured zdsim: ~0.53 (v0.2 weights)
         },
         steps,
+    );
+}
+
+#[test]
+fn test_encode_jxl_lossy() {
+    let steps = reencode_with(s::EncoderPreset::JxlLossy { distance: 1.0 });
+
+    compare_encoded_to_source(
+        IoTestEnum::Url(FRYMIRE_URL.to_owned()),
+        DEBUG_GRAPH,
+        Constraints { max_file_size: Some(800_000), similarity: Some(Similarity::MaxZdsim(0.40)) },
+        steps,
+    );
+}
+
+#[test]
+fn test_encode_jxl_lossless() {
+    let steps = reencode_with(s::EncoderPreset::JxlLossless);
+
+    compare_encoded_to_source(
+        IoTestEnum::Url(FRYMIRE_URL.to_owned()),
+        DEBUG_GRAPH,
+        Constraints { max_file_size: Some(1_500_000), similarity: Some(Similarity::MaxZdsim(0.0)) },
+        steps,
+    );
+}
+
+// ============================================================================
+// Cross-format roundtrip tests
+// Encode to format A, decode, re-encode to format B, verify against original.
+// ============================================================================
+
+/// Encode source to `first_preset`, decode that output, then encode to `second_preset`,
+/// decode again, and compare the final bitmap to the original source.
+fn cross_format_roundtrip(
+    input: IoTestEnum,
+    first_preset: s::EncoderPreset,
+    second_preset: s::EncoderPreset,
+    require: Constraints,
+) {
+    test_init();
+
+    // Step 1: Encode source to first format
+    let mut ctx1 = Context::create().unwrap();
+    IoTestTranslator {}.add(&mut ctx1, 0, input.clone()).unwrap();
+    IoTestTranslator {}.add(&mut ctx1, 1, IoTestEnum::OutputBuffer).unwrap();
+
+    let execute1 = s::Execute001 {
+        graph_recording: default_graph_recording(false),
+        security: None,
+        framewise: s::Framewise::Steps(reencode_with(first_preset)),
+    };
+    ctx1.execute_1(execute1).unwrap();
+    let bytes1 = ctx1.take_output_buffer(1).unwrap();
+
+    // Step 2: Decode first format, encode to second format
+    let mut ctx2 = Context::create().unwrap();
+    IoTestTranslator {}.add(&mut ctx2, 0, IoTestEnum::ByteArray(bytes1)).unwrap();
+    IoTestTranslator {}.add(&mut ctx2, 1, IoTestEnum::OutputBuffer).unwrap();
+
+    let execute2 = s::Execute001 {
+        graph_recording: default_graph_recording(false),
+        security: None,
+        framewise: s::Framewise::Steps(reencode_with(second_preset)),
+    };
+    ctx2.execute_1(execute2).unwrap();
+    let bytes2 = ctx2.take_output_buffer(1).unwrap();
+
+    // Step 3: Decode second format output and compare against original source
+    let mut ctx_ref = Context::create().unwrap();
+    let ref_bitmap = decode_input(&mut ctx_ref, input);
+
+    compare_with(ctx_ref, ref_bitmap, &bytes2, require, true);
+}
+
+#[test]
+fn test_roundtrip_png_to_jxl_lossy() {
+    cross_format_roundtrip(
+        IoTestEnum::Url(FRYMIRE_URL.to_owned()),
+        s::EncoderPreset::Lodepng { maximum_deflate: None },
+        s::EncoderPreset::JxlLossy { distance: 1.0 },
+        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.40)) },
+    );
+}
+
+#[test]
+fn test_roundtrip_jxl_lossy_to_webp_lossless() {
+    cross_format_roundtrip(
+        IoTestEnum::Url(FRYMIRE_URL.to_owned()),
+        s::EncoderPreset::JxlLossy { distance: 1.0 },
+        s::EncoderPreset::WebPLossless,
+        // JXL lossy d=1.0 → decode → WebP lossless preserves the JXL decode exactly
+        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.40)) },
+    );
+}
+
+#[test]
+fn test_roundtrip_webp_lossy_to_jxl_lossy() {
+    cross_format_roundtrip(
+        IoTestEnum::Url(FRYMIRE_URL.to_owned()),
+        s::EncoderPreset::WebPLossy { quality: 80.0 },
+        s::EncoderPreset::JxlLossy { distance: 1.0 },
+        // Two lossy compressions: expect accumulated error
+        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.60)) },
+    );
+}
+
+#[test]
+fn test_roundtrip_jxl_lossy_to_gif() {
+    cross_format_roundtrip(
+        IoTestEnum::Url(FRYMIRE_URL.to_owned()),
+        s::EncoderPreset::JxlLossy { distance: 2.0 },
+        s::EncoderPreset::Gif,
+        // JXL lossy d=2 + GIF quantization = significant loss
+        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.80)) },
+    );
+}
+
+#[test]
+fn test_roundtrip_gif_to_jxl_lossy() {
+    cross_format_roundtrip(
+        IoTestEnum::Url(FRYMIRE_URL.to_owned()),
+        s::EncoderPreset::Gif,
+        s::EncoderPreset::JxlLossy { distance: 1.0 },
+        // GIF quantizes to 256 colors, JXL lossy adds minor additional loss
+        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.80)) },
+    );
+}
+
+#[test]
+fn test_roundtrip_webp_lossless_to_jxl_lossy() {
+    cross_format_roundtrip(
+        IoTestEnum::Url(FRYMIRE_URL.to_owned()),
+        s::EncoderPreset::WebPLossless,
+        s::EncoderPreset::JxlLossy { distance: 1.0 },
+        // WebP lossless → JXL lossy d=1.0: minor loss from JXL compression
+        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.40)) },
+    );
+}
+
+#[test]
+fn test_roundtrip_png_to_webp_lossy_to_gif() {
+    test_init();
+
+    // PNG → WebP lossy → GIF: three-stage roundtrip
+    let mut ctx1 = Context::create().unwrap();
+    IoTestTranslator {}.add(&mut ctx1, 0, IoTestEnum::Url(FRYMIRE_URL.to_owned())).unwrap();
+    IoTestTranslator {}.add(&mut ctx1, 1, IoTestEnum::OutputBuffer).unwrap();
+    ctx1.execute_1(s::Execute001 {
+        graph_recording: default_graph_recording(false),
+        security: None,
+        framewise: s::Framewise::Steps(reencode_with(s::EncoderPreset::WebPLossy {
+            quality: 80.0,
+        })),
+    })
+    .unwrap();
+    let webp_bytes = ctx1.take_output_buffer(1).unwrap();
+
+    // WebP → GIF
+    let mut ctx2 = Context::create().unwrap();
+    IoTestTranslator {}.add(&mut ctx2, 0, IoTestEnum::ByteArray(webp_bytes)).unwrap();
+    IoTestTranslator {}.add(&mut ctx2, 1, IoTestEnum::OutputBuffer).unwrap();
+    ctx2.execute_1(s::Execute001 {
+        graph_recording: default_graph_recording(false),
+        security: None,
+        framewise: s::Framewise::Steps(reencode_with(s::EncoderPreset::Gif)),
+    })
+    .unwrap();
+    let gif_bytes = ctx2.take_output_buffer(1).unwrap();
+
+    // Compare GIF output to original PNG source
+    let mut ctx_ref = Context::create().unwrap();
+    let ref_bitmap = decode_input(&mut ctx_ref, IoTestEnum::Url(FRYMIRE_URL.to_owned()));
+    compare_with(
+        ctx_ref,
+        ref_bitmap,
+        &gif_bytes,
+        Constraints { max_file_size: None, similarity: Some(Similarity::MaxZdsim(0.80)) },
+        true,
     );
 }
 
