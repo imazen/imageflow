@@ -137,7 +137,6 @@ impl Decoder for ZenGifDecoder {
     }
 
     fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
-        return_if_cancelled!(c);
         let decoder = self.decoder.as_mut().ok_or_else(|| {
             nerror!(ErrorKind::InvalidOperation, "ZenGifDecoder already consumed")
         })?;
@@ -299,7 +298,6 @@ impl Encoder for ZenGifEncoder {
         bitmap_key: BitmapKey,
         decoder_io_ids: &[i32],
     ) -> Result<s::EncodeResult> {
-        return_if_cancelled!(c);
         // Check if the source decoder is a ZenGifDecoder to get frame metadata
         let mut delay = 10u16; // default 100ms
         for io_id in decoder_io_ids {

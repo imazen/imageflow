@@ -49,16 +49,16 @@ safe_unaligned_simd = "0.2"
 
 evalchroma = "1"
 enough = { version = "0.4", features = ["std"] }
-garb = "0.2"
+garb = "0.1"
 moxcms = { git = "https://github.com/awxkee/moxcms.git", rev = "c4affa1", features = ["in_place"] }
 
 # --- Zen codec dependencies (pure Rust, default) ---
 # Using path deps until next publish cycle
-zenjpeg = { path = "../../zenjpeg/zenjpeg", features = ["decoder", "parallel"], optional = true }
+zenjpeg = { path = "../../zenjpeg/zenjpeg", features = ["decoder"], optional = true }
 zengif = { path = "../../zengif", features = ["color_quant"], optional = true }
 zenwebp = { path = "../../zenwebp", optional = true }
 zenjxl = { path = "../../zenjxl", optional = true }
-zenpixels = { version = "0.1", default-features = false, features = ["buffer"], optional = true }
+zenpixels = { path = "../../zenpixels/zenpixels", default-features = false, features = ["buffer"], optional = true }
 
 # Used for schema generation if feature enabled
 utoipa = { version = "5.3.1", features = [], optional = true }

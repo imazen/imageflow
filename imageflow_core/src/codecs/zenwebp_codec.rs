@@ -82,7 +82,6 @@ impl Decoder for ZenWebPDecoder {
     }
 
     fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
-        return_if_cancelled!(c);
         self.ensure_data_buffered()?;
         let data = self.data.as_ref().unwrap();
 
@@ -178,7 +177,6 @@ impl Encoder for ZenWebPEncoder {
         bitmap_key: BitmapKey,
         _decoder_io_ids: &[i32],
     ) -> Result<s::EncodeResult> {
-        return_if_cancelled!(c);
         let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
 
@@ -210,14 +208,20 @@ impl Encoder for ZenWebPEncoder {
             _ => 4,
         };
         let row_bytes = w as usize * pixel_bytes;
-        let stride_pixels = src_stride / pixel_bytes;
+        let total_bytes = row_bytes * h as usize;
 
-        // Pass the full strided buffer and let zenwebp handle stride natively
+        // Borrow directly when strides match; copy only when padding exists
+        let owned_buf: Vec<u8>;
         let pixels: &[u8] = if src_stride == row_bytes {
-            &window.get_slice()[..row_bytes * h as usize]
+            &window.get_slice()[..total_bytes]
         } else {
-            // Include full strided rows (zenwebp reads stride_pixels per row)
-            &window.get_slice()[..(h as usize - 1) * src_stride + row_bytes]
+            let slice = window.get_slice();
+            let mut buf = Vec::with_capacity(total_bytes);
+            for y in 0..h as usize {
+                buf.extend_from_slice(&slice[y * src_stride..y * src_stride + row_bytes]);
+            }
+            owned_buf = buf;
+            &owned_buf
         };
 
         let lossless = self.lossless.unwrap_or(false);
@@ -225,20 +229,13 @@ impl Encoder for ZenWebPEncoder {
 
         let webp_bytes = if lossless {
             let config = zenwebp::LosslessConfig::new().with_quality(quality).with_method(6);
-            let mut req = zenwebp::EncodeRequest::lossless(&config, pixels, pixel_layout, w, h);
-            if src_stride != row_bytes {
-                req = req.with_stride(stride_pixels as usize);
-            }
-            req.encode().map_err(|e| {
-                nerror!(ErrorKind::ImageEncodingError, "zenwebp lossless error: {}", e)
-            })?
+            zenwebp::EncodeRequest::lossless(&config, pixels, pixel_layout, w, h).encode().map_err(
+                |e| nerror!(ErrorKind::ImageEncodingError, "zenwebp lossless error: {}", e),
+            )?
         } else {
             let config = zenwebp::LossyConfig::new().with_quality(quality).with_method(4);
-            let mut req = zenwebp::EncodeRequest::lossy(&config, pixels, pixel_layout, w, h);
-            if src_stride != row_bytes {
-                req = req.with_stride(stride_pixels as usize);
-            }
-            req.encode()
+            zenwebp::EncodeRequest::lossy(&config, pixels, pixel_layout, w, h)
+                .encode()
                 .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "zenwebp lossy error: {}", e))?
         };
 

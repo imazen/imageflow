@@ -136,11 +136,11 @@ checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
 
 [[package]]
 name = "archmage"
-version = "0.7.0"
+version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61bd463aee29794a0318115ab857c2486842b28956c3f75365b304f1047b4758"
+checksum = "c0fb818f2e02ca08cc6416725044fadc84bcf5a96e2eb7ab103c966123667d86"
 dependencies = [
- "archmage-macros 0.7.0",
+ "archmage-macros 0.8.9",
  "safe_unaligned_simd",
 ]
 
@@ -156,9 +156,9 @@ dependencies = [
 
 [[package]]
 name = "archmage-macros"
-version = "0.7.0"
+version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02b01e2d131ffadba47bdff5d5e1d5d8a3b9743dc6b3d6ce4847ae2d6d306058"
+checksum = "1886761e37995842cfbaf8c24d483e62d9b8c174254d29146f596d4d87efff2d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -780,12 +780,6 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "enough"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65641ff0923e45cf34a4cb0115080cb7fc8bf4fd419c2207670d5722bab4c581"
-
-[[package]]
-name = "enough"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "177a59811828ea5dbc8927662d444ffee7b55a44696486f1b1a245ae9e652533"
@@ -990,12 +984,13 @@ dependencies = [
 
 [[package]]
 name = "garb"
-version = "0.2.0"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d588075922ffd9b8269a191fcfde64b9ce5c4e58ad239e191b05dd6660decf1"
+checksum = "02fb4b910fea99b511df11b42ef02847853225d067c2cb7d5d9a0c27e7950110"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.8.9",
  "bytemuck",
+ "safe_unaligned_simd",
 ]
 
 [[package]]
@@ -1368,7 +1363,7 @@ dependencies = [
  "csv",
  "daggy",
  "dashmap",
- "enough 0.4.0",
+ "enough",
  "evalchroma",
  "flate2",
  "fs2",
@@ -1638,12 +1633,10 @@ dependencies = [
 [[package]]
 name = "jxl-encoder"
 version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0925f41cdcc51570d14d058ae45e17f2ed08a852e82cc7708adaa7489e3b6e8f"
 dependencies = [
- "archmage 0.7.0",
+ "archmage 0.9.3",
  "bytemuck",
- "enough 0.3.1",
+ "enough",
  "hashbrown 0.16.1",
  "jxl-encoder-simd",
  "once_cell",
@@ -1654,11 +1647,9 @@ dependencies = [
 [[package]]
 name = "jxl-encoder-simd"
 version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79f4e84d9956c1ffe6bc7cdc1718f14faaf922f560403aba178d630af2e39c8e"
 dependencies = [
- "archmage 0.7.0",
- "magetypes 0.7.0",
+ "archmage 0.9.3",
+ "magetypes",
 ]
 
 [[package]]
@@ -1770,13 +1761,13 @@ dependencies = [
 
 [[package]]
 name = "linear-srgb"
-version = "0.6.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40c9a589797e9ba985551ca1f2725358439d7d3ef8cd92aa1d41c925ff2becea"
+checksum = "11250b8422bbf1dc12e954298efc0f4d59ddcd0d13f14c56163268c35690fc20"
 dependencies = [
  "archmage 0.9.3",
  "bytemuck",
- "magetypes 0.9.3",
+ "magetypes",
  "num-traits",
 ]
 
@@ -1832,15 +1823,6 @@ dependencies = [
 name = "macro-attr"
 version = "0.2.1"
 source = "git+https://github.com/DanielKeep/rust-custom-derive.git#1252f258cdb9b7c9867f937c52c2f5c0e69a9c03"
-
-[[package]]
-name = "magetypes"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d55dd4e83507ff9fe129b01669adca1e302ef346dac252ef59139c78def312a"
-dependencies = [
- "archmage 0.7.0",
-]
 
 [[package]]
 name = "magetypes"
@@ -3111,9 +3093,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.22.0"
+version = "1.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a68d3c8f01c0cfa54a75291d83601161799e4a89a39e0929f4b0354d88757a37"
+checksum = "b672338555252d43fd2240c714dc444b8c6fb0a5c5335e65a07bba7742735ddb"
 dependencies = [
  "getrandom 0.4.2",
  "js-sys",
@@ -3613,7 +3595,7 @@ name = "zencodec-types"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "enough 0.4.0",
+ "enough",
  "imgref",
  "rgb",
  "whereat",
@@ -3627,7 +3609,7 @@ version = "0.6.0"
 dependencies = [
  "bytemuck",
  "color_quant",
- "enough 0.4.0",
+ "enough",
  "gif",
  "linear-srgb",
  "rgb",
@@ -3643,12 +3625,11 @@ dependencies = [
  "aligned-vec",
  "archmage 0.9.3",
  "bytemuck",
- "enough 0.4.0",
+ "enough",
  "imgref",
- "magetypes 0.9.3",
+ "magetypes",
  "multiversed",
  "multiversion",
- "rayon",
  "rgb",
  "safe_unaligned_simd",
  "thiserror",
@@ -3665,7 +3646,7 @@ name = "zenjxl"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "enough 0.4.0",
+ "enough",
  "imgref",
  "jxl-encoder",
  "linear-srgb",
@@ -3685,7 +3666,7 @@ dependencies = [
  "atomic_refcell",
  "bytemuck",
  "byteorder",
- "enough 0.4.0",
+ "enough",
  "num-derive",
  "num-traits",
  "paste",
@@ -3716,8 +3697,6 @@ dependencies = [
 [[package]]
 name = "zenpixels"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a5034cd8276387929cdc53b7cc8b391e140e7769183664dc76c0fc2a04891be"
 dependencies = [
  "bytemuck",
  "imgref",
@@ -3727,8 +3706,6 @@ dependencies = [
 [[package]]
 name = "zenpixels-convert"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bb9b620ebbacfdeb7ef943212c9ac4cbfa7d9f3e2ea1bdcc03d3ec7e1db3471"
 dependencies = [
  "bytemuck",
  "linear-srgb",
@@ -3742,11 +3719,8 @@ version = "0.1.0"
 dependencies = [
  "archmage 0.9.3",
  "bytemuck",
- "imgref",
- "linear-srgb",
- "magetypes 0.9.3",
+ "magetypes",
  "rayon",
- "rgb",
  "thiserror",
 ]
 
@@ -3768,11 +3742,11 @@ version = "0.3.2"
 dependencies = [
  "archmage 0.9.3",
  "byteorder-lite",
- "enough 0.4.0",
+ "enough",
  "hashbrown 0.16.1",
  "libm",
  "linear-srgb",
- "magetypes 0.9.3",
+ "magetypes",
  "rgb",
  "thiserror",
  "whereat",

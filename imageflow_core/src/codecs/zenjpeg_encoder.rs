@@ -75,16 +75,9 @@ impl Encoder for ZenJpegEncoder {
         };
 
         // Use ApproxMozjpeg quality mapping for backward compat with existing quality profiles
-        let mut config = EncoderConfig::ycbcr(Quality::ApproxMozjpeg(q), subsampling)
+        let config = EncoderConfig::ycbcr(Quality::ApproxMozjpeg(q), subsampling)
             .auto_optimize(true)
             .progressive(self.progressive.unwrap_or(true));
-
-        // Enable parallel encoding when explicitly requested via max_encoder_threads > 1
-        if let Some(threads) = c.security.max_encoder_threads {
-            if threads > 1 {
-                config = config.parallel(zenjpeg::encoder::ParallelEncoding::Auto);
-            }
-        }
 
         let pixel_layout = match window.pixel_format() {
             PixelFormat::Bgra32 => PixelLayout::Bgra8Srgb,
@@ -102,14 +95,13 @@ impl Encoder for ZenJpegEncoder {
             .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "zenjpeg config error: {}", e))?;
 
         // Push scanlines (handles stride differences)
-        let stop = c.stop();
         if w * window.pixel_format().bytes() == src_stride {
-            encoder.push_packed(window.get_slice(), stop).map_err(|e| {
-                nerror!(ErrorKind::ImageEncodingError, "zenjpeg encode error: {}", e)
-            })?;
+            encoder.push_packed(window.get_slice(), zenjpeg::encoder::Unstoppable).map_err(
+                |e| nerror!(ErrorKind::ImageEncodingError, "zenjpeg encode error: {}", e),
+            )?;
         } else {
             for line in window.scanlines() {
-                encoder.push_packed(line.row(), stop).map_err(|e| {
+                encoder.push_packed(line.row(), zenjpeg::encoder::Unstoppable).map_err(|e| {
                     nerror!(ErrorKind::ImageEncodingError, "zenjpeg encode error: {}", e)
                 })?;
             }

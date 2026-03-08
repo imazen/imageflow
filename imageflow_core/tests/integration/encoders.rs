@@ -184,7 +184,7 @@ fn test_encode_jxl_lossy() {
     compare_encoded_to_source(
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
-        Constraints { max_file_size: Some(800_000), similarity: Some(Similarity::MaxZdsim(0.40)) },
+        Constraints { max_file_size: Some(700_000), similarity: Some(Similarity::MaxZdsim(0.40)) },
         steps,
     );
 }

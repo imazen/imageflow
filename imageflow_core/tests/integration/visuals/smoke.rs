@@ -271,7 +271,6 @@ fn test_max_encode_dimensions() {
                 h: 1,
                 megapixels: 100.0,
             }),
-            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
@@ -301,7 +300,6 @@ fn test_max_decode_dimensions() {
             }),
             max_frame_size: None,
             max_encode_size: None,
-            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
@@ -330,7 +328,6 @@ fn test_max_frame_dimensions() {
             }),
             max_decode_size: None,
             max_encode_size: None,
-            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
@@ -601,7 +598,7 @@ fn test_detect_whitespace_all_small_images() {
 
 /// Build a minimal animated GIF with the given frame colors (RGBA hex strings).
 /// Each frame is `w`x`h` pixels, solid color, with the given delay in centiseconds.
-pub(super) fn build_animated_gif(w: u16, h: u16, colors: &[&str], delay: u16) -> Vec<u8> {
+fn build_animated_gif(w: u16, h: u16, colors: &[&str], delay: u16) -> Vec<u8> {
     let mut buf = Vec::new();
     {
         let mut encoder = gif::Encoder::new(&mut buf, w, h, &[]).unwrap();

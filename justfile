@@ -8,9 +8,13 @@ test:
 test-filter filter:
     cargo nextest run -p imageflow_core --test integration -E 'test({{filter}})'
 
-# Run tests, creating baselines for brand-new tests only (never replaces existing)
-test-create-baselines:
-    CREATE_BASELINES=1 cargo nextest run -p imageflow_core --test integration
+# Run tests with checksum auto-update (accepts within tolerance)
+test-update:
+    UPDATE_CHECKSUMS=1 cargo nextest run -p imageflow_core --test integration
+
+# Alias for test-update (there is no separate "replace" mode)
+test-replace:
+    UPDATE_CHECKSUMS=1 cargo nextest run -p imageflow_core --test integration
 
 # Build tests without running (compile check)
 test-build:

@@ -1134,89 +1134,20 @@ pub struct ExecutionSecurity {
     pub max_decode_size: Option<FrameSizeLimit>,
     pub max_frame_size: Option<FrameSizeLimit>,
     pub max_encode_size: Option<FrameSizeLimit>,
-
-    /// Processing timeout in milliseconds. Operations exceeding this are cancelled.
-    /// Default: 30000 (30 seconds). `None` = no timeout.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub process_timeout_ms: Option<u64>,
-
-    /// Allow C library codecs (mozjpeg, libpng, libwebp). `Some(false)` disables all C codecs.
-    /// Default: `None` (use compile-time defaults).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub use_c_codecs: Option<bool>,
-    /// Allow pure-Rust codecs (zenjpeg, zenwebp, zengif, zenjxl). `Some(false)` disables all.
-    /// Default: `None` (use compile-time defaults).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub use_safe_codecs: Option<bool>,
-    /// Prefer C library codecs over pure-Rust when both are available.
-    /// Default: `None` (false — prefer pure-Rust).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub prefer_c_codecs: Option<bool>,
-
-    /// Per-format decoder kill bits. `Some(false)` disables all decoders for that format.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_jpeg_decoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_png_decoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_gif_decoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_webp_decoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_jxl_decoding: Option<bool>,
-
-    /// Maximum threads for parallel encoding operations.
-    /// `Some(1)` disables parallelism. `None` = codec default (typically auto-detect cores).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_encoder_threads: Option<u32>,
-
-    /// Per-format encoder kill bits. `Some(false)` disables all encoders for that format.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_jpeg_encoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_png_encoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_gif_encoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_webp_encoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_jxl_encoding: Option<bool>,
 }
 
 impl ExecutionSecurity {
     pub fn sane_defaults() -> Self {
         ExecutionSecurity {
+            // Set max_decode_size to reject oversized images early during decode
+            // Matches typical web image limits
             max_decode_size: Some(FrameSizeLimit { w: 12000, h: 12000, megapixels: 100f32 }),
             max_frame_size: Some(FrameSizeLimit { w: 10000, h: 10000, megapixels: 100f32 }),
             max_encode_size: None,
-            process_timeout_ms: Some(30_000),
-            use_c_codecs: None,
-            use_safe_codecs: None,
-            prefer_c_codecs: None,
-            ..Self::unspecified()
         }
     }
     pub fn unspecified() -> Self {
-        ExecutionSecurity {
-            max_decode_size: None,
-            max_frame_size: None,
-            max_encode_size: None,
-            process_timeout_ms: None,
-            use_c_codecs: None,
-            use_safe_codecs: None,
-            prefer_c_codecs: None,
-            max_encoder_threads: None,
-            enable_jpeg_decoding: None,
-            enable_png_decoding: None,
-            enable_gif_decoding: None,
-            enable_webp_decoding: None,
-            enable_jxl_decoding: None,
-            enable_jpeg_encoding: None,
-            enable_png_encoding: None,
-            enable_gif_encoding: None,
-            enable_webp_encoding: None,
-            enable_jxl_encoding: None,
-        }
+        ExecutionSecurity { max_decode_size: None, max_frame_size: None, max_encode_size: None }
     }
 }
 
