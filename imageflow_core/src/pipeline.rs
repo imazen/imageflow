@@ -13,6 +13,7 @@
 use crate::error::FlowError;
 use crate::io::IoStore;
 use imageflow_types::*;
+use zc::Orientation;
 use zenpixels::PixelBuffer;
 use zenpixels_convert::PixelBufferConvertExt;
 
@@ -40,14 +41,18 @@ pub fn probe_image(data: &[u8]) -> Result<ImageInfo, FlowError> {
     let info =
         zencodecs::from_bytes(data).map_err(|e| FlowError::Codec(format!("probe failed: {e}")))?;
 
-    Ok(ImageInfo {
+    Ok(imageflow_types::ImageInfo {
         format: format!("{:?}", info.format).to_lowercase(),
         w: info.width,
         h: info.height,
         has_alpha: info.has_alpha,
-        orientation: None,   // TODO: extract from EXIF
+        orientation: if info.orientation.is_identity() {
+            None
+        } else {
+            Some(info.orientation.exif_value() as u8)
+        },
         color_profile: None, // TODO: extract ICC/CICP info
-        has_ultrahdr: false, // TODO: detect UltraHDR
+        has_ultrahdr: info.has_gain_map,
     })
 }
 
@@ -131,6 +136,7 @@ fn execute_segment(
         .map_err(|e| FlowError::Codec(format!("decode failed: {e}")))?;
 
     let source_info = decoded.info().clone();
+    let exif_orientation = source_info.orientation;
     let mut pixels = decoded.into_buffer();
     let mut width = source_info.width;
     let mut height = source_info.height;
@@ -158,25 +164,69 @@ fn execute_segment(
             Step::FlipV => {
                 flip_vertical(&mut pixels, width, height);
             }
-            Step::Rotate90 | Step::Rotate180 | Step::Rotate270 | Step::Transpose => {
-                // TODO: implement rotation/transpose via pixel manipulation
+            Step::Rotate90 => {
+                let (p, w, h) = rotate_90(&pixels, width, height);
+                pixels = p;
+                width = w;
+                height = h;
+            }
+            Step::Rotate180 => {
+                rotate_180(&mut pixels, width, height);
+            }
+            Step::Rotate270 => {
+                let (p, w, h) = rotate_270(&pixels, width, height);
+                pixels = p;
+                width = w;
+                height = h;
+            }
+            Step::Transpose => {
+                let (p, w, h) = transpose_pixels(&pixels, width, height);
+                pixels = p;
+                width = w;
+                height = h;
             }
             Step::Orient(orient) => {
-                // TODO: apply EXIF orientation
-                let _ = orient;
+                let exif = match orient {
+                    OrientStep::Auto => exif_orientation,
+                    OrientStep::Exif(n) => Orientation::from_exif(*n as u16),
+                };
+                apply_orientation(&mut pixels, &mut width, &mut height, exif);
             }
-            Step::ColorFilter(_)
-            | Step::ColorAdjust(_)
-            | Step::ColorMatrix(_)
-            | Step::Sharpen(_)
-            | Step::Blur(_) => {
-                // TODO: implement filters via zenfilters / manual Oklab ops
+            Step::Region(region) => {
+                let (new_pixels, new_w, new_h) = execute_region(&pixels, width, height, region)?;
+                pixels = new_pixels;
+                width = new_w;
+                height = new_h;
             }
-            Step::ExpandCanvas(_) | Step::FillRect(_) | Step::RoundCorners(_) | Step::Region(_) => {
-                // TODO: canvas operations
+            Step::ExpandCanvas(expand) => {
+                let (p, w, h) = execute_expand_canvas(&pixels, width, height, expand);
+                pixels = p;
+                width = w;
+                height = h;
+            }
+            Step::FillRect(fill) => {
+                execute_fill_rect(&mut pixels, width, height, fill);
+            }
+            Step::RoundCorners(rc) => {
+                execute_round_corners(&mut pixels, width, height, rc);
+            }
+            Step::ColorFilter(filter) => {
+                execute_color_filter(&mut pixels, width, height, filter);
+            }
+            Step::ColorAdjust(adj) => {
+                execute_color_adjust(&mut pixels, width, height, adj);
+            }
+            Step::ColorMatrix(mat) => {
+                execute_color_matrix(&mut pixels, width, height, mat);
+            }
+            Step::Sharpen(sharp) => {
+                execute_sharpen(&mut pixels, width, height, sharp);
+            }
+            Step::Blur(blur_step) => {
+                execute_blur(&mut pixels, width, height, blur_step);
             }
             Step::DrawImage(_) | Step::Watermark(_) => {
-                // TODO: composition operations
+                // TODO: composition requires decoding a second image from IO
             }
             Step::CommandString(cmd) => {
                 let (new_pixels, new_w, new_h) =
@@ -371,6 +421,578 @@ fn flip_vertical(pixels: &mut PixelBuffer, width: u32, height: u32) {
     *pixels = rgba.erase();
 }
 
+// ─── Rotation ──────────────────────────────────────────────────────────
+
+fn rotate_90(pixels: &PixelBuffer, in_w: u32, in_h: u32) -> (PixelBuffer, u32, u32) {
+    let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let src = rgba.as_imgref();
+    let stride = src.stride();
+    let buf = src.buf();
+    let out_w = in_h;
+    let out_h = in_w;
+    let mut out = vec![rgb::RGBA { r: 0, g: 0, b: 0, a: 0 }; (out_w * out_h) as usize];
+    for y in 0..in_h as usize {
+        for x in 0..in_w as usize {
+            // Rotate 90° CW: (x, y) → (in_h - 1 - y, x)
+            let dst_x = in_h as usize - 1 - y;
+            let dst_y = x;
+            out[dst_y * out_w as usize + dst_x] = buf[y * stride + x];
+        }
+    }
+    let output = imgref::ImgVec::new(out, out_w as usize, out_h as usize);
+    (PixelBuffer::from_imgvec(output).erase(), out_w, out_h)
+}
+
+fn rotate_180(pixels: &mut PixelBuffer, width: u32, height: u32) {
+    let mut rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let mut img = rgba.as_imgref_mut();
+    let stride = img.stride();
+    let w = width as usize;
+    let h = height as usize;
+    let buf = img.buf_mut();
+    for y in 0..h {
+        for x in 0..w {
+            let from = y * stride + x;
+            let to = (h - 1 - y) * stride + (w - 1 - x);
+            if from < to {
+                buf.swap(from, to);
+            }
+        }
+    }
+    *pixels = rgba.erase();
+}
+
+fn rotate_270(pixels: &PixelBuffer, in_w: u32, in_h: u32) -> (PixelBuffer, u32, u32) {
+    let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let src = rgba.as_imgref();
+    let stride = src.stride();
+    let buf = src.buf();
+    let out_w = in_h;
+    let out_h = in_w;
+    let mut out = vec![rgb::RGBA { r: 0, g: 0, b: 0, a: 0 }; (out_w * out_h) as usize];
+    for y in 0..in_h as usize {
+        for x in 0..in_w as usize {
+            // Rotate 270° CW: (x, y) → (y, in_w - 1 - x)
+            let dst_x = y;
+            let dst_y = in_w as usize - 1 - x;
+            out[dst_y * out_w as usize + dst_x] = buf[y * stride + x];
+        }
+    }
+    let output = imgref::ImgVec::new(out, out_w as usize, out_h as usize);
+    (PixelBuffer::from_imgvec(output).erase(), out_w, out_h)
+}
+
+fn transpose_pixels(pixels: &PixelBuffer, in_w: u32, in_h: u32) -> (PixelBuffer, u32, u32) {
+    let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let src = rgba.as_imgref();
+    let stride = src.stride();
+    let buf = src.buf();
+    let out_w = in_h;
+    let out_h = in_w;
+    let mut out = vec![rgb::RGBA { r: 0, g: 0, b: 0, a: 0 }; (out_w * out_h) as usize];
+    for y in 0..in_h as usize {
+        for x in 0..in_w as usize {
+            out[x * out_w as usize + y] = buf[y * stride + x];
+        }
+    }
+    let output = imgref::ImgVec::new(out, out_w as usize, out_h as usize);
+    (PixelBuffer::from_imgvec(output).erase(), out_w, out_h)
+}
+
+// ─── EXIF Orientation ──────────────────────────────────────────────────
+
+fn apply_orientation(
+    pixels: &mut PixelBuffer,
+    width: &mut u32,
+    height: &mut u32,
+    exif: Orientation,
+) {
+    match exif {
+        Orientation::Normal => {}
+        Orientation::FlipHorizontal => flip_horizontal(pixels, *width, *height),
+        Orientation::Rotate180 => rotate_180(pixels, *width, *height),
+        Orientation::FlipVertical => flip_vertical(pixels, *width, *height),
+        Orientation::Transpose => {
+            let (p, w, h) = transpose_pixels(pixels, *width, *height);
+            *pixels = p;
+            *width = w;
+            *height = h;
+        }
+        Orientation::Rotate90 => {
+            let (p, w, h) = rotate_90(pixels, *width, *height);
+            *pixels = p;
+            *width = w;
+            *height = h;
+        }
+        Orientation::Transverse => {
+            let (mut p, w, h) = transpose_pixels(pixels, *width, *height);
+            rotate_180(&mut p, w, h);
+            *pixels = p;
+            *width = w;
+            *height = h;
+        }
+        Orientation::Rotate270 => {
+            let (p, w, h) = rotate_270(pixels, *width, *height);
+            *pixels = p;
+            *width = w;
+            *height = h;
+        }
+        _ => {} // non_exhaustive
+    }
+}
+
+// ─── Region (float-coordinate crop) ────────────────────────────────────
+
+fn execute_region(
+    pixels: &PixelBuffer,
+    in_w: u32,
+    in_h: u32,
+    region: &RegionStep,
+) -> Result<(PixelBuffer, u32, u32), FlowError> {
+    let to_px = |v: f64, dim: u32| -> u32 {
+        if v <= 1.0 {
+            (v * dim as f64) as u32
+        } else {
+            v as u32
+        }
+    };
+    let crop = CropStep {
+        x1: to_px(region.x1, in_w).min(in_w),
+        y1: to_px(region.y1, in_h).min(in_h),
+        x2: to_px(region.x2, in_w).min(in_w),
+        y2: to_px(region.y2, in_h).min(in_h),
+    };
+    execute_crop(pixels, in_w, in_h, &crop)
+}
+
+// ─── Canvas Operations ─────────────────────────────────────────────────
+
+fn execute_expand_canvas(
+    pixels: &PixelBuffer,
+    in_w: u32,
+    in_h: u32,
+    expand: &ExpandCanvasStep,
+) -> (PixelBuffer, u32, u32) {
+    let out_w = in_w + expand.left + expand.right;
+    let out_h = in_h + expand.top + expand.bottom;
+    let bg = color_to_rgba(&expand.color);
+
+    let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let src = rgba.as_imgref();
+    let stride = src.stride();
+    let src_buf = src.buf();
+
+    let mut out = vec![bg; (out_w * out_h) as usize];
+    for y in 0..in_h as usize {
+        let src_start = y * stride;
+        let dst_start = (y + expand.top as usize) * out_w as usize + expand.left as usize;
+        out[dst_start..dst_start + in_w as usize]
+            .copy_from_slice(&src_buf[src_start..src_start + in_w as usize]);
+    }
+
+    let output = imgref::ImgVec::new(out, out_w as usize, out_h as usize);
+    (PixelBuffer::from_imgvec(output).erase(), out_w, out_h)
+}
+
+fn execute_fill_rect(pixels: &mut PixelBuffer, width: u32, height: u32, fill: &FillRectStep) {
+    let color = color_to_rgba(&fill.color);
+    let x1 = fill.x1.min(width) as usize;
+    let y1 = fill.y1.min(height) as usize;
+    let x2 = fill.x2.min(width) as usize;
+    let y2 = fill.y2.min(height) as usize;
+
+    let mut rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let mut img = rgba.as_imgref_mut();
+    let stride = img.stride();
+    let buf = img.buf_mut();
+    for y in y1..y2 {
+        for x in x1..x2 {
+            buf[y * stride + x] = color;
+        }
+    }
+    *pixels = rgba.erase();
+}
+
+fn execute_round_corners(pixels: &mut PixelBuffer, width: u32, height: u32, rc: &RoundCornersStep) {
+    let w = width as f32;
+    let h = height as f32;
+    let min_dim = w.min(h);
+
+    let radius = match &rc.mode {
+        RoundCornersMode::Pixels(px) => *px,
+        RoundCornersMode::Percent(pct) => min_dim * pct / 100.0,
+        RoundCornersMode::Circle => min_dim / 2.0,
+        RoundCornersMode::Custom(radii) => radii[0],
+    };
+    let radii = match &rc.mode {
+        RoundCornersMode::Custom(r) => *r,
+        _ => [radius, radius, radius, radius],
+    };
+    let bg =
+        rc.background.as_ref().map(color_to_rgba).unwrap_or(rgb::RGBA { r: 0, g: 0, b: 0, a: 0 });
+
+    let mut rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let mut img = rgba.as_imgref_mut();
+    let stride = img.stride();
+    let buf = img.buf_mut();
+    let w_u = width as usize;
+    let h_u = height as usize;
+
+    for y in 0..h_u {
+        for x in 0..w_u {
+            // radii: [TL, TR, BR, BL]
+            let (cr, cx, cy) = if (x as f32) < radii[0] && (y as f32) < radii[0] {
+                (radii[0], radii[0], radii[0])
+            } else if x as f32 >= w - radii[1] && (y as f32) < radii[1] {
+                (radii[1], w - radii[1], radii[1])
+            } else if x as f32 >= w - radii[2] && y as f32 >= h - radii[2] {
+                (radii[2], w - radii[2], h - radii[2])
+            } else if (x as f32) < radii[3] && y as f32 >= h - radii[3] {
+                (radii[3], radii[3], h - radii[3])
+            } else {
+                continue;
+            };
+            if cr <= 0.0 {
+                continue;
+            }
+            let dx = x as f32 - cx;
+            let dy = y as f32 - cy;
+            let dist = (dx * dx + dy * dy).sqrt();
+            if dist > cr {
+                buf[y * stride + x] = bg;
+            } else if dist > cr - 1.0 {
+                let alpha = (cr - dist).max(0.0).min(1.0);
+                let p = &mut buf[y * stride + x];
+                p.r = (p.r as f32 * alpha + bg.r as f32 * (1.0 - alpha)) as u8;
+                p.g = (p.g as f32 * alpha + bg.g as f32 * (1.0 - alpha)) as u8;
+                p.b = (p.b as f32 * alpha + bg.b as f32 * (1.0 - alpha)) as u8;
+                p.a = (p.a as f32 * alpha + bg.a as f32 * (1.0 - alpha)) as u8;
+            }
+        }
+    }
+    *pixels = rgba.erase();
+}
+
+// ─── Color Filters ─────────────────────────────────────────────────────
+
+fn execute_color_filter(
+    pixels: &mut PixelBuffer,
+    width: u32,
+    height: u32,
+    filter: &ColorFilterStep,
+) {
+    let mut rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let mut img = rgba.as_imgref_mut();
+    let stride = img.stride();
+    let w = width as usize;
+    let h = height as usize;
+    let buf = img.buf_mut();
+
+    match filter {
+        ColorFilterStep::GrayscaleBt709 => {
+            for y in 0..h {
+                for x in 0..w {
+                    let p = &mut buf[y * stride + x];
+                    let lum =
+                        (0.2126 * p.r as f32 + 0.7152 * p.g as f32 + 0.0722 * p.b as f32) as u8;
+                    p.r = lum;
+                    p.g = lum;
+                    p.b = lum;
+                }
+            }
+        }
+        ColorFilterStep::GrayscaleNtsc => {
+            for y in 0..h {
+                for x in 0..w {
+                    let p = &mut buf[y * stride + x];
+                    let lum = (0.299 * p.r as f32 + 0.587 * p.g as f32 + 0.114 * p.b as f32) as u8;
+                    p.r = lum;
+                    p.g = lum;
+                    p.b = lum;
+                }
+            }
+        }
+        ColorFilterStep::GrayscaleFlat => {
+            for y in 0..h {
+                for x in 0..w {
+                    let p = &mut buf[y * stride + x];
+                    let lum = ((p.r as u16 + p.g as u16 + p.b as u16) / 3) as u8;
+                    p.r = lum;
+                    p.g = lum;
+                    p.b = lum;
+                }
+            }
+        }
+        ColorFilterStep::Sepia => {
+            for y in 0..h {
+                for x in 0..w {
+                    let p = &mut buf[y * stride + x];
+                    let r = p.r as f32;
+                    let g = p.g as f32;
+                    let b = p.b as f32;
+                    p.r = (0.393 * r + 0.769 * g + 0.189 * b).min(255.0) as u8;
+                    p.g = (0.349 * r + 0.686 * g + 0.168 * b).min(255.0) as u8;
+                    p.b = (0.272 * r + 0.534 * g + 0.131 * b).min(255.0) as u8;
+                }
+            }
+        }
+        ColorFilterStep::Invert => {
+            for y in 0..h {
+                for x in 0..w {
+                    let p = &mut buf[y * stride + x];
+                    p.r = 255 - p.r;
+                    p.g = 255 - p.g;
+                    p.b = 255 - p.b;
+                }
+            }
+        }
+        ColorFilterStep::Alpha(a) => {
+            let alpha_mul = (*a * 255.0) as u16;
+            for y in 0..h {
+                for x in 0..w {
+                    let p = &mut buf[y * stride + x];
+                    p.a = ((p.a as u16 * alpha_mul) / 255) as u8;
+                }
+            }
+        }
+    }
+    *pixels = rgba.erase();
+}
+
+// ─── Color Adjust ──────────────────────────────────────────────────────
+
+fn execute_color_adjust(pixels: &mut PixelBuffer, width: u32, height: u32, adj: &ColorAdjustStep) {
+    let brightness = adj.brightness.unwrap_or(0.0);
+    let contrast = adj.contrast.unwrap_or(0.0);
+    let saturation = adj.saturation.unwrap_or(0.0);
+    if brightness == 0.0 && contrast == 0.0 && saturation == 0.0 {
+        return;
+    }
+
+    let mut rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let mut img = rgba.as_imgref_mut();
+    let stride = img.stride();
+    let w = width as usize;
+    let h = height as usize;
+    let buf = img.buf_mut();
+
+    for y in 0..h {
+        for x in 0..w {
+            let p = &mut buf[y * stride + x];
+            let mut r = p.r as f32 / 255.0;
+            let mut g = p.g as f32 / 255.0;
+            let mut b = p.b as f32 / 255.0;
+
+            // Brightness
+            r += brightness;
+            g += brightness;
+            b += brightness;
+
+            // Contrast: scale around 0.5
+            r = (r - 0.5) * (1.0 + contrast) + 0.5;
+            g = (g - 0.5) * (1.0 + contrast) + 0.5;
+            b = (b - 0.5) * (1.0 + contrast) + 0.5;
+
+            // Saturation: interpolate with BT.709 luminance
+            if saturation != 0.0 {
+                let lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                let s = 1.0 + saturation;
+                r = lum + (r - lum) * s;
+                g = lum + (g - lum) * s;
+                b = lum + (b - lum) * s;
+            }
+
+            p.r = (r * 255.0).max(0.0).min(255.0) as u8;
+            p.g = (g * 255.0).max(0.0).min(255.0) as u8;
+            p.b = (b * 255.0).max(0.0).min(255.0) as u8;
+        }
+    }
+    *pixels = rgba.erase();
+}
+
+// ─── Color Matrix ──────────────────────────────────────────────────────
+
+fn execute_color_matrix(pixels: &mut PixelBuffer, width: u32, height: u32, mat: &ColorMatrixStep) {
+    let m = &mat.matrix;
+    let mut rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let mut img = rgba.as_imgref_mut();
+    let stride = img.stride();
+    let w = width as usize;
+    let h = height as usize;
+    let buf = img.buf_mut();
+
+    for y in 0..h {
+        for x in 0..w {
+            let p = &mut buf[y * stride + x];
+            let r = p.r as f32 / 255.0;
+            let g = p.g as f32 / 255.0;
+            let b = p.b as f32 / 255.0;
+            let a = p.a as f32 / 255.0;
+            // [R',G',B',A',1] = M × [R,G,B,A,1] (row-major 5×5)
+            let nr = m[0] * r + m[1] * g + m[2] * b + m[3] * a + m[4];
+            let ng = m[5] * r + m[6] * g + m[7] * b + m[8] * a + m[9];
+            let nb = m[10] * r + m[11] * g + m[12] * b + m[13] * a + m[14];
+            let na = m[15] * r + m[16] * g + m[17] * b + m[18] * a + m[19];
+            p.r = (nr * 255.0).max(0.0).min(255.0) as u8;
+            p.g = (ng * 255.0).max(0.0).min(255.0) as u8;
+            p.b = (nb * 255.0).max(0.0).min(255.0) as u8;
+            p.a = (na * 255.0).max(0.0).min(255.0) as u8;
+        }
+    }
+    *pixels = rgba.erase();
+}
+
+// ─── Sharpen (unsharp mask) ────────────────────────────────────────────
+
+fn execute_sharpen(pixels: &mut PixelBuffer, width: u32, height: u32, sharp: &SharpenStep) {
+    let amount = sharp.amount / 100.0;
+    let w = width as usize;
+    let h = height as usize;
+
+    let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let src = rgba.as_imgref();
+    let stride = src.stride();
+    let src_buf = src.buf();
+
+    let mut packed: Vec<rgb::RGBA<u8>> = Vec::with_capacity(w * h);
+    for y in 0..h {
+        packed.extend_from_slice(&src_buf[y * stride..y * stride + w]);
+    }
+
+    let blurred = box_blur_rgba(&packed, w, h, 2);
+
+    let mut out = packed.clone();
+    for i in 0..out.len() {
+        let o = packed[i];
+        let b = blurred[i];
+        out[i] = rgb::RGBA {
+            r: ((o.r as f32 + amount * (o.r as f32 - b.r as f32)).max(0.0).min(255.0)) as u8,
+            g: ((o.g as f32 + amount * (o.g as f32 - b.g as f32)).max(0.0).min(255.0)) as u8,
+            b: ((o.b as f32 + amount * (o.b as f32 - b.b as f32)).max(0.0).min(255.0)) as u8,
+            a: o.a,
+        };
+    }
+
+    let output = imgref::ImgVec::new(out, w, h);
+    *pixels = PixelBuffer::from_imgvec(output).erase();
+}
+
+// ─── Blur (box blur × 3 ≈ Gaussian) ───────────────────────────────────
+
+fn execute_blur(pixels: &mut PixelBuffer, width: u32, height: u32, blur_step: &BlurStep) {
+    let radius = (blur_step.sigma * 2.0).ceil() as usize;
+    if radius == 0 {
+        return;
+    }
+    let w = width as usize;
+    let h = height as usize;
+
+    let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
+    let src = rgba.as_imgref();
+    let stride = src.stride();
+    let src_buf = src.buf();
+
+    let mut packed: Vec<rgb::RGBA<u8>> = Vec::with_capacity(w * h);
+    for y in 0..h {
+        packed.extend_from_slice(&src_buf[y * stride..y * stride + w]);
+    }
+
+    let pass_radius = (radius / 3).max(1);
+    for _ in 0..3 {
+        packed = box_blur_rgba(&packed, w, h, pass_radius);
+    }
+
+    let output = imgref::ImgVec::new(packed, w, h);
+    *pixels = PixelBuffer::from_imgvec(output).erase();
+}
+
+/// Separable box blur on tightly-packed RGBA8 buffer.
+fn box_blur_rgba(input: &[rgb::RGBA<u8>], w: usize, h: usize, radius: usize) -> Vec<rgb::RGBA<u8>> {
+    let diameter = 2 * radius + 1;
+    let inv = 1.0 / diameter as f32;
+
+    // Horizontal pass
+    let mut temp = vec![rgb::RGBA { r: 0, g: 0, b: 0, a: 0 }; w * h];
+    for y in 0..h {
+        for x in 0..w {
+            let (mut rs, mut gs, mut bs, mut a_s) = (0u32, 0u32, 0u32, 0u32);
+            for di in 0..diameter {
+                let sx = (x as i64 + di as i64 - radius as i64).max(0).min(w as i64 - 1) as usize;
+                let p = input[y * w + sx];
+                rs += p.r as u32;
+                gs += p.g as u32;
+                bs += p.b as u32;
+                a_s += p.a as u32;
+            }
+            temp[y * w + x] = rgb::RGBA {
+                r: (rs as f32 * inv) as u8,
+                g: (gs as f32 * inv) as u8,
+                b: (bs as f32 * inv) as u8,
+                a: (a_s as f32 * inv) as u8,
+            };
+        }
+    }
+
+    // Vertical pass
+    let mut output = vec![rgb::RGBA { r: 0, g: 0, b: 0, a: 0 }; w * h];
+    for x in 0..w {
+        for y in 0..h {
+            let (mut rs, mut gs, mut bs, mut a_s) = (0u32, 0u32, 0u32, 0u32);
+            for di in 0..diameter {
+                let sy = (y as i64 + di as i64 - radius as i64).max(0).min(h as i64 - 1) as usize;
+                let p = temp[sy * w + x];
+                rs += p.r as u32;
+                gs += p.g as u32;
+                bs += p.b as u32;
+                a_s += p.a as u32;
+            }
+            output[y * w + x] = rgb::RGBA {
+                r: (rs as f32 * inv) as u8,
+                g: (gs as f32 * inv) as u8,
+                b: (bs as f32 * inv) as u8,
+                a: (a_s as f32 * inv) as u8,
+            };
+        }
+    }
+
+    output
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────
+
+fn color_to_rgba(color: &Color) -> rgb::RGBA<u8> {
+    match color {
+        Color::Srgb { r, g, b, a } => rgb::RGBA { r: *r, g: *g, b: *b, a: *a },
+        Color::Hex(hex) => parse_hex_color(hex),
+    }
+}
+
+fn parse_hex_color(hex: &str) -> rgb::RGBA<u8> {
+    let hex = hex.trim_start_matches('#');
+    match hex.len() {
+        3 => {
+            let r = u8::from_str_radix(&hex[0..1], 16).unwrap_or(0);
+            let g = u8::from_str_radix(&hex[1..2], 16).unwrap_or(0);
+            let b = u8::from_str_radix(&hex[2..3], 16).unwrap_or(0);
+            rgb::RGBA { r: r * 17, g: g * 17, b: b * 17, a: 255 }
+        }
+        6 => {
+            let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
+            let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
+            let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
+            rgb::RGBA { r, g, b, a: 255 }
+        }
+        8 => {
+            let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
+            let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
+            let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
+            let a = u8::from_str_radix(&hex[6..8], 16).unwrap_or(255);
+            rgb::RGBA { r, g, b, a }
+        }
+        _ => rgb::RGBA { r: 0, g: 0, b: 0, a: 255 },
+    }
+}
+
 // ─── Command String (RIAPI) ────────────────────────────────────────────
 
 fn execute_command_string(
@@ -518,8 +1140,12 @@ fn try_jpeg_lossless(
         return Ok(None);
     }
 
+    // Get EXIF orientation for Auto orient in lossless path
+    let exif_orientation =
+        source_info.as_ref().map(|i| i.orientation).unwrap_or(Orientation::Normal);
+
     // Check if all processing steps can be done losslessly
-    let transform = match classify_lossless_steps(processing_steps) {
+    let transform = match classify_lossless_steps(processing_steps, exif_orientation) {
         Some(t) => t,
         None => return Ok(None),
     };
@@ -552,14 +1178,16 @@ fn try_jpeg_lossless(
 
 /// Classify processing steps as a single lossless JPEG transform, or None
 /// if any step requires pixel decoding.
-fn classify_lossless_steps(steps: &[Step]) -> Option<zenjpeg::lossless::LosslessTransform> {
+fn classify_lossless_steps(
+    steps: &[Step],
+    exif_orientation: Orientation,
+) -> Option<zenjpeg::lossless::LosslessTransform> {
     use zenjpeg::lossless::LosslessTransform;
 
     if steps.is_empty() {
         return Some(LosslessTransform::None);
     }
 
-    // Only simple orientation steps can be lossless
     let mut combined = LosslessTransform::None;
     for step in steps {
         let step_transform = match step {
@@ -569,9 +1197,9 @@ fn classify_lossless_steps(steps: &[Step]) -> Option<zenjpeg::lossless::Lossless
             Step::Rotate180 => LosslessTransform::Rotate180,
             Step::Rotate270 => LosslessTransform::Rotate270,
             Step::Transpose => LosslessTransform::Transpose,
-            Step::Orient(OrientStep::Auto) => {
-                // Auto-orient is handled by the lossless path via EXIF
-                LosslessTransform::None // Will be resolved from EXIF
+            Step::Orient(OrientStep::Auto) => orientation_to_lossless(exif_orientation),
+            Step::Orient(OrientStep::Exif(n)) => {
+                orientation_to_lossless(Orientation::from_exif(*n as u16))
             }
             _ => return None, // Non-lossless operation
         };
@@ -580,18 +1208,61 @@ fn classify_lossless_steps(steps: &[Step]) -> Option<zenjpeg::lossless::Lossless
     Some(combined)
 }
 
+fn orientation_to_lossless(o: Orientation) -> zenjpeg::lossless::LosslessTransform {
+    use zenjpeg::lossless::LosslessTransform;
+    match o {
+        Orientation::Normal => LosslessTransform::None,
+        Orientation::FlipHorizontal => LosslessTransform::FlipHorizontal,
+        Orientation::Rotate180 => LosslessTransform::Rotate180,
+        Orientation::FlipVertical => LosslessTransform::FlipVertical,
+        Orientation::Transpose => LosslessTransform::Transpose,
+        Orientation::Rotate90 => LosslessTransform::Rotate90,
+        Orientation::Transverse => LosslessTransform::Transverse,
+        Orientation::Rotate270 => LosslessTransform::Rotate270,
+        _ => LosslessTransform::None, // non_exhaustive
+    }
+}
+
+/// D4 dihedral group composition: result of applying `a` then `b`.
+///
+/// Each element is represented as (rotation_steps: 0-3, flip_h: bool),
+/// meaning: rotate CW by rot*90°, then optionally flip horizontally.
 fn compose_transforms(
     a: zenjpeg::lossless::LosslessTransform,
     b: zenjpeg::lossless::LosslessTransform,
 ) -> zenjpeg::lossless::LosslessTransform {
+    let (ra, fa) = to_d4(a);
+    let (rb, fb) = to_d4(b);
+    let (rr, fr) =
+        if !fb { ((ra + rb) % 4, fa) } else { (((rb as i8 - ra as i8).rem_euclid(4)) as u8, !fa) };
+    from_d4(rr, fr)
+}
+
+fn to_d4(t: zenjpeg::lossless::LosslessTransform) -> (u8, bool) {
     use zenjpeg::lossless::LosslessTransform::*;
-    if matches!(b, None) {
-        return a;
+    match t {
+        None => (0, false),
+        Rotate90 => (1, false),
+        Rotate180 => (2, false),
+        Rotate270 => (3, false),
+        FlipHorizontal => (0, true),
+        Transpose => (1, true),
+        FlipVertical => (2, true),
+        Transverse => (3, true),
     }
-    if matches!(a, None) {
-        return b;
+}
+
+fn from_d4(rot: u8, flip: bool) -> zenjpeg::lossless::LosslessTransform {
+    use zenjpeg::lossless::LosslessTransform::*;
+    match (rot % 4, flip) {
+        (0, false) => None,
+        (1, false) => Rotate90,
+        (2, false) => Rotate180,
+        (3, false) => Rotate270,
+        (0, true) => FlipHorizontal,
+        (1, true) => Transpose,
+        (2, true) => FlipVertical,
+        (3, true) => Transverse,
+        _ => unreachable!(),
     }
-    // For complex compositions, fall back to the last transform.
-    // A proper implementation would use D4 group composition.
-    b
 }
