@@ -39,17 +39,11 @@ mod mozjpeg_decoder_helpers;
 #[cfg(feature = "c-codecs")]
 mod webp;
 
-// Zen codec modules — pure Rust, require zen-codecs feature
+// Unified zen codec adapters (zencodec-types dyn dispatch)
 #[cfg(feature = "zen-codecs")]
-mod zengif_codec;
+pub(crate) mod zen_decoder;
 #[cfg(feature = "zen-codecs")]
-mod zenjpeg_decoder;
-#[cfg(feature = "zen-codecs")]
-mod zenjpeg_encoder;
-#[cfg(feature = "zen-codecs")]
-mod zenjxl_codec;
-#[cfg(feature = "zen-codecs")]
-mod zenwebp_codec;
+pub(crate) mod zen_encoder;
 
 use crate::graphics::bitmaps::BitmapKey;
 
@@ -108,6 +102,10 @@ pub enum NamedDecoders {
     ZenGifDecoder,
     #[cfg(feature = "zen-codecs")]
     ZenJxlDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenAvifDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenHeicDecoder,
 }
 impl NamedDecoders {
     pub fn is_jpeg(&self) -> bool {
@@ -151,6 +149,20 @@ impl NamedDecoders {
             _ => false,
         }
     }
+    pub fn is_avif(&self) -> bool {
+        match self {
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenAvifDecoder => true,
+            _ => false,
+        }
+    }
+    pub fn is_heic(&self) -> bool {
+        match self {
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenHeicDecoder => true,
+            _ => false,
+        }
+    }
 
     pub fn is_c_codec(&self) -> bool {
         match self {
@@ -168,7 +180,9 @@ impl NamedDecoders {
             Self::ZenJpegDecoder
             | Self::ZenWebPDecoder
             | Self::ZenGifDecoder
-            | Self::ZenJxlDecoder => true,
+            | Self::ZenJxlDecoder
+            | Self::ZenAvifDecoder
+            | Self::ZenHeicDecoder => true,
             _ => false,
         }
     }
@@ -211,6 +225,27 @@ impl NamedDecoders {
                     || (bytes.len() >= 12
                         && bytes.starts_with(&[0x00, 0x00, 0x00, 0x0C, 0x4A, 0x58, 0x4C, 0x20]))
             }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenAvifDecoder => {
+                // ISO BMFF ftyp box with AVIF brands
+                bytes.len() >= 12
+                    && &bytes[4..8] == b"ftyp"
+                    && (bytes[8..12].starts_with(b"avif")
+                        || bytes[8..12].starts_with(b"avis")
+                        || bytes[8..12].starts_with(b"mif1"))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenHeicDecoder => {
+                // ISO BMFF ftyp box with HEIC brands
+                bytes.len() >= 12
+                    && &bytes[4..8] == b"ftyp"
+                    && (bytes[8..12].starts_with(b"heic")
+                        || bytes[8..12].starts_with(b"heix")
+                        || bytes[8..12].starts_with(b"heim")
+                        || bytes[8..12].starts_with(b"heis")
+                        || bytes[8..12].starts_with(b"hevc")
+                        || bytes[8..12].starts_with(b"hevx"))
+            }
         }
     }
 
@@ -237,19 +272,27 @@ impl NamedDecoders {
             NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
             #[cfg(feature = "zen-codecs")]
             NamedDecoders::ZenJpegDecoder => {
-                Ok(Box::new(zenjpeg_decoder::ZenJpegDecoder::create(c, io, io_id)?))
+                Ok(Box::new(zen_decoder::ZenDecoder::create_jpeg(c, io, io_id)?))
             }
             #[cfg(feature = "zen-codecs")]
             NamedDecoders::ZenWebPDecoder => {
-                Ok(Box::new(zenwebp_codec::ZenWebPDecoder::create(c, io, io_id)?))
+                Ok(Box::new(zen_decoder::ZenDecoder::create_webp(c, io, io_id)?))
             }
             #[cfg(feature = "zen-codecs")]
             NamedDecoders::ZenGifDecoder => {
-                Ok(Box::new(zengif_codec::ZenGifDecoder::create(c, io, io_id)?))
+                Ok(Box::new(zen_decoder::ZenDecoder::create_gif(c, io, io_id)?))
             }
             #[cfg(feature = "zen-codecs")]
             NamedDecoders::ZenJxlDecoder => {
-                Ok(Box::new(zenjxl_codec::ZenJxlDecoder::create(c, io, io_id)?))
+                Ok(Box::new(zen_decoder::ZenDecoder::create_jxl(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenAvifDecoder => {
+                Ok(Box::new(zen_decoder::ZenDecoder::create_avif(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenHeicDecoder => {
+                Ok(Box::new(zen_decoder::ZenDecoder::create_heic(c, io, io_id)?))
             }
         }
     }
@@ -274,6 +317,8 @@ pub enum NamedEncoders {
     ZenGifEncoder,
     #[cfg(feature = "zen-codecs")]
     ZenJxlEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenAvifEncoder,
 }
 impl NamedEncoders {
     pub fn is_jpeg(&self) -> bool {
@@ -317,6 +362,13 @@ impl NamedEncoders {
             _ => false,
         }
     }
+    pub fn is_avif(&self) -> bool {
+        match self {
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenAvifEncoder => true,
+            _ => false,
+        }
+    }
     pub fn is_c_codec(&self) -> bool {
         match self {
             #[cfg(feature = "c-codecs")]
@@ -330,7 +382,8 @@ impl NamedEncoders {
             Self::ZenJpegEncoder
             | Self::ZenWebPEncoder
             | Self::ZenGifEncoder
-            | Self::ZenJxlEncoder => true,
+            | Self::ZenJxlEncoder
+            | Self::ZenAvifEncoder => true,
             _ => false,
         }
     }
@@ -366,6 +419,12 @@ impl Default for EnabledCodecs {
                 // JXL decoder (zen-codecs only)
                 #[cfg(feature = "zen-codecs")]
                 NamedDecoders::ZenJxlDecoder,
+                // AVIF decoder (zen-codecs only)
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenAvifDecoder,
+                // HEIC decoder (zen-codecs only)
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenHeicDecoder,
             ]),
             encoders: smallvec::SmallVec::from_slice(&[
                 #[cfg(feature = "zen-codecs")]
@@ -388,6 +447,8 @@ impl Default for EnabledCodecs {
                 NamedEncoders::LibPngRsEncoder,
                 #[cfg(feature = "zen-codecs")]
                 NamedEncoders::ZenJxlEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenAvifEncoder,
             ]),
         }
     }

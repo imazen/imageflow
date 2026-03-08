@@ -1,161 +1,161 @@
 # orientation.checksums — v1
 
-## test_crop_exif landscape_1
+## test_jpeg_rotation_cropped portrait_1
 tolerance off-by-one
-~ ripe-reed-bbc81e4edb:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ red-sand-e14547d18a:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_fit_pad_exif landscape_1
 tolerance off-by-one
-~ base-lily-bee1590968:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation_cropped portrait_1
-tolerance off-by-one
-~ red-sand-e14547d18a:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ base-lily-bee1590968:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_jpeg_rotation Landscape_1
 tolerance off-by-one
-~ lone-larch-87c29bf05f:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ lone-larch-87c29bf05f:sea  x86_64-avx512  @808d9cf9  new-baseline
 
-## test_fit_pad_exif landscape_2
+## test_crop_exif landscape_1
 tolerance off-by-one
-~ dense-ring-bf0460b4d7:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_crop_exif landscape_2
-tolerance off-by-one
-~ round-jade-1e196944c3:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation Landscape_2
-tolerance off-by-one
-~ lucid-dock-b2f00c4cb2:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ ripe-reed-bbc81e4edb:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_2
 tolerance off-by-one
-~ dim-panda-c8a45adb7c:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ dim-panda-c8a45adb7c:sea  x86_64-avx512  @808d9cf9  new-baseline
 
-## test_jpeg_rotation Landscape_3
+## test_fit_pad_exif landscape_2
 tolerance off-by-one
-~ peak-wave-d65b05ae37:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ dense-ring-bf0460b4d7:sea  x86_64-avx512  @808d9cf9  new-baseline
 
-## test_crop_exif landscape_3
+## test_jpeg_rotation Landscape_2
 tolerance off-by-one
-~ level-spark-2edbc7f07e:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ lucid-dock-b2f00c4cb2:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_crop_exif landscape_2
+tolerance off-by-one
+~ round-jade-1e196944c3:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_3
 tolerance off-by-one
-~ modal-mouse-b90dfeba45:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ modal-mouse-b90dfeba45:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_fit_pad_exif landscape_3
 tolerance off-by-one
-~ south-gull-2dfa7c69e2:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ south-gull-2dfa7c69e2:sea  x86_64-avx512  @808d9cf9  new-baseline
 
-## test_jpeg_rotation Landscape_4
+## test_jpeg_rotation Landscape_3
 tolerance off-by-one
-~ flat-mare-7dc975f7f4:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ peak-wave-d65b05ae37:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_crop_exif landscape_3
+tolerance off-by-one
+~ level-spark-2edbc7f07e:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_4
 tolerance off-by-one
-~ flat-fern-c7911e4828:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_crop_exif landscape_4
-tolerance off-by-one
-~ steep-wasp-23e18da389:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation Landscape_5
-tolerance off-by-one
-~ ripe-grain-7c79c56d2c:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ flat-fern-c7911e4828:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_fit_pad_exif landscape_4
 tolerance off-by-one
-~ paced-rose-5d00b9d644:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ paced-rose-5d00b9d644:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_jpeg_rotation Landscape_4
+tolerance off-by-one
+~ flat-mare-7dc975f7f4:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_crop_exif landscape_4
+tolerance off-by-one
+~ steep-wasp-23e18da389:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_5
 tolerance off-by-one
-~ clean-stork-ad8742ee53:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation Landscape_6
-tolerance off-by-one
-~ ripe-zone-418adfb3de:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ clean-stork-ad8742ee53:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_fit_pad_exif landscape_5
 tolerance off-by-one
-~ real-lynx-123401b516:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ red-frog-fff2ea356b:sea  x86_64-avx512  @808d9cf9  new-baseline
 
-## test_jpeg_rotation Landscape_7
+## test_jpeg_rotation Landscape_5
 tolerance off-by-one
-~ major-shrew-6098c2f817:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_crop_exif landscape_5
-tolerance off-by-one
-~ hasty-pearl-68faa7a099:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ husky-lotus-89d9355d08:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_6
 tolerance off-by-one
-~ dizzy-edge-6dd8ebe512:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ dizzy-edge-6dd8ebe512:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_crop_exif landscape_5
+tolerance off-by-one
+~ hasty-pearl-68faa7a099:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_fit_pad_exif landscape_6
 tolerance off-by-one
-~ moved-yak-4cd8e5a63e:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ loud-path-1a2e8fbdc8:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_jpeg_rotation Landscape_6
+tolerance off-by-one
+~ jolly-doe-14b2dd607e:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_7
 tolerance off-by-one
-~ hefty-shrew-14e682161d:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ hefty-shrew-14e682161d:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_crop_exif landscape_6
 tolerance off-by-one
-~ dusk-snail-fe4d14bbdc:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ steep-otter-025b8acc8b:sea  x86_64-avx512  @808d9cf9  new-baseline
 
-## test_jpeg_rotation Portrait_1
+## test_jpeg_rotation Landscape_7
 tolerance off-by-one
-~ jazzy-lace-5a5bead854:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ fluid-pulse-cdc8e36e48:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_fit_pad_exif landscape_7
 tolerance off-by-one
-~ mint-plum-e37c25048b:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ roomy-port-53dcfaf54a:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_8
 tolerance off-by-one
-~ bare-mule-4c01ce8e53:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ bare-mule-4c01ce8e53:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_crop_exif landscape_7
 tolerance off-by-one
-~ oily-bell-d10c8fb45c:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_fit_pad_exif landscape_8
-tolerance off-by-one
-~ dry-edge-9c1819a06e:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation Portrait_2
-tolerance off-by-one
-~ brisk-ice-dc943955fb:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_crop_exif landscape_8
-tolerance off-by-one
-~ civil-doe-8b06d3f9b0:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation Portrait_3
-tolerance off-by-one
-~ large-pond-9faa15f523:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation Portrait_4
-tolerance off-by-one
-~ ionic-mule-1cabd77ed0:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation Portrait_5
-tolerance off-by-one
-~ dual-stone-8385a2a1c0:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation Portrait_6
-tolerance off-by-one
-~ rude-ash-ed569201cb:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation Portrait_7
-tolerance off-by-one
-~ civic-lodge-87cec77e65:sea  x86_64-avx512  @c4c85640  auto-accepted
-
-## test_jpeg_rotation Portrait_8
-tolerance off-by-one
-~ pure-yew-9ef3e71864:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ keen-yak-0dcde012e5:sea  x86_64-avx512  @808d9cf9  new-baseline
 
 ## test_jpeg_rotation Landscape_8
 tolerance off-by-one
-~ dual-palm-5fb2422928:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ fine-leaf-8d5d3312d6:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_fit_pad_exif landscape_8
+tolerance off-by-one
+~ slow-onyx-76032a2861:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_crop_exif landscape_8
+tolerance off-by-one
+~ civil-doe-8b06d3f9b0:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_jpeg_rotation Portrait_1
+tolerance off-by-one
+~ jazzy-lace-5a5bead854:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_jpeg_rotation Portrait_2
+tolerance off-by-one
+~ keen-glen-169f4b6c92:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_jpeg_rotation Portrait_3
+tolerance off-by-one
+~ gruff-lynx-8c39dd5c03:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_jpeg_rotation Portrait_4
+tolerance off-by-one
+~ minor-brick-9041686015:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_jpeg_rotation Portrait_5
+tolerance off-by-one
+~ dual-stone-8385a2a1c0:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_jpeg_rotation Portrait_6
+tolerance off-by-one
+~ rude-ash-ed569201cb:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_jpeg_rotation Portrait_7
+tolerance off-by-one
+~ civic-lodge-87cec77e65:sea  x86_64-avx512  @808d9cf9  new-baseline
+
+## test_jpeg_rotation Portrait_8
+tolerance off-by-one
+~ pure-yew-9ef3e71864:sea  x86_64-avx512  @808d9cf9  new-baseline

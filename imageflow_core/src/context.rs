@@ -727,6 +727,12 @@ impl Context {
         if s.enable_jxl_decoding == Some(false) {
             self.enabled_codecs.decoders.retain(|d| !d.is_jxl());
         }
+        if s.enable_avif_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_avif());
+        }
+        if s.enable_heic_decoding == Some(false) {
+            self.enabled_codecs.decoders.retain(|d| !d.is_heic());
+        }
         // Per-format encoder kill bits
         if s.enable_jpeg_encoding == Some(false) {
             self.enabled_codecs.encoders.retain(|e| !e.is_jpeg());
@@ -742,6 +748,9 @@ impl Context {
         }
         if s.enable_jxl_encoding == Some(false) {
             self.enabled_codecs.encoders.retain(|e| !e.is_jxl());
+        }
+        if s.enable_avif_encoding == Some(false) {
+            self.enabled_codecs.encoders.retain(|e| !e.is_avif());
         }
     }
 
@@ -1043,7 +1052,7 @@ impl Drop for Context {
 #[test]
 fn test_context_size() {
     eprintln!("std::mem::sizeof(Context) = {}", std::mem::size_of::<Context>());
-    assert!(std::mem::size_of::<Context>() < 360);
+    assert!(std::mem::size_of::<Context>() < 400);
 }
 
 #[test]

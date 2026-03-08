@@ -77,7 +77,7 @@ pub(crate) fn create_encoder(
             #[cfg(feature = "zen-codecs")]
             {
                 Box::new(
-                    crate::codecs::zengif_codec::ZenGifEncoder::create(c, io, bitmap_key)
+                    crate::codecs::zen_encoder::ZenEncoder::create_gif(c, io, bitmap_key)
                         .map_err(|e| e.at(here!()))?,
                 )
             }
@@ -107,12 +107,12 @@ pub(crate) fn create_encoder(
             #[cfg(feature = "zen-codecs")]
             {
                 Box::new(
-                    crate::codecs::zenjpeg_encoder::ZenJpegEncoder::create(
+                    crate::codecs::zen_encoder::ZenEncoder::create_jpeg(
                         c,
+                        io,
                         quality,
                         progressive,
                         matte.clone(),
-                        io,
                     )
                     .map_err(|e| e.at(here!()))?,
                 )
@@ -149,12 +149,12 @@ pub(crate) fn create_encoder(
                 // ZenJpeg doesn't have a "classic" mode; use standard encoding
                 let _ = optimize_huffman_coding; // not applicable to zenjpeg
                 Box::new(
-                    crate::codecs::zenjpeg_encoder::ZenJpegEncoder::create(
+                    crate::codecs::zen_encoder::ZenEncoder::create_jpeg(
                         c,
+                        io,
                         quality.map(|q| q as u8),
                         progressive,
                         matte.clone(),
-                        io,
                     )
                     .map_err(|e| e.at(here!()))?,
                 )
@@ -211,7 +211,7 @@ pub(crate) fn create_encoder(
             #[cfg(feature = "zen-codecs")]
             {
                 Box::new(
-                    crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                    crate::codecs::zen_encoder::ZenEncoder::create_webp(
                         c,
                         io,
                         None,
@@ -240,7 +240,7 @@ pub(crate) fn create_encoder(
             #[cfg(feature = "zen-codecs")]
             {
                 Box::new(
-                    crate::codecs::zenjxl_codec::ZenJxlEncoder::create(
+                    crate::codecs::zen_encoder::ZenEncoder::create_jxl(
                         c,
                         io,
                         Some(distance),
@@ -261,7 +261,7 @@ pub(crate) fn create_encoder(
             #[cfg(feature = "zen-codecs")]
             {
                 Box::new(
-                    crate::codecs::zenjxl_codec::ZenJxlEncoder::create(c, io, None, true)
+                    crate::codecs::zen_encoder::ZenEncoder::create_jxl(c, io, None, true)
                         .map_err(|e| e.at(here!()))?,
                 )
             }
@@ -292,7 +292,7 @@ pub(crate) fn create_encoder(
             #[cfg(all(feature = "zen-codecs", not(feature = "c-codecs")))]
             {
                 Box::new(
-                    crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                    crate::codecs::zen_encoder::ZenEncoder::create_webp(
                         c,
                         io,
                         Some(quality),
@@ -342,7 +342,7 @@ fn create_encoder_auto(
             #[cfg(feature = "zen-codecs")]
             {
                 Box::new(
-                    crate::codecs::zengif_codec::ZenGifEncoder::create(ctx, io, bitmap_key)
+                    crate::codecs::zen_encoder::ZenEncoder::create_gif(ctx, io, bitmap_key)
                         .map_err(|e| e.at(here!()))?,
                 )
             }
@@ -364,9 +364,8 @@ fn create_encoder_auto(
             .map_err(|e| e.at(here!()))?,
         OutputImageFormat::Jxl => create_jxl_auto(ctx, io, bitmap_key, decoder_io_ids, details)
             .map_err(|e| e.at(here!()))?,
-        OutputImageFormat::Avif => {
-            unimplemented!()
-        }
+        OutputImageFormat::Avif => create_avif_auto(ctx, io, bitmap_key, decoder_io_ids, details)
+            .map_err(|e| e.at(here!()))?,
     })
     //libpng depth is 32 if alpha, 24 otherwise, zlib=9 if png_max_deflate=true, otherwise none
     //pngquant quality is 100 if png_quality is none
@@ -591,12 +590,12 @@ fn create_jpeg_auto(
         // ZenJpeg handles all styles; no separate "classic" mode needed
         let _ = style;
         Ok(Box::new(
-            crate::codecs::zenjpeg_encoder::ZenJpegEncoder::create(
+            crate::codecs::zen_encoder::ZenEncoder::create_jpeg(
                 ctx,
+                io,
                 Some(moz_quality),
                 Some(progressive),
                 matte,
-                io,
             )
             .map_err(|e| e.at(here!()))?,
         ))
@@ -677,7 +676,7 @@ fn create_webp_auto(
         #[cfg(feature = "zen-codecs")]
         {
             return Ok(Box::new(
-                crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                crate::codecs::zen_encoder::ZenEncoder::create_webp(
                     ctx,
                     io,
                     quality,
@@ -705,7 +704,7 @@ fn create_webp_auto(
         #[cfg(all(feature = "zen-codecs", not(feature = "c-codecs")))]
         {
             return Ok(Box::new(
-                crate::codecs::zenwebp_codec::ZenWebPEncoder::create(
+                crate::codecs::zen_encoder::ZenEncoder::create_webp(
                     ctx,
                     io,
                     quality,
@@ -721,6 +720,49 @@ fn create_webp_auto(
         return Err(nerror!(
             ErrorKind::CodecDisabledError,
             "WebP encoding requires the 'c-codecs' or 'zen-codecs' feature"
+        ));
+    }
+}
+
+fn create_avif_auto(
+    ctx: &Context,
+    io: IoProxy,
+    _bitmap_key: BitmapKey,
+    _decoder_io_ids: &[i32],
+    details: AutoEncoderDetails,
+) -> Result<Box<dyn Encoder>> {
+    let profile_hints = details
+        .quality_profile
+        .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
+
+    let lossless = details.needs_lossless.unwrap_or(false);
+    let matte = details.matte;
+
+    #[cfg(feature = "zen-codecs")]
+    {
+        if lossless {
+            Ok(Box::new(
+                crate::codecs::zen_encoder::ZenEncoder::create_avif(
+                    ctx, io, None, None, true, matte,
+                )
+                .map_err(|e| e.at(here!()))?,
+            ))
+        } else {
+            let quality = profile_hints.map(|h| h.avif);
+            let speed = profile_hints.map(|h| h.avif_s);
+            Ok(Box::new(
+                crate::codecs::zen_encoder::ZenEncoder::create_avif(
+                    ctx, io, quality, speed, false, matte,
+                )
+                .map_err(|e| e.at(here!()))?,
+            ))
+        }
+    }
+    #[cfg(not(feature = "zen-codecs"))]
+    {
+        return Err(nerror!(
+            ErrorKind::CodecDisabledError,
+            "AVIF encoding requires the 'zen-codecs' feature"
         ));
     }
 }
@@ -742,13 +784,13 @@ fn create_jxl_auto(
     {
         if lossless {
             Ok(Box::new(
-                crate::codecs::zenjxl_codec::ZenJxlEncoder::create(ctx, io, None, true)
+                crate::codecs::zen_encoder::ZenEncoder::create_jxl(ctx, io, None, true)
                     .map_err(|e| e.at(here!()))?,
             ))
         } else {
             let distance = profile_hints.map(|h| h.jxl).unwrap_or(1.0);
             Ok(Box::new(
-                crate::codecs::zenjxl_codec::ZenJxlEncoder::create(ctx, io, Some(distance), false)
+                crate::codecs::zen_encoder::ZenEncoder::create_jxl(ctx, io, Some(distance), false)
                     .map_err(|e| e.at(here!()))?,
             ))
         }
@@ -977,7 +1019,7 @@ struct FeaturesImplemented {
 }
 #[cfg(feature = "zen-codecs")]
 const FEATURES_IMPLEMENTED: FeaturesImplemented =
-    FeaturesImplemented { jxl: true, avif: false, webp_animation: false, jpegli: false };
+    FeaturesImplemented { jxl: true, avif: true, webp_animation: false, jpegli: false };
 #[cfg(not(feature = "zen-codecs"))]
 const FEATURES_IMPLEMENTED: FeaturesImplemented =
     FeaturesImplemented { jxl: false, avif: false, webp_animation: false, jpegli: false };

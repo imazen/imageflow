@@ -1587,6 +1587,18 @@
       "ExecutionSecurity": {
         "type": "object",
         "properties": {
+          "enable_avif_decoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_avif_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "enable_gif_decoding": {
             "type": [
               "boolean",
@@ -1594,6 +1606,12 @@
             ]
           },
           "enable_gif_encoding": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "enable_heic_decoding": {
             "type": [
               "boolean",
               "null"
@@ -1668,6 +1686,15 @@
                 "$ref": "#/components/schemas/FrameSizeLimit"
               }
             ]
+          },
+          "max_encoder_threads": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Maximum threads for parallel encoding operations.\n`Some(1)` disables parallelism. `None` = codec default (typically auto-detect cores).",
+            "minimum": 0
           },
           "max_frame_size": {
             "oneOf": [

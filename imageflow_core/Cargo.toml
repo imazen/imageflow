@@ -54,11 +54,14 @@ moxcms = { git = "https://github.com/awxkee/moxcms.git", rev = "c4affa1", featur
 
 # --- Zen codec dependencies (pure Rust, default) ---
 # Using path deps until next publish cycle
-zenjpeg = { path = "../../zenjpeg/zenjpeg", features = ["decoder"], optional = true }
-zengif = { path = "../../zengif", features = ["color_quant"], optional = true }
-zenwebp = { path = "../../zenwebp", optional = true }
-zenjxl = { path = "../../zenjxl", optional = true }
+zenjpeg = { path = "../../zen/zenjpeg/zenjpeg", features = ["decoder", "parallel", "zencodec"], optional = true }
+zengif = { path = "../../zen/zengif", features = ["color_quant", "zencodec"], optional = true }
+zenwebp = { path = "../../zen/zenwebp", features = ["zencodec"], optional = true }
+zenjxl = { path = "../../zen/zenjxl", features = ["zencodec"], optional = true }
+zenavif = { path = "../../zen/zenavif", features = ["zencodec", "encode"], optional = true }
+heic-decoder = { path = "../../zen/heic-decoder-rs", features = ["zencodec"], optional = true }
 zenpixels = { version = "0.1", default-features = false, features = ["buffer"], optional = true }
+zc = { path = "../../zen/zencodec-types", package = "zencodec-types", optional = true }
 
 # Used for schema generation if feature enabled
 utoipa = { version = "5.3.1", features = [], optional = true }
@@ -91,8 +94,8 @@ walkdir = "2"
 csv = "1"
 rayon = "1"
 colorutils-rs = "0.7"
-zensim-regress = { path = "../../zensim/zensim-regress" }
-zensim = { path = "../../zensim/zensim" }
+zensim-regress = { path = "../../zen/zensim/zensim-regress" }
+zensim = { path = "../../zen/zensim/zensim" }
 seahash = "4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
@@ -115,7 +118,10 @@ zen-codecs = [
     "dep:zengif",
     "dep:zenwebp",
     "dep:zenjxl",
+    "dep:zenavif",
+    "dep:heic-decoder",
     "dep:zenpixels",
+    "dep:zc",
 ]
 # Feature to enable OpenAPI schema generation capabilities
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]

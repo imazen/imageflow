@@ -1164,6 +1164,15 @@ pub struct ExecutionSecurity {
     pub enable_webp_decoding: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enable_jxl_decoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_avif_decoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_heic_decoding: Option<bool>,
+
+    /// Maximum threads for parallel encoding operations.
+    /// `Some(1)` disables parallelism. `None` = codec default (typically auto-detect cores).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_encoder_threads: Option<u32>,
 
     /// Per-format encoder kill bits. `Some(false)` disables all encoders for that format.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1176,6 +1185,8 @@ pub struct ExecutionSecurity {
     pub enable_webp_encoding: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enable_jxl_encoding: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_avif_encoding: Option<bool>,
 }
 
 impl ExecutionSecurity {
@@ -1200,16 +1211,20 @@ impl ExecutionSecurity {
             use_c_codecs: None,
             use_safe_codecs: None,
             prefer_c_codecs: None,
+            max_encoder_threads: None,
             enable_jpeg_decoding: None,
             enable_png_decoding: None,
             enable_gif_decoding: None,
             enable_webp_decoding: None,
             enable_jxl_decoding: None,
+            enable_avif_decoding: None,
+            enable_heic_decoding: None,
             enable_jpeg_encoding: None,
             enable_png_encoding: None,
             enable_gif_encoding: None,
             enable_webp_encoding: None,
             enable_jxl_encoding: None,
+            enable_avif_encoding: None,
         }
     }
 }
