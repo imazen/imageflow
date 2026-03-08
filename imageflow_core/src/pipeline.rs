@@ -37,15 +37,15 @@ pub fn execute(
 
 /// Probe an image for metadata without decoding pixels.
 pub fn probe_image(data: &[u8]) -> Result<ImageInfo, FlowError> {
-    let info = zencodecs::from_bytes(data)
-        .map_err(|e| FlowError::Codec(format!("probe failed: {e}")))?;
+    let info =
+        zencodecs::from_bytes(data).map_err(|e| FlowError::Codec(format!("probe failed: {e}")))?;
 
     Ok(ImageInfo {
         format: format!("{:?}", info.format).to_lowercase(),
         w: info.width,
         h: info.height,
         has_alpha: info.has_alpha,
-        orientation: None, // TODO: extract from EXIF
+        orientation: None,   // TODO: extract from EXIF
         color_profile: None, // TODO: extract ICC/CICP info
         has_ultrahdr: false, // TODO: detect UltraHDR
     })
@@ -117,11 +117,9 @@ fn execute_segment(
 
     // Check for JPEG lossless fast path
     if encode_step.prefer_lossless_jpeg {
-        if let Some(result) = try_jpeg_lossless(
-            source_data,
-            &steps[segment.processing_range.clone()],
-            encode_step,
-        )? {
+        if let Some(result) =
+            try_jpeg_lossless(source_data, &steps[segment.processing_range.clone()], encode_step)?
+        {
             io.write_output(encode_step.io_id, result.data)?;
             return Ok(result.encode_result);
         }
@@ -174,10 +172,7 @@ fn execute_segment(
             | Step::Blur(_) => {
                 // TODO: implement filters via zenfilters / manual Oklab ops
             }
-            Step::ExpandCanvas(_)
-            | Step::FillRect(_)
-            | Step::RoundCorners(_)
-            | Step::Region(_) => {
+            Step::ExpandCanvas(_) | Step::FillRect(_) | Step::RoundCorners(_) | Step::Region(_) => {
                 // TODO: canvas operations
             }
             Step::DrawImage(_) | Step::Watermark(_) => {
@@ -240,13 +235,9 @@ fn execute_constrain(
         ConstraintMode::AspectCrop => zenlayout::ConstraintMode::AspectCrop,
     };
 
-    let pipeline = pipeline.constrain(
-        zenlayout::Constraint::new(zl_mode, target_w, target_h),
-    );
+    let pipeline = pipeline.constrain(zenlayout::Constraint::new(zl_mode, target_w, target_h));
 
-    let (ideal, _request) = pipeline
-        .plan()
-        .map_err(|e| FlowError::Layout(format!("{e:?}")))?;
+    let (ideal, _request) = pipeline.plan().map_err(|e| FlowError::Layout(format!("{e:?}")))?;
 
     let out_w = ideal.layout.resize_to.width;
     let out_h = ideal.layout.resize_to.height;
@@ -275,7 +266,13 @@ fn execute_constrain(
         .format(zenresize::PixelDescriptor::RGBA8_SRGB)
         .build();
 
-    let output = zenresize::resize_4ch(img_ref, out_w, out_h, zenresize::PixelDescriptor::RGBA8_SRGB, &config);
+    let output = zenresize::resize_4ch(
+        img_ref,
+        out_w,
+        out_h,
+        zenresize::PixelDescriptor::RGBA8_SRGB,
+        &config,
+    );
 
     // Convert ImgVec<RGBA<u8>> back to PixelBuffer
     let out_buf = PixelBuffer::from_imgvec(output);
@@ -390,9 +387,8 @@ fn execute_command_string(
         .to_pipeline(in_w, in_h, None)
         .map_err(|e| FlowError::Layout(format!("RIAPI parse error: {e:?}")))?;
 
-    let (ideal, _request) = pipeline
-        .plan()
-        .map_err(|e| FlowError::Layout(format!("RIAPI layout error: {e:?}")))?;
+    let (ideal, _request) =
+        pipeline.plan().map_err(|e| FlowError::Layout(format!("RIAPI layout error: {e:?}")))?;
 
     let out_w = ideal.layout.resize_to.width;
     let out_h = ideal.layout.resize_to.height;
@@ -440,9 +436,7 @@ fn execute_encode(
         Some(OutputFormat::Gif) => zencodecs::ImageFormat::Gif,
         Some(OutputFormat::Avif) => zencodecs::ImageFormat::Avif,
         Some(OutputFormat::Jxl) => zencodecs::ImageFormat::Jxl,
-        Some(OutputFormat::Keep) | None => {
-            source_format.unwrap_or(zencodecs::ImageFormat::Jpeg)
-        }
+        Some(OutputFormat::Keep) | None => source_format.unwrap_or(zencodecs::ImageFormat::Jpeg),
         Some(OutputFormat::Auto { .. }) => {
             // Auto-select based on alpha
             if pixels.has_alpha() {
@@ -518,10 +512,8 @@ fn try_jpeg_lossless(
         return Ok(None);
     }
 
-    let target_is_jpeg = matches!(
-        encode.format,
-        Some(OutputFormat::Jpeg) | Some(OutputFormat::Keep) | None
-    );
+    let target_is_jpeg =
+        matches!(encode.format, Some(OutputFormat::Jpeg) | Some(OutputFormat::Keep) | None);
     if !target_is_jpeg {
         return Ok(None);
     }

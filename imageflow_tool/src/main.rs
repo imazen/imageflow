@@ -14,22 +14,12 @@ fn main() {
         .subcommand(
             Command::new("v2/build")
                 .about("Execute a JSON build request")
-                .arg(
-                    Arg::new("json")
-                        .long("json")
-                        .help("JSON build request")
-                        .required(true),
-                ),
+                .arg(Arg::new("json").long("json").help("JSON build request").required(true)),
         )
         .subcommand(
             Command::new("probe")
                 .about("Probe an image for metadata")
-                .arg(
-                    Arg::new("input")
-                        .long("in")
-                        .help("Input image file")
-                        .required(true),
-                ),
+                .arg(Arg::new("input").long("in").help("Input image file").required(true)),
         )
         .get_matches();
 

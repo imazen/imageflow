@@ -6,9 +6,7 @@
 use crate::error::FlowError;
 use crate::io::IoStore;
 use crate::pipeline;
-use imageflow_types::{
-    BuildRequest, ExecuteRequest, Response, ResponseData, VersionInfo,
-};
+use imageflow_types::{BuildRequest, ExecuteRequest, Response, ResponseData, VersionInfo};
 use std::sync::{Arc, RwLock};
 
 /// The main imageflow context. Owns I/O buffers and processes requests.
@@ -31,37 +29,28 @@ pub struct JsonResponse {
 impl Context {
     /// Create a new context.
     pub fn new() -> Self {
-        Context {
-            inner: RwLock::new(ContextInner {
-                io: IoStore::new(),
-                error: None,
-            }),
-        }
+        Context { inner: RwLock::new(ContextInner { io: IoStore::new(), error: None }) }
     }
 
     /// Add an input buffer.
     pub fn add_input_buffer(&self, io_id: i32, data: &[u8]) -> Result<(), FlowError> {
-        let mut inner = self.inner.write().map_err(|_| {
-            FlowError::Internal("lock poisoned".into())
-        })?;
+        let mut inner =
+            self.inner.write().map_err(|_| FlowError::Internal("lock poisoned".into()))?;
         inner.io.add_input(io_id, Arc::from(data));
         Ok(())
     }
 
     /// Add an output buffer slot.
     pub fn add_output_buffer(&self, io_id: i32) -> Result<(), FlowError> {
-        let mut inner = self.inner.write().map_err(|_| {
-            FlowError::Internal("lock poisoned".into())
-        })?;
+        let mut inner =
+            self.inner.write().map_err(|_| FlowError::Internal("lock poisoned".into()))?;
         inner.io.add_output(io_id);
         Ok(())
     }
 
     /// Get the output buffer for a given io_id.
     pub fn get_output_buffer(&self, io_id: i32) -> Result<Vec<u8>, FlowError> {
-        let inner = self.inner.read().map_err(|_| {
-            FlowError::Internal("lock poisoned".into())
-        })?;
+        let inner = self.inner.read().map_err(|_| FlowError::Internal("lock poisoned".into()))?;
         Ok(inner.io.get_output(io_id)?.to_vec())
     }
 
@@ -70,14 +59,13 @@ impl Context {
         let result = self.handle_method(method, json);
         match result {
             Ok(response) => {
-                let json_bytes = serde_json::to_vec(&response)
-                    .unwrap_or_else(|e| {
-                        format!(r#"{{"code":500,"success":false,"message":"serialization error: {e}"}}"#).into_bytes()
-                    });
-                JsonResponse {
-                    status_code: response.code as i32,
-                    response_json: json_bytes,
-                }
+                let json_bytes = serde_json::to_vec(&response).unwrap_or_else(|e| {
+                    format!(
+                        r#"{{"code":500,"success":false,"message":"serialization error: {e}"}}"#
+                    )
+                    .into_bytes()
+                });
+                JsonResponse { status_code: response.code as i32, response_json: json_bytes }
             }
             Err(e) => {
                 let status = e.http_status();
@@ -87,14 +75,10 @@ impl Context {
                     data: None,
                     message: Some(e.to_string()),
                 };
-                let json_bytes = serde_json::to_vec(&response)
-                    .unwrap_or_else(|_| {
-                        format!(r#"{{"code":{status},"success":false,"message":"error"}}"#).into_bytes()
-                    });
-                JsonResponse {
-                    status_code: status as i32,
-                    response_json: json_bytes,
-                }
+                let json_bytes = serde_json::to_vec(&response).unwrap_or_else(|_| {
+                    format!(r#"{{"code":{status},"success":false,"message":"error"}}"#).into_bytes()
+                });
+                JsonResponse { status_code: status as i32, response_json: json_bytes }
             }
         }
     }
@@ -104,24 +88,24 @@ impl Context {
             "v2/build" | "v1/build" => self.handle_build(json),
             "v2/execute" | "v1/execute" => self.handle_execute(json),
             "v2/get_image_info" | "v1/get_image_info" => self.handle_get_image_info(json),
-            "v2/get_version_info" | "v1/get_version_info" => {
-                Ok(Response {
-                    code: 200,
-                    success: true,
-                    data: Some(ResponseData::VersionInfo(VersionInfo {
-                        version: env!("CARGO_PKG_VERSION").to_string(),
-                        git_commit: None,
-                        codecs: vec![
-                            "jpeg".into(), "png".into(), "webp".into(),
-                            "gif".into(), "avif".into(), "jxl".into(),
-                        ],
-                    })),
-                    message: None,
-                })
-            }
-            _ => Err(FlowError::InvalidPipeline(format!(
-                "unknown method: {method}"
-            ))),
+            "v2/get_version_info" | "v1/get_version_info" => Ok(Response {
+                code: 200,
+                success: true,
+                data: Some(ResponseData::VersionInfo(VersionInfo {
+                    version: env!("CARGO_PKG_VERSION").to_string(),
+                    git_commit: None,
+                    codecs: vec![
+                        "jpeg".into(),
+                        "png".into(),
+                        "webp".into(),
+                        "gif".into(),
+                        "avif".into(),
+                        "jxl".into(),
+                    ],
+                })),
+                message: None,
+            }),
+            _ => Err(FlowError::InvalidPipeline(format!("unknown method: {method}"))),
         }
     }
 
@@ -130,9 +114,8 @@ impl Context {
 
         // Set up I/O from the request
         {
-            let mut inner = self.inner.write().map_err(|_| {
-                FlowError::Internal("lock poisoned".into())
-            })?;
+            let mut inner =
+                self.inner.write().map_err(|_| FlowError::Internal("lock poisoned".into()))?;
             for io_obj in &request.io {
                 match io_obj.direction {
                     imageflow_types::IoDirection::In => {
@@ -148,9 +131,8 @@ impl Context {
 
         // Execute the pipeline
         let result = {
-            let mut inner = self.inner.write().map_err(|_| {
-                FlowError::Internal("lock poisoned".into())
-            })?;
+            let mut inner =
+                self.inner.write().map_err(|_| FlowError::Internal("lock poisoned".into()))?;
             pipeline::execute(&mut inner.io, &request.pipeline, &request.security)?
         };
 
@@ -166,9 +148,8 @@ impl Context {
         let request: ExecuteRequest = serde_json::from_slice(json)?;
 
         let result = {
-            let mut inner = self.inner.write().map_err(|_| {
-                FlowError::Internal("lock poisoned".into())
-            })?;
+            let mut inner =
+                self.inner.write().map_err(|_| FlowError::Internal("lock poisoned".into()))?;
             pipeline::execute(&mut inner.io, &request.pipeline, &request.security)?
         };
 
@@ -187,9 +168,7 @@ impl Context {
         }
         let req: InfoRequest = serde_json::from_slice(json)?;
 
-        let inner = self.inner.read().map_err(|_| {
-            FlowError::Internal("lock poisoned".into())
-        })?;
+        let inner = self.inner.read().map_err(|_| FlowError::Internal("lock poisoned".into()))?;
         let data = inner.io.get_input(req.io_id)?;
 
         let info = pipeline::probe_image(data)?;
@@ -220,15 +199,12 @@ fn resolve_io_data(io: &imageflow_types::IoEnum) -> Result<Vec<u8>, FlowError> {
                 .map_err(|e| FlowError::InvalidPipeline(format!("invalid base64: {e}")))
         }
         imageflow_types::IoEnum::BytesHex(hex) => {
-            let bytes: Result<Vec<u8>, _> = (0..hex.len())
-                .step_by(2)
-                .map(|i| u8::from_str_radix(&hex[i..i + 2], 16))
-                .collect();
+            let bytes: Result<Vec<u8>, _> =
+                (0..hex.len()).step_by(2).map(|i| u8::from_str_radix(&hex[i..i + 2], 16)).collect();
             bytes.map_err(|e| FlowError::InvalidPipeline(format!("invalid hex: {e}")))
         }
         imageflow_types::IoEnum::Filename(path) => {
-            std::fs::read(path)
-                .map_err(|e| FlowError::Codec(format!("failed to read {path}: {e}")))
+            std::fs::read(path).map_err(|e| FlowError::Codec(format!("failed to read {path}: {e}")))
         }
         imageflow_types::IoEnum::Placeholder => {
             Err(FlowError::InvalidPipeline("placeholder I/O not replaced before execution".into()))

@@ -626,21 +626,18 @@ fn webp_quality_sweep() {
         })
         .unwrap_or_else(|e| panic!("WebP quality={q} failed: {e}"));
         let output = ctx.take_output_buffer(1).unwrap();
-        assert!(
-            output.starts_with(b"RIFF"),
-            "WebP quality={q}: output doesn't have RIFF magic"
-        );
+        assert!(output.starts_with(b"RIFF"), "WebP quality={q}: output doesn't have RIFF magic");
     }
 }
 
 #[test]
 fn jxl_distance_sweep() {
     test_init();
-    let input_bytes =
-        get_url_bytes_with_retry(FRYMIRE_PNG).expect("failed to fetch frymire.png");
+    let input_bytes = get_url_bytes_with_retry(FRYMIRE_PNG).expect("failed to fetch frymire.png");
 
     for d in [0.0f32, 0.5, 1.0, 2.0, 4.0, 8.0] {
-        let preset = if d == 0.0 { jxl_lossless() } else { EncoderPreset::JxlLossy { distance: d } };
+        let preset =
+            if d == 0.0 { jxl_lossless() } else { EncoderPreset::JxlLossy { distance: d } };
         let steps = vec![
             Node::Decode { io_id: 0, commands: None },
             Node::Constrain(Constraint {

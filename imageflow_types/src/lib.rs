@@ -559,21 +559,40 @@ pub struct CommandStringStep {
 #[serde(untagged)]
 pub enum Color {
     Hex(String),
-    Srgb { r: u8, g: u8, b: u8, #[serde(default = "default_255")] a: u8 },
+    Srgb {
+        r: u8,
+        g: u8,
+        b: u8,
+        #[serde(default = "default_255")]
+        a: u8,
+    },
 }
 
 impl Color {
-    pub fn transparent() -> Self { Color::Srgb { r: 0, g: 0, b: 0, a: 0 } }
-    pub fn white() -> Self { Color::Srgb { r: 255, g: 255, b: 255, a: 255 } }
-    pub fn black() -> Self { Color::Srgb { r: 0, g: 0, b: 0, a: 255 } }
+    pub fn transparent() -> Self {
+        Color::Srgb { r: 0, g: 0, b: 0, a: 0 }
+    }
+    pub fn white() -> Self {
+        Color::Srgb { r: 255, g: 255, b: 255, a: 255 }
+    }
+    pub fn black() -> Self {
+        Color::Srgb { r: 0, g: 0, b: 0, a: 255 }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Gravity {
-    TopLeft, Top, TopRight,
-    Left, #[default] Center, Right,
-    BottomLeft, Bottom, BottomRight,
+    TopLeft,
+    Top,
+    TopRight,
+    Left,
+    #[default]
+    Center,
+    Right,
+    BottomLeft,
+    Bottom,
+    BottomRight,
 }
 
 // ─── Security ──────────────────────────────────────────────────────────
@@ -691,10 +710,18 @@ pub mod endpoints {
 
 // ─── Defaults ──────────────────────────────────────────────────────────
 
-fn default_true() -> bool { true }
-fn default_one() -> f32 { 1.0 }
-fn default_sharpen() -> f32 { 15.0 }
-fn default_255() -> u8 { 255 }
+fn default_true() -> bool {
+    true
+}
+fn default_one() -> f32 {
+    1.0
+}
+fn default_sharpen() -> f32 {
+    15.0
+}
+fn default_255() -> u8 {
+    255
+}
 
 // ─── Tests ─────────────────────────────────────────────────────────────
 
@@ -706,24 +733,11 @@ mod tests {
     fn roundtrip_basic_pipeline() {
         let req = BuildRequest {
             io: vec![
-                IoObject {
-                    io_id: 0,
-                    direction: IoDirection::In,
-                    io: IoEnum::Placeholder,
-                },
-                IoObject {
-                    io_id: 1,
-                    direction: IoDirection::Out,
-                    io: IoEnum::OutputBuffer,
-                },
+                IoObject { io_id: 0, direction: IoDirection::In, io: IoEnum::Placeholder },
+                IoObject { io_id: 1, direction: IoDirection::Out, io: IoEnum::OutputBuffer },
             ],
             pipeline: vec![
-                Step::Decode(DecodeStep {
-                    io_id: 0,
-                    color: None,
-                    hints: None,
-                    ultrahdr: None,
-                }),
+                Step::Decode(DecodeStep { io_id: 0, color: None, hints: None, ultrahdr: None }),
                 Step::Constrain(ConstrainStep {
                     mode: ConstraintMode::Fit,
                     w: Some(800),
@@ -753,8 +767,13 @@ mod tests {
     #[test]
     fn quality_target_variants() {
         let cases: Vec<(&str, fn(&QualityTarget) -> bool)> = vec![
-            (r#"{"quality": 85.0}"#, |q| matches!(q, QualityTarget::Quality(v) if (*v - 85.0).abs() < 0.01)),
-            (r#"{"match_source": {"shrink_guarantee": true}}"#, |q| matches!(q, QualityTarget::MatchSource { shrink_guarantee: true, .. })),
+            (
+                r#"{"quality": 85.0}"#,
+                |q| matches!(q, QualityTarget::Quality(v) if (*v - 85.0).abs() < 0.01),
+            ),
+            (r#"{"match_source": {"shrink_guarantee": true}}"#, |q| {
+                matches!(q, QualityTarget::MatchSource { shrink_guarantee: true, .. })
+            }),
             (r#"{"butteraugli": 1.5}"#, |q| matches!(q, QualityTarget::Butteraugli(_))),
             (r#""lossless""#, |q| matches!(q, QualityTarget::Lossless)),
         ];

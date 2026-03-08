@@ -30,9 +30,7 @@ pub struct ImageflowJsonResponse {
 
 impl ImageflowContext {
     fn new() -> Self {
-        Self {
-            inner: Arc::new(Context::new()),
-        }
+        Self { inner: Arc::new(Context::new()) }
     }
 }
 
@@ -46,32 +44,23 @@ impl ImageflowContext {
 
     /// Add an input buffer.
     pub fn add_input_buffer(&self, io_id: i32, data: &[u8]) -> Result<(), String> {
-        self.inner
-            .add_input_buffer(io_id, data)
-            .map_err(|e| e.to_string())
+        self.inner.add_input_buffer(io_id, data).map_err(|e| e.to_string())
     }
 
     /// Add an output buffer slot.
     pub fn add_output_buffer(&self, io_id: i32) -> Result<(), String> {
-        self.inner
-            .add_output_buffer(io_id)
-            .map_err(|e| e.to_string())
+        self.inner.add_output_buffer(io_id).map_err(|e| e.to_string())
     }
 
     /// Get the output buffer for a given io_id.
     pub fn get_output_buffer(&self, io_id: i32) -> Result<Vec<u8>, String> {
-        self.inner
-            .get_output_buffer(io_id)
-            .map_err(|e| e.to_string())
+        self.inner.get_output_buffer(io_id).map_err(|e| e.to_string())
     }
 
     /// Send a JSON message and get a JSON response.
     pub fn send_json(&self, method: &str, json: &[u8]) -> ImageflowJsonResponse {
         let resp = self.inner.send_json(method, json);
-        ImageflowJsonResponse {
-            status_code: resp.status_code,
-            json: resp.response_json,
-        }
+        ImageflowJsonResponse { status_code: resp.status_code, json: resp.response_json }
     }
 
     /// ABI version compatibility check.

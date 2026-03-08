@@ -25,18 +25,12 @@ pub use imageflow_types as types;
 /// ]).unwrap();
 /// std::fs::write("output.jpg", output).unwrap();
 /// ```
-pub fn process(
-    input: &[u8],
-    steps: &[imageflow_types::Step],
-) -> Result<Vec<u8>, FlowError> {
+pub fn process(input: &[u8], steps: &[imageflow_types::Step]) -> Result<Vec<u8>, FlowError> {
     let ctx = Context::new();
     ctx.add_input_buffer(0, input)?;
     ctx.add_output_buffer(1)?;
 
-    let request = imageflow_types::ExecuteRequest {
-        pipeline: steps.to_vec(),
-        security: None,
-    };
+    let request = imageflow_types::ExecuteRequest { pipeline: steps.to_vec(), security: None };
 
     let json = serde_json::to_vec(&request)
         .map_err(|e| FlowError::Internal(format!("serialize request: {e}")))?;
