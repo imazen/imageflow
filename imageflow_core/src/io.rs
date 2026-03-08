@@ -1,245 +1,110 @@
-use crate::for_other_imageflow_crates::preludes::external_without_std::*;
-use crate::internal_prelude::external::std::io::SeekFrom;
-use crate::internal_prelude::external_without_std::io::{BufReader, Cursor};
-use crate::{ffi, FlowError};
-use crate::{Context, ErrorKind, JsonResponse, Result};
-use imageflow_types::collections::AddRemoveSet;
-use imageflow_types::IoDirection;
-use std::rc::Rc;
-use uuid::Uuid;
+//! I/O proxy — manages input/output buffers for the pipeline.
 
-enum IoBackend {
-    ReadSlice(Cursor<&'static [u8]>),
-    ReadVec(Cursor<Vec<u8>>),
-    WriteVec(Cursor<Vec<u8>>),
-    ReadFile(BufReader<File>),
-    WriteFile(BufWriter<File>),
-}
-impl IoBackend {
-    pub fn get_write(&mut self) -> Option<&mut dyn Write> {
-        match self {
-            IoBackend::WriteVec(w) => Some(w),
-            IoBackend::WriteFile(w) => Some(w),
-            _ => None,
-        }
-    }
-    pub fn get_read(&mut self) -> Option<&mut dyn Read> {
-        match self {
-            IoBackend::ReadSlice(w) => Some(w),
-            IoBackend::ReadVec(w) => Some(w),
-            IoBackend::ReadFile(w) => Some(w),
-            _ => None,
-        }
-    }
-    pub fn get_buf_read(&mut self) -> Option<&mut dyn io::BufRead> {
-        match self {
-            IoBackend::ReadSlice(w) => Some(w),
-            IoBackend::ReadVec(w) => Some(w),
-            IoBackend::ReadFile(w) => Some(w),
-            _ => None,
-        }
-    }
-    pub fn get_seek(&mut self) -> Option<&mut dyn Seek> {
-        match self {
-            IoBackend::ReadSlice(w) => Some(w),
-            IoBackend::ReadVec(w) => Some(w),
-            IoBackend::ReadFile(w) => Some(w),
-            _ => None,
-        }
-    }
+use crate::error::FlowError;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+pub use imageflow_types::IoDirection;
+
+/// Manages I/O buffers referenced by io_id in the pipeline.
+#[derive(Default)]
+pub struct IoStore {
+    objects: HashMap<i32, IoProxy>,
 }
 
-/// A safer proxy over the C IO object.
-/// Implements Read/Write
-pub struct IoProxy {
-    io_id: i32,
-    path: Option<PathBuf>,
-    backend: IoBackend,
-}
-
-impl io::Read for IoProxy {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.backend.get_read().expect("cannot read from writer").read(buf)
-    }
-}
-impl io::Seek for IoProxy {
-    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
-        self.backend.get_seek().expect("cannot read from writer").seek(pos)
-    }
-}
-impl io::BufRead for IoProxy {
-    fn fill_buf(&mut self) -> io::Result<&[u8]> {
-        self.backend.get_buf_read().expect("cannot read from writer").fill_buf()
-    }
-    fn consume(&mut self, amt: usize) {
-        self.backend.get_buf_read().expect("cannot read from writer").consume(amt)
-    }
-}
-impl io::Write for IoProxy {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.backend.get_write().expect("cannot write from reader").write(buf)
-    }
-    fn flush(&mut self) -> io::Result<()> {
-        self.backend.get_write().expect("cannot write from reader").flush()
-    }
-}
-
-/// Allows access to Write trait through an Rc<RefCell<>>
-pub struct IoProxyProxy(pub Rc<RefCell<IoProxy>>);
-impl Write for IoProxyProxy {
-    fn write(&mut self, buf: &[u8]) -> ::std::io::Result<usize> {
-        self.0.borrow_mut().write(buf)
+impl IoStore {
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    fn flush(&mut self) -> ::std::io::Result<()> {
-        self.0.borrow_mut().flush()
-    }
-}
-
-impl IoProxy {
-    pub fn io_id(&self) -> i32 {
-        self.io_id
-    }
-    pub fn try_get_length(&mut self) -> Option<u64> {
-        match &self.backend {
-            IoBackend::ReadVec(v) => Some(v.get_ref().len() as u64),
-            IoBackend::ReadSlice(v) => Some(v.get_ref().len() as u64),
-            IoBackend::ReadFile(v) => v.get_ref().metadata().map(|m| m.len()).ok(),
-            _ => None,
-        }
-    }
-
-    pub fn try_get_position(&mut self) -> Option<u64> {
-        match &self.backend {
-            IoBackend::ReadVec(v) => Some(v.position()),
-            IoBackend::ReadSlice(v) => Some(v.position()),
-            IoBackend::ReadFile(v) => v.get_ref().stream_position().ok(),
-            _ => None,
-        }
-    }
-
-    pub fn read_exact(&mut self, buf: &mut [u8]) -> std::io::Result<()> {
-        self.backend.get_read().expect("cannot read from writer").read_exact(buf)
-    }
-
-    pub fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.backend.get_read().expect("cannot read from writer").read(buf)
-    }
-
-    pub fn read_maximally(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let mut total_read = 0;
-        while total_read < buf.len() {
-            let read = self.read(&mut buf[total_read..])?;
-            if read == 0 {
-                break;
-            }
-            total_read += read;
-        }
-        Ok(total_read)
-    }
-
-    pub fn read_file(context: &Context, filename: PathBuf, io_id: i32) -> Result<IoProxy> {
-        IoProxy::file_with_mode(context, io_id, filename, IoDirection::In)
-    }
-    pub fn write_file(context: &Context, filename: PathBuf, io_id: i32) -> Result<IoProxy> {
-        IoProxy::file_with_mode(context, io_id, filename, IoDirection::Out)
-    }
-
-    fn check_io_id(context: &Context, io_id: i32) -> Result<()> {
-        if context.io_id_present(io_id) {
-            Err(nerror!(
-                ErrorKind::DuplicateIoId,
-                "io_id {} is already in use on this context",
-                io_id
-            ))
-        } else {
-            Ok(())
-        }
-    }
-
-    /// Creates a zero-copy IoProxy that reads from a borrowed byte slice.
-    /// The `'static` lifetime means the caller must guarantee the bytes
-    /// outlive the IoProxy (and any Context it is added to).
-    /// In practice, the caller (imageflow_abi) uses transmute to erase
-    /// the real lifetime before calling this.
-    pub fn read_slice(context: &Context, io_id: i32, bytes: &'static [u8]) -> Result<IoProxy> {
-        IoProxy::check_io_id(context, io_id)?;
-
-        Ok(IoProxy { path: None, io_id, backend: IoBackend::ReadSlice(Cursor::new(bytes)) })
-    }
-
-    /// Consume this IoProxy and return the output buffer as an owned `Vec<u8>`.
-    /// Only works on `WriteVec`-backed proxies (output buffers).
-    pub fn into_output_vec(self) -> Result<Vec<u8>> {
-        match self.backend {
-            IoBackend::WriteVec(cursor) => Ok(cursor.into_inner()),
-            _ => Err(nerror!(
-                ErrorKind::InvalidOperation,
-                "into_output_vec only works on output buffers"
-            )),
-        }
-    }
-
-    /// Return a raw pointer and length to the output buffer contents.
-    /// The pointer is valid as long as this `IoProxy` is alive and not mutated.
-    /// Only works on `WriteVec`-backed proxies (output buffers).
-    pub fn output_buffer_raw_parts(&self) -> Result<(*const u8, usize)> {
-        match &self.backend {
-            IoBackend::WriteVec(v) => {
-                let slice = v.get_ref().as_slice();
-                Ok((slice.as_ptr(), slice.len()))
-            }
-            _ => Err(nerror!(
-                ErrorKind::InvalidOperation,
-                "output_buffer_raw_parts only works on output buffers"
-            )),
-        }
-    }
-
-    pub fn create_output_buffer(context: &Context, io_id: i32) -> Result<IoProxy> {
-        IoProxy::check_io_id(context, io_id)?;
-        Ok(IoProxy { path: None, io_id, backend: IoBackend::WriteVec(Cursor::new(Vec::new())) })
-    }
-
-    pub fn read_vec(context: &Context, io_id: i32, bytes: Vec<u8>) -> Result<IoProxy> {
-        IoProxy::check_io_id(context, io_id)?;
-
-        Ok(IoProxy { path: None, io_id, backend: IoBackend::ReadVec(Cursor::new(bytes)) })
-    }
-
-    pub fn copy_slice(context: &Context, io_id: i32, bytes: &[u8]) -> Result<IoProxy> {
-        IoProxy::check_io_id(context, io_id)?;
-
-        Ok(IoProxy {
-            path: None,
+    /// Add an input buffer.
+    pub fn add_input(&mut self, io_id: i32, data: Arc<[u8]>) {
+        self.objects.insert(
             io_id,
-            backend: IoBackend::ReadVec(Cursor::new(Vec::from(bytes))),
-        })
+            IoProxy {
+                direction: IoDirection::In,
+                data: IoData::Input(data),
+            },
+        );
     }
 
-    pub fn file_with_mode<T: AsRef<Path>>(
-        context: &Context,
-        io_id: i32,
-        path: T,
-        direction: IoDirection,
-    ) -> Result<IoProxy> {
-        IoProxy::check_io_id(context, io_id)?;
-
-        let backend = match direction {
-            IoDirection::In => {
-                let file = File::open(path.as_ref()).map_err(FlowError::from_decoder)?;
-                IoBackend::ReadFile(BufReader::new(file))
-            }
-            IoDirection::Out => {
-                let file = OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .truncate(true)
-                    .open(path.as_ref())
-                    .map_err(FlowError::from_encoder)?;
-                IoBackend::WriteFile(BufWriter::new(file))
-            }
-        };
-        Ok(IoProxy { path: Some(path.as_ref().to_owned()), io_id, backend })
+    /// Add an output buffer slot.
+    pub fn add_output(&mut self, io_id: i32) {
+        self.objects.insert(
+            io_id,
+            IoProxy {
+                direction: IoDirection::Out,
+                data: IoData::Output(Vec::new()),
+            },
+        );
     }
+
+    /// Get an input buffer by io_id.
+    pub fn get_input(&self, io_id: i32) -> Result<&[u8], FlowError> {
+        match self.objects.get(&io_id) {
+            Some(IoProxy {
+                data: IoData::Input(data),
+                ..
+            }) => Ok(data),
+            Some(_) => Err(FlowError::InvalidPipeline(format!(
+                "io_id {io_id} is not an input"
+            ))),
+            None => Err(FlowError::IoNotFound(io_id)),
+        }
+    }
+
+    /// Write to an output buffer.
+    pub fn write_output(&mut self, io_id: i32, data: Vec<u8>) -> Result<(), FlowError> {
+        match self.objects.get_mut(&io_id) {
+            Some(IoProxy {
+                data: IoData::Output(buf),
+                ..
+            }) => {
+                *buf = data;
+                Ok(())
+            }
+            Some(_) => Err(FlowError::InvalidPipeline(format!(
+                "io_id {io_id} is not an output"
+            ))),
+            None => Err(FlowError::IoNotFound(io_id)),
+        }
+    }
+
+    /// Get the output buffer by io_id.
+    pub fn get_output(&self, io_id: i32) -> Result<&[u8], FlowError> {
+        match self.objects.get(&io_id) {
+            Some(IoProxy {
+                data: IoData::Output(buf),
+                ..
+            }) => Ok(buf),
+            Some(_) => Err(FlowError::InvalidPipeline(format!(
+                "io_id {io_id} is not an output"
+            ))),
+            None => Err(FlowError::IoNotFound(io_id)),
+        }
+    }
+
+    /// Take ownership of the output buffer.
+    pub fn take_output(&mut self, io_id: i32) -> Result<Vec<u8>, FlowError> {
+        match self.objects.get_mut(&io_id) {
+            Some(IoProxy {
+                data: IoData::Output(buf),
+                ..
+            }) => Ok(std::mem::take(buf)),
+            Some(_) => Err(FlowError::InvalidPipeline(format!(
+                "io_id {io_id} is not an output"
+            ))),
+            None => Err(FlowError::IoNotFound(io_id)),
+        }
+    }
+}
+
+pub struct IoProxy {
+    pub direction: IoDirection,
+    pub data: IoData,
+}
+
+pub enum IoData {
+    Input(Arc<[u8]>),
+    Output(Vec<u8>),
 }

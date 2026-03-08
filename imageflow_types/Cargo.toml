@@ -1,35 +1,15 @@
 [package]
 name = "imageflow_types"
-version = "0.1.0"
-authors = ["Lilith River <lilith@imazen.io>"]
-workspace = "../"
-build = "build.rs"
-edition = "2021"
+version = "4.0.0-alpha.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "JSON API schema types for imageflow 4"
 
 [lib]
-name="imageflow_types"
 doctest = false
 
 [dependencies]
-serde = "1"
-serde_json = "1"
-serde_derive = "1"
-lazy_static = "1"
-regex-lite = { version = "0.1.6" }
-imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
-append_only_set = { path = "../append_only_set" }
-chrono = "0.4"
-imgref = "1.10"
-rgb = "0.8"
-schemars = { version = "1", features = ["derive"], optional = true }
-utoipa = { version = "5.3.1", features = [], optional = true }
-
-[build-dependencies]
-quick-error = "2"
-chrono = "0.4"
-rayon = "1"
-
-[features]
-json-schema = ["dep:schemars"]
-schema-export = ["dep:utoipa"]
-
+serde = { workspace = true }
+serde_json = { workspace = true }
