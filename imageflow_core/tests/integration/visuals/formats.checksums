@@ -1,0 +1,157 @@
+# formats.checksums — v1
+
+## cmyk_jpeg_to_jxl cmyk_to_jxl_200x200
+tolerance zensim:90 (dissim 0.10)
+~ cozy-dew-d27fb45096:sea  x86_64-avx512  @41573149  new-baseline
+
+## cmyk_jpeg_to_webp cmyk_to_webp_200x200
+~ damp-ember-1a93a98e4f:sea  x86_64-avx512  @41573149  new-baseline
+~ damp-ember-1a93a98e4f:sea  x86_64-avx512  @41573149  new-baseline
+
+## cmyk_jpeg_to_png cmyk_to_png_200x200
+tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
+~ dire-chip-d9c593c58f:sea  x86_64-avx512  @41573149  new-baseline
+
+## gif_to_jpeg 300x300_jpeg_q80
+tolerance zensim:95 (dissim 0.05)
+~ happy-robin-3c4d2c8713:sea  x86_64-avx512  @41573149  new-baseline
+
+## gif_to_jxl_lossy 300x300_jxl_d1
+tolerance zensim:95 (dissim 0.05)
+~ lean-ring-b6b19cfdeb:sea  x86_64-avx512  @41573149  new-baseline
+
+## gif_to_png 300x300_png32
+tolerance zensim:99 (dissim 0.01)
+~ fixed-moon-d039a13fd5:sea  x86_64-avx512  @41573149  new-baseline
+
+## gif_to_webp_lossless 300x300_webp_ll
+tolerance zensim:99 (dissim 0.01)
+~ lined-gem-f5aa7f0521:sea  x86_64-avx512  @41573149  new-baseline
+
+## jpeg_to_avif 300x300_avif
+tolerance zensim:45 (dissim 0.55)
+~ avid-rain-21e3d8ee99:sea  x86_64-avx512  @41573149  new-baseline
+
+## jpeg_to_gif 300x300_gif
+tolerance zensim:50 (dissim 0.50)
+~ level-fig-54c38af0ad:sea  x86_64-avx512  @41573149  new-baseline
+
+## jpeg_to_jpeg 300x300_q80
+tolerance zensim:95 (dissim 0.05)
+~ swift-kelp-0f49a7a558:sea  x86_64-avx512  @41573149  new-baseline
+
+## jpeg_to_jxl_lossless 300x300_jxl_ll
+tolerance zensim:99 (dissim 0.01)
+~ same-loom-d6388ef241:sea  x86_64-avx512  @41573149  new-baseline
+
+## jpeg_to_jxl_lossy 300x300_jxl_d1
+tolerance zensim:95 (dissim 0.05)
+~ fast-dock-4af2a6c0f6:sea  x86_64-avx512  @41573149  new-baseline
+
+## jpeg_to_png 300x300_png32
+tolerance zensim:99 (dissim 0.01)
+~ pale-ram-b1842482fd:sea  x86_64-avx512  @41573149  new-baseline
+
+## jpeg_to_webp_lossless 300x300_webp_ll
+tolerance zensim:99 (dissim 0.01)
+~ glad-box-29d423e497:sea  x86_64-avx512  @41573149  new-baseline
+
+## jpeg_to_webp_lossy 300x300_webp_q80
+tolerance zensim:95 (dissim 0.05)
+~ crisp-frog-38c80bab06:sea  x86_64-avx512  @41573149  new-baseline
+
+## passthrough_jxl_lossless passthrough_jxl_ll
+tolerance zensim:99 (dissim 0.01)
+~ fixed-mint-9aecf41145:sea  x86_64-avx512  @41573149  new-baseline
+
+## passthrough_png_lossless passthrough_png32
+tolerance identical
+~ eager-mouse-8f2a157699:sea  x86_64-avx512  @41573149  new-baseline
+
+## passthrough_webp_lossless passthrough_webp_ll
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ cross-gull-69a853e8b7:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_alpha_to_gif 200x200_gif
+tolerance zensim:50 (dissim 0.50)
+~ foggy-oat-7422b95d5d:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_alpha_to_jpeg 200x200_jpeg_q90
+tolerance zensim:95 (dissim 0.05)
+~ odd-slate-edf551a32c:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_alpha_to_png 200x200_png32
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ fond-glow-92818b6e58:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_alpha_to_webp_lossless 200x200_webp_ll
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ fizzy-bud-b1b9323fc0:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_alpha_to_webp_lossy 200x200_webp_q80
+tolerance zensim:90 (dissim 0.10)
+~ aged-boot-f204fac4e3:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_to_avif 400x400_avif
+tolerance zensim:45 (dissim 0.55)
+~ oval-ivy-4cb6f4486e:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_to_gif 400x400_gif
+tolerance zensim:50 (dissim 0.50)
+~ cute-cape-6a35e362f0:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_to_jpeg 400x400_q80
+tolerance zensim:95 (dissim 0.05)
+~ quiet-dust-043020baa5:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_to_jxl_lossless 400x400_jxl_ll
+tolerance zensim:99 (dissim 0.01)
+~ south-bloom-47c27a0d29:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_to_jxl_lossy 400x400_jxl_d1
+tolerance zensim:95 (dissim 0.05)
+~ plain-jade-753843f928:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_to_png 400x400_png32
+tolerance zensim:99 (dissim 0.01)
+~ famed-lion-3f427e7a3c:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_to_webp_lossless 400x400_webp_ll
+tolerance zensim:99 (dissim 0.01)
+~ brown-river-9d67a5ba87:sea  x86_64-avx512  @41573149  new-baseline
+
+## png_to_webp_lossy 400x400_webp_q80
+tolerance zensim:95 (dissim 0.05)
+~ born-eel-212ffaad68:sea  x86_64-avx512  @41573149  new-baseline
+
+## webp_lossless_to_gif 200x200_gif
+tolerance zensim:50 (dissim 0.50)
+~ tidy-tiger-5ce33859c1:sea  x86_64-avx512  @41573149  new-baseline
+
+## webp_lossless_to_jpeg 200x200_jpeg_q80
+tolerance zensim:95 (dissim 0.05)
+~ airy-squid-c0e92b8a70:sea  x86_64-avx512  @41573149  new-baseline
+
+## webp_lossless_to_jxl_lossy 200x200_jxl_d1
+tolerance zensim:95 (dissim 0.05)
+~ swift-mesa-ef43e67dd5:sea  x86_64-avx512  @41573149  new-baseline
+
+## webp_lossless_to_png 200x200_png32
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ iron-goose-d2b38dba40:sea  x86_64-avx512  @41573149  new-baseline
+
+## webp_lossless_to_webp_lossy 200x200_webp_q80
+tolerance zensim:95 (dissim 0.05)
+~ neat-moth-f85e66dbe4:sea  x86_64-avx512  @41573149  new-baseline
+
+## webp_lossy_to_jpeg 300x300_jpeg_q80
+tolerance zensim:95 (dissim 0.05)
+~ firm-sole-aeb7b3b938:sea  x86_64-avx512  @41573149  new-baseline
+
+## webp_lossy_to_jxl_lossy 300x300_jxl_d1
+tolerance zensim:95 (dissim 0.05)
+~ level-raven-6f309543ef:sea  x86_64-avx512  @41573149  new-baseline
+
+## webp_lossy_to_png 300x300_png32
+tolerance zensim:99 (dissim 0.01)
+~ damp-clay-22ccabff02:sea  x86_64-avx512  @41573149  new-baseline
