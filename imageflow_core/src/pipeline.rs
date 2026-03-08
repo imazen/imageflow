@@ -1011,27 +1011,6 @@ fn parse_hex_color(hex: &str) -> rgb::RGBA<u8> {
 
 // ─── Composition (DrawImage / Watermark) ───────────────────────────────
 
-/// Convert RGBA8 sRGB pixels to premultiplied linear f32 for SliceBackground.
-fn rgba8_to_premul_linear_f32(pixels: &PixelBuffer, width: u32, height: u32) -> Vec<f32> {
-    let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
-    let src_bytes = rgba.copy_to_contiguous_bytes();
-    let pixel_count = (width * height) as usize;
-    let f32_count = pixel_count * 4;
-    let mut linear = vec![0.0f32; f32_count];
-
-    // sRGB u8 → linear f32 (alpha channel gets direct u8/255 conversion)
-    linear_srgb::default::srgb_u8_to_linear_rgba_slice(&src_bytes, &mut linear);
-
-    // Premultiply: RGB *= alpha
-    for chunk in linear.chunks_exact_mut(4) {
-        let a = chunk[3];
-        chunk[0] *= a;
-        chunk[1] *= a;
-        chunk[2] *= a;
-    }
-    linear
-}
-
 /// Decode an overlay image from the IO store and return RGBA8 pixels + dimensions.
 fn decode_overlay(io: &IoStore, io_id: i32) -> Result<(PixelBuffer, u32, u32), FlowError> {
     let overlay_data = io.get_input(io_id)?;
@@ -1065,32 +1044,79 @@ fn apply_opacity(pixels: &mut PixelBuffer, width: u32, height: u32, opacity: f32
     *pixels = rgba.erase();
 }
 
-/// Build an IdealLayout via Pipeline::plan(), then patch canvas/placement for compositing.
-///
-/// IdealLayout and Layout are #[non_exhaustive], so we can't construct them directly.
-/// Instead, we use Pipeline to create a valid layout for the overlay resize, then
-/// mutate the canvas/placement fields to position the resized overlay on the main image.
-#[allow(clippy::too_many_arguments)]
-fn build_composite_layout(
-    overlay_w: u32,
-    overlay_h: u32,
-    target_w: u32,
-    target_h: u32,
+/// Extract a sub-rectangle of RGBA8 canvas bytes, convert to premultiplied linear f32.
+/// Out-of-bounds pixels are transparent black.
+fn extract_region_premul_f32(
+    canvas_bytes: &[u8],
     canvas_w: u32,
     canvas_h: u32,
-    place_x: i32,
-    place_y: i32,
-) -> Result<zenlayout::IdealLayout, FlowError> {
-    let constraint =
-        zenlayout::Constraint::new(zenlayout::ConstraintMode::Distort, target_w, target_h);
-    let pipeline = zenlayout::Pipeline::new(overlay_w, overlay_h).constrain(constraint);
-    let (mut ideal, _request) = pipeline.plan().map_err(|e| FlowError::Layout(format!("{e:?}")))?;
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+) -> Vec<f32> {
+    let mut region_bytes = vec![0u8; (w * h * 4) as usize];
+    for row in 0..h {
+        let cy = y + row as i32;
+        if cy < 0 || cy >= canvas_h as i32 {
+            continue;
+        }
+        let cx_start = x.max(0);
+        let cx_end = (x + w as i32).min(canvas_w as i32);
+        if cx_start >= cx_end {
+            continue;
+        }
+        let copy_w = (cx_end - cx_start) as usize;
+        let src_off = (cy as usize * canvas_w as usize + cx_start as usize) * 4;
+        let dst_x = (cx_start - x) as usize;
+        let dst_off = (row as usize * w as usize + dst_x) * 4;
+        region_bytes[dst_off..dst_off + copy_w * 4]
+            .copy_from_slice(&canvas_bytes[src_off..src_off + copy_w * 4]);
+    }
 
-    // Patch for compositing: expand canvas to main image, set placement offset
-    ideal.layout.canvas = zenlayout::Size::new(canvas_w, canvas_h);
-    ideal.layout.placement = (place_x, place_y);
-    ideal.layout.canvas_color = zenlayout::CanvasColor::Transparent;
-    Ok(ideal)
+    let f32_count = (w * h * 4) as usize;
+    let mut linear = vec![0.0f32; f32_count];
+    linear_srgb::default::srgb_u8_to_linear_rgba_slice(&region_bytes, &mut linear);
+
+    // Premultiply: RGB *= alpha
+    for chunk in linear.chunks_exact_mut(4) {
+        let a = chunk[3];
+        chunk[0] *= a;
+        chunk[1] *= a;
+        chunk[2] *= a;
+    }
+    linear
+}
+
+/// Blit an RGBA8 region back into a larger RGBA8 canvas byte buffer.
+/// Clips to canvas bounds.
+fn blit_rgba8_region(
+    canvas: &mut [u8],
+    canvas_w: u32,
+    canvas_h: u32,
+    region: &[u8],
+    region_w: u32,
+    region_h: u32,
+    x: i32,
+    y: i32,
+) {
+    for row in 0..region_h {
+        let cy = y + row as i32;
+        if cy < 0 || cy >= canvas_h as i32 {
+            continue;
+        }
+        let cx_start = x.max(0);
+        let cx_end = (x + region_w as i32).min(canvas_w as i32);
+        if cx_start >= cx_end {
+            continue;
+        }
+        let copy_w = (cx_end - cx_start) as usize;
+        let src_x = (cx_start - x) as usize;
+        let src_off = (row as usize * region_w as usize + src_x) * 4;
+        let dst_off = (cy as usize * canvas_w as usize + cx_start as usize) * 4;
+        canvas[dst_off..dst_off + copy_w * 4]
+            .copy_from_slice(&region[src_off..src_off + copy_w * 4]);
+    }
 }
 
 fn execute_draw_image(
@@ -1104,29 +1130,58 @@ fn execute_draw_image(
 
     let target_w = draw.w.max(1);
     let target_h = draw.h.max(1);
+    let target_size = zenlayout::Size::new(target_w, target_h);
 
-    let ideal = build_composite_layout(
-        overlay_w, overlay_h, target_w, target_h, canvas_w, canvas_h, draw.x, draw.y,
-    )?;
+    // Resize overlay to target dims, canvas = resize_to (no padding → no canvas fill)
+    let plan = zenlayout::LayoutPlan::identity(zenlayout::Size::new(overlay_w, overlay_h))
+        .with_resize_to(target_size)
+        .with_canvas(target_size);
 
-    // Convert canvas to premultiplied linear f32 for SliceBackground
-    let canvas_f32 = rgba8_to_premul_linear_f32(canvas, canvas_w, canvas_h);
-    let background = zenresize::SliceBackground::new(&canvas_f32, canvas_w as usize * 4);
+    // Get canvas as contiguous RGBA8 bytes
+    let rgba: PixelBuffer<rgb::RGBA<u8>> = canvas.to_rgba8();
+    let mut canvas_bytes = rgba.copy_to_contiguous_bytes();
 
-    let rgba: PixelBuffer<rgb::RGBA<u8>> = overlay_pixels.to_rgba8();
-    let overlay_bytes = rgba.copy_to_contiguous_bytes();
+    // Extract overlay target region from canvas as premul f32 background
+    let bg_f32 = extract_region_premul_f32(
+        &canvas_bytes,
+        canvas_w,
+        canvas_h,
+        draw.x,
+        draw.y,
+        target_w,
+        target_h,
+    );
+    let background = zenresize::SliceBackground::new(&bg_f32, target_w as usize * 4);
+
+    let overlay_rgba: PixelBuffer<rgb::RGBA<u8>> = overlay_pixels.to_rgba8();
+    let overlay_bytes = overlay_rgba.copy_to_contiguous_bytes();
     let desc = zenpixels::PixelDescriptor::RGBA8_SRGB;
 
-    let result_bytes = zenresize::execute_with_background(
+    // Resize + composite overlay onto background region
+    let result_bytes = zenresize::execute_layout_with_background(
         &overlay_bytes,
-        &ideal,
+        overlay_w,
+        overlay_h,
+        &plan,
         desc,
         zenresize::Filter::Lanczos,
         background,
     )
     .map_err(|e| FlowError::Layout(format!("draw_image composite failed: {e}")))?;
 
-    let out_buf = zenpixels::PixelBuffer::from_vec(result_bytes, canvas_w, canvas_h, desc)
+    // Blit composited result back into canvas
+    blit_rgba8_region(
+        &mut canvas_bytes,
+        canvas_w,
+        canvas_h,
+        &result_bytes,
+        target_w,
+        target_h,
+        draw.x,
+        draw.y,
+    );
+
+    let out_buf = zenpixels::PixelBuffer::from_vec(canvas_bytes, canvas_w, canvas_h, desc)
         .map_err(|e| FlowError::Layout(format!("buffer creation failed: {e}")))?;
     Ok((out_buf.erase(), canvas_w, canvas_h))
 }
@@ -1160,23 +1215,40 @@ fn execute_watermark(
     let box_w = (box_right as i32 - box_left).max(1) as u32;
     let box_h = (box_bottom as i32 - box_top).max(1) as u32;
 
-    // Fit watermark within the box, maintaining aspect ratio (never upscale)
-    let scale = (box_w as f32 / overlay_w as f32).min(box_h as f32 / overlay_h as f32).min(1.0);
-    let target_w = (overlay_w as f32 * scale).max(1.0) as u32;
-    let target_h = (overlay_h as f32 * scale).max(1.0) as u32;
+    // Delegate aspect-ratio-preserving fit to zenlayout (never upscale)
+    let layout = zenlayout::Constraint::new(zenlayout::ConstraintMode::Within, box_w, box_h)
+        .compute(overlay_w, overlay_h)
+        .map_err(|e| FlowError::Layout(format!("{e:?}")))?;
 
-    // Apply gravity within the fit box
+    let target_w = layout.resize_to.width;
+    let target_h = layout.resize_to.height;
+    let target_size = zenlayout::Size::new(target_w, target_h);
+
+    // Position overlay within fit box using gravity
     let (gx_frac, gy_frac) = gravity_to_fractions(&wm.gravity);
     let place_x = box_left + ((box_w - target_w) as f32 * gx_frac) as i32;
     let place_y = box_top + ((box_h - target_h) as f32 * gy_frac) as i32;
 
-    let ideal = build_composite_layout(
-        overlay_w, overlay_h, target_w, target_h, canvas_w, canvas_h, place_x, place_y,
-    )?;
+    // Resize overlay to target dims, canvas = resize_to (no padding → no canvas fill)
+    let plan = zenlayout::LayoutPlan::identity(zenlayout::Size::new(overlay_w, overlay_h))
+        .with_resize_to(target_size)
+        .with_canvas(target_size);
 
-    // Convert canvas to premultiplied linear f32 for SliceBackground
-    let canvas_f32 = rgba8_to_premul_linear_f32(canvas, canvas_w, canvas_h);
-    let background = zenresize::SliceBackground::new(&canvas_f32, canvas_w as usize * 4);
+    // Get canvas as contiguous RGBA8 bytes
+    let rgba: PixelBuffer<rgb::RGBA<u8>> = canvas.to_rgba8();
+    let mut canvas_bytes = rgba.copy_to_contiguous_bytes();
+
+    // Extract overlay target region from canvas as premul f32 background
+    let bg_f32 = extract_region_premul_f32(
+        &canvas_bytes,
+        canvas_w,
+        canvas_h,
+        place_x,
+        place_y,
+        target_w,
+        target_h,
+    );
+    let background = zenresize::SliceBackground::new(&bg_f32, target_w as usize * 4);
 
     let filter = wm
         .hints
@@ -1185,15 +1257,35 @@ fn execute_watermark(
         .map(map_filter)
         .unwrap_or(zenresize::Filter::Lanczos);
 
-    let rgba: PixelBuffer<rgb::RGBA<u8>> = overlay_pixels.to_rgba8();
-    let overlay_bytes = rgba.copy_to_contiguous_bytes();
+    let overlay_rgba: PixelBuffer<rgb::RGBA<u8>> = overlay_pixels.to_rgba8();
+    let overlay_bytes = overlay_rgba.copy_to_contiguous_bytes();
     let desc = zenpixels::PixelDescriptor::RGBA8_SRGB;
 
-    let result_bytes =
-        zenresize::execute_with_background(&overlay_bytes, &ideal, desc, filter, background)
-            .map_err(|e| FlowError::Layout(format!("watermark composite failed: {e}")))?;
+    // Resize + composite overlay onto background region
+    let result_bytes = zenresize::execute_layout_with_background(
+        &overlay_bytes,
+        overlay_w,
+        overlay_h,
+        &plan,
+        desc,
+        filter,
+        background,
+    )
+    .map_err(|e| FlowError::Layout(format!("watermark composite failed: {e}")))?;
 
-    let out_buf = zenpixels::PixelBuffer::from_vec(result_bytes, canvas_w, canvas_h, desc)
+    // Blit composited result back into canvas
+    blit_rgba8_region(
+        &mut canvas_bytes,
+        canvas_w,
+        canvas_h,
+        &result_bytes,
+        target_w,
+        target_h,
+        place_x,
+        place_y,
+    );
+
+    let out_buf = zenpixels::PixelBuffer::from_vec(canvas_bytes, canvas_w, canvas_h, desc)
         .map_err(|e| FlowError::Layout(format!("buffer creation failed: {e}")))?;
     Ok((out_buf.erase(), canvas_w, canvas_h))
 }
