@@ -1044,39 +1044,13 @@ fn apply_opacity(pixels: &mut PixelBuffer, width: u32, height: u32, opacity: f32
     *pixels = rgba.erase();
 }
 
-/// Extract a sub-rectangle of RGBA8 canvas bytes, convert to premultiplied linear f32.
-/// Out-of-bounds pixels are transparent black.
-fn extract_region_premul_f32(
-    canvas_bytes: &[u8],
-    canvas_w: u32,
-    canvas_h: u32,
-    x: i32,
-    y: i32,
-    w: u32,
-    h: u32,
-) -> Vec<f32> {
-    let mut region_bytes = vec![0u8; (w * h * 4) as usize];
-    for row in 0..h {
-        let cy = y + row as i32;
-        if cy < 0 || cy >= canvas_h as i32 {
-            continue;
-        }
-        let cx_start = x.max(0);
-        let cx_end = (x + w as i32).min(canvas_w as i32);
-        if cx_start >= cx_end {
-            continue;
-        }
-        let copy_w = (cx_end - cx_start) as usize;
-        let src_off = (cy as usize * canvas_w as usize + cx_start as usize) * 4;
-        let dst_x = (cx_start - x) as usize;
-        let dst_off = (row as usize * w as usize + dst_x) * 4;
-        region_bytes[dst_off..dst_off + copy_w * 4]
-            .copy_from_slice(&canvas_bytes[src_off..src_off + copy_w * 4]);
-    }
-
-    let f32_count = (w * h * 4) as usize;
+/// Convert full canvas RGBA8 to premultiplied linear f32 for SliceBackground.
+fn canvas_to_premul_f32(canvas: &PixelBuffer, width: u32, height: u32) -> Vec<f32> {
+    let rgba: PixelBuffer<rgb::RGBA<u8>> = canvas.to_rgba8();
+    let src_bytes = rgba.copy_to_contiguous_bytes();
+    let f32_count = (width * height * 4) as usize;
     let mut linear = vec![0.0f32; f32_count];
-    linear_srgb::default::srgb_u8_to_linear_rgba_slice(&region_bytes, &mut linear);
+    linear_srgb::default::srgb_u8_to_linear_rgba_slice(&src_bytes, &mut linear);
 
     // Premultiply: RGB *= alpha
     for chunk in linear.chunks_exact_mut(4) {
@@ -1086,37 +1060,6 @@ fn extract_region_premul_f32(
         chunk[2] *= a;
     }
     linear
-}
-
-/// Blit an RGBA8 region back into a larger RGBA8 canvas byte buffer.
-/// Clips to canvas bounds.
-fn blit_rgba8_region(
-    canvas: &mut [u8],
-    canvas_w: u32,
-    canvas_h: u32,
-    region: &[u8],
-    region_w: u32,
-    region_h: u32,
-    x: i32,
-    y: i32,
-) {
-    for row in 0..region_h {
-        let cy = y + row as i32;
-        if cy < 0 || cy >= canvas_h as i32 {
-            continue;
-        }
-        let cx_start = x.max(0);
-        let cx_end = (x + region_w as i32).min(canvas_w as i32);
-        if cx_start >= cx_end {
-            continue;
-        }
-        let copy_w = (cx_end - cx_start) as usize;
-        let src_x = (cx_start - x) as usize;
-        let src_off = (row as usize * region_w as usize + src_x) * 4;
-        let dst_off = (cy as usize * canvas_w as usize + cx_start as usize) * 4;
-        canvas[dst_off..dst_off + copy_w * 4]
-            .copy_from_slice(&region[src_off..src_off + copy_w * 4]);
-    }
 }
 
 fn execute_draw_image(
@@ -1130,34 +1073,22 @@ fn execute_draw_image(
 
     let target_w = draw.w.max(1);
     let target_h = draw.h.max(1);
-    let target_size = zenlayout::Size::new(target_w, target_h);
+    let canvas_size = zenlayout::Size::new(canvas_w, canvas_h);
 
-    // Resize overlay to target dims, canvas = resize_to (no padding → no canvas fill)
+    // Resize overlay to target, place at (x, y) on main canvas
     let plan = zenlayout::LayoutPlan::identity(zenlayout::Size::new(overlay_w, overlay_h))
-        .with_resize_to(target_size)
-        .with_canvas(target_size);
+        .with_resize_to(zenlayout::Size::new(target_w, target_h))
+        .with_canvas(canvas_size)
+        .with_placement(draw.x, draw.y);
 
-    // Get canvas as contiguous RGBA8 bytes
-    let rgba: PixelBuffer<rgb::RGBA<u8>> = canvas.to_rgba8();
-    let mut canvas_bytes = rgba.copy_to_contiguous_bytes();
-
-    // Extract overlay target region from canvas as premul f32 background
-    let bg_f32 = extract_region_premul_f32(
-        &canvas_bytes,
-        canvas_w,
-        canvas_h,
-        draw.x,
-        draw.y,
-        target_w,
-        target_h,
-    );
-    let background = zenresize::SliceBackground::new(&bg_f32, target_w as usize * 4);
+    // Canvas-sized background — zenresize handles offset + canvas fill
+    let bg_f32 = canvas_to_premul_f32(canvas, canvas_w, canvas_h);
+    let background = zenresize::SliceBackground::new(&bg_f32, canvas_w as usize * 4);
 
     let overlay_rgba: PixelBuffer<rgb::RGBA<u8>> = overlay_pixels.to_rgba8();
     let overlay_bytes = overlay_rgba.copy_to_contiguous_bytes();
     let desc = zenpixels::PixelDescriptor::RGBA8_SRGB;
 
-    // Resize + composite overlay onto background region
     let result_bytes = zenresize::execute_layout_with_background(
         &overlay_bytes,
         overlay_w,
@@ -1169,19 +1100,7 @@ fn execute_draw_image(
     )
     .map_err(|e| FlowError::Layout(format!("draw_image composite failed: {e}")))?;
 
-    // Blit composited result back into canvas
-    blit_rgba8_region(
-        &mut canvas_bytes,
-        canvas_w,
-        canvas_h,
-        &result_bytes,
-        target_w,
-        target_h,
-        draw.x,
-        draw.y,
-    );
-
-    let out_buf = zenpixels::PixelBuffer::from_vec(canvas_bytes, canvas_w, canvas_h, desc)
+    let out_buf = zenpixels::PixelBuffer::from_vec(result_bytes, canvas_w, canvas_h, desc)
         .map_err(|e| FlowError::Layout(format!("buffer creation failed: {e}")))?;
     Ok((out_buf.erase(), canvas_w, canvas_h))
 }
@@ -1222,33 +1141,22 @@ fn execute_watermark(
 
     let target_w = layout.resize_to.width;
     let target_h = layout.resize_to.height;
-    let target_size = zenlayout::Size::new(target_w, target_h);
+    let canvas_size = zenlayout::Size::new(canvas_w, canvas_h);
 
     // Position overlay within fit box using gravity
     let (gx_frac, gy_frac) = gravity_to_fractions(&wm.gravity);
     let place_x = box_left + ((box_w - target_w) as f32 * gx_frac) as i32;
     let place_y = box_top + ((box_h - target_h) as f32 * gy_frac) as i32;
 
-    // Resize overlay to target dims, canvas = resize_to (no padding → no canvas fill)
+    // Resize overlay to target, place at computed position on main canvas
     let plan = zenlayout::LayoutPlan::identity(zenlayout::Size::new(overlay_w, overlay_h))
-        .with_resize_to(target_size)
-        .with_canvas(target_size);
+        .with_resize_to(zenlayout::Size::new(target_w, target_h))
+        .with_canvas(canvas_size)
+        .with_placement(place_x, place_y);
 
-    // Get canvas as contiguous RGBA8 bytes
-    let rgba: PixelBuffer<rgb::RGBA<u8>> = canvas.to_rgba8();
-    let mut canvas_bytes = rgba.copy_to_contiguous_bytes();
-
-    // Extract overlay target region from canvas as premul f32 background
-    let bg_f32 = extract_region_premul_f32(
-        &canvas_bytes,
-        canvas_w,
-        canvas_h,
-        place_x,
-        place_y,
-        target_w,
-        target_h,
-    );
-    let background = zenresize::SliceBackground::new(&bg_f32, target_w as usize * 4);
+    // Canvas-sized background — zenresize handles offset + canvas fill
+    let bg_f32 = canvas_to_premul_f32(canvas, canvas_w, canvas_h);
+    let background = zenresize::SliceBackground::new(&bg_f32, canvas_w as usize * 4);
 
     let filter = wm
         .hints
@@ -1261,7 +1169,6 @@ fn execute_watermark(
     let overlay_bytes = overlay_rgba.copy_to_contiguous_bytes();
     let desc = zenpixels::PixelDescriptor::RGBA8_SRGB;
 
-    // Resize + composite overlay onto background region
     let result_bytes = zenresize::execute_layout_with_background(
         &overlay_bytes,
         overlay_w,
@@ -1273,19 +1180,7 @@ fn execute_watermark(
     )
     .map_err(|e| FlowError::Layout(format!("watermark composite failed: {e}")))?;
 
-    // Blit composited result back into canvas
-    blit_rgba8_region(
-        &mut canvas_bytes,
-        canvas_w,
-        canvas_h,
-        &result_bytes,
-        target_w,
-        target_h,
-        place_x,
-        place_y,
-    );
-
-    let out_buf = zenpixels::PixelBuffer::from_vec(canvas_bytes, canvas_w, canvas_h, desc)
+    let out_buf = zenpixels::PixelBuffer::from_vec(result_bytes, canvas_w, canvas_h, desc)
         .map_err(|e| FlowError::Layout(format!("buffer creation failed: {e}")))?;
     Ok((out_buf.erase(), canvas_w, canvas_h))
 }
