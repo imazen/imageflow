@@ -1227,6 +1227,102 @@ impl ExecutionSecurity {
             enable_avif_encoding: None,
         }
     }
+
+    // ── Builder methods ────────────────────────────────────────────
+
+    /// Set processing timeout in milliseconds.
+    pub fn with_timeout_ms(mut self, ms: u64) -> Self {
+        self.process_timeout_ms = Some(ms);
+        self
+    }
+
+    /// Use only C codecs (disable all pure-Rust zen codecs).
+    pub fn c_codecs_only(mut self) -> Self {
+        self.use_safe_codecs = Some(false);
+        self.prefer_c_codecs = Some(true);
+        self
+    }
+
+    /// Use only pure-Rust zen codecs (disable all C codecs).
+    pub fn zen_codecs_only(mut self) -> Self {
+        self.use_c_codecs = Some(false);
+        self.prefer_c_codecs = Some(false);
+        self
+    }
+
+    /// Prefer C codecs when both are available for a format.
+    pub fn prefer_c(mut self) -> Self {
+        self.prefer_c_codecs = Some(true);
+        self
+    }
+
+    /// Prefer pure-Rust zen codecs when both are available (the default).
+    pub fn prefer_zen(mut self) -> Self {
+        self.prefer_c_codecs = Some(false);
+        self
+    }
+
+    // ── Group killbits ─────────────────────────────────────────────
+
+    /// Disable all decoding.
+    pub fn disable_all_decoders(mut self) -> Self {
+        self.enable_jpeg_decoding = Some(false);
+        self.enable_png_decoding = Some(false);
+        self.enable_gif_decoding = Some(false);
+        self.enable_webp_decoding = Some(false);
+        self.enable_jxl_decoding = Some(false);
+        self.enable_avif_decoding = Some(false);
+        self.enable_heic_decoding = Some(false);
+        self
+    }
+
+    /// Disable all encoding.
+    pub fn disable_all_encoders(mut self) -> Self {
+        self.enable_jpeg_encoding = Some(false);
+        self.enable_png_encoding = Some(false);
+        self.enable_gif_encoding = Some(false);
+        self.enable_webp_encoding = Some(false);
+        self.enable_jxl_encoding = Some(false);
+        self.enable_avif_encoding = Some(false);
+        self
+    }
+
+    /// Allow only the specified decoder formats. All others are disabled.
+    /// Accepts format name strings: "jpeg", "png", "gif", "webp", "jxl", "avif", "heic".
+    pub fn only_decode_formats(self, formats: &[&str]) -> Self {
+        let mut s = self.disable_all_decoders();
+        for &fmt in formats {
+            match fmt {
+                "jpeg" | "jpg" => s.enable_jpeg_decoding = Some(true),
+                "png" => s.enable_png_decoding = Some(true),
+                "gif" => s.enable_gif_decoding = Some(true),
+                "webp" => s.enable_webp_decoding = Some(true),
+                "jxl" => s.enable_jxl_decoding = Some(true),
+                "avif" => s.enable_avif_decoding = Some(true),
+                "heic" | "heif" => s.enable_heic_decoding = Some(true),
+                _ => {} // unknown formats silently ignored
+            }
+        }
+        s
+    }
+
+    /// Allow only the specified encoder formats. All others are disabled.
+    /// Accepts format name strings: "jpeg", "png", "gif", "webp", "jxl", "avif".
+    pub fn only_encode_formats(self, formats: &[&str]) -> Self {
+        let mut s = self.disable_all_encoders();
+        for &fmt in formats {
+            match fmt {
+                "jpeg" | "jpg" => s.enable_jpeg_encoding = Some(true),
+                "png" => s.enable_png_encoding = Some(true),
+                "gif" => s.enable_gif_encoding = Some(true),
+                "webp" => s.enable_webp_encoding = Some(true),
+                "jxl" => s.enable_jxl_encoding = Some(true),
+                "avif" => s.enable_avif_encoding = Some(true),
+                _ => {} // unknown formats silently ignored
+            }
+        }
+        s
+    }
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
