@@ -269,13 +269,10 @@ fn execute_constrain(
     in_h: u32,
     constrain: &ConstrainStep,
 ) -> Result<(PixelBuffer, u32, u32), FlowError> {
-    // Use zenlayout to compute target dimensions
     let target_w = constrain.w.unwrap_or(in_w);
     let target_h = constrain.h.unwrap_or(in_h);
 
-    let pipeline = zenlayout::Pipeline::new(in_w, in_h);
-
-    // Map our constraint mode to zenlayout
+    // Map constraint mode
     let zl_mode = match constrain.mode {
         ConstraintMode::Fit => zenlayout::ConstraintMode::Fit,
         ConstraintMode::Within => zenlayout::ConstraintMode::Within,
@@ -288,21 +285,33 @@ fn execute_constrain(
         ConstraintMode::AspectCrop => zenlayout::ConstraintMode::AspectCrop,
     };
 
-    let pipeline = pipeline.constrain(zenlayout::Constraint::new(zl_mode, target_w, target_h));
+    // Build constraint with gravity and background
+    let mut zl_constraint = zenlayout::Constraint::new(zl_mode, target_w, target_h);
+    if let Some(gravity) = &constrain.gravity {
+        zl_constraint = zl_constraint.gravity(map_gravity(gravity));
+    }
+    if let Some(bg) = &constrain.background {
+        let c = color_to_rgba(bg);
+        zl_constraint = zl_constraint.canvas_color(zenlayout::CanvasColor::Srgb {
+            r: c.r,
+            g: c.g,
+            b: c.b,
+            a: c.a,
+        });
+    }
 
+    let pipeline = zenlayout::Pipeline::new(in_w, in_h).constrain(zl_constraint);
     let (ideal, _request) = pipeline.plan().map_err(|e| FlowError::Layout(format!("{e:?}")))?;
 
-    let out_w = ideal.layout.resize_to.width;
-    let out_h = ideal.layout.resize_to.height;
+    // Use canvas dimensions — includes padding for FitPad/WithinPad
+    let out_w = ideal.layout.canvas.width;
+    let out_h = ideal.layout.canvas.height;
 
-    if out_w == in_w && out_h == in_h {
-        // No resize needed — clone the buffer
-        // No change needed — return a copy via rgba8 roundtrip
+    if !ideal.layout.needs_resize() && !ideal.layout.needs_crop() && !ideal.layout.needs_padding() {
         let copy: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
         return Ok((copy.erase(), in_w, in_h));
     }
 
-    // Determine resize filter
     let filter = constrain
         .hints
         .as_ref()
@@ -310,26 +319,32 @@ fn execute_constrain(
         .map(map_filter)
         .unwrap_or(zenresize::Filter::Robidoux);
 
-    // Convert to RGBA8 for resize
+    // Convert to RGBA8 contiguous bytes for zenresize::execute
     let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
-    let img_ref = rgba.as_imgref();
+    let src_bytes = rgba.copy_to_contiguous_bytes();
+    let desc = zenpixels::PixelDescriptor::RGBA8_SRGB;
 
-    let config = zenresize::ResizeConfig::builder(in_w, in_h, out_w, out_h)
-        .filter(filter)
-        .format(zenresize::PixelDescriptor::RGBA8_SRGB)
-        .build();
+    // zenresize::execute handles: source_crop → resize → canvas placement → padding
+    let result_bytes = zenresize::execute(&src_bytes, &ideal, desc, filter);
 
-    let output = zenresize::resize_4ch(
-        img_ref,
-        out_w,
-        out_h,
-        zenresize::PixelDescriptor::RGBA8_SRGB,
-        &config,
-    );
-
-    // Convert ImgVec<RGBA<u8>> back to PixelBuffer
-    let out_buf = PixelBuffer::from_imgvec(output);
+    // Wrap result back into PixelBuffer
+    let out_buf = zenpixels::PixelBuffer::from_vec(result_bytes, out_w, out_h, desc)
+        .map_err(|e| FlowError::Layout(format!("buffer creation failed: {e}")))?;
     Ok((out_buf.erase(), out_w, out_h))
+}
+
+fn map_gravity(g: &Gravity) -> zenlayout::Gravity {
+    match g {
+        Gravity::Center => zenlayout::Gravity::Center,
+        Gravity::TopLeft => zenlayout::Gravity::Percentage(0.0, 0.0),
+        Gravity::Top => zenlayout::Gravity::Percentage(0.5, 0.0),
+        Gravity::TopRight => zenlayout::Gravity::Percentage(1.0, 0.0),
+        Gravity::Left => zenlayout::Gravity::Percentage(0.0, 0.5),
+        Gravity::Right => zenlayout::Gravity::Percentage(1.0, 0.5),
+        Gravity::BottomLeft => zenlayout::Gravity::Percentage(0.0, 1.0),
+        Gravity::Bottom => zenlayout::Gravity::Percentage(0.5, 1.0),
+        Gravity::BottomRight => zenlayout::Gravity::Percentage(1.0, 1.0),
+    }
 }
 
 fn map_filter(f: Filter) -> zenresize::Filter {
@@ -376,20 +391,8 @@ fn execute_crop(
     }
 
     let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
-    let src = rgba.as_imgref();
-    let stride = src.stride();
-    let buf = src.buf();
-    let mut out_pixels: Vec<rgb::RGBA<u8>> = Vec::with_capacity((out_w * out_h) as usize);
-
-    for y in y1..y2 {
-        let row_start = y as usize * stride + x1 as usize;
-        let row_end = row_start + out_w as usize;
-        out_pixels.extend_from_slice(&buf[row_start..row_end]);
-    }
-
-    let output = imgref::ImgVec::new(out_pixels, out_w as usize, out_h as usize);
-    let out_buf = PixelBuffer::from_imgvec(output);
-    Ok((out_buf.erase(), out_w, out_h))
+    let cropped = rgba.crop_copy(x1, y1, out_w, out_h);
+    Ok((cropped.erase(), out_w, out_h))
 }
 
 // ─── Flip ──────────────────────────────────────────────────────────────
@@ -1015,31 +1018,22 @@ fn execute_command_string(
     let (ideal, _request) =
         pipeline.plan().map_err(|e| FlowError::Layout(format!("RIAPI layout error: {e:?}")))?;
 
-    let out_w = ideal.layout.resize_to.width;
-    let out_h = ideal.layout.resize_to.height;
+    let out_w = ideal.layout.canvas.width;
+    let out_h = ideal.layout.canvas.height;
 
-    if out_w == in_w && out_h == in_h {
-        // No change needed — return a copy via rgba8 roundtrip
+    if !ideal.layout.needs_resize() && !ideal.layout.needs_crop() && !ideal.layout.needs_padding() {
         let copy: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
         return Ok((copy.erase(), in_w, in_h));
     }
 
-    // Resize with default filter
     let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
-    let config = zenresize::ResizeConfig::builder(in_w, in_h, out_w, out_h)
-        .filter(zenresize::Filter::Robidoux)
-        .format(zenresize::PixelDescriptor::RGBA8_SRGB)
-        .build();
+    let src_bytes = rgba.copy_to_contiguous_bytes();
+    let desc = zenpixels::PixelDescriptor::RGBA8_SRGB;
 
-    let output = zenresize::resize_4ch(
-        rgba.as_imgref(),
-        out_w,
-        out_h,
-        zenresize::PixelDescriptor::RGBA8_SRGB,
-        &config,
-    );
+    let result_bytes = zenresize::execute(&src_bytes, &ideal, desc, zenresize::Filter::Robidoux);
 
-    let out_buf = PixelBuffer::from_imgvec(output);
+    let out_buf = zenpixels::PixelBuffer::from_vec(result_bytes, out_w, out_h, desc)
+        .map_err(|e| FlowError::Layout(format!("buffer creation failed: {e}")))?;
     Ok((out_buf.erase(), out_w, out_h))
 }
 
