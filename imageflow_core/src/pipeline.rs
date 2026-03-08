@@ -10,6 +10,9 @@
 //! 6. Handles JPEG lossless fast paths via zenjpeg
 //! 7. Probes quality via zenjpeg::detect for match_source encoding
 
+// Intentional: .max().min() suppresses NaN; .clamp() propagates it.
+#![allow(clippy::manual_clamp)]
+
 use crate::error::FlowError;
 use crate::io::IoStore;
 use imageflow_types::*;
