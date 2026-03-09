@@ -1181,6 +1181,12 @@ pub enum CodecName {
     ZenavifDecoder,
     /// HEIC/HEIF decoder via heic-decoder (pure Rust)
     ZenheicDecoder,
+    /// BMP decoder via zenbitmaps (pure Rust)
+    ZenbmpDecoder,
+    /// PNM/PAM/PFM decoder via zenbitmaps (pure Rust)
+    ZenpnmDecoder,
+    /// Farbfeld decoder via zenbitmaps (pure Rust)
+    ZenfarbfeldDecoder,
 
     // ── Encoders ──────────────────────────
     /// JPEG encoder via mozjpeg (C library)
@@ -1205,6 +1211,12 @@ pub enum CodecName {
     ZenjxlEncoder,
     /// AVIF encoder via zenavif (pure Rust)
     ZenavifEncoder,
+    /// BMP encoder via zenbitmaps (pure Rust)
+    ZenbmpEncoder,
+    /// PNM/PAM/PFM encoder via zenbitmaps (pure Rust)
+    ZenpnmEncoder,
+    /// Farbfeld encoder via zenbitmaps (pure Rust)
+    ZenfarbfeldEncoder,
 }
 
 impl CodecName {
@@ -1224,6 +1236,9 @@ impl CodecName {
                 | Self::ZenjxlDecoder
                 | Self::ZenavifDecoder
                 | Self::ZenheicDecoder
+                | Self::ZenbmpDecoder
+                | Self::ZenpnmDecoder
+                | Self::ZenfarbfeldDecoder
         )
     }
 
@@ -1260,6 +1275,9 @@ impl CodecName {
             Self::ZenjxlDecoder | Self::ZenjxlEncoder => ImageFormat::Jxl,
             Self::ZenavifDecoder | Self::ZenavifEncoder => ImageFormat::Avif,
             Self::ZenheicDecoder => ImageFormat::Heic,
+            Self::ZenbmpDecoder | Self::ZenbmpEncoder => ImageFormat::Bmp,
+            Self::ZenpnmDecoder | Self::ZenpnmEncoder => ImageFormat::Pnm,
+            Self::ZenfarbfeldDecoder | Self::ZenfarbfeldEncoder => ImageFormat::Farbfeld,
         }
     }
 }
@@ -1276,6 +1294,7 @@ pub enum ImageFormat {
     Webp,
     Bmp,
     Pnm,
+    Farbfeld,
     Jxl,
     Avif,
     Heic,
