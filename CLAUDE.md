@@ -42,18 +42,16 @@ Compositing (DrawImage, Watermark) delegates to `zenresize::execute_layout_with_
 
 ## Premultiply Dedup Status
 
-garb is the canonical SIMD premultiply. Premultiply is channel-order-agnostic (channels 0,1,2 × channel 3), so garb works for both RGBA and BGRA data.
+garb is the canonical SIMD premultiply (channel-order-agnostic). Dedup complete for:
+- imageflow4 `canvas_to_premul_f32` → garb
+- zenimage `graphics/alpha.rs` scalar → garb
+- zenimage `graphics/alpha_simd.rs` SIMD → garb
+- zenimage `pipeline/ops/streaming/alpha.rs` → garb (4ch fast path)
 
-**Replaceable with garb:**
-- zenimage `graphics/alpha.rs` scalar premul/unpremul (same operation, just has width/height args)
-- zenimage `graphics/alpha_simd.rs` SIMD premul/unpremul (garb has better dispatch)
-- zenimage `pipeline/ops/streaming/alpha.rs` PremultiplyAlphaOp/UnpremultiplyAlphaOp
-- zenresize `color.rs` test-only utilities
-
-**Not replaceable (fused or specialized):**
-- zenimage `srgb_to_linear_premul` / `linear_premul_to_srgb` (fused color space + premul)
-- zenimage `linear_premul_to_srgb_row_simd` (fused SIMD unpremul + gamma)
-- zenjxl-decoder stages (generic channel count + 1e-10 threshold + jxl_simd framework)
+Remaining (not replaceable):
+- zenimage fused `srgb_to_linear_premul` / `linear_premul_to_srgb` (depend on ColorContext custom gamma; linear-srgb only handles standard sRGB)
+- zenresize `color.rs` test-only utilities (not worth adding dep)
+- zenjxl-decoder stages (generic channel count + jxl_simd framework)
 
 ## Delayed TODOs
 
