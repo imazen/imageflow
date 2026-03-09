@@ -42,12 +42,18 @@ Compositing (DrawImage, Watermark) delegates to `zenresize::execute_layout_with_
 
 ## Premultiply Dedup Status
 
-garb is the canonical SIMD premultiply. Cross-crate dedup is limited because:
-- zenimage has BGRA layout + fused srgb↔linear↔premul (garb is RGBA-only, premul-only)
-- zenjxl-decoder has generic channel count + 1e-10 threshold + jxl_simd framework
-- zenresize has test-only utilities with intentionally different thresholds
+garb is the canonical SIMD premultiply. Premultiply is channel-order-agnostic (channels 0,1,2 × channel 3), so garb works for both RGBA and BGRA data.
 
-Further consolidation requires adding BGRA support and fused operations to garb.
+**Replaceable with garb:**
+- zenimage `graphics/alpha.rs` scalar premul/unpremul (same operation, just has width/height args)
+- zenimage `graphics/alpha_simd.rs` SIMD premul/unpremul (garb has better dispatch)
+- zenimage `pipeline/ops/streaming/alpha.rs` PremultiplyAlphaOp/UnpremultiplyAlphaOp
+- zenresize `color.rs` test-only utilities
+
+**Not replaceable (fused or specialized):**
+- zenimage `srgb_to_linear_premul` / `linear_premul_to_srgb` (fused color space + premul)
+- zenimage `linear_premul_to_srgb_row_simd` (fused SIMD unpremul + gamma)
+- zenjxl-decoder stages (generic channel count + 1e-10 threshold + jxl_simd framework)
 
 ## Delayed TODOs
 
