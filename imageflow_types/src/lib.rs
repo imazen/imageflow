@@ -1274,6 +1274,8 @@ pub enum ImageFormat {
     Png,
     Gif,
     Webp,
+    Bmp,
+    Pnm,
     Jxl,
     Avif,
     Heic,
