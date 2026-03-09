@@ -431,17 +431,9 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "garb"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d588075922ffd9b8269a191fcfde64b9ce5c4e58ad239e191b05dd6660decf1"
-dependencies = [
- "archmage 0.9.3",
- "bytemuck",
-]
-
-[[package]]
-name = "garb"
 version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "232a3653471b7228242fec8669102c1991af35a5262c6eb18aa47d68d661a143"
 dependencies = [
  "archmage 0.9.3",
  "bytemuck",
@@ -501,7 +493,7 @@ version = "0.1.0"
 dependencies = [
  "archmage 0.9.3",
  "enough",
- "garb 0.2.0",
+ "garb",
  "imgref",
  "rgb",
  "safe_unaligned_simd",
@@ -533,7 +525,7 @@ dependencies = [
  "base64",
  "bytemuck",
  "enough",
- "garb 0.2.1",
+ "garb",
  "imageflow_types",
  "imgref",
  "linear-srgb",
@@ -626,9 +618,9 @@ checksum = "884e2677b40cc8c339eaefcb701c32ef1fd2493d71118dc0ca4b6a736c93bd67"
 
 [[package]]
 name = "libc"
-version = "0.2.182"
+version = "0.2.183"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6800badb6cb2082ffd7b6a67e6125bb39f18782f793520caee8cb8846be06112"
+checksum = "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
 
 [[package]]
 name = "libfuzzer-sys"
@@ -1531,7 +1523,7 @@ version = "0.2.0"
 
 [[package]]
 name = "zenpixels"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
  "imgref",
@@ -1540,7 +1532,7 @@ dependencies = [
 
 [[package]]
 name = "zenpixels-convert"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
  "enough",
@@ -1618,7 +1610,7 @@ dependencies = [
  "bytemuck",
  "byteorder-lite",
  "enough",
- "garb 0.2.0",
+ "garb",
  "hashbrown",
  "libm",
  "linear-srgb",
