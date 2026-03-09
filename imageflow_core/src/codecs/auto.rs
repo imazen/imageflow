@@ -121,17 +121,15 @@ pub(crate) fn create_encoder(
             progressive,
             optimize_huffman_coding,
             ref matte,
-        } => {
-            create_jpeg_turbo_encoder(
-                c,
-                io,
-                quality.map(|q| q as u8),
-                progressive,
-                optimize_huffman_coding,
-                matte.clone(),
-            )
-            .map_err(|e| e.at(here!()))?
-        }
+        } => create_jpeg_turbo_encoder(
+            c,
+            io,
+            quality.map(|q| q as u8),
+            progressive,
+            optimize_huffman_coding,
+            matte.clone(),
+        )
+        .map_err(|e| e.at(here!()))?,
         s::EncoderPreset::Lodepng { maximum_deflate } => Box::new(
             crate::codecs::lode::LodepngEncoder::create(c, io, maximum_deflate, None)
                 .map_err(|e| e.at(here!()))?,
@@ -160,11 +158,7 @@ pub(crate) fn create_encoder(
 // ── Runtime codec instantiation helpers ─────────────────────────────────────
 
 /// Create a GIF encoder using the highest-priority enabled encoder.
-fn create_gif_encoder(
-    c: &Context,
-    io: IoProxy,
-    bitmap_key: BitmapKey,
-) -> Result<Box<dyn Encoder>> {
+fn create_gif_encoder(c: &Context, io: IoProxy, bitmap_key: BitmapKey) -> Result<Box<dyn Encoder>> {
     let encoder = c
         .enabled_codecs
         .first_encoder_for_format(ImageFormat::Gif)
@@ -176,8 +170,7 @@ fn create_gif_encoder(
                 .map_err(|e| e.at(here!()))?,
         )),
         NamedEncoders::GifEncoder => Ok(Box::new(
-            crate::codecs::gif::GifEncoder::create(c, io, bitmap_key)
-                .map_err(|e| e.at(here!()))?,
+            crate::codecs::gif::GifEncoder::create(c, io, bitmap_key).map_err(|e| e.at(here!()))?,
         )),
         _ => Err(nerror!(ErrorKind::CodecDisabledError, "No usable GIF encoder found")),
     }
@@ -276,10 +269,7 @@ fn create_webp_encoder(
             .copied()
             .find(|e| e.codec_name().format() == ImageFormat::Webp && e.is_zen_codec())
             .or_else(|| {
-                encoders
-                    .iter()
-                    .copied()
-                    .find(|e| e.codec_name().format() == ImageFormat::Webp)
+                encoders.iter().copied().find(|e| e.codec_name().format() == ImageFormat::Webp)
             })
     } else {
         // Prefer C for lossy, fall back to zen
@@ -288,10 +278,7 @@ fn create_webp_encoder(
             .copied()
             .find(|e| e.codec_name().format() == ImageFormat::Webp && e.is_c_codec())
             .or_else(|| {
-                encoders
-                    .iter()
-                    .copied()
-                    .find(|e| e.codec_name().format() == ImageFormat::Webp)
+                encoders.iter().copied().find(|e| e.codec_name().format() == ImageFormat::Webp)
             })
     };
 
@@ -392,12 +379,8 @@ fn create_encoder_auto(
     decoder_io_ids: &[i32],
     details: AutoEncoderDetails,
 ) -> Result<Box<dyn Encoder>> {
-    let final_format = format_select_with_specified(
-        details.format,
-        &details,
-        &ctx.enabled_codecs,
-    )
-    .map_err(|e| e.at(here!()))?;
+    let final_format = format_select_with_specified(details.format, &details, &ctx.enabled_codecs)
+        .map_err(|e| e.at(here!()))?;
 
     Ok(match final_format {
         OutputImageFormat::Keep => unreachable!(),
@@ -793,8 +776,8 @@ fn create_avif_auto(
         .unwrap_or(good_defaults.avif_s)
         .clamp(0, 10);
 
-    let lossless = details.lossless_setting.unwrap_or(false)
-        || details.legacy_needs_lossless.unwrap_or(false);
+    let lossless =
+        details.lossless_setting.unwrap_or(false) || details.legacy_needs_lossless.unwrap_or(false);
 
     create_avif_encoder(ctx, io, Some(quality), Some(speed), lossless, matte)
 }
@@ -810,8 +793,8 @@ fn create_jxl_auto(
         .quality_profile
         .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
 
-    let lossless = details.lossless_setting.unwrap_or(false)
-        || details.legacy_needs_lossless.unwrap_or(false);
+    let lossless =
+        details.lossless_setting.unwrap_or(false) || details.legacy_needs_lossless.unwrap_or(false);
 
     if lossless {
         create_jxl_encoder(ctx, io, None, true)
@@ -876,13 +859,7 @@ fn create_png_auto(
             .map_err(|e| e.at(here!()))?,
         )),
         PngEncodingDetails::LibPng { depth, matte, zlib_compression } => {
-            create_libpng_encoder(
-                ctx,
-                io,
-                depth,
-                matte,
-                zlib_compression.map(|z| z as i32),
-            )
+            create_libpng_encoder(ctx, io, depth, matte, zlib_compression.map(|z| z as i32))
         }
     }
 }
@@ -1110,9 +1087,8 @@ fn build_auto_encoder_details(
     let final_pixel_count =
         final_bitmap.info().width() as u64 * final_bitmap.info().height() as u64;
 
-    let source_image_format = source_image_info
-        .as_ref()
-        .and_then(|i| OutputImageFormat::parse(&i.preferred_mime_type));
+    let source_image_format =
+        source_image_info.as_ref().and_then(|i| OutputImageFormat::parse(&i.preferred_mime_type));
 
     let has_animation = source_image_info.as_ref().map(|i| i.multiple_frames).unwrap_or(false);
 
@@ -1289,8 +1265,8 @@ fn format_auto_select_preview(
         return Some(OutputImageFormat::Jxl);
     }
 
-    let choose_lossless = details.lossless_setting == Some(true)
-        || details.source_lossless_capable == Some(true);
+    let choose_lossless =
+        details.lossless_setting == Some(true) || details.source_lossless_capable == Some(true);
 
     // Lossless path: PNG and WebP are faster and often smaller than AVIF for lossless
     if choose_lossless {
@@ -1328,10 +1304,7 @@ fn format_auto_select_preview(
     // High quality lossy jxl-d1-e4 > avif-q80-s6 |> jpegli-q91 > webp-q93-m5 > avif-s9 > webp-q94-m2 > mozjpeg
 
     // AVIF is 10x slower than jpegli, but might still be in our budget.
-    if (pixel_count < 3_000_000 || !can_jpegli)
-        && features.avif()
-        && allowed.avif == Some(true)
-    {
+    if (pixel_count < 3_000_000 || !can_jpegli) && features.avif() && allowed.avif == Some(true) {
         return Some(OutputImageFormat::Avif);
     }
     if can_jpegli {
@@ -1434,10 +1407,7 @@ fn format_auto_select_legacy(
     // med-high jxl-d2.6e7 > jxl-d3e4 > avif-q53s6 > jpegli-q73 | mozjpeg-q73.5 | webp-q73-m5
     // High quality lossy jxl-d1-e4 > avif-q80-s6 |> jpegli-q91 > webp-q93-m5 > avif-s9 > webp-q94-m2 > mozjpeg
 
-    if (pixel_count < 3_000_000 || !can_jpegli)
-        && features.avif()
-        && allowed.avif == Some(true)
-    {
+    if (pixel_count < 3_000_000 || !can_jpegli) && features.avif() && allowed.avif == Some(true) {
         return Some(OutputImageFormat::Avif);
     }
     if can_jpegli {
