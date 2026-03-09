@@ -693,285 +693,59 @@ fn execute_round_corners(pixels: &mut PixelBuffer, width: u32, height: u32, rc: 
 
 fn execute_color_filter(
     pixels: &mut PixelBuffer,
-    width: u32,
-    height: u32,
+    _width: u32,
+    _height: u32,
     filter: &ColorFilterStep,
 ) {
-    let mut rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
-    let mut img = rgba.as_imgref_mut();
-    let stride = img.stride();
-    let w = width as usize;
-    let h = height as usize;
-    let buf = img.buf_mut();
-
-    match filter {
-        ColorFilterStep::GrayscaleBt709 => {
-            for y in 0..h {
-                for x in 0..w {
-                    let p = &mut buf[y * stride + x];
-                    let lum =
-                        (0.2126 * p.r as f32 + 0.7152 * p.g as f32 + 0.0722 * p.b as f32) as u8;
-                    p.r = lum;
-                    p.g = lum;
-                    p.b = lum;
-                }
-            }
-        }
-        ColorFilterStep::GrayscaleNtsc => {
-            for y in 0..h {
-                for x in 0..w {
-                    let p = &mut buf[y * stride + x];
-                    let lum = (0.299 * p.r as f32 + 0.587 * p.g as f32 + 0.114 * p.b as f32) as u8;
-                    p.r = lum;
-                    p.g = lum;
-                    p.b = lum;
-                }
-            }
-        }
-        ColorFilterStep::GrayscaleFlat => {
-            for y in 0..h {
-                for x in 0..w {
-                    let p = &mut buf[y * stride + x];
-                    let lum = ((p.r as u16 + p.g as u16 + p.b as u16) / 3) as u8;
-                    p.r = lum;
-                    p.g = lum;
-                    p.b = lum;
-                }
-            }
-        }
-        ColorFilterStep::Sepia => {
-            for y in 0..h {
-                for x in 0..w {
-                    let p = &mut buf[y * stride + x];
-                    let r = p.r as f32;
-                    let g = p.g as f32;
-                    let b = p.b as f32;
-                    p.r = (0.393 * r + 0.769 * g + 0.189 * b).min(255.0) as u8;
-                    p.g = (0.349 * r + 0.686 * g + 0.168 * b).min(255.0) as u8;
-                    p.b = (0.272 * r + 0.534 * g + 0.131 * b).min(255.0) as u8;
-                }
-            }
-        }
-        ColorFilterStep::Invert => {
-            for y in 0..h {
-                for x in 0..w {
-                    let p = &mut buf[y * stride + x];
-                    p.r = 255 - p.r;
-                    p.g = 255 - p.g;
-                    p.b = 255 - p.b;
-                }
-            }
-        }
-        ColorFilterStep::Alpha(a) => {
-            let alpha_mul = (*a * 255.0) as u16;
-            for y in 0..h {
-                for x in 0..w {
-                    let p = &mut buf[y * stride + x];
-                    p.a = ((p.a as u16 * alpha_mul) / 255) as u8;
-                }
-            }
-        }
-    }
-    *pixels = rgba.erase();
+    use zenfilters::srgb_filters::{color_filter, SrgbColorFilter};
+    let zen_filter = match filter {
+        ColorFilterStep::GrayscaleBt709 => SrgbColorFilter::GrayscaleBt709,
+        ColorFilterStep::GrayscaleNtsc => SrgbColorFilter::GrayscaleNtsc,
+        ColorFilterStep::GrayscaleFlat => SrgbColorFilter::GrayscaleFlat,
+        ColorFilterStep::Sepia => SrgbColorFilter::Sepia,
+        ColorFilterStep::Invert => SrgbColorFilter::Invert,
+        ColorFilterStep::Alpha(a) => SrgbColorFilter::Alpha(*a),
+    };
+    color_filter(&mut pixels.as_slice_mut(), &zen_filter);
 }
 
 // ─── Color Adjust ──────────────────────────────────────────────────────
 
-fn execute_color_adjust(pixels: &mut PixelBuffer, width: u32, height: u32, adj: &ColorAdjustStep) {
-    let brightness = adj.brightness.unwrap_or(0.0);
-    let contrast = adj.contrast.unwrap_or(0.0);
-    let saturation = adj.saturation.unwrap_or(0.0);
-    if brightness == 0.0 && contrast == 0.0 && saturation == 0.0 {
-        return;
-    }
-
-    let mut rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
-    let mut img = rgba.as_imgref_mut();
-    let stride = img.stride();
-    let w = width as usize;
-    let h = height as usize;
-    let buf = img.buf_mut();
-
-    for y in 0..h {
-        for x in 0..w {
-            let p = &mut buf[y * stride + x];
-            let mut r = p.r as f32 / 255.0;
-            let mut g = p.g as f32 / 255.0;
-            let mut b = p.b as f32 / 255.0;
-
-            // Brightness
-            r += brightness;
-            g += brightness;
-            b += brightness;
-
-            // Contrast: scale around 0.5
-            r = (r - 0.5) * (1.0 + contrast) + 0.5;
-            g = (g - 0.5) * (1.0 + contrast) + 0.5;
-            b = (b - 0.5) * (1.0 + contrast) + 0.5;
-
-            // Saturation: interpolate with BT.709 luminance
-            if saturation != 0.0 {
-                let lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                let s = 1.0 + saturation;
-                r = lum + (r - lum) * s;
-                g = lum + (g - lum) * s;
-                b = lum + (b - lum) * s;
-            }
-
-            p.r = (r * 255.0).max(0.0).min(255.0) as u8;
-            p.g = (g * 255.0).max(0.0).min(255.0) as u8;
-            p.b = (b * 255.0).max(0.0).min(255.0) as u8;
-        }
-    }
-    *pixels = rgba.erase();
+fn execute_color_adjust(
+    pixels: &mut PixelBuffer,
+    _width: u32,
+    _height: u32,
+    adj: &ColorAdjustStep,
+) {
+    zenfilters::srgb_filters::color_adjust(
+        &mut pixels.as_slice_mut(),
+        adj.brightness.unwrap_or(0.0),
+        adj.contrast.unwrap_or(0.0),
+        adj.saturation.unwrap_or(0.0),
+    );
 }
 
 // ─── Color Matrix ──────────────────────────────────────────────────────
 
-fn execute_color_matrix(pixels: &mut PixelBuffer, width: u32, height: u32, mat: &ColorMatrixStep) {
-    let m = &mat.matrix;
-    let mut rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
-    let mut img = rgba.as_imgref_mut();
-    let stride = img.stride();
-    let w = width as usize;
-    let h = height as usize;
-    let buf = img.buf_mut();
-
-    for y in 0..h {
-        for x in 0..w {
-            let p = &mut buf[y * stride + x];
-            let r = p.r as f32 / 255.0;
-            let g = p.g as f32 / 255.0;
-            let b = p.b as f32 / 255.0;
-            let a = p.a as f32 / 255.0;
-            // [R',G',B',A',1] = M × [R,G,B,A,1] (row-major 5×5)
-            let nr = m[0] * r + m[1] * g + m[2] * b + m[3] * a + m[4];
-            let ng = m[5] * r + m[6] * g + m[7] * b + m[8] * a + m[9];
-            let nb = m[10] * r + m[11] * g + m[12] * b + m[13] * a + m[14];
-            let na = m[15] * r + m[16] * g + m[17] * b + m[18] * a + m[19];
-            p.r = (nr * 255.0).max(0.0).min(255.0) as u8;
-            p.g = (ng * 255.0).max(0.0).min(255.0) as u8;
-            p.b = (nb * 255.0).max(0.0).min(255.0) as u8;
-            p.a = (na * 255.0).max(0.0).min(255.0) as u8;
-        }
-    }
-    *pixels = rgba.erase();
+fn execute_color_matrix(
+    pixels: &mut PixelBuffer,
+    _width: u32,
+    _height: u32,
+    mat: &ColorMatrixStep,
+) {
+    zenfilters::srgb_filters::color_matrix(&mut pixels.as_slice_mut(), &mat.matrix);
 }
 
 // ─── Sharpen (unsharp mask) ────────────────────────────────────────────
 
-fn execute_sharpen(pixels: &mut PixelBuffer, width: u32, height: u32, sharp: &SharpenStep) {
-    let amount = sharp.amount / 100.0;
-    let w = width as usize;
-    let h = height as usize;
-
-    let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
-    let src = rgba.as_imgref();
-    let stride = src.stride();
-    let src_buf = src.buf();
-
-    let mut packed: Vec<rgb::RGBA<u8>> = Vec::with_capacity(w * h);
-    for y in 0..h {
-        packed.extend_from_slice(&src_buf[y * stride..y * stride + w]);
-    }
-
-    let blurred = box_blur_rgba(&packed, w, h, 2);
-
-    let mut out = packed.clone();
-    for i in 0..out.len() {
-        let o = packed[i];
-        let b = blurred[i];
-        out[i] = rgb::RGBA {
-            r: ((o.r as f32 + amount * (o.r as f32 - b.r as f32)).max(0.0).min(255.0)) as u8,
-            g: ((o.g as f32 + amount * (o.g as f32 - b.g as f32)).max(0.0).min(255.0)) as u8,
-            b: ((o.b as f32 + amount * (o.b as f32 - b.b as f32)).max(0.0).min(255.0)) as u8,
-            a: o.a,
-        };
-    }
-
-    let output = imgref::ImgVec::new(out, w, h);
-    *pixels = PixelBuffer::from_imgvec(output).erase();
+fn execute_sharpen(pixels: &mut PixelBuffer, _width: u32, _height: u32, sharp: &SharpenStep) {
+    zenfilters::srgb_filters::sharpen(pixels, sharp.amount);
 }
 
 // ─── Blur (box blur × 3 ≈ Gaussian) ───────────────────────────────────
 
-fn execute_blur(pixels: &mut PixelBuffer, width: u32, height: u32, blur_step: &BlurStep) {
-    let radius = (blur_step.sigma * 2.0).ceil() as usize;
-    if radius == 0 {
-        return;
-    }
-    let w = width as usize;
-    let h = height as usize;
-
-    let rgba: PixelBuffer<rgb::RGBA<u8>> = pixels.to_rgba8();
-    let src = rgba.as_imgref();
-    let stride = src.stride();
-    let src_buf = src.buf();
-
-    let mut packed: Vec<rgb::RGBA<u8>> = Vec::with_capacity(w * h);
-    for y in 0..h {
-        packed.extend_from_slice(&src_buf[y * stride..y * stride + w]);
-    }
-
-    let pass_radius = (radius / 3).max(1);
-    for _ in 0..3 {
-        packed = box_blur_rgba(&packed, w, h, pass_radius);
-    }
-
-    let output = imgref::ImgVec::new(packed, w, h);
-    *pixels = PixelBuffer::from_imgvec(output).erase();
-}
-
-/// Separable box blur on tightly-packed RGBA8 buffer.
-fn box_blur_rgba(input: &[rgb::RGBA<u8>], w: usize, h: usize, radius: usize) -> Vec<rgb::RGBA<u8>> {
-    let diameter = 2 * radius + 1;
-    let inv = 1.0 / diameter as f32;
-
-    // Horizontal pass
-    let mut temp = vec![rgb::RGBA { r: 0, g: 0, b: 0, a: 0 }; w * h];
-    for y in 0..h {
-        for x in 0..w {
-            let (mut rs, mut gs, mut bs, mut a_s) = (0u32, 0u32, 0u32, 0u32);
-            for di in 0..diameter {
-                let sx = (x as i64 + di as i64 - radius as i64).max(0).min(w as i64 - 1) as usize;
-                let p = input[y * w + sx];
-                rs += p.r as u32;
-                gs += p.g as u32;
-                bs += p.b as u32;
-                a_s += p.a as u32;
-            }
-            temp[y * w + x] = rgb::RGBA {
-                r: (rs as f32 * inv) as u8,
-                g: (gs as f32 * inv) as u8,
-                b: (bs as f32 * inv) as u8,
-                a: (a_s as f32 * inv) as u8,
-            };
-        }
-    }
-
-    // Vertical pass
-    let mut output = vec![rgb::RGBA { r: 0, g: 0, b: 0, a: 0 }; w * h];
-    for x in 0..w {
-        for y in 0..h {
-            let (mut rs, mut gs, mut bs, mut a_s) = (0u32, 0u32, 0u32, 0u32);
-            for di in 0..diameter {
-                let sy = (y as i64 + di as i64 - radius as i64).max(0).min(h as i64 - 1) as usize;
-                let p = temp[sy * w + x];
-                rs += p.r as u32;
-                gs += p.g as u32;
-                bs += p.b as u32;
-                a_s += p.a as u32;
-            }
-            output[y * w + x] = rgb::RGBA {
-                r: (rs as f32 * inv) as u8,
-                g: (gs as f32 * inv) as u8,
-                b: (bs as f32 * inv) as u8,
-                a: (a_s as f32 * inv) as u8,
-            };
-        }
-    }
-
-    output
+fn execute_blur(pixels: &mut PixelBuffer, _width: u32, _height: u32, blur_step: &BlurStep) {
+    zenfilters::srgb_filters::blur(pixels, blur_step.sigma);
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────
@@ -1052,13 +826,9 @@ fn canvas_to_premul_f32(canvas: &PixelBuffer, width: u32, height: u32) -> Vec<f3
     let mut linear = vec![0.0f32; f32_count];
     linear_srgb::default::srgb_u8_to_linear_rgba_slice(&src_bytes, &mut linear);
 
-    // Premultiply: RGB *= alpha
-    for chunk in linear.chunks_exact_mut(4) {
-        let a = chunk[3];
-        chunk[0] *= a;
-        chunk[1] *= a;
-        chunk[2] *= a;
-    }
+    // Premultiply using garb's SIMD-optimized implementation
+    let byte_buf: &mut [u8] = bytemuck::cast_slice_mut(&mut linear);
+    garb::bytes::premultiply_alpha_f32(byte_buf).expect("buffer is pixel-aligned");
     linear
 }
 

@@ -440,6 +440,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "garb"
+version = "0.2.1"
+dependencies = [
+ "archmage 0.9.3",
+ "bytemuck",
+ "paste",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -492,7 +501,7 @@ version = "0.1.0"
 dependencies = [
  "archmage 0.9.3",
  "enough",
- "garb",
+ "garb 0.2.0",
  "imgref",
  "rgb",
  "safe_unaligned_simd",
@@ -524,6 +533,7 @@ dependencies = [
  "base64",
  "bytemuck",
  "enough",
+ "garb 0.2.1",
  "imageflow_types",
  "imgref",
  "linear-srgb",
@@ -534,6 +544,7 @@ dependencies = [
  "ultrahdr-core",
  "zencodec-types",
  "zencodecs",
+ "zenfilters",
  "zenjpeg",
  "zenlayout",
  "zenpixels",
@@ -1464,6 +1475,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "zenfilters"
+version = "0.1.0"
+dependencies = [
+ "archmage 0.9.3",
+ "bytemuck",
+ "linear-srgb",
+ "magetypes",
+ "rgb",
+ "zenpixels",
+ "zenpixels-convert",
+]
+
+[[package]]
 name = "zengif"
 version = "0.6.0"
 dependencies = [
@@ -1591,8 +1615,10 @@ name = "zenwebp"
 version = "0.3.2"
 dependencies = [
  "archmage 0.9.3",
+ "bytemuck",
  "byteorder-lite",
  "enough",
+ "garb 0.2.0",
  "hashbrown",
  "libm",
  "linear-srgb",

@@ -30,7 +30,9 @@ zenpixels-convert = { path = "../zenpixels/zenpixels-convert", default-features 
 zencodecs = { path = "../zencodecs", default-features = false, features = ["jpeg", "webp", "gif", "avif-decode", "avif-encode", "heic-decode", "bitmaps-bmp"] }
 zenlayout = { path = "../zenlayout", default-features = false, features = ["std", "riapi"] }
 zenresize = { path = "../zenresize", default-features = false, features = ["std", "layout"] }
+zenfilters = { path = "../zenfilters", default-features = false, features = ["srgb-filters"] }
 zenjpeg = { path = "../zenjpeg/zenjpeg", features = ["decoder"] }
+garb = { path = "../../garb", default-features = false, features = ["std", "experimental"] }
 zencodec-types = { path = "../zencodec-types" }
 ultrahdr-core = { path = "../ultrahdr/ultrahdr-core" }
 ultrahdr-rs = { path = "../ultrahdr/ultrahdr" }

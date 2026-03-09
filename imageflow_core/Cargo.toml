@@ -25,8 +25,10 @@ zenpixels-convert = { workspace = true }
 zencodecs = { workspace = true }
 zenlayout = { workspace = true }
 zenresize = { workspace = true }
+zenfilters = { workspace = true }
 zenjpeg = { workspace = true }
 zencodec-types = { workspace = true }
+garb = { workspace = true }
 
 # UltraHDR
 ultrahdr-core = { workspace = true }
