@@ -47,9 +47,10 @@ garb is the canonical SIMD premultiply (channel-order-agnostic). Dedup complete 
 - zenimage `graphics/alpha.rs` scalar → garb
 - zenimage `graphics/alpha_simd.rs` SIMD → garb
 - zenimage `pipeline/ops/streaming/alpha.rs` → garb (4ch fast path)
+- zenimage fused `srgb_to_linear_premul` / `linear_premul_to_srgb` → linear-srgb fused ops (sRGB + custom gamma) + garb (identity)
+- zenimage `linear_premul_to_srgb_row_simd` → linear-srgb `unpremultiply_linear_to_srgb_u8_rgba_slice`
 
 Remaining (not replaceable):
-- zenimage fused `srgb_to_linear_premul` / `linear_premul_to_srgb` (depend on ColorContext custom gamma; linear-srgb only handles standard sRGB)
 - zenresize `color.rs` test-only utilities (not worth adding dep)
 - zenjxl-decoder stages (generic channel count + jxl_simd framework)
 
