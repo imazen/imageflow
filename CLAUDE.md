@@ -34,6 +34,21 @@ created for tests that have no existing section in the checksums file.
 Checksum files: `imageflow_core/tests/integration/visuals/*.checksums`
 Reference images: `imageflow_core/tests/integration/visuals/images/`
 
+## Zen Crate Delegation
+
+Pipeline filters (blur, sharpen, color_filter, color_adjust, color_matrix) delegate to `zenfilters::srgb_filters`. Premultiply in `canvas_to_premul_f32` uses `garb::bytes::premultiply_alpha_f32`.
+
+Compositing (DrawImage, Watermark) delegates to `zenresize::execute_layout_with_background` with `SliceBackground` for canvas-sized backgrounds. zenresize handles OffsetBackground wrapping and canvas fill internally.
+
+## Premultiply Dedup Status
+
+garb is the canonical SIMD premultiply. Cross-crate dedup is limited because:
+- zenimage has BGRA layout + fused srgb↔linear↔premul (garb is RGBA-only, premul-only)
+- zenjxl-decoder has generic channel count + 1e-10 threshold + jxl_simd framework
+- zenresize has test-only utilities with intentionally different thresholds
+
+Further consolidation requires adding BGRA support and fused operations to garb.
+
 ## Delayed TODOs
 
 - **Licensing/caching module** (`imageflow_helpers/src/unused/`): ~2300 lines of draft licensing, caching, and polling code. Currently unreferenced (no `mod` declaration). Needs review, modernization, and wiring into the build when ready to complete.
