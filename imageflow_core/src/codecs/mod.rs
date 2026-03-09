@@ -454,6 +454,124 @@ impl Default for EnabledCodecs {
     }
 }
 
+impl NamedDecoders {
+    /// Convert to the stable `CodecName` used in the JSON API.
+    pub fn codec_name(&self) -> imageflow_types::CodecName {
+        use imageflow_types::CodecName;
+        match self {
+            #[cfg(feature = "c-codecs")]
+            Self::MozJpegRsDecoder => CodecName::MozjpegDecoder,
+            #[cfg(feature = "c-codecs")]
+            Self::ImageRsJpegDecoder => CodecName::ImageRsJpegDecoder,
+            Self::ImageRsPngDecoder => CodecName::ImageRsPngDecoder,
+            #[cfg(feature = "c-codecs")]
+            Self::LibPngRsDecoder => CodecName::LibpngDecoder,
+            Self::GifRsDecoder => CodecName::GifRsDecoder,
+            #[cfg(feature = "c-codecs")]
+            Self::WebPDecoder => CodecName::LibwebpDecoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJpegDecoder => CodecName::ZenjpegDecoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenWebPDecoder => CodecName::ZenwebpDecoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenGifDecoder => CodecName::ZengifDecoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJxlDecoder => CodecName::ZenjxlDecoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenAvifDecoder => CodecName::ZenavifDecoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenHeicDecoder => CodecName::ZenheicDecoder,
+        }
+    }
+
+    /// Try to convert from a `CodecName`. Returns `None` if the name
+    /// refers to an encoder or a codec not compiled in.
+    pub fn from_codec_name(name: imageflow_types::CodecName) -> Option<Self> {
+        use imageflow_types::CodecName;
+        match name {
+            #[cfg(feature = "c-codecs")]
+            CodecName::MozjpegDecoder => Some(Self::MozJpegRsDecoder),
+            #[cfg(feature = "c-codecs")]
+            CodecName::ImageRsJpegDecoder => Some(Self::ImageRsJpegDecoder),
+            CodecName::ImageRsPngDecoder => Some(Self::ImageRsPngDecoder),
+            #[cfg(feature = "c-codecs")]
+            CodecName::LibpngDecoder => Some(Self::LibPngRsDecoder),
+            CodecName::GifRsDecoder => Some(Self::GifRsDecoder),
+            #[cfg(feature = "c-codecs")]
+            CodecName::LibwebpDecoder => Some(Self::WebPDecoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZenjpegDecoder => Some(Self::ZenJpegDecoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZenwebpDecoder => Some(Self::ZenWebPDecoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZengifDecoder => Some(Self::ZenGifDecoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZenjxlDecoder => Some(Self::ZenJxlDecoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZenavifDecoder => Some(Self::ZenAvifDecoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZenheicDecoder => Some(Self::ZenHeicDecoder),
+            _ => None,
+        }
+    }
+}
+
+impl NamedEncoders {
+    /// Convert to the stable `CodecName` used in the JSON API.
+    pub fn codec_name(&self) -> imageflow_types::CodecName {
+        use imageflow_types::CodecName;
+        match self {
+            Self::GifEncoder => CodecName::GifEncoder,
+            #[cfg(feature = "c-codecs")]
+            Self::MozJpegEncoder => CodecName::MozjpegEncoder,
+            Self::PngQuantEncoder => CodecName::PngquantEncoder,
+            Self::LodePngEncoder => CodecName::LodepngEncoder,
+            #[cfg(feature = "c-codecs")]
+            Self::WebPEncoder => CodecName::LibwebpEncoder,
+            #[cfg(feature = "c-codecs")]
+            Self::LibPngRsEncoder => CodecName::LibpngEncoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJpegEncoder => CodecName::ZenjpegEncoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenWebPEncoder => CodecName::ZenwebpEncoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenGifEncoder => CodecName::ZengifEncoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenJxlEncoder => CodecName::ZenjxlEncoder,
+            #[cfg(feature = "zen-codecs")]
+            Self::ZenAvifEncoder => CodecName::ZenavifEncoder,
+        }
+    }
+
+    /// Try to convert from a `CodecName`. Returns `None` if the name
+    /// refers to a decoder or a codec not compiled in.
+    pub fn from_codec_name(name: imageflow_types::CodecName) -> Option<Self> {
+        use imageflow_types::CodecName;
+        match name {
+            CodecName::GifEncoder => Some(Self::GifEncoder),
+            #[cfg(feature = "c-codecs")]
+            CodecName::MozjpegEncoder => Some(Self::MozJpegEncoder),
+            CodecName::PngquantEncoder => Some(Self::PngQuantEncoder),
+            CodecName::LodepngEncoder => Some(Self::LodePngEncoder),
+            #[cfg(feature = "c-codecs")]
+            CodecName::LibwebpEncoder => Some(Self::WebPEncoder),
+            #[cfg(feature = "c-codecs")]
+            CodecName::LibpngEncoder => Some(Self::LibPngRsEncoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZenjpegEncoder => Some(Self::ZenJpegEncoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZenwebpEncoder => Some(Self::ZenWebPEncoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZengifEncoder => Some(Self::ZenGifEncoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZenjxlEncoder => Some(Self::ZenJxlEncoder),
+            #[cfg(feature = "zen-codecs")]
+            CodecName::ZenavifEncoder => Some(Self::ZenAvifEncoder),
+            _ => None,
+        }
+    }
+}
+
 impl EnabledCodecs {
     pub fn prefer_decoder(&mut self, decoder: NamedDecoders) {
         self.decoders.retain(|item| item != &decoder);
@@ -462,6 +580,206 @@ impl EnabledCodecs {
     pub fn disable_decoder(&mut self, decoder: NamedDecoders) {
         self.decoders.retain(|item| item != &decoder);
     }
+
+    /// Build an `EnabledCodecs` from the preset definitions.
+    pub fn from_preset(preset: imageflow_types::CodecPreset) -> Self {
+        use imageflow_types::CodecPreset;
+        match preset {
+            CodecPreset::Legacy => Self::preset_legacy(),
+            CodecPreset::Transitional => Self::preset_transitional(),
+            CodecPreset::Modern => Self::preset_modern(),
+            CodecPreset::Experimental => Self::preset_experimental(),
+        }
+    }
+
+    /// Legacy: C codecs only. Always-available Rust fallbacks kept.
+    fn preset_legacy() -> Self {
+        EnabledCodecs {
+            decoders: smallvec::SmallVec::from_slice(&[
+                #[cfg(feature = "c-codecs")]
+                NamedDecoders::MozJpegRsDecoder,
+                #[cfg(feature = "c-codecs")]
+                NamedDecoders::LibPngRsDecoder,
+                #[cfg(feature = "c-codecs")]
+                NamedDecoders::WebPDecoder,
+                NamedDecoders::ImageRsPngDecoder,
+                NamedDecoders::GifRsDecoder,
+            ]),
+            encoders: smallvec::SmallVec::from_slice(&[
+                #[cfg(feature = "c-codecs")]
+                NamedEncoders::MozJpegEncoder,
+                #[cfg(feature = "c-codecs")]
+                NamedEncoders::LibPngRsEncoder,
+                #[cfg(feature = "c-codecs")]
+                NamedEncoders::WebPEncoder,
+                NamedEncoders::PngQuantEncoder,
+                NamedEncoders::LodePngEncoder,
+                NamedEncoders::GifEncoder,
+            ]),
+        }
+    }
+
+    /// Transitional: C primary, zen supplements for new formats + fallbacks.
+    fn preset_transitional() -> Self {
+        EnabledCodecs {
+            decoders: smallvec::SmallVec::from_slice(&[
+                #[cfg(feature = "c-codecs")]
+                NamedDecoders::MozJpegRsDecoder,
+                #[cfg(feature = "c-codecs")]
+                NamedDecoders::LibPngRsDecoder,
+                #[cfg(feature = "c-codecs")]
+                NamedDecoders::WebPDecoder,
+                NamedDecoders::GifRsDecoder,
+                NamedDecoders::ImageRsPngDecoder,
+                // Zen decoders as fallback for C-covered formats
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenJpegDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenWebPDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenGifDecoder,
+                // Zen-only formats
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenJxlDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenAvifDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenHeicDecoder,
+            ]),
+            encoders: smallvec::SmallVec::from_slice(&[
+                #[cfg(feature = "c-codecs")]
+                NamedEncoders::MozJpegEncoder,
+                #[cfg(feature = "c-codecs")]
+                NamedEncoders::LibPngRsEncoder,
+                #[cfg(feature = "c-codecs")]
+                NamedEncoders::WebPEncoder,
+                NamedEncoders::GifEncoder,
+                NamedEncoders::PngQuantEncoder,
+                NamedEncoders::LodePngEncoder,
+                // Zen encoder fallbacks for C-covered formats
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenJpegEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenWebPEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenGifEncoder,
+                // Zen-only formats
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenJxlEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenAvifEncoder,
+            ]),
+        }
+    }
+
+    /// Modern: Zen primary, C as fallback. Default behavior.
+    fn preset_modern() -> Self {
+        // This matches the current Default::default() ordering
+        Self::default()
+    }
+
+    /// Experimental: Pure Rust, no C codecs.
+    fn preset_experimental() -> Self {
+        EnabledCodecs {
+            decoders: smallvec::SmallVec::from_slice(&[
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenJpegDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenWebPDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenGifDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenJxlDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenAvifDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenHeicDecoder,
+                NamedDecoders::ImageRsPngDecoder,
+                NamedDecoders::GifRsDecoder,
+            ]),
+            encoders: smallvec::SmallVec::from_slice(&[
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenJpegEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenWebPEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenGifEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenJxlEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenAvifEncoder,
+                NamedEncoders::PngQuantEncoder,
+                NamedEncoders::LodePngEncoder,
+                NamedEncoders::GifEncoder,
+            ]),
+        }
+    }
+
+    /// Build from an explicit allowlist of codec names (ordered).
+    /// Names not compiled in are silently skipped.
+    pub fn from_allowlist(codecs: &[imageflow_types::CodecName]) -> Self {
+        let mut decoders = smallvec::SmallVec::new();
+        let mut encoders = smallvec::SmallVec::new();
+        for &name in codecs {
+            if let Some(d) = NamedDecoders::from_codec_name(name) {
+                if !decoders.contains(&d) {
+                    decoders.push(d);
+                }
+            }
+            if let Some(e) = NamedEncoders::from_codec_name(name) {
+                if !encoders.contains(&e) {
+                    encoders.push(e);
+                }
+            }
+        }
+        EnabledCodecs { decoders, encoders }
+    }
+
+    /// Apply `prefer` list: move named codecs to front of their respective lists.
+    pub fn apply_prefer(&mut self, prefer: &[imageflow_types::CodecName]) {
+        // Process in reverse so first item in `prefer` ends up at position 0
+        for &name in prefer.iter().rev() {
+            if let Some(d) = NamedDecoders::from_codec_name(name) {
+                if self.decoders.contains(&d) {
+                    self.decoders.retain(|item| item != &d);
+                    self.decoders.insert(0, d);
+                }
+            }
+            if let Some(e) = NamedEncoders::from_codec_name(name) {
+                if self.encoders.contains(&e) {
+                    self.encoders.retain(|item| item != &e);
+                    self.encoders.insert(0, e);
+                }
+            }
+        }
+    }
+
+    /// Apply `disable` list: remove named codecs.
+    pub fn apply_disable(&mut self, disable: &[imageflow_types::CodecName]) {
+        for &name in disable {
+            if let Some(d) = NamedDecoders::from_codec_name(name) {
+                self.decoders.retain(|item| item != &d);
+            }
+            if let Some(e) = NamedEncoders::from_codec_name(name) {
+                self.encoders.retain(|item| item != &e);
+            }
+        }
+    }
+
+    /// Apply format-level decoder kills.
+    pub fn apply_disable_decode_formats(&mut self, formats: &[imageflow_types::ImageFormat]) {
+        for &fmt in formats {
+            self.decoders.retain(|d| d.codec_name().format() != fmt);
+        }
+    }
+
+    /// Apply format-level encoder kills.
+    pub fn apply_disable_encode_formats(&mut self, formats: &[imageflow_types::ImageFormat]) {
+        for &fmt in formats {
+            self.encoders.retain(|e| e.codec_name().format() != fmt);
+        }
+    }
+
     pub fn create_decoder_for_magic_bytes(
         &self,
         bytes: &[u8],

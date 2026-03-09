@@ -1127,6 +1127,212 @@ pub struct FrameSizeLimit {
     pub megapixels: f32,
 }
 
+// ── Codec configuration types ──────────────────────────────────────────
+
+/// Named codec preset. Sets the initial priority ordering and availability
+/// of codec implementations.
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum CodecPreset {
+    /// C codecs only. No pure-Rust zen codecs. Pre-zen-codecs behavior.
+    /// Always-available Rust fallbacks (image-rs PNG, gif crate, pngquant, lodepng) are kept.
+    Legacy,
+    /// C codecs primary for JPEG/PNG/WebP/GIF. Rust zen codecs supplement
+    /// with JXL/AVIF/HEIC and serve as fallbacks for C-covered formats.
+    Transitional,
+    /// Rust zen codecs primary for all formats. C codecs available as fallback.
+    /// This is the default when no preset is specified.
+    Modern,
+    /// Pure Rust only. No C codec libraries used.
+    Experimental,
+}
+
+/// Identifies a specific codec implementation (decoder or encoder).
+/// Names are stable across versions. Unknown names fail deserialization.
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum CodecName {
+    // ── Decoders ──────────────────────────
+    /// JPEG decoder via mozjpeg (C library)
+    MozjpegDecoder,
+    /// JPEG decoder via image-rs (uses mozjpeg C library)
+    ImageRsJpegDecoder,
+    /// PNG decoder via libpng (C library)
+    LibpngDecoder,
+    /// PNG decoder via image-rs png crate (pure Rust)
+    ImageRsPngDecoder,
+    /// WebP decoder via libwebp (C library)
+    LibwebpDecoder,
+    /// GIF decoder via gif crate (pure Rust)
+    GifRsDecoder,
+    /// JPEG decoder via zenjpeg (pure Rust)
+    ZenjpegDecoder,
+    /// WebP decoder via zenwebp (pure Rust)
+    ZenwebpDecoder,
+    /// GIF decoder via zengif (pure Rust)
+    ZengifDecoder,
+    /// JPEG XL decoder via zenjxl (pure Rust)
+    ZenjxlDecoder,
+    /// AVIF decoder via zenavif (pure Rust)
+    ZenavifDecoder,
+    /// HEIC/HEIF decoder via heic-decoder (pure Rust)
+    ZenheicDecoder,
+
+    // ── Encoders ──────────────────────────
+    /// JPEG encoder via mozjpeg (C library)
+    MozjpegEncoder,
+    /// PNG encoder via libpng (C library)
+    LibpngEncoder,
+    /// WebP encoder via libwebp (C library)
+    LibwebpEncoder,
+    /// PNG encoder via pngquant (pure Rust)
+    PngquantEncoder,
+    /// PNG encoder via lodepng (pure Rust)
+    LodepngEncoder,
+    /// GIF encoder via gif crate (pure Rust)
+    GifEncoder,
+    /// JPEG encoder via zenjpeg (pure Rust)
+    ZenjpegEncoder,
+    /// WebP encoder via zenwebp (pure Rust)
+    ZenwebpEncoder,
+    /// GIF encoder via zengif (pure Rust)
+    ZengifEncoder,
+    /// JPEG XL encoder via zenjxl (pure Rust)
+    ZenjxlEncoder,
+    /// AVIF encoder via zenavif (pure Rust)
+    ZenavifEncoder,
+}
+
+impl CodecName {
+    /// Returns true if this names a decoder.
+    pub fn is_decoder(self) -> bool {
+        matches!(
+            self,
+            Self::MozjpegDecoder
+                | Self::ImageRsJpegDecoder
+                | Self::LibpngDecoder
+                | Self::ImageRsPngDecoder
+                | Self::LibwebpDecoder
+                | Self::GifRsDecoder
+                | Self::ZenjpegDecoder
+                | Self::ZenwebpDecoder
+                | Self::ZengifDecoder
+                | Self::ZenjxlDecoder
+                | Self::ZenavifDecoder
+                | Self::ZenheicDecoder
+        )
+    }
+
+    /// Returns true if this names an encoder.
+    pub fn is_encoder(self) -> bool {
+        !self.is_decoder()
+    }
+
+    /// Returns the image format this codec handles.
+    pub fn format(self) -> ImageFormat {
+        match self {
+            Self::MozjpegDecoder
+            | Self::ImageRsJpegDecoder
+            | Self::ZenjpegDecoder
+            | Self::MozjpegEncoder
+            | Self::ZenjpegEncoder => ImageFormat::Jpeg,
+
+            Self::LibpngDecoder
+            | Self::ImageRsPngDecoder
+            | Self::LibpngEncoder
+            | Self::PngquantEncoder
+            | Self::LodepngEncoder => ImageFormat::Png,
+
+            Self::LibwebpDecoder
+            | Self::ZenwebpDecoder
+            | Self::LibwebpEncoder
+            | Self::ZenwebpEncoder => ImageFormat::Webp,
+
+            Self::GifRsDecoder
+            | Self::ZengifDecoder
+            | Self::GifEncoder
+            | Self::ZengifEncoder => ImageFormat::Gif,
+
+            Self::ZenjxlDecoder | Self::ZenjxlEncoder => ImageFormat::Jxl,
+            Self::ZenavifDecoder | Self::ZenavifEncoder => ImageFormat::Avif,
+            Self::ZenheicDecoder => ImageFormat::Heic,
+        }
+    }
+}
+
+/// Image format identifier for format-level enable/disable.
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ImageFormat {
+    Jpeg,
+    Png,
+    Gif,
+    Webp,
+    Jxl,
+    Avif,
+    Heic,
+}
+
+/// Codec selection and priority configuration.
+///
+/// Two mutually exclusive modes:
+///
+/// **Preset mode** (incremental): Start from a named `preset`, optionally
+/// `prefer` specific codecs (move to front) and `disable` others.
+///
+/// **Allowlist mode** (explicit): Provide `allow_only` with an ordered list
+/// of codecs. Only those codecs are available, in the specified priority order.
+///
+/// Both modes can combine with `disable_decode` / `disable_encode` for
+/// format-level kills.
+///
+/// If `allow_only` is set alongside `preset`, `prefer`, or `disable`,
+/// configuration is rejected with an error.
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct CodecConfig {
+    // ── Preset mode (incremental) ──────────────────────────────────
+
+    /// Named preset that sets the initial codec priority ordering.
+    /// Default (when entire `codecs` field is absent): `Modern`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preset: Option<CodecPreset>,
+
+    /// Move these codecs to the front of their format group (highest priority).
+    /// Order within this list is preserved. Applied after preset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prefer: Option<Vec<CodecName>>,
+
+    /// Remove these codecs entirely. Applied after prefer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disable: Option<Vec<CodecName>>,
+
+    // ── Allowlist mode (explicit, ordered) ─────────────────────────
+
+    /// Explicit ordered allowlist. Only these codecs are available, in this
+    /// priority order. Incompatible with `preset`/`prefer`/`disable`.
+    /// Codec names not compiled in are silently skipped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allow_only: Option<Vec<CodecName>>,
+
+    // ── Format-level kills (either mode) ───────────────────────────
+
+    /// Disable decoding for entire formats. Applied last.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disable_decode: Option<Vec<ImageFormat>>,
+
+    /// Disable encoding for entire formats. Applied last.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disable_encode: Option<Vec<ImageFormat>>,
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -1140,53 +1346,14 @@ pub struct ExecutionSecurity {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub process_timeout_ms: Option<u64>,
 
-    /// Allow C library codecs (mozjpeg, libpng, libwebp). `Some(false)` disables all C codecs.
-    /// Default: `None` (use compile-time defaults).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub use_c_codecs: Option<bool>,
-    /// Allow pure-Rust codecs (zenjpeg, zenwebp, zengif, zenjxl). `Some(false)` disables all.
-    /// Default: `None` (use compile-time defaults).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub use_safe_codecs: Option<bool>,
-    /// Prefer C library codecs over pure-Rust when both are available.
-    /// Default: `None` (false — prefer pure-Rust).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub prefer_c_codecs: Option<bool>,
-
-    /// Per-format decoder kill bits. `Some(false)` disables all decoders for that format.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_jpeg_decoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_png_decoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_gif_decoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_webp_decoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_jxl_decoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_avif_decoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_heic_decoding: Option<bool>,
-
     /// Maximum threads for parallel encoding operations.
     /// `Some(1)` disables parallelism. `None` = codec default (typically auto-detect cores).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_encoder_threads: Option<u32>,
 
-    /// Per-format encoder kill bits. `Some(false)` disables all encoders for that format.
+    /// Codec selection and priority configuration.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_jpeg_encoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_png_encoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_gif_encoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_webp_encoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_jxl_encoding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enable_avif_encoding: Option<bool>,
+    pub codecs: Option<CodecConfig>,
 }
 
 impl ExecutionSecurity {
@@ -1196,10 +1363,8 @@ impl ExecutionSecurity {
             max_frame_size: Some(FrameSizeLimit { w: 10000, h: 10000, megapixels: 100f32 }),
             max_encode_size: None,
             process_timeout_ms: Some(30_000),
-            use_c_codecs: None,
-            use_safe_codecs: None,
-            prefer_c_codecs: None,
-            ..Self::unspecified()
+            max_encoder_threads: None,
+            codecs: None,
         }
     }
     pub fn unspecified() -> Self {
@@ -1208,23 +1373,8 @@ impl ExecutionSecurity {
             max_frame_size: None,
             max_encode_size: None,
             process_timeout_ms: None,
-            use_c_codecs: None,
-            use_safe_codecs: None,
-            prefer_c_codecs: None,
             max_encoder_threads: None,
-            enable_jpeg_decoding: None,
-            enable_png_decoding: None,
-            enable_gif_decoding: None,
-            enable_webp_decoding: None,
-            enable_jxl_decoding: None,
-            enable_avif_decoding: None,
-            enable_heic_decoding: None,
-            enable_jpeg_encoding: None,
-            enable_png_encoding: None,
-            enable_gif_encoding: None,
-            enable_webp_encoding: None,
-            enable_jxl_encoding: None,
-            enable_avif_encoding: None,
+            codecs: None,
         }
     }
 
@@ -1236,92 +1386,36 @@ impl ExecutionSecurity {
         self
     }
 
-    /// Use only C codecs (disable all pure-Rust zen codecs).
-    pub fn c_codecs_only(mut self) -> Self {
-        self.use_safe_codecs = Some(false);
-        self.prefer_c_codecs = Some(true);
+    /// Set codec configuration.
+    pub fn with_codecs(mut self, config: CodecConfig) -> Self {
+        self.codecs = Some(config);
         self
     }
 
-    /// Use only pure-Rust zen codecs (disable all C codecs).
-    pub fn zen_codecs_only(mut self) -> Self {
-        self.use_c_codecs = Some(false);
-        self.prefer_c_codecs = Some(false);
-        self
+    /// Use the Legacy preset (C codecs only, no zen codecs).
+    pub fn legacy(self) -> Self {
+        self.with_codecs(CodecConfig { preset: Some(CodecPreset::Legacy), ..Default::default() })
     }
 
-    /// Prefer C codecs when both are available for a format.
-    pub fn prefer_c(mut self) -> Self {
-        self.prefer_c_codecs = Some(true);
-        self
+    /// Use the Transitional preset (C primary, zen supplements).
+    pub fn transitional(self) -> Self {
+        self.with_codecs(CodecConfig {
+            preset: Some(CodecPreset::Transitional),
+            ..Default::default()
+        })
     }
 
-    /// Prefer pure-Rust zen codecs when both are available (the default).
-    pub fn prefer_zen(mut self) -> Self {
-        self.prefer_c_codecs = Some(false);
-        self
+    /// Use the Modern preset (zen primary, C fallback). This is the default.
+    pub fn modern(self) -> Self {
+        self.with_codecs(CodecConfig { preset: Some(CodecPreset::Modern), ..Default::default() })
     }
 
-    // ── Group killbits ─────────────────────────────────────────────
-
-    /// Disable all decoding.
-    pub fn disable_all_decoders(mut self) -> Self {
-        self.enable_jpeg_decoding = Some(false);
-        self.enable_png_decoding = Some(false);
-        self.enable_gif_decoding = Some(false);
-        self.enable_webp_decoding = Some(false);
-        self.enable_jxl_decoding = Some(false);
-        self.enable_avif_decoding = Some(false);
-        self.enable_heic_decoding = Some(false);
-        self
-    }
-
-    /// Disable all encoding.
-    pub fn disable_all_encoders(mut self) -> Self {
-        self.enable_jpeg_encoding = Some(false);
-        self.enable_png_encoding = Some(false);
-        self.enable_gif_encoding = Some(false);
-        self.enable_webp_encoding = Some(false);
-        self.enable_jxl_encoding = Some(false);
-        self.enable_avif_encoding = Some(false);
-        self
-    }
-
-    /// Allow only the specified decoder formats. All others are disabled.
-    /// Accepts format name strings: "jpeg", "png", "gif", "webp", "jxl", "avif", "heic".
-    pub fn only_decode_formats(self, formats: &[&str]) -> Self {
-        let mut s = self.disable_all_decoders();
-        for &fmt in formats {
-            match fmt {
-                "jpeg" | "jpg" => s.enable_jpeg_decoding = Some(true),
-                "png" => s.enable_png_decoding = Some(true),
-                "gif" => s.enable_gif_decoding = Some(true),
-                "webp" => s.enable_webp_decoding = Some(true),
-                "jxl" => s.enable_jxl_decoding = Some(true),
-                "avif" => s.enable_avif_decoding = Some(true),
-                "heic" | "heif" => s.enable_heic_decoding = Some(true),
-                _ => {} // unknown formats silently ignored
-            }
-        }
-        s
-    }
-
-    /// Allow only the specified encoder formats. All others are disabled.
-    /// Accepts format name strings: "jpeg", "png", "gif", "webp", "jxl", "avif".
-    pub fn only_encode_formats(self, formats: &[&str]) -> Self {
-        let mut s = self.disable_all_encoders();
-        for &fmt in formats {
-            match fmt {
-                "jpeg" | "jpg" => s.enable_jpeg_encoding = Some(true),
-                "png" => s.enable_png_encoding = Some(true),
-                "gif" => s.enable_gif_encoding = Some(true),
-                "webp" => s.enable_webp_encoding = Some(true),
-                "jxl" => s.enable_jxl_encoding = Some(true),
-                "avif" => s.enable_avif_encoding = Some(true),
-                _ => {} // unknown formats silently ignored
-            }
-        }
-        s
+    /// Use the Experimental preset (pure Rust, no C codecs).
+    pub fn experimental(self) -> Self {
+        self.with_codecs(CodecConfig {
+            preset: Some(CodecPreset::Experimental),
+            ..Default::default()
+        })
     }
 }
 

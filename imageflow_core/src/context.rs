@@ -674,83 +674,51 @@ impl Context {
         if let Some(timeout_ms) = s.process_timeout_ms {
             self.cancellation_token.set_timeout(std::time::Duration::from_millis(timeout_ms));
         }
-        // Backend selection — applied before per-format kill bits
-        if s.use_c_codecs == Some(false) {
-            self.enabled_codecs.decoders.retain(|d| !d.is_c_codec());
-            self.enabled_codecs.encoders.retain(|e| !e.is_c_codec());
+        // Codec configuration
+        if let Some(codec_cfg) = s.codecs {
+            self.apply_codec_config(codec_cfg);
         }
-        if s.use_safe_codecs == Some(false) {
-            self.enabled_codecs.decoders.retain(|d| !d.is_zen_codec());
-            self.enabled_codecs.encoders.retain(|e| !e.is_zen_codec());
-        }
-        if s.prefer_c_codecs == Some(true) {
-            // Move C codecs before zen codecs by stable-partitioning
-            let mut decoders = std::mem::take(&mut self.enabled_codecs.decoders);
-            let mut c_decoders: smallvec::SmallVec<[_; 4]> = smallvec::SmallVec::new();
-            let mut other_decoders: smallvec::SmallVec<[_; 4]> = smallvec::SmallVec::new();
-            for d in decoders.drain(..) {
-                if d.is_c_codec() {
-                    c_decoders.push(d);
-                } else {
-                    other_decoders.push(d);
-                }
-            }
-            c_decoders.extend(other_decoders);
-            self.enabled_codecs.decoders = c_decoders;
+    }
 
-            let mut encoders = std::mem::take(&mut self.enabled_codecs.encoders);
-            let mut c_encoders: smallvec::SmallVec<[_; 8]> = smallvec::SmallVec::new();
-            let mut other_encoders: smallvec::SmallVec<[_; 8]> = smallvec::SmallVec::new();
-            for e in encoders.drain(..) {
-                if e.is_c_codec() {
-                    c_encoders.push(e);
-                } else {
-                    other_encoders.push(e);
-                }
+    fn apply_codec_config(&mut self, cfg: s::CodecConfig) {
+        use crate::codecs::EnabledCodecs;
+
+        let has_preset_mode =
+            cfg.preset.is_some() || cfg.prefer.is_some() || cfg.disable.is_some();
+        let has_allowlist = cfg.allow_only.is_some();
+
+        if has_preset_mode && has_allowlist {
+            // TODO: return a proper error instead of logging — for now, allowlist wins
+            eprintln!(
+                "warning: CodecConfig has both preset/prefer/disable and allow_only; \
+                 using allow_only and ignoring preset mode fields"
+            );
+        }
+
+        if let Some(ref allow_only) = cfg.allow_only {
+            // Allowlist mode: replace codec lists entirely
+            self.enabled_codecs = EnabledCodecs::from_allowlist(allow_only);
+        } else {
+            // Preset mode: start from preset (or keep current default)
+            if let Some(preset) = cfg.preset {
+                self.enabled_codecs = EnabledCodecs::from_preset(preset);
             }
-            c_encoders.extend(other_encoders);
-            self.enabled_codecs.encoders = c_encoders;
+            // Apply prefer (reorder)
+            if let Some(ref prefer) = cfg.prefer {
+                self.enabled_codecs.apply_prefer(prefer);
+            }
+            // Apply disable (remove specific codecs)
+            if let Some(ref disable) = cfg.disable {
+                self.enabled_codecs.apply_disable(disable);
+            }
         }
-        // Per-format decoder kill bits
-        if s.enable_jpeg_decoding == Some(false) {
-            self.enabled_codecs.decoders.retain(|d| !d.is_jpeg());
+
+        // Format-level kills apply in either mode
+        if let Some(ref formats) = cfg.disable_decode {
+            self.enabled_codecs.apply_disable_decode_formats(formats);
         }
-        if s.enable_png_decoding == Some(false) {
-            self.enabled_codecs.decoders.retain(|d| !d.is_png());
-        }
-        if s.enable_gif_decoding == Some(false) {
-            self.enabled_codecs.decoders.retain(|d| !d.is_gif());
-        }
-        if s.enable_webp_decoding == Some(false) {
-            self.enabled_codecs.decoders.retain(|d| !d.is_webp());
-        }
-        if s.enable_jxl_decoding == Some(false) {
-            self.enabled_codecs.decoders.retain(|d| !d.is_jxl());
-        }
-        if s.enable_avif_decoding == Some(false) {
-            self.enabled_codecs.decoders.retain(|d| !d.is_avif());
-        }
-        if s.enable_heic_decoding == Some(false) {
-            self.enabled_codecs.decoders.retain(|d| !d.is_heic());
-        }
-        // Per-format encoder kill bits
-        if s.enable_jpeg_encoding == Some(false) {
-            self.enabled_codecs.encoders.retain(|e| !e.is_jpeg());
-        }
-        if s.enable_png_encoding == Some(false) {
-            self.enabled_codecs.encoders.retain(|e| !e.is_png());
-        }
-        if s.enable_gif_encoding == Some(false) {
-            self.enabled_codecs.encoders.retain(|e| !e.is_gif());
-        }
-        if s.enable_webp_encoding == Some(false) {
-            self.enabled_codecs.encoders.retain(|e| !e.is_webp());
-        }
-        if s.enable_jxl_encoding == Some(false) {
-            self.enabled_codecs.encoders.retain(|e| !e.is_jxl());
-        }
-        if s.enable_avif_encoding == Some(false) {
-            self.enabled_codecs.encoders.retain(|e| !e.is_avif());
+        if let Some(ref formats) = cfg.disable_encode {
+            self.enabled_codecs.apply_disable_encode_formats(formats);
         }
     }
 
