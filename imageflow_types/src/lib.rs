@@ -324,29 +324,33 @@ impl OutputImageFormat {
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub struct EncoderHints {
-    //pub jxl: Option<JxlEncoderHints>,
+    pub jxl: Option<JxlEncoderHints>,
     pub webp: Option<WebpEncoderHints>,
     pub jpeg: Option<JpegEncoderHints>,
     pub png: Option<PngEncoderHints>,
-    //pub avif: Option<AvifEncoderHints>,
+    pub avif: Option<AvifEncoderHints>,
     pub gif: Option<GifEncoderHints>,
 }
 
-// #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
-// #[serde(rename_all = "lowercase")]
-// pub struct JxlEncoderHints{
-//     pub quality: Option<f32>,
-//     pub lossless: Option<bool>,
-//     //pub effort: Option<u8>,
-//     pub distance: Option<f32>,
-// }
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "lowercase")]
+pub struct JxlEncoderHints {
+    pub quality: Option<f32>,
+    pub lossless: Option<bool>,
+    pub distance: Option<f32>,
+}
 
-// #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
-// #[serde(rename_all = "lowercase")]
-// pub struct AvifEncoderHints{
-//     pub quality: Option<f32>,
-//     pub speed: Option<u8>,
-// }
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "lowercase")]
+pub struct AvifEncoderHints {
+    pub quality: Option<f32>,
+    pub speed: Option<u8>,
+    pub alpha_quality: Option<f32>,
+}
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
@@ -634,6 +638,17 @@ impl BoolKeep {
             BoolKeep::Keep => default,
             BoolKeep::True => true,
             BoolKeep::False => false,
+        }
+    }
+
+    /// Resolve an `Option<BoolKeep>` against an `Option<bool>` "keep" value.
+    /// `None` → `None`, `Some(Keep)` → `keep_value`, `Some(True)` → `Some(true)`, etc.
+    pub fn and_resolve(value: Option<BoolKeep>, keep_value: Option<bool>) -> Option<bool> {
+        match value {
+            Some(BoolKeep::Keep) => keep_value,
+            Some(BoolKeep::True) => Some(true),
+            Some(BoolKeep::False) => Some(false),
+            None => None,
         }
     }
 }
