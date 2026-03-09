@@ -146,11 +146,11 @@ dependencies = [
 
 [[package]]
 name = "archmage"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c06fce4ba08fb97a48343135a4a3a1306a402137650ce7f2e2d377af19135b6f"
+checksum = "8890833f60d40334c52df791e924456e3688eb54579973df1bcb6137fd40b59b"
 dependencies = [
- "archmage-macros 0.9.3",
+ "archmage-macros 0.9.4",
  "safe_unaligned_simd",
 ]
 
@@ -167,9 +167,9 @@ dependencies = [
 
 [[package]]
 name = "archmage-macros"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1313d66c52ca713bb53065953e1ecaa9bf69cb8f4e190aa08232ac5790a66dc1"
+checksum = "320a3958b3befe63e12cc761781da61013529f6d1697bcae0061c447ae2486fc"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1025,11 +1025,11 @@ dependencies = [
 
 [[package]]
 name = "garb"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d588075922ffd9b8269a191fcfde64b9ce5c4e58ad239e191b05dd6660decf1"
+checksum = "232a3653471b7228242fec8669102c1991af35a5262c6eb18aa47d68d661a143"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.9.4",
  "bytemuck",
 ]
 
@@ -1147,7 +1147,7 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 name = "heic-decoder"
 version = "0.1.0"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.9.4",
  "enough",
  "garb",
  "imgref",
@@ -1410,7 +1410,7 @@ name = "imageflow_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "archmage 0.9.3",
+ "archmage 0.9.4",
  "base64",
  "bytemuck",
  "colorutils-rs",
@@ -1692,7 +1692,7 @@ dependencies = [
 name = "jxl-encoder"
 version = "0.2.0"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.9.4",
  "bytemuck",
  "enough",
  "hashbrown 0.16.1",
@@ -1706,7 +1706,7 @@ dependencies = [
 name = "jxl-encoder-simd"
 version = "0.2.0"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.9.4",
  "magetypes",
 ]
 
@@ -1829,7 +1829,7 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ad4cadc069dae2158d5f87814de8958b88985b7bd1afe36f3bc9c1f607418fd5"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.9.4",
  "bytemuck",
  "magetypes",
  "num-traits",
@@ -1890,11 +1890,11 @@ source = "git+https://github.com/DanielKeep/rust-custom-derive.git#1252f258cdb9b
 
 [[package]]
 name = "magetypes"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06ba39f70cdfbbaea85cf5d82bfe84c83c8c00f0cc80243bee241c6a5227c3dd"
+checksum = "739934e720cab10b1ca37f0c3e34780bb4820ba272712e4b64d135f0dbe03d44"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.9.4",
 ]
 
 [[package]]
@@ -2755,6 +2755,12 @@ name = "seahash"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c107b6f4780854c8b126e228ea8869f4d7b71260f962fefb57b996b8959ba6b"
+
+[[package]]
+name = "self_cell"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b12e76d157a900eb52e81bc6e9f3069344290341720e9178cde2407113ac8d89"
 
 [[package]]
 name = "semver"
@@ -3739,7 +3745,7 @@ dependencies = [
 name = "zenavif"
 version = "0.1.0"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.9.4",
  "bytemuck",
  "enough",
  "imgref",
@@ -3808,7 +3814,7 @@ name = "zenjpeg"
 version = "0.6.1"
 dependencies = [
  "aligned-vec",
- "archmage 0.9.3",
+ "archmage 0.9.4",
  "bytemuck",
  "enough",
  "imgref",
@@ -3877,15 +3883,13 @@ dependencies = [
 name = "zenjxl-decoder-simd"
 version = "0.3.0"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.9.4",
  "paste",
 ]
 
 [[package]]
 name = "zenpixels"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a5034cd8276387929cdc53b7cc8b391e140e7769183664dc76c0fc2a04891be"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
  "imgref",
@@ -3953,7 +3957,7 @@ dependencies = [
 name = "zensim"
 version = "0.1.0"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.9.4",
  "bytemuck",
  "imgref",
  "linear-srgb",
@@ -3979,14 +3983,17 @@ dependencies = [
 name = "zenwebp"
 version = "0.3.2"
 dependencies = [
- "archmage 0.9.3",
+ "archmage 0.9.4",
+ "bytemuck",
  "byteorder-lite",
  "enough",
+ "garb",
  "hashbrown 0.16.1",
  "libm",
  "linear-srgb",
  "magetypes",
  "rgb",
+ "self_cell",
  "thiserror",
  "whereat",
  "yuv",
