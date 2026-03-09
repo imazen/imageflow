@@ -94,6 +94,8 @@ fn read_encoder_hints(i: &Instructions) -> s::EncoderHints {
             quality: i.webp_quality.or(i.quality.map(|v| v as f32)),
         }),
         gif: Some(s::GifEncoderHints {}),
+        jxl: None,
+        avif: None,
     }
 }
 

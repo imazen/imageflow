@@ -60,8 +60,8 @@ zenwebp = { path = "../../zen/zenwebp", features = ["zencodec"], optional = true
 zenjxl = { path = "../../zen/zenjxl", features = ["zencodec"], optional = true }
 zenavif = { path = "../../zen/zenavif", features = ["zencodec", "encode"], optional = true }
 heic-decoder = { path = "../../zen/heic-decoder-rs", features = ["zencodec"], optional = true }
-zenpixels = { path = "../../zen/zenpixels/zenpixels", default-features = false, features = ["buffer"], optional = true }
-zc = { path = "../../zen/zencodec-types", package = "zencodec-types", optional = true }
+zenpixels = { path = "../../zen/zenpixels/zenpixels", default-features = false, optional = true }
+zc = { path = "../../zen/zencodec", package = "zencodec", optional = true }
 
 # Used for schema generation if feature enabled
 utoipa = { version = "5.3.1", features = [], optional = true }

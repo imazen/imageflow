@@ -318,6 +318,36 @@ impl OutputImageFormat {
             _ => None,
         }
     }
+
+    /// Convert to the codec config `ImageFormat` enum.
+    /// Returns `None` for `Keep` and `Jpg` (use `Jpeg` instead).
+    pub fn to_image_format(self) -> Option<ImageFormat> {
+        match self {
+            OutputImageFormat::Jpeg | OutputImageFormat::Jpg => Some(ImageFormat::Jpeg),
+            OutputImageFormat::Png => Some(ImageFormat::Png),
+            OutputImageFormat::Gif => Some(ImageFormat::Gif),
+            OutputImageFormat::Webp => Some(ImageFormat::Webp),
+            OutputImageFormat::Jxl => Some(ImageFormat::Jxl),
+            OutputImageFormat::Avif => Some(ImageFormat::Avif),
+            OutputImageFormat::Keep => None,
+        }
+    }
+}
+
+impl ImageFormat {
+    /// Convert to the output format enum used in encoder presets.
+    pub fn to_output_format(self) -> Option<OutputImageFormat> {
+        match self {
+            ImageFormat::Jpeg => Some(OutputImageFormat::Jpeg),
+            ImageFormat::Png => Some(OutputImageFormat::Png),
+            ImageFormat::Gif => Some(OutputImageFormat::Gif),
+            ImageFormat::Webp => Some(OutputImageFormat::Webp),
+            ImageFormat::Jxl => Some(OutputImageFormat::Jxl),
+            ImageFormat::Avif => Some(OutputImageFormat::Avif),
+            // No direct output format for these
+            ImageFormat::Bmp | ImageFormat::Pnm | ImageFormat::Farbfeld | ImageFormat::Heic => None,
+        }
+    }
 }
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
