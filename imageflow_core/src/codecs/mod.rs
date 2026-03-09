@@ -186,6 +186,10 @@ impl NamedDecoders {
             _ => false,
         }
     }
+    /// Returns the image format this decoder handles.
+    pub fn format(&self) -> imageflow_types::ImageFormat {
+        self.codec_name().format()
+    }
 
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
         match self {
@@ -386,6 +390,10 @@ impl NamedEncoders {
             | Self::ZenAvifEncoder => true,
             _ => false,
         }
+    }
+    /// Returns the image format this encoder handles.
+    pub fn format(&self) -> imageflow_types::ImageFormat {
+        self.codec_name().format()
     }
 }
 pub struct EnabledCodecs {
@@ -778,6 +786,58 @@ impl EnabledCodecs {
         for &fmt in formats {
             self.encoders.retain(|e| e.codec_name().format() != fmt);
         }
+    }
+
+    // ── Query methods ────────────────────────────────────────────────
+
+    /// Returns true if any encoder for the given format is enabled.
+    pub fn has_encoder_for_format(&self, format: imageflow_types::ImageFormat) -> bool {
+        self.encoders.iter().any(|e| e.codec_name().format() == format)
+    }
+
+    /// Returns true if any decoder for the given format is enabled.
+    pub fn has_decoder_for_format(&self, format: imageflow_types::ImageFormat) -> bool {
+        self.decoders.iter().any(|d| d.codec_name().format() == format)
+    }
+
+    /// Returns the highest-priority encoder for the given format, if any.
+    pub fn first_encoder_for_format(
+        &self,
+        format: imageflow_types::ImageFormat,
+    ) -> Option<NamedEncoders> {
+        self.encoders.iter().copied().find(|e| e.codec_name().format() == format)
+    }
+
+    /// Returns the highest-priority decoder for the given format, if any.
+    pub fn first_decoder_for_format(
+        &self,
+        format: imageflow_types::ImageFormat,
+    ) -> Option<NamedDecoders> {
+        self.decoders.iter().copied().find(|d| d.codec_name().format() == format)
+    }
+
+    /// Returns true if the specific encoder is enabled.
+    pub fn has_encoder(&self, encoder: NamedEncoders) -> bool {
+        self.encoders.contains(&encoder)
+    }
+
+    /// Returns true if the specific decoder is enabled.
+    pub fn has_decoder(&self, decoder: NamedDecoders) -> bool {
+        self.decoders.contains(&decoder)
+    }
+
+    /// Returns the deduplicated set of formats that have at least one encoder,
+    /// in priority order (first encoder for each format determines ordering).
+    pub fn available_encode_formats(&self) -> smallvec::SmallVec<[imageflow_types::ImageFormat; 8]>
+    {
+        let mut formats = smallvec::SmallVec::new();
+        for e in &self.encoders {
+            let fmt = e.codec_name().format();
+            if !formats.contains(&fmt) {
+                formats.push(fmt);
+            }
+        }
+        formats
     }
 
     pub fn create_decoder_for_magic_bytes(
