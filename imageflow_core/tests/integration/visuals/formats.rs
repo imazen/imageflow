@@ -1130,6 +1130,24 @@ fn cb_png24_to_webp() {
 }
 
 #[test]
+fn cb_png24_to_jxl() {
+    let (ok, fail) = cb_scan("png-24-32", "png", "jxl");
+    report_corpus("cb_png24", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_png24_to_avif() {
+    let (ok, fail) = cb_scan("png-24-32", "png", "avif");
+    report_corpus("cb_png24", "avif", ok, &fail);
+}
+
+#[test]
+fn cb_png24_to_gif() {
+    let (ok, fail) = cb_scan("png-24-32", "png", "gif");
+    report_corpus("cb_png24", "gif", ok, &fail);
+}
+
+#[test]
 fn cb_png8_to_png() {
     let (ok, fail) = cb_scan("png-8", "png", "png");
     report_corpus("cb_png8", "png", ok, &fail);
@@ -1141,6 +1159,30 @@ fn cb_png8_to_jpg() {
     report_corpus("cb_png8", "jpg", ok, &fail);
 }
 
+#[test]
+fn cb_png8_to_webp() {
+    let (ok, fail) = cb_scan("png-8", "png", "webp");
+    report_corpus("cb_png8", "webp", ok, &fail);
+}
+
+#[test]
+fn cb_png8_to_jxl() {
+    let (ok, fail) = cb_scan("png-8", "png", "jxl");
+    report_corpus("cb_png8", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_png8_to_avif() {
+    let (ok, fail) = cb_scan("png-8", "png", "avif");
+    report_corpus("cb_png8", "avif", ok, &fail);
+}
+
+#[test]
+fn cb_png8_to_gif() {
+    let (ok, fail) = cb_scan("png-8", "png", "gif");
+    report_corpus("cb_png8", "gif", ok, &fail);
+}
+
 // ── APNG corpus-builder ─────────────────────────────────────────────────
 
 #[test]
@@ -1150,9 +1192,33 @@ fn cb_apng_to_png() {
 }
 
 #[test]
+fn cb_apng_to_jpg() {
+    let (ok, fail) = cb_scan("apng", "png", "jpg");
+    report_corpus("cb_apng", "jpg", ok, &fail);
+}
+
+#[test]
+fn cb_apng_to_webp() {
+    let (ok, fail) = cb_scan("apng", "png", "webp");
+    report_corpus("cb_apng", "webp", ok, &fail);
+}
+
+#[test]
 fn cb_apng_to_gif() {
     let (ok, fail) = cb_scan("apng", "png", "gif");
     report_corpus("cb_apng", "gif", ok, &fail);
+}
+
+#[test]
+fn cb_apng_to_jxl() {
+    let (ok, fail) = cb_scan("apng", "png", "jxl");
+    report_corpus("cb_apng", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_apng_to_avif() {
+    let (ok, fail) = cb_scan("apng", "png", "avif");
+    report_corpus("cb_apng", "avif", ok, &fail);
 }
 
 // ── JPEG corpus-builder ─────────────────────────────────────────────────
@@ -1164,15 +1230,33 @@ fn cb_jpeg_to_jpg() {
 }
 
 #[test]
+fn cb_jpeg_to_png() {
+    let (ok, fail) = cb_scan("source_jpegs", "jpg", "png");
+    report_corpus("cb_jpeg", "png", ok, &fail);
+}
+
+#[test]
 fn cb_jpeg_to_webp() {
     let (ok, fail) = cb_scan("source_jpegs", "jpg", "webp");
     report_corpus("cb_jpeg", "webp", ok, &fail);
 }
 
 #[test]
-fn cb_jpeg_to_png() {
-    let (ok, fail) = cb_scan("source_jpegs", "jpg", "png");
-    report_corpus("cb_jpeg", "png", ok, &fail);
+fn cb_jpeg_to_jxl() {
+    let (ok, fail) = cb_scan("source_jpegs", "jpg", "jxl");
+    report_corpus("cb_jpeg", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_jpeg_to_avif() {
+    let (ok, fail) = cb_scan("source_jpegs", "jpg", "avif");
+    report_corpus("cb_jpeg", "avif", ok, &fail);
+}
+
+#[test]
+fn cb_jpeg_to_gif() {
+    let (ok, fail) = cb_scan("source_jpegs", "jpg", "gif");
+    report_corpus("cb_jpeg", "gif", ok, &fail);
 }
 
 // ── WebP corpus-builder ─────────────────────────────────────────────────
@@ -1195,12 +1279,42 @@ fn cb_webp_to_webp() {
     report_corpus("cb_webp", "webp", ok, &fail);
 }
 
+#[test]
+fn cb_webp_to_jxl() {
+    let (ok, fail) = cb_scan("webp", "webp", "jxl");
+    report_corpus("cb_webp", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_webp_to_avif() {
+    let (ok, fail) = cb_scan("webp", "webp", "avif");
+    report_corpus("cb_webp", "avif", ok, &fail);
+}
+
+#[test]
+fn cb_webp_to_gif() {
+    let (ok, fail) = cb_scan("webp", "webp", "gif");
+    report_corpus("cb_webp", "gif", ok, &fail);
+}
+
 // ── WebP animated corpus-builder ────────────────────────────────────────
 
 #[test]
 fn cb_webp_anim_to_gif() {
     let (ok, fail) = cb_scan("webp-animated", "webp", "gif");
     report_corpus("cb_webp_anim", "gif", ok, &fail);
+}
+
+#[test]
+fn cb_webp_anim_to_png() {
+    let (ok, fail) = cb_scan("webp-animated", "webp", "png");
+    report_corpus("cb_webp_anim", "png", ok, &fail);
+}
+
+#[test]
+fn cb_webp_anim_to_jpg() {
+    let (ok, fail) = cb_scan("webp-animated", "webp", "jpg");
+    report_corpus("cb_webp_anim", "jpg", ok, &fail);
 }
 
 // ── AVIF corpus-builder ─────────────────────────────────────────────────
@@ -1223,6 +1337,38 @@ fn cb_avif_to_webp() {
     report_corpus("cb_avif", "webp", ok, &fail);
 }
 
+#[test]
+fn cb_avif_to_jxl() {
+    let (ok, fail) = cb_scan("avif", "avif", "jxl");
+    report_corpus("cb_avif", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_avif_to_avif() {
+    let (ok, fail) = cb_scan("avif", "avif", "avif");
+    report_corpus("cb_avif", "avif", ok, &fail);
+}
+
+#[test]
+fn cb_avif_to_gif() {
+    let (ok, fail) = cb_scan("avif", "avif", "gif");
+    report_corpus("cb_avif", "gif", ok, &fail);
+}
+
+// ── AVIF animated corpus-builder ────────────────────────────────────────
+
+#[test]
+fn cb_avif_anim_to_png() {
+    let (ok, fail) = cb_scan("avif-animated", "avif", "png");
+    report_corpus("cb_avif_anim", "png", ok, &fail);
+}
+
+#[test]
+fn cb_avif_anim_to_gif() {
+    let (ok, fail) = cb_scan("avif-animated", "avif", "gif");
+    report_corpus("cb_avif_anim", "gif", ok, &fail);
+}
+
 // ── JXL corpus-builder ──────────────────────────────────────────────────
 
 #[test]
@@ -1235,6 +1381,44 @@ fn cb_jxl_to_png() {
 fn cb_jxl_to_jpg() {
     let (ok, fail) = cb_scan("jxl", "jxl", "jpg");
     report_corpus("cb_jxl", "jpg", ok, &fail);
+}
+
+#[test]
+fn cb_jxl_to_webp() {
+    let (ok, fail) = cb_scan("jxl", "jxl", "webp");
+    report_corpus("cb_jxl", "webp", ok, &fail);
+}
+
+#[test]
+fn cb_jxl_to_jxl() {
+    let (ok, fail) = cb_scan("jxl", "jxl", "jxl");
+    report_corpus("cb_jxl", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_jxl_to_avif() {
+    let (ok, fail) = cb_scan("jxl", "jxl", "avif");
+    report_corpus("cb_jxl", "avif", ok, &fail);
+}
+
+#[test]
+fn cb_jxl_to_gif() {
+    let (ok, fail) = cb_scan("jxl", "jxl", "gif");
+    report_corpus("cb_jxl", "gif", ok, &fail);
+}
+
+// ── JXL animated corpus-builder ─────────────────────────────────────────
+
+#[test]
+fn cb_jxl_anim_to_png() {
+    let (ok, fail) = cb_scan("jxl-animated", "jxl", "png");
+    report_corpus("cb_jxl_anim", "png", ok, &fail);
+}
+
+#[test]
+fn cb_jxl_anim_to_gif() {
+    let (ok, fail) = cb_scan("jxl-animated", "jxl", "gif");
+    report_corpus("cb_jxl_anim", "gif", ok, &fail);
 }
 
 // ── GIF static corpus-builder ───────────────────────────────────────────
@@ -1251,6 +1435,30 @@ fn cb_gif_static_to_jpg() {
     report_corpus("cb_gif_static", "jpg", ok, &fail);
 }
 
+#[test]
+fn cb_gif_static_to_webp() {
+    let (ok, fail) = cb_scan("gif-static", "gif", "webp");
+    report_corpus("cb_gif_static", "webp", ok, &fail);
+}
+
+#[test]
+fn cb_gif_static_to_jxl() {
+    let (ok, fail) = cb_scan("gif-static", "gif", "jxl");
+    report_corpus("cb_gif_static", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_gif_static_to_avif() {
+    let (ok, fail) = cb_scan("gif-static", "gif", "avif");
+    report_corpus("cb_gif_static", "avif", ok, &fail);
+}
+
+#[test]
+fn cb_gif_static_to_gif() {
+    let (ok, fail) = cb_scan("gif-static", "gif", "gif");
+    report_corpus("cb_gif_static", "gif", ok, &fail);
+}
+
 // ── GIF animated corpus-builder ─────────────────────────────────────────
 
 #[test]
@@ -1259,30 +1467,68 @@ fn cb_gif_anim_to_gif() {
     report_corpus("cb_gif_anim", "gif", ok, &fail);
 }
 
-// ── Wide-gamut corpus-builder ───────────────────────────────────────────
+#[test]
+fn cb_gif_anim_to_png() {
+    let (ok, fail) = cb_scan("gif-animated", "gif", "png");
+    report_corpus("cb_gif_anim", "png", ok, &fail);
+}
 
 #[test]
-fn cb_wide_gamut_to_jpg() {
+fn cb_gif_anim_to_jpg() {
+    let (ok, fail) = cb_scan("gif-animated", "gif", "jpg");
+    report_corpus("cb_gif_anim", "jpg", ok, &fail);
+}
+
+// ── Wide-gamut corpus-builder ───────────────────────────────────────────
+
+const WIDE_GAMUT_EXTS: &[&str] = &["jpg", "png", "avif", "webp", "jxl", "heic"];
+
+fn cb_wide_gamut_to(target: &str) {
     let dir = Path::new(CORPUS_BUILDER).join("wide-gamut");
     if !dir.exists() {
         eprintln!("skipping corpus-builder/wide-gamut: not found");
         return;
     }
-    // Scan all extensions: jpg, png, avif, webp, jxl
     let mut ok_total = 0;
     let mut fail_total = Vec::new();
-    for ext in &["jpg", "png", "avif", "webp", "jxl", "heic"] {
-        let (ok, fail) = corpus_scan(&dir, ext, "jpg", 50000);
+    for ext in WIDE_GAMUT_EXTS {
+        let (ok, fail) = corpus_scan(&dir, ext, target, 50000);
         ok_total += ok;
         fail_total.extend(fail);
     }
-    report_corpus("cb_wide_gamut", "jpg", ok_total, &fail_total);
+    report_corpus("cb_wide_gamut", target, ok_total, &fail_total);
+}
+
+#[test]
+fn cb_wide_gamut_to_jpg() {
+    cb_wide_gamut_to("jpg");
+}
+
+#[test]
+fn cb_wide_gamut_to_png() {
+    cb_wide_gamut_to("png");
+}
+
+#[test]
+fn cb_wide_gamut_to_webp() {
+    cb_wide_gamut_to("webp");
+}
+
+#[test]
+fn cb_wide_gamut_to_jxl() {
+    cb_wide_gamut_to("jxl");
+}
+
+#[test]
+fn cb_wide_gamut_to_avif() {
+    cb_wide_gamut_to("avif");
 }
 
 // ── Weird/edge-case corpus-builder ──────────────────────────────────────
 
-#[test]
-fn cb_weird_to_png() {
+const WEIRD_EXTS: &[&str] = &["avif", "jxl", "webp", "png", "jpg"];
+
+fn cb_weird_to(target: &str) {
     let dir = Path::new(CORPUS_BUILDER).join("weird");
     if !dir.exists() {
         eprintln!("skipping corpus-builder/weird: not found");
@@ -1290,18 +1536,44 @@ fn cb_weird_to_png() {
     }
     let mut ok_total = 0;
     let mut fail_total = Vec::new();
-    for ext in &["avif", "jxl", "webp", "png", "jpg"] {
-        let (ok, fail) = corpus_scan(&dir, ext, "png", 50000);
+    for ext in WEIRD_EXTS {
+        let (ok, fail) = corpus_scan(&dir, ext, target, 50000);
         ok_total += ok;
         fail_total.extend(fail);
     }
-    report_corpus("cb_weird", "png", ok_total, &fail_total);
+    report_corpus("cb_weird", target, ok_total, &fail_total);
+}
+
+#[test]
+fn cb_weird_to_png() {
+    cb_weird_to("png");
+}
+
+#[test]
+fn cb_weird_to_jpg() {
+    cb_weird_to("jpg");
+}
+
+#[test]
+fn cb_weird_to_webp() {
+    cb_weird_to("webp");
+}
+
+#[test]
+fn cb_weird_to_jxl() {
+    cb_weird_to("jxl");
+}
+
+#[test]
+fn cb_weird_to_avif() {
+    cb_weird_to("avif");
 }
 
 // ── Repro images corpus-builder ─────────────────────────────────────────
 
-#[test]
-fn cb_repro_to_png() {
+const REPRO_EXTS: &[&str] = &["avif", "jxl", "webp", "png", "jpg", "gif", "heic"];
+
+fn cb_repro_to(target: &str) {
     let dir = Path::new(CORPUS_BUILDER).join("repro-images");
     if !dir.exists() {
         eprintln!("skipping corpus-builder/repro-images: not found");
@@ -1309,10 +1581,145 @@ fn cb_repro_to_png() {
     }
     let mut ok_total = 0;
     let mut fail_total = Vec::new();
-    for ext in &["avif", "jxl", "webp", "png", "jpg", "gif", "heic"] {
-        let (ok, fail) = corpus_scan(&dir, ext, "png", 50000);
+    for ext in REPRO_EXTS {
+        let (ok, fail) = corpus_scan(&dir, ext, target, 50000);
         ok_total += ok;
         fail_total.extend(fail);
     }
-    report_corpus("cb_repro", "png", ok_total, &fail_total);
+    report_corpus("cb_repro", target, ok_total, &fail_total);
+}
+
+#[test]
+fn cb_repro_to_png() {
+    cb_repro_to("png");
+}
+
+#[test]
+fn cb_repro_to_jpg() {
+    cb_repro_to("jpg");
+}
+
+#[test]
+fn cb_repro_to_webp() {
+    cb_repro_to("webp");
+}
+
+// ── HEIC test images ────────────────────────────────────────────────────
+
+const HEIC_DIR: &str = "/mnt/v/heic";
+
+fn heic_scan(target: &str) {
+    let dir = Path::new(HEIC_DIR);
+    if !dir.exists() {
+        eprintln!("skipping heic: not found");
+        return;
+    }
+    // collect_files_recursive uses eq_ignore_ascii_case, so "heic" matches .HEIC
+    let (ok, fail) = corpus_scan(dir, "heic", target, 50000);
+    report_corpus("heic", target, ok, &fail);
+}
+
+#[test]
+fn heic_to_png() {
+    heic_scan("png");
+}
+
+#[test]
+fn heic_to_jpg() {
+    heic_scan("jpg");
+}
+
+#[test]
+fn heic_to_webp() {
+    heic_scan("webp");
+}
+
+#[test]
+fn heic_to_avif() {
+    heic_scan("avif");
+}
+
+#[test]
+fn heic_to_jxl() {
+    heic_scan("jxl");
+}
+
+// ── Non-sRGB ICC profile corpus ─────────────────────────────────────────
+
+const NON_SRGB_DIR: &str = "/mnt/v/datasets/non-srgb-by-profile";
+
+fn icc_profile_scan(subdir: &str, target: &str) {
+    let dir = Path::new(NON_SRGB_DIR).join(subdir);
+    if !dir.exists() {
+        eprintln!("skipping non-srgb-by-profile/{subdir}: not found");
+        return;
+    }
+    let mut ok_total = 0;
+    let mut fail_total = Vec::new();
+    for ext in &["jpg", "png", "avif", "webp", "jxl", "tiff", "tif"] {
+        let (ok, fail) = corpus_scan(&dir, ext, target, 50000);
+        ok_total += ok;
+        fail_total.extend(fail);
+    }
+    report_corpus(&format!("icc_{subdir}"), target, ok_total, &fail_total);
+}
+
+#[test]
+fn icc_adobe_rgb_to_jpg() {
+    icc_profile_scan("adobe-rgb", "jpg");
+}
+
+#[test]
+fn icc_adobe_rgb_to_png() {
+    icc_profile_scan("adobe-rgb", "png");
+}
+
+#[test]
+fn icc_display_p3_to_jpg() {
+    icc_profile_scan("display-p3", "jpg");
+}
+
+#[test]
+fn icc_display_p3_to_png() {
+    icc_profile_scan("display-p3", "png");
+}
+
+#[test]
+fn icc_prophoto_rgb_to_jpg() {
+    icc_profile_scan("prophoto-rgb", "jpg");
+}
+
+#[test]
+fn icc_prophoto_rgb_to_png() {
+    icc_profile_scan("prophoto-rgb", "png");
+}
+
+#[test]
+fn icc_rec2020_to_jpg() {
+    icc_profile_scan("rec-2020-pq", "jpg");
+}
+
+#[test]
+fn icc_rec2020_to_png() {
+    icc_profile_scan("rec-2020-pq", "png");
+}
+
+#[test]
+fn icc_bt709_to_jpg() {
+    icc_profile_scan("bt709", "jpg");
+}
+
+#[test]
+fn icc_camera_rgb_to_jpg() {
+    icc_profile_scan("camera-rgb", "jpg");
+}
+
+#[test]
+fn icc_grayscale_to_jpg() {
+    icc_profile_scan("grayscale", "jpg");
+}
+
+#[test]
+fn icc_grayscale_to_png() {
+    icc_profile_scan("grayscale", "png");
 }
