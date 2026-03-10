@@ -357,13 +357,25 @@ impl QualityIntent {
 
     /// Build an [`EncoderConfig`] for the given encoder using this quality intent.
     ///
-    /// Returns default config for each format/encoder.  The caller can further
-    /// customize the returned config (e.g. via `EncoderHints` overrides).
+    /// **Zen codecs** receive `generic_quality` directly — they have their own
+    /// calibration tables (via `with_generic_quality()`).
+    /// **C codecs** (mozjpeg, libwebp) receive pre-calibrated native values.
+    ///
+    /// The caller can further customize the returned config (e.g. via
+    /// `EncoderHints` overrides).
     pub fn build_config(&self, encoder: NamedEncoders, matte: Option<Color>) -> EncoderConfig {
         let lossless = self.is_lossless();
+        let is_zen = encoder.is_zen_codec();
+
         match encoder.caps().format {
             ImageFormat::Jpeg => EncoderConfig::Jpeg {
-                quality: self.mozjpeg_quality(),
+                // Zen: pass generic_quality, zen's calibrated_jpeg_quality() maps it
+                // C (mozjpeg): pass pre-calibrated mozjpeg quality
+                quality: if is_zen {
+                    self.generic_quality.clamp(0.0, 100.0) as u8
+                } else {
+                    self.mozjpeg_quality()
+                },
                 progressive: true,
                 classic: false,
                 optimize_huffman: false,
@@ -391,7 +403,11 @@ impl QualityIntent {
                     EncoderConfig::WebP { quality: None, lossless: true, matte }
                 } else {
                     EncoderConfig::WebP {
-                        quality: Some(self.libwebp_quality()),
+                        quality: Some(if is_zen {
+                            self.generic_quality.clamp(0.0, 100.0)
+                        } else {
+                            self.libwebp_quality()
+                        }),
                         lossless: false,
                         matte,
                     }
@@ -399,17 +415,29 @@ impl QualityIntent {
             }
             ImageFormat::Gif => EncoderConfig::Gif,
             ImageFormat::Jxl => {
+                // JXL is zen-only, but we still produce a proper config
                 if lossless {
                     EncoderConfig::Jxl { distance: None, lossless: true }
                 } else {
                     EncoderConfig::Jxl {
+                        // Zen JXL has with_generic_quality() → calibrated_jxl_quality()
+                        // which returns a distance. We pass generic_quality; the
+                        // instantiation layer calls with_generic_quality().
+                        // The distance field here is used for direct JXL distance
+                        // overrides (e.g. from srcset `jxl-d1.5`).
                         distance: Some(self.jxl_distance()),
                         lossless: false,
                     }
                 }
             }
             ImageFormat::Avif => EncoderConfig::Avif {
-                quality: self.avif_quality(),
+                // Zen AVIF has with_generic_quality() → calibrated_avif_quality()
+                // For zen, pass generic_quality; for C AVIF (hypothetical), calibrate.
+                quality: if is_zen {
+                    self.generic_quality.clamp(0.0, 100.0)
+                } else {
+                    self.avif_quality()
+                },
                 speed: self.avif_speed(),
                 lossless,
                 matte,
@@ -1905,6 +1933,53 @@ mod tests {
         match cfg {
             EncoderConfig::Jpeg { matte: m, .. } => assert_eq!(m, matte),
             _ => panic!("expected Jpeg"),
+        }
+    }
+
+    #[test]
+    fn build_config_zen_jpeg_gets_generic_quality() {
+        let q = QualityIntent::from_value(73.0);
+        let zen_cfg = q.build_config(NamedEncoders::ZenJpegEncoder, None);
+        let c_cfg = q.build_config(NamedEncoders::MozJpegEncoder, None);
+        match (zen_cfg, c_cfg) {
+            (EncoderConfig::Jpeg { quality: zen_q, .. }, EncoderConfig::Jpeg { quality: c_q, .. }) => {
+                // Zen gets generic_quality (73), C gets calibrated mozjpeg quality (also 73)
+                // In this case they happen to match because (73, 73) is an anchor point
+                assert_eq!(zen_q, 73);
+                assert_eq!(c_q, 73);
+            }
+            _ => panic!("expected two Jpeg configs"),
+        }
+    }
+
+    #[test]
+    fn build_config_zen_webp_gets_generic_quality() {
+        let q = QualityIntent::from_value(55.0);
+        let zen_cfg = q.build_config(NamedEncoders::ZenWebPEncoder, None);
+        let c_cfg = q.build_config(NamedEncoders::WebPEncoder, None);
+        match (zen_cfg, c_cfg) {
+            (
+                EncoderConfig::WebP { quality: Some(zen_q), .. },
+                EncoderConfig::WebP { quality: Some(c_q), .. },
+            ) => {
+                // Zen gets generic (55.0), C gets calibrated (53.0)
+                assert!((zen_q - 55.0).abs() < 0.01, "zen should get generic_quality 55, got {}", zen_q);
+                assert!((c_q - 53.0).abs() < 0.01, "C should get calibrated 53, got {}", c_q);
+            }
+            _ => panic!("expected two lossy WebP configs"),
+        }
+    }
+
+    #[test]
+    fn build_config_zen_avif_gets_generic_quality() {
+        let q = QualityIntent::from_value(73.0);
+        let cfg = q.build_config(NamedEncoders::ZenAvifEncoder, None);
+        match cfg {
+            EncoderConfig::Avif { quality, .. } => {
+                // Zen AVIF should get generic_quality directly (73.0)
+                assert!((quality - 73.0).abs() < 0.01, "zen AVIF should get 73.0, got {}", quality);
+            }
+            _ => panic!("expected Avif config"),
         }
     }
 
