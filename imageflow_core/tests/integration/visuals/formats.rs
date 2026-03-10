@@ -8,8 +8,8 @@
 use crate::common::*;
 use imageflow_core::Context;
 use imageflow_types::{
-    self as s, CommandStringKind, Constraint, ConstraintMode, EncoderPreset, Execute001, Framewise,
-    Node,
+    self as s, CommandStringKind, Constraint, ConstraintMode, DecoderCommand, EncoderPreset,
+    Execute001, Framewise, Node,
 };
 use std::path::{Path, PathBuf};
 
@@ -626,21 +626,18 @@ fn webp_quality_sweep() {
         })
         .unwrap_or_else(|e| panic!("WebP quality={q} failed: {e}"));
         let output = ctx.take_output_buffer(1).unwrap();
-        assert!(
-            output.starts_with(b"RIFF"),
-            "WebP quality={q}: output doesn't have RIFF magic"
-        );
+        assert!(output.starts_with(b"RIFF"), "WebP quality={q}: output doesn't have RIFF magic");
     }
 }
 
 #[test]
 fn jxl_distance_sweep() {
     test_init();
-    let input_bytes =
-        get_url_bytes_with_retry(FRYMIRE_PNG).expect("failed to fetch frymire.png");
+    let input_bytes = get_url_bytes_with_retry(FRYMIRE_PNG).expect("failed to fetch frymire.png");
 
     for d in [0.0f32, 0.5, 1.0, 2.0, 4.0, 8.0] {
-        let preset = if d == 0.0 { jxl_lossless() } else { EncoderPreset::JxlLossy { distance: d } };
+        let preset =
+            if d == 0.0 { jxl_lossless() } else { EncoderPreset::JxlLossy { distance: d } };
         let steps = vec![
             Node::Decode { io_id: 0, commands: None },
             Node::Constrain(Constraint {
@@ -764,6 +761,9 @@ fn corpus_scan(
             let mut ctx = Context::create().unwrap();
             ctx.add_input_vector(0, bytes).unwrap();
             ctx.add_output_buffer(1).unwrap();
+            // Corpus images may have mismatched ICC profiles (e.g. grayscale
+            // profile on an RGB image). Fall back to sRGB rather than failing.
+            ctx.tell_decoder(0, DecoderCommand::IgnoreColorProfileErrors).unwrap();
             let execute = Execute001 {
                 graph_recording: None,
                 security: None,
@@ -1092,4 +1092,227 @@ fn corpus_icc_prophoto_to_jpeg() {
     let mut fail = fail_webp;
     fail.extend(fail_jpg);
     report_corpus("icc_prophoto", "jpg", ok, &fail);
+}
+
+// ── corpus-builder comprehensive tests ────────────────────────────────────
+
+const CORPUS_BUILDER: &str = "/mnt/v/output/corpus-builder";
+
+/// Helper: run corpus_scan against a corpus-builder subdirectory.
+/// Scans ALL files (limit = 50000).
+fn cb_scan(subdir: &str, ext: &str, target: &str) -> (usize, Vec<(PathBuf, String)>) {
+    let dir = Path::new(CORPUS_BUILDER).join(subdir);
+    if !dir.exists() {
+        eprintln!("skipping corpus-builder/{subdir}: not found");
+        return (0, vec![]);
+    }
+    corpus_scan(&dir, ext, target, 50000)
+}
+
+// ── PNG corpus-builder ──────────────────────────────────────────────────
+
+#[test]
+fn cb_png24_to_png() {
+    let (ok, fail) = cb_scan("png-24-32", "png", "png");
+    report_corpus("cb_png24", "png", ok, &fail);
+}
+
+#[test]
+fn cb_png24_to_jpg() {
+    let (ok, fail) = cb_scan("png-24-32", "png", "jpg");
+    report_corpus("cb_png24", "jpg", ok, &fail);
+}
+
+#[test]
+fn cb_png24_to_webp() {
+    let (ok, fail) = cb_scan("png-24-32", "png", "webp");
+    report_corpus("cb_png24", "webp", ok, &fail);
+}
+
+#[test]
+fn cb_png8_to_png() {
+    let (ok, fail) = cb_scan("png-8", "png", "png");
+    report_corpus("cb_png8", "png", ok, &fail);
+}
+
+#[test]
+fn cb_png8_to_jpg() {
+    let (ok, fail) = cb_scan("png-8", "png", "jpg");
+    report_corpus("cb_png8", "jpg", ok, &fail);
+}
+
+// ── APNG corpus-builder ─────────────────────────────────────────────────
+
+#[test]
+fn cb_apng_to_png() {
+    let (ok, fail) = cb_scan("apng", "png", "png");
+    report_corpus("cb_apng", "png", ok, &fail);
+}
+
+#[test]
+fn cb_apng_to_gif() {
+    let (ok, fail) = cb_scan("apng", "png", "gif");
+    report_corpus("cb_apng", "gif", ok, &fail);
+}
+
+// ── JPEG corpus-builder ─────────────────────────────────────────────────
+
+#[test]
+fn cb_jpeg_to_jpg() {
+    let (ok, fail) = cb_scan("source_jpegs", "jpg", "jpg");
+    report_corpus("cb_jpeg", "jpg", ok, &fail);
+}
+
+#[test]
+fn cb_jpeg_to_webp() {
+    let (ok, fail) = cb_scan("source_jpegs", "jpg", "webp");
+    report_corpus("cb_jpeg", "webp", ok, &fail);
+}
+
+#[test]
+fn cb_jpeg_to_png() {
+    let (ok, fail) = cb_scan("source_jpegs", "jpg", "png");
+    report_corpus("cb_jpeg", "png", ok, &fail);
+}
+
+// ── WebP corpus-builder ─────────────────────────────────────────────────
+
+#[test]
+fn cb_webp_to_png() {
+    let (ok, fail) = cb_scan("webp", "webp", "png");
+    report_corpus("cb_webp", "png", ok, &fail);
+}
+
+#[test]
+fn cb_webp_to_jpg() {
+    let (ok, fail) = cb_scan("webp", "webp", "jpg");
+    report_corpus("cb_webp", "jpg", ok, &fail);
+}
+
+#[test]
+fn cb_webp_to_webp() {
+    let (ok, fail) = cb_scan("webp", "webp", "webp");
+    report_corpus("cb_webp", "webp", ok, &fail);
+}
+
+// ── WebP animated corpus-builder ────────────────────────────────────────
+
+#[test]
+fn cb_webp_anim_to_gif() {
+    let (ok, fail) = cb_scan("webp-animated", "webp", "gif");
+    report_corpus("cb_webp_anim", "gif", ok, &fail);
+}
+
+// ── AVIF corpus-builder ─────────────────────────────────────────────────
+
+#[test]
+fn cb_avif_to_png() {
+    let (ok, fail) = cb_scan("avif", "avif", "png");
+    report_corpus("cb_avif", "png", ok, &fail);
+}
+
+#[test]
+fn cb_avif_to_jpg() {
+    let (ok, fail) = cb_scan("avif", "avif", "jpg");
+    report_corpus("cb_avif", "jpg", ok, &fail);
+}
+
+#[test]
+fn cb_avif_to_webp() {
+    let (ok, fail) = cb_scan("avif", "avif", "webp");
+    report_corpus("cb_avif", "webp", ok, &fail);
+}
+
+// ── JXL corpus-builder ──────────────────────────────────────────────────
+
+#[test]
+fn cb_jxl_to_png() {
+    let (ok, fail) = cb_scan("jxl", "jxl", "png");
+    report_corpus("cb_jxl", "png", ok, &fail);
+}
+
+#[test]
+fn cb_jxl_to_jpg() {
+    let (ok, fail) = cb_scan("jxl", "jxl", "jpg");
+    report_corpus("cb_jxl", "jpg", ok, &fail);
+}
+
+// ── GIF static corpus-builder ───────────────────────────────────────────
+
+#[test]
+fn cb_gif_static_to_png() {
+    let (ok, fail) = cb_scan("gif-static", "gif", "png");
+    report_corpus("cb_gif_static", "png", ok, &fail);
+}
+
+#[test]
+fn cb_gif_static_to_jpg() {
+    let (ok, fail) = cb_scan("gif-static", "gif", "jpg");
+    report_corpus("cb_gif_static", "jpg", ok, &fail);
+}
+
+// ── GIF animated corpus-builder ─────────────────────────────────────────
+
+#[test]
+fn cb_gif_anim_to_gif() {
+    let (ok, fail) = cb_scan("gif-animated", "gif", "gif");
+    report_corpus("cb_gif_anim", "gif", ok, &fail);
+}
+
+// ── Wide-gamut corpus-builder ───────────────────────────────────────────
+
+#[test]
+fn cb_wide_gamut_to_jpg() {
+    let dir = Path::new(CORPUS_BUILDER).join("wide-gamut");
+    if !dir.exists() {
+        eprintln!("skipping corpus-builder/wide-gamut: not found");
+        return;
+    }
+    // Scan all extensions: jpg, png, avif, webp, jxl
+    let mut ok_total = 0;
+    let mut fail_total = Vec::new();
+    for ext in &["jpg", "png", "avif", "webp", "jxl", "heic"] {
+        let (ok, fail) = corpus_scan(&dir, ext, "jpg", 50000);
+        ok_total += ok;
+        fail_total.extend(fail);
+    }
+    report_corpus("cb_wide_gamut", "jpg", ok_total, &fail_total);
+}
+
+// ── Weird/edge-case corpus-builder ──────────────────────────────────────
+
+#[test]
+fn cb_weird_to_png() {
+    let dir = Path::new(CORPUS_BUILDER).join("weird");
+    if !dir.exists() {
+        eprintln!("skipping corpus-builder/weird: not found");
+        return;
+    }
+    let mut ok_total = 0;
+    let mut fail_total = Vec::new();
+    for ext in &["avif", "jxl", "webp", "png", "jpg"] {
+        let (ok, fail) = corpus_scan(&dir, ext, "png", 50000);
+        ok_total += ok;
+        fail_total.extend(fail);
+    }
+    report_corpus("cb_weird", "png", ok_total, &fail_total);
+}
+
+// ── Repro images corpus-builder ─────────────────────────────────────────
+
+#[test]
+fn cb_repro_to_png() {
+    let dir = Path::new(CORPUS_BUILDER).join("repro-images");
+    if !dir.exists() {
+        eprintln!("skipping corpus-builder/repro-images: not found");
+        return;
+    }
+    let mut ok_total = 0;
+    let mut fail_total = Vec::new();
+    for ext in &["avif", "jxl", "webp", "png", "jpg", "gif", "heic"] {
+        let (ok, fail) = corpus_scan(&dir, ext, "png", 50000);
+        ok_total += ok;
+        fail_total.extend(fail);
+    }
+    report_corpus("cb_repro", "png", ok_total, &fail_total);
 }

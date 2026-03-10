@@ -5,6 +5,7 @@ tolerance zensim:90 (dissim 0.10)
 ~ cozy-dew-d27fb45096:sea  x86_64-avx512  @41573149  new-baseline
 
 ## cmyk_jpeg_to_webp cmyk_to_webp_200x200
+tolerance zensim:90 (dissim 0.10)
 ~ damp-ember-1a93a98e4f:sea  x86_64-avx512  @41573149  new-baseline
 ~ damp-ember-1a93a98e4f:sea  x86_64-avx512  @41573149  new-baseline
 

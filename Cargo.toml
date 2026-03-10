@@ -30,6 +30,7 @@ opt-level = 2
 #  libwebp-sys = { git = "https://github.com/imazen/libwebp-sys" }
 libpng-sys = { git = "https://github.com/imazen/rust-libpng-sys" }
 lcms2-sys = { git = "https://github.com/imazen/rust-lcms2-sys", branch = "update-lcms2-2.18" }
+zenpixels = { path = "../zen/zenpixels/zenpixels" }
 # load_image.git = "https://gitlab.com/lilith6/load_image.git"
 # TODO(rgb-0.8.91): Uncomment when rgb 0.8.91+ is published to crates.io
 # This enables: root-level BGR8/BGRA8/RGB8/RGBA8 exports, Gray_v09 compat type,

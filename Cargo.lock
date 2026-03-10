@@ -146,11 +146,11 @@ dependencies = [
 
 [[package]]
 name = "archmage"
-version = "0.9.4"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8890833f60d40334c52df791e924456e3688eb54579973df1bcb6137fd40b59b"
+checksum = "6fd400bfe079970d495bda0865afa8e3ba6f1604812f003c1ddcedc4d7a55a7e"
 dependencies = [
- "archmage-macros 0.9.4",
+ "archmage-macros 0.9.5",
  "safe_unaligned_simd",
 ]
 
@@ -167,9 +167,9 @@ dependencies = [
 
 [[package]]
 name = "archmage-macros"
-version = "0.9.4"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "320a3958b3befe63e12cc761781da61013529f6d1697bcae0061c447ae2486fc"
+checksum = "e73d1377bc9ebbed872f6a818decf8b360050183c641604078c0b5fc0f4a9189"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1029,8 +1029,9 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "232a3653471b7228242fec8669102c1991af35a5262c6eb18aa47d68d661a143"
 dependencies = [
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "bytemuck",
+ "paste",
 ]
 
 [[package]]
@@ -1147,14 +1148,14 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 name = "heic-decoder"
 version = "0.1.0"
 dependencies = [
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "enough",
  "garb",
  "imgref",
  "rgb",
  "safe_unaligned_simd",
- "whereat",
- "zencodec-types",
+ "whereat 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zencodec",
  "zenpixels",
 ]
 
@@ -1410,7 +1411,7 @@ name = "imageflow_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "base64",
  "bytemuck",
  "colorutils-rs",
@@ -1464,7 +1465,7 @@ dependencies = [
  "uuid",
  "walkdir",
  "zenavif",
- "zencodec-types",
+ "zencodec",
  "zengif",
  "zenjpeg",
  "zenjxl",
@@ -1692,21 +1693,21 @@ dependencies = [
 name = "jxl-encoder"
 version = "0.2.0"
 dependencies = [
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "bytemuck",
  "enough",
  "hashbrown 0.16.1",
  "jxl-encoder-simd",
  "once_cell",
  "thiserror",
- "whereat",
+ "whereat 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "jxl-encoder-simd"
 version = "0.2.0"
 dependencies = [
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "magetypes",
 ]
 
@@ -1825,11 +1826,11 @@ dependencies = [
 
 [[package]]
 name = "linear-srgb"
-version = "0.6.2"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad4cadc069dae2158d5f87814de8958b88985b7bd1afe36f3bc9c1f607418fd5"
+checksum = "125a2ceb187051329f82182e8aa5ad24a988749bb58c3ab5ee64ea65c0284bc8"
 dependencies = [
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "bytemuck",
  "magetypes",
  "num-traits",
@@ -1890,11 +1891,11 @@ source = "git+https://github.com/DanielKeep/rust-custom-derive.git#1252f258cdb9b
 
 [[package]]
 name = "magetypes"
-version = "0.9.4"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "739934e720cab10b1ca37f0c3e34780bb4820ba272712e4b64d135f0dbe03d44"
+checksum = "f1d74daed887a4af79f24aff472446d8b5f9a626d555db93f8c4bcdf6e6db41e"
 dependencies = [
- "archmage 0.9.4",
+ "archmage 0.9.5",
 ]
 
 [[package]]
@@ -3418,6 +3419,10 @@ checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
 [[package]]
 name = "whereat"
 version = "0.1.3"
+
+[[package]]
+name = "whereat"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ec598a1ade4224cfe3c5dace0d5d7deec9ed670503ff99d4946973c8c094534"
 
@@ -3745,7 +3750,7 @@ dependencies = [
 name = "zenavif"
 version = "0.1.0"
 dependencies = [
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "bytemuck",
  "enough",
  "imgref",
@@ -3756,10 +3761,10 @@ dependencies = [
  "rgb",
  "safe_unaligned_simd",
  "thiserror",
- "whereat",
+ "whereat 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "yuv",
  "zenavif-parse",
- "zencodec-types",
+ "zencodec",
  "zenpixels",
  "zenpixels-convert",
  "zenravif",
@@ -3786,10 +3791,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "zencodec-types"
+name = "zencodec"
 version = "0.1.0"
 dependencies = [
  "enough",
+ "whereat 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "zenpixels",
 ]
 
@@ -3804,8 +3810,8 @@ dependencies = [
  "linear-srgb",
  "rgb",
  "thiserror",
- "whereat",
- "zencodec-types",
+ "whereat 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zencodec",
  "zenpixels",
 ]
 
@@ -3814,7 +3820,7 @@ name = "zenjpeg"
 version = "0.6.1"
 dependencies = [
  "aligned-vec",
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "bytemuck",
  "enough",
  "imgref",
@@ -3826,10 +3832,10 @@ dependencies = [
  "safe_unaligned_simd",
  "thiserror",
  "tinyvec",
- "whereat",
+ "whereat 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "wide",
  "yuv",
- "zencodec-types",
+ "zencodec",
  "zenpixels",
 ]
 
@@ -3844,8 +3850,8 @@ dependencies = [
  "linear-srgb",
  "rgb",
  "thiserror",
- "whereat",
- "zencodec-types",
+ "whereat 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zencodec",
  "zenjxl-decoder",
  "zenpixels",
 ]
@@ -3883,7 +3889,7 @@ dependencies = [
 name = "zenjxl-decoder-simd"
 version = "0.3.0"
 dependencies = [
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "paste",
 ]
 
@@ -3894,17 +3900,18 @@ dependencies = [
  "bytemuck",
  "imgref",
  "rgb",
+ "whereat 0.1.3",
 ]
 
 [[package]]
 name = "zenpixels-convert"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bb9b620ebbacfdeb7ef943212c9ac4cbfa7d9f3e2ea1bdcc03d3ec7e1db3471"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
+ "garb",
  "linear-srgb",
  "rgb",
+ "whereat 0.1.3",
  "zenpixels",
 ]
 
@@ -3955,9 +3962,9 @@ dependencies = [
 
 [[package]]
 name = "zensim"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "bytemuck",
  "imgref",
  "linear-srgb",
@@ -3969,7 +3976,7 @@ dependencies = [
 
 [[package]]
 name = "zensim-regress"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64",
  "fs2",
@@ -3983,7 +3990,7 @@ dependencies = [
 name = "zenwebp"
 version = "0.3.2"
 dependencies = [
- "archmage 0.9.4",
+ "archmage 0.9.5",
  "bytemuck",
  "byteorder-lite",
  "enough",
@@ -3995,9 +4002,9 @@ dependencies = [
  "rgb",
  "self_cell",
  "thiserror",
- "whereat",
+ "whereat 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "yuv",
- "zencodec-types",
+ "zencodec",
  "zenpixels",
 ]
 

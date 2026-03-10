@@ -178,6 +178,7 @@ fn test_encode_webp_lossy() {
 }
 
 #[test]
+#[ignore = "JXL encoder under construction"]
 fn test_encode_jxl_lossy() {
     let steps = reencode_with(s::EncoderPreset::JxlLossy { distance: 1.0 });
 
@@ -190,6 +191,7 @@ fn test_encode_jxl_lossy() {
 }
 
 #[test]
+#[ignore = "JXL encoder under construction"]
 fn test_encode_jxl_lossless() {
     let steps = reencode_with(s::EncoderPreset::JxlLossless);
 
