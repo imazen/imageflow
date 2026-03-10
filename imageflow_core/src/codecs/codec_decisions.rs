@@ -192,8 +192,12 @@ pub enum EncoderConfig {
     },
     Gif,
     Jxl {
-        /// Butteraugli distance.  `None` for lossless.
+        /// Butteraugli distance override (e.g. from `jxl-d1.5` srcset param).
+        /// If `None` and not lossless, the encoder uses `generic_quality`.
         distance: Option<f32>,
+        /// Generic quality for zen's `with_generic_quality()`.
+        /// The zen encoder's calibrated_jxl_quality() maps this to distance.
+        generic_quality: Option<f32>,
         lossless: bool,
     },
     Avif {
@@ -415,17 +419,15 @@ impl QualityIntent {
             }
             ImageFormat::Gif => EncoderConfig::Gif,
             ImageFormat::Jxl => {
-                // JXL is zen-only, but we still produce a proper config
                 if lossless {
-                    EncoderConfig::Jxl { distance: None, lossless: true }
+                    EncoderConfig::Jxl { distance: None, generic_quality: None, lossless: true }
                 } else {
                     EncoderConfig::Jxl {
-                        // Zen JXL has with_generic_quality() → calibrated_jxl_quality()
-                        // which returns a distance. We pass generic_quality; the
-                        // instantiation layer calls with_generic_quality().
-                        // The distance field here is used for direct JXL distance
-                        // overrides (e.g. from srcset `jxl-d1.5`).
-                        distance: Some(self.jxl_distance()),
+                        // No explicit distance override — use generic_quality path.
+                        // Instantiation calls with_generic_quality() for zen,
+                        // or uses jxl_distance() for hypothetical C encoders.
+                        distance: None,
+                        generic_quality: Some(self.generic_quality),
                         lossless: false,
                     }
                 }
@@ -1458,7 +1460,7 @@ mod tests {
         );
         assert_eq!(EncoderConfig::Gif.format(), ImageFormat::Gif);
         assert_eq!(
-            EncoderConfig::Jxl { distance: Some(1.0), lossless: false }.format(),
+            EncoderConfig::Jxl { distance: Some(1.0), generic_quality: None, lossless: false }.format(),
             ImageFormat::Jxl
         );
         assert_eq!(
@@ -1863,10 +1865,12 @@ mod tests {
         let q = QualityIntent::from_value(73.0);
         let cfg = q.build_config(NamedEncoders::ZenJxlEncoder, None);
         match cfg {
-            EncoderConfig::Jxl { distance, lossless } => {
+            EncoderConfig::Jxl { distance, generic_quality, lossless } => {
                 assert!(!lossless);
-                let d = distance.unwrap();
-                assert!(d > 0.0 && d < 25.0, "distance {} out of range", d);
+                // No explicit distance override — uses generic_quality path
+                assert!(distance.is_none());
+                let gq = generic_quality.unwrap();
+                assert!((gq - 73.0).abs() < 0.01, "expected generic_quality ~73, got {}", gq);
             }
             _ => panic!("expected Jxl config"),
         }
@@ -1877,9 +1881,10 @@ mod tests {
         let q = QualityIntent::from_profile(QualityProfile::Lossless, None);
         let cfg = q.build_config(NamedEncoders::ZenJxlEncoder, None);
         match cfg {
-            EncoderConfig::Jxl { distance, lossless } => {
+            EncoderConfig::Jxl { distance, generic_quality, lossless } => {
                 assert!(lossless);
                 assert!(distance.is_none());
+                assert!(generic_quality.is_none());
             }
             _ => panic!("expected Jxl config"),
         }
