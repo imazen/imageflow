@@ -149,7 +149,7 @@ jobs:
           ZEN_DIR="${{ github.workspace }}/../zen"
           mkdir -p "$ZEN_DIR"
           clone() { git clone --depth 1 "https://github.com/imazen/$1.git" "$ZEN_DIR/$2"; }
-          clone zencodec-types  zencodec-types
+          clone zencodec        zencodec
           clone zenpixels       zenpixels
           clone zenjpeg         zenjpeg
           clone zengif          zengif

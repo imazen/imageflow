@@ -39,7 +39,7 @@ mod mozjpeg_decoder_helpers;
 #[cfg(feature = "c-codecs")]
 mod webp;
 
-// Unified zen codec adapters (zencodec-types dyn dispatch)
+// Unified zen codec adapters (zencodec dyn dispatch)
 #[cfg(feature = "zen-codecs")]
 pub(crate) mod zen_decoder;
 #[cfg(feature = "zen-codecs")]

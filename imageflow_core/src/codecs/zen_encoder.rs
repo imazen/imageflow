@@ -21,7 +21,7 @@ enum EncodeMode {
 
 /// Unified encoder for all zen codec formats.
 ///
-/// Uses zencodec-types dyn dispatch for WebP, GIF, JXL, AVIF (and eventually PNG).
+/// Uses zencodec dyn dispatch for WebP, GIF, JXL, AVIF (and eventually PNG).
 /// JPEG uses the native zenjpeg streaming API for exact backward compatibility.
 pub struct ZenEncoder {
     mode: EncodeMode,

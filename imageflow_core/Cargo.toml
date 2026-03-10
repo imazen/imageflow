@@ -27,7 +27,7 @@ zenlayout = { workspace = true }
 zenresize = { workspace = true }
 zenfilters = { workspace = true }
 zenjpeg = { workspace = true }
-zencodec-types = { workspace = true }
+zc = { workspace = true }
 garb = { workspace = true }
 
 # UltraHDR

@@ -25,7 +25,7 @@ serde_json = "1"
 # Zen ecosystem
 zenpixels = { version = "0.1", default-features = false, features = ["buffer", "planar"] }
 zenpixels-convert = { path = "../zenpixels/zenpixels-convert", default-features = false, features = ["std", "buffer", "codec"] }
-# TODO: re-enable "png" once zenpng compiles (has uncommitted WIP changes against updated zencodec-types)
+# TODO: re-enable "png" once zenpng compiles (has uncommitted WIP changes against updated zencodec)
 # TODO: re-enable "jxl-decode", "jxl-encode" once zenjxl-decoder merge conflict is resolved
 zencodecs = { path = "../zencodecs", default-features = false, features = ["jpeg", "webp", "gif", "avif-decode", "avif-encode", "heic-decode", "bitmaps-bmp"] }
 zenlayout = { path = "../zenlayout", default-features = false, features = ["std", "riapi"] }
@@ -33,7 +33,7 @@ zenresize = { path = "../zenresize", default-features = false, features = ["std"
 zenfilters = { path = "../zenfilters", default-features = false, features = ["srgb-filters"] }
 zenjpeg = { path = "../zenjpeg/zenjpeg", features = ["decoder"] }
 garb = { version = "0.2.1", default-features = false, features = ["std", "experimental"] }
-zencodec-types = { path = "../zencodec-types" }
+zc = { path = "../zencodec", package = "zencodec" }
 ultrahdr-core = { path = "../ultrahdr/ultrahdr-core" }
 ultrahdr-rs = { path = "../ultrahdr/ultrahdr" }
 
@@ -53,7 +53,7 @@ bytemuck = { version = "1.14", features = ["derive"] }
 [patch.crates-io]
 zenpixels = { path = "../zenpixels/zenpixels" }
 zenpixels-convert = { path = "../zenpixels/zenpixels-convert" }
-zencodec-types = { path = "../zencodec-types" }
+zencodec = { path = "../zencodec" }
 enough = { path = "../../enough/crates/enough" }
 zenlayout = { path = "../zenlayout" }
 

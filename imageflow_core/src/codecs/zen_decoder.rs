@@ -96,7 +96,7 @@ enum DecodeMode {
 
 /// Unified decoder for all zen codec formats.
 ///
-/// Uses zencodec-types dyn dispatch to handle WebP, GIF, JXL, AVIF, HEIC
+/// Uses zencodec dyn dispatch to handle WebP, GIF, JXL, AVIF, HEIC
 /// through a single adapter.
 /// JPEG uses the native zenjpeg API for exact backward compatibility.
 pub struct ZenDecoder {
@@ -256,7 +256,7 @@ impl ZenDecoder {
         Ok(())
     }
 
-    /// Extract SourceProfile from zencodec-types ImageInfo for CMS.
+    /// Extract SourceProfile from zencodec ImageInfo for CMS.
     fn source_profile_from_info(&self, info: &ZenImageInfo) -> SourceProfile {
         if self.ignore_color_profile {
             return SourceProfile::Srgb;
