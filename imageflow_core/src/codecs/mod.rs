@@ -47,6 +47,30 @@ pub(crate) mod zen_encoder;
 
 use crate::graphics::bitmaps::BitmapKey;
 
+// ── Codec capabilities ──────────────────────────────────────────────────────
+
+/// Static capability metadata for an encoder implementation.
+#[derive(Debug, Clone, Copy)]
+pub struct EncoderCaps {
+    pub format: imageflow_types::ImageFormat,
+    pub lossy: bool,
+    pub lossless: bool,
+    pub animation: bool,
+    pub alpha: bool,
+    /// Quality ranking for lossy encoding (0=broken, 1=functional, 2=good, 3=excellent).
+    /// Used to pick the best encoder when multiple support the same format+mode.
+    pub lossy_rank: u8,
+    /// Quality ranking for lossless encoding.
+    pub lossless_rank: u8,
+}
+
+/// Static capability metadata for a decoder implementation.
+#[derive(Debug, Clone, Copy)]
+pub struct DecoderCaps {
+    pub format: imageflow_types::ImageFormat,
+    pub animation: bool,
+}
+
 pub trait DecoderFactory {
     fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<dyn Decoder>>>;
 }
@@ -82,165 +106,134 @@ enum CodecKind {
     Decoder(Box<dyn Decoder>),
 }
 
-#[derive(PartialEq, Copy, Clone)]
+/// Named decoder implementations. Variants are always present regardless of
+/// feature flags — `#[cfg]` only gates whether `create()` can instantiate them
+/// and whether they appear in default/preset lists.
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum NamedDecoders {
-    #[cfg(feature = "c-codecs")]
     MozJpegRsDecoder,
-    #[cfg(feature = "c-codecs")]
     ImageRsJpegDecoder,
     ImageRsPngDecoder,
-    #[cfg(feature = "c-codecs")]
     LibPngRsDecoder,
     GifRsDecoder,
-    #[cfg(feature = "c-codecs")]
     WebPDecoder,
-    #[cfg(feature = "zen-codecs")]
     ZenJpegDecoder,
-    #[cfg(feature = "zen-codecs")]
     ZenWebPDecoder,
-    #[cfg(feature = "zen-codecs")]
     ZenGifDecoder,
-    #[cfg(feature = "zen-codecs")]
     ZenJxlDecoder,
-    #[cfg(feature = "zen-codecs")]
     ZenAvifDecoder,
-    #[cfg(feature = "zen-codecs")]
     ZenHeicDecoder,
 }
 impl NamedDecoders {
     pub fn is_jpeg(&self) -> bool {
-        match self {
-            #[cfg(feature = "c-codecs")]
-            Self::MozJpegRsDecoder | Self::ImageRsJpegDecoder => true,
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenJpegDecoder => true,
-            _ => false,
-        }
+        matches!(self, Self::MozJpegRsDecoder | Self::ImageRsJpegDecoder | Self::ZenJpegDecoder)
     }
     pub fn is_png(&self) -> bool {
-        match self {
-            Self::ImageRsPngDecoder => true,
-            #[cfg(feature = "c-codecs")]
-            Self::LibPngRsDecoder => true,
-            _ => false,
-        }
+        matches!(self, Self::ImageRsPngDecoder | Self::LibPngRsDecoder)
     }
     pub fn is_gif(&self) -> bool {
-        match self {
-            Self::GifRsDecoder => true,
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenGifDecoder => true,
-            _ => false,
-        }
+        matches!(self, Self::GifRsDecoder | Self::ZenGifDecoder)
     }
     pub fn is_webp(&self) -> bool {
-        match self {
-            #[cfg(feature = "c-codecs")]
-            Self::WebPDecoder => true,
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenWebPDecoder => true,
-            _ => false,
-        }
+        matches!(self, Self::WebPDecoder | Self::ZenWebPDecoder)
     }
     pub fn is_jxl(&self) -> bool {
-        match self {
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenJxlDecoder => true,
-            _ => false,
-        }
+        matches!(self, Self::ZenJxlDecoder)
     }
     pub fn is_avif(&self) -> bool {
-        match self {
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenAvifDecoder => true,
-            _ => false,
-        }
+        matches!(self, Self::ZenAvifDecoder)
     }
     pub fn is_heic(&self) -> bool {
-        match self {
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenHeicDecoder => true,
-            _ => false,
-        }
+        matches!(self, Self::ZenHeicDecoder)
     }
 
     pub fn is_c_codec(&self) -> bool {
-        match self {
-            #[cfg(feature = "c-codecs")]
+        matches!(
+            self,
             Self::MozJpegRsDecoder
-            | Self::ImageRsJpegDecoder
-            | Self::LibPngRsDecoder
-            | Self::WebPDecoder => true,
-            _ => false,
-        }
+                | Self::ImageRsJpegDecoder
+                | Self::LibPngRsDecoder
+                | Self::WebPDecoder
+        )
     }
     pub fn is_zen_codec(&self) -> bool {
-        match self {
-            #[cfg(feature = "zen-codecs")]
+        matches!(
+            self,
             Self::ZenJpegDecoder
-            | Self::ZenWebPDecoder
-            | Self::ZenGifDecoder
-            | Self::ZenJxlDecoder
-            | Self::ZenAvifDecoder
-            | Self::ZenHeicDecoder => true,
-            _ => false,
-        }
+                | Self::ZenWebPDecoder
+                | Self::ZenGifDecoder
+                | Self::ZenJxlDecoder
+                | Self::ZenAvifDecoder
+                | Self::ZenHeicDecoder
+        )
     }
+
     /// Returns the image format this decoder handles.
     pub fn format(&self) -> imageflow_types::ImageFormat {
-        self.codec_name().format()
+        self.caps().format
+    }
+
+    /// Static capability metadata for this decoder implementation.
+    pub fn caps(&self) -> DecoderCaps {
+        use imageflow_types::ImageFormat;
+        match self {
+            Self::MozJpegRsDecoder => DecoderCaps { format: ImageFormat::Jpeg, animation: false },
+            Self::ImageRsJpegDecoder => DecoderCaps { format: ImageFormat::Jpeg, animation: false },
+            Self::ImageRsPngDecoder => DecoderCaps { format: ImageFormat::Png, animation: false },
+            Self::LibPngRsDecoder => DecoderCaps { format: ImageFormat::Png, animation: false },
+            Self::GifRsDecoder => DecoderCaps { format: ImageFormat::Gif, animation: true },
+            Self::WebPDecoder => DecoderCaps { format: ImageFormat::Webp, animation: false },
+            Self::ZenJpegDecoder => DecoderCaps { format: ImageFormat::Jpeg, animation: false },
+            Self::ZenWebPDecoder => DecoderCaps { format: ImageFormat::Webp, animation: false },
+            Self::ZenGifDecoder => DecoderCaps { format: ImageFormat::Gif, animation: true },
+            Self::ZenJxlDecoder => DecoderCaps { format: ImageFormat::Jxl, animation: false },
+            Self::ZenAvifDecoder => DecoderCaps { format: ImageFormat::Avif, animation: false },
+            Self::ZenHeicDecoder => DecoderCaps { format: ImageFormat::Heic, animation: false },
+        }
+    }
+
+    /// Returns true if this decoder can be instantiated with the current feature flags.
+    pub fn is_compiled_in(&self) -> bool {
+        match self {
+            Self::MozJpegRsDecoder | Self::ImageRsJpegDecoder | Self::LibPngRsDecoder
+            | Self::WebPDecoder => cfg!(feature = "c-codecs"),
+            Self::ZenJpegDecoder | Self::ZenWebPDecoder | Self::ZenGifDecoder
+            | Self::ZenJxlDecoder | Self::ZenAvifDecoder | Self::ZenHeicDecoder => {
+                cfg!(feature = "zen-codecs")
+            }
+            Self::ImageRsPngDecoder | Self::GifRsDecoder => true,
+        }
     }
 
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
         match self {
-            #[cfg(feature = "c-codecs")]
-            NamedDecoders::ImageRsJpegDecoder | NamedDecoders::MozJpegRsDecoder => {
+            Self::MozJpegRsDecoder | Self::ImageRsJpegDecoder | Self::ZenJpegDecoder => {
                 bytes.starts_with(b"\xFF\xD8\xFF")
             }
-            NamedDecoders::GifRsDecoder => {
+            Self::GifRsDecoder | Self::ZenGifDecoder => {
                 bytes.starts_with(b"GIF89a") || bytes.starts_with(b"GIF87a")
             }
-            #[cfg(feature = "c-codecs")]
-            NamedDecoders::LibPngRsDecoder => {
+            Self::LibPngRsDecoder | Self::ImageRsPngDecoder => {
                 bytes.starts_with(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A")
             }
-            NamedDecoders::ImageRsPngDecoder => {
-                bytes.starts_with(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A")
-            }
-            #[cfg(feature = "c-codecs")]
-            NamedDecoders::WebPDecoder => {
+            Self::WebPDecoder | Self::ZenWebPDecoder => {
                 bytes.starts_with(b"RIFF") && bytes.len() >= 12 && bytes[8..12].starts_with(b"WEBP")
             }
-            #[cfg(feature = "zen-codecs")]
-            NamedDecoders::ZenJpegDecoder => bytes.starts_with(b"\xFF\xD8\xFF"),
-            #[cfg(feature = "zen-codecs")]
-            NamedDecoders::ZenWebPDecoder => {
-                bytes.starts_with(b"RIFF") && bytes.len() >= 12 && bytes[8..12].starts_with(b"WEBP")
-            }
-            #[cfg(feature = "zen-codecs")]
-            NamedDecoders::ZenGifDecoder => {
-                bytes.starts_with(b"GIF89a") || bytes.starts_with(b"GIF87a")
-            }
-            #[cfg(feature = "zen-codecs")]
-            NamedDecoders::ZenJxlDecoder => {
+            Self::ZenJxlDecoder => {
                 // JXL bare codestream: 0xFF 0x0A
                 // JXL container: 0x00 0x00 0x00 0x0C 0x4A 0x58 0x4C 0x20 0x0D 0x0A 0x87 0x0A
                 bytes.starts_with(&[0xFF, 0x0A])
                     || (bytes.len() >= 12
                         && bytes.starts_with(&[0x00, 0x00, 0x00, 0x0C, 0x4A, 0x58, 0x4C, 0x20]))
             }
-            #[cfg(feature = "zen-codecs")]
-            NamedDecoders::ZenAvifDecoder => {
-                // ISO BMFF ftyp box with AVIF brands
+            Self::ZenAvifDecoder => {
                 bytes.len() >= 12
                     && &bytes[4..8] == b"ftyp"
                     && (bytes[8..12].starts_with(b"avif")
                         || bytes[8..12].starts_with(b"avis")
                         || bytes[8..12].starts_with(b"mif1"))
             }
-            #[cfg(feature = "zen-codecs")]
-            NamedDecoders::ZenHeicDecoder => {
-                // ISO BMFF ftyp box with HEIC brands
+            Self::ZenHeicDecoder => {
                 bytes.len() >= 12
                     && &bytes[4..8] == b"ftyp"
                     && (bytes[8..12].starts_with(b"heic")
@@ -253,6 +246,7 @@ impl NamedDecoders {
         }
     }
 
+    /// Instantiate the decoder. Returns an error if the codec is not compiled in.
     pub fn create(&self, c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>> {
         return_if_cancelled!(c);
         match self {
@@ -298,102 +292,132 @@ impl NamedDecoders {
             NamedDecoders::ZenHeicDecoder => {
                 Ok(Box::new(zen_decoder::ZenDecoder::create_heic(c, io, io_id)?))
             }
+            #[allow(unreachable_patterns)]
+            other => Err(nerror!(
+                ErrorKind::CodecDisabledError,
+                "Decoder {:?} is not compiled in (missing feature flag)",
+                other
+            )),
         }
     }
 }
-#[derive(PartialEq, Copy, Clone)]
+/// Named encoder implementations. Variants are always present regardless of
+/// feature flags — `#[cfg]` only gates whether they appear in default/preset lists
+/// and whether `auto.rs` can instantiate the concrete encoder type.
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum NamedEncoders {
     GifEncoder,
-    #[cfg(feature = "c-codecs")]
     MozJpegEncoder,
     PngQuantEncoder,
     LodePngEncoder,
-    #[cfg(feature = "c-codecs")]
     WebPEncoder,
-    #[cfg(feature = "c-codecs")]
     LibPngRsEncoder,
-    #[cfg(feature = "zen-codecs")]
     ZenJpegEncoder,
-    #[cfg(feature = "zen-codecs")]
     ZenWebPEncoder,
-    #[cfg(feature = "zen-codecs")]
     ZenGifEncoder,
-    #[cfg(feature = "zen-codecs")]
     ZenJxlEncoder,
-    #[cfg(feature = "zen-codecs")]
     ZenAvifEncoder,
 }
 impl NamedEncoders {
     pub fn is_jpeg(&self) -> bool {
-        match self {
-            #[cfg(feature = "c-codecs")]
-            Self::MozJpegEncoder => true,
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenJpegEncoder => true,
-            _ => false,
-        }
+        matches!(self, Self::MozJpegEncoder | Self::ZenJpegEncoder)
     }
     pub fn is_png(&self) -> bool {
-        match self {
-            Self::PngQuantEncoder | Self::LodePngEncoder => true,
-            #[cfg(feature = "c-codecs")]
-            Self::LibPngRsEncoder => true,
-            _ => false,
-        }
+        matches!(self, Self::PngQuantEncoder | Self::LodePngEncoder | Self::LibPngRsEncoder)
     }
     pub fn is_gif(&self) -> bool {
-        match self {
-            Self::GifEncoder => true,
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenGifEncoder => true,
-            _ => false,
-        }
+        matches!(self, Self::GifEncoder | Self::ZenGifEncoder)
     }
     pub fn is_webp(&self) -> bool {
-        match self {
-            #[cfg(feature = "c-codecs")]
-            Self::WebPEncoder => true,
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenWebPEncoder => true,
-            _ => false,
-        }
+        matches!(self, Self::WebPEncoder | Self::ZenWebPEncoder)
     }
     pub fn is_jxl(&self) -> bool {
-        match self {
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenJxlEncoder => true,
-            _ => false,
-        }
+        matches!(self, Self::ZenJxlEncoder)
     }
     pub fn is_avif(&self) -> bool {
-        match self {
-            #[cfg(feature = "zen-codecs")]
-            Self::ZenAvifEncoder => true,
-            _ => false,
-        }
+        matches!(self, Self::ZenAvifEncoder)
     }
     pub fn is_c_codec(&self) -> bool {
-        match self {
-            #[cfg(feature = "c-codecs")]
-            Self::MozJpegEncoder | Self::WebPEncoder | Self::LibPngRsEncoder => true,
-            _ => false,
-        }
+        matches!(self, Self::MozJpegEncoder | Self::WebPEncoder | Self::LibPngRsEncoder)
     }
     pub fn is_zen_codec(&self) -> bool {
-        match self {
-            #[cfg(feature = "zen-codecs")]
+        matches!(
+            self,
             Self::ZenJpegEncoder
-            | Self::ZenWebPEncoder
-            | Self::ZenGifEncoder
-            | Self::ZenJxlEncoder
-            | Self::ZenAvifEncoder => true,
-            _ => false,
-        }
+                | Self::ZenWebPEncoder
+                | Self::ZenGifEncoder
+                | Self::ZenJxlEncoder
+                | Self::ZenAvifEncoder
+        )
     }
+
     /// Returns the image format this encoder handles.
     pub fn format(&self) -> imageflow_types::ImageFormat {
-        self.codec_name().format()
+        self.caps().format
+    }
+
+    /// Returns true if this encoder can be instantiated with the current feature flags.
+    pub fn is_compiled_in(&self) -> bool {
+        match self {
+            Self::MozJpegEncoder | Self::WebPEncoder | Self::LibPngRsEncoder => {
+                cfg!(feature = "c-codecs")
+            }
+            Self::ZenJpegEncoder | Self::ZenWebPEncoder | Self::ZenGifEncoder
+            | Self::ZenJxlEncoder | Self::ZenAvifEncoder => cfg!(feature = "zen-codecs"),
+            Self::GifEncoder | Self::PngQuantEncoder | Self::LodePngEncoder => true,
+        }
+    }
+
+    /// Static capability metadata for this encoder implementation.
+    pub fn caps(&self) -> EncoderCaps {
+        use imageflow_types::ImageFormat;
+        match self {
+            Self::GifEncoder => EncoderCaps {
+                format: ImageFormat::Gif, lossy: true, lossless: false,
+                animation: true, alpha: true, lossy_rank: 2, lossless_rank: 0,
+            },
+            Self::MozJpegEncoder => EncoderCaps {
+                format: ImageFormat::Jpeg, lossy: true, lossless: false,
+                animation: false, alpha: false, lossy_rank: 3, lossless_rank: 0,
+            },
+            Self::PngQuantEncoder => EncoderCaps {
+                format: ImageFormat::Png, lossy: true, lossless: false,
+                animation: false, alpha: true, lossy_rank: 2, lossless_rank: 0,
+            },
+            Self::LodePngEncoder => EncoderCaps {
+                format: ImageFormat::Png, lossy: false, lossless: true,
+                animation: false, alpha: true, lossy_rank: 0, lossless_rank: 2,
+            },
+            Self::WebPEncoder => EncoderCaps {
+                format: ImageFormat::Webp, lossy: true, lossless: true,
+                animation: false, alpha: true, lossy_rank: 2, lossless_rank: 2,
+            },
+            Self::LibPngRsEncoder => EncoderCaps {
+                format: ImageFormat::Png, lossy: false, lossless: true,
+                animation: false, alpha: true, lossy_rank: 0, lossless_rank: 2,
+            },
+            Self::ZenJpegEncoder => EncoderCaps {
+                format: ImageFormat::Jpeg, lossy: true, lossless: false,
+                animation: false, alpha: false, lossy_rank: 3, lossless_rank: 0,
+            },
+            Self::ZenWebPEncoder => EncoderCaps {
+                format: ImageFormat::Webp, lossy: true, lossless: true,
+                animation: false, alpha: true, lossy_rank: 2, lossless_rank: 2,
+            },
+            Self::ZenGifEncoder => EncoderCaps {
+                format: ImageFormat::Gif, lossy: true, lossless: false,
+                animation: true, alpha: true, lossy_rank: 2, lossless_rank: 0,
+            },
+            Self::ZenJxlEncoder => EncoderCaps {
+                format: ImageFormat::Jxl, lossy: true, lossless: true,
+                animation: false, alpha: true, lossy_rank: 3, lossless_rank: 3,
+            },
+            Self::ZenAvifEncoder => EncoderCaps {
+                format: ImageFormat::Avif, lossy: true, lossless: false,
+                animation: false, alpha: true, lossy_rank: 3, lossless_rank: 0,
+            },
+        }
     }
 }
 pub struct EnabledCodecs {
@@ -443,7 +467,7 @@ impl Default for EnabledCodecs {
                 NamedEncoders::ZenJpegEncoder,
                 #[cfg(feature = "zen-codecs")]
                 NamedEncoders::ZenWebPEncoder,
-                // C-based WebP encoder always enabled for lossy (zenwebp lossy has quality issues)
+                // C-based WebP encoder as fallback
                 #[cfg(feature = "c-codecs")]
                 NamedEncoders::WebPEncoder,
                 // C-based JPEG encoder as fallback
@@ -467,57 +491,38 @@ impl NamedDecoders {
     pub fn codec_name(&self) -> imageflow_types::CodecName {
         use imageflow_types::CodecName;
         match self {
-            #[cfg(feature = "c-codecs")]
             Self::MozJpegRsDecoder => CodecName::MozjpegDecoder,
-            #[cfg(feature = "c-codecs")]
             Self::ImageRsJpegDecoder => CodecName::ImageRsJpegDecoder,
             Self::ImageRsPngDecoder => CodecName::ImageRsPngDecoder,
-            #[cfg(feature = "c-codecs")]
             Self::LibPngRsDecoder => CodecName::LibpngDecoder,
             Self::GifRsDecoder => CodecName::GifRsDecoder,
-            #[cfg(feature = "c-codecs")]
             Self::WebPDecoder => CodecName::LibwebpDecoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenJpegDecoder => CodecName::ZenjpegDecoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenWebPDecoder => CodecName::ZenwebpDecoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenGifDecoder => CodecName::ZengifDecoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenJxlDecoder => CodecName::ZenjxlDecoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenAvifDecoder => CodecName::ZenavifDecoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenHeicDecoder => CodecName::ZenheicDecoder,
         }
     }
 
-    /// Try to convert from a `CodecName`. Returns `None` if the name
-    /// refers to an encoder or a codec not compiled in.
+    /// Convert from a `CodecName`. Returns `None` if the name refers to an encoder.
+    /// Always succeeds for decoder names regardless of feature flags — the variant
+    /// exists, it just may not be instantiable.
     pub fn from_codec_name(name: imageflow_types::CodecName) -> Option<Self> {
         use imageflow_types::CodecName;
         match name {
-            #[cfg(feature = "c-codecs")]
             CodecName::MozjpegDecoder => Some(Self::MozJpegRsDecoder),
-            #[cfg(feature = "c-codecs")]
             CodecName::ImageRsJpegDecoder => Some(Self::ImageRsJpegDecoder),
             CodecName::ImageRsPngDecoder => Some(Self::ImageRsPngDecoder),
-            #[cfg(feature = "c-codecs")]
             CodecName::LibpngDecoder => Some(Self::LibPngRsDecoder),
             CodecName::GifRsDecoder => Some(Self::GifRsDecoder),
-            #[cfg(feature = "c-codecs")]
             CodecName::LibwebpDecoder => Some(Self::WebPDecoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZenjpegDecoder => Some(Self::ZenJpegDecoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZenwebpDecoder => Some(Self::ZenWebPDecoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZengifDecoder => Some(Self::ZenGifDecoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZenjxlDecoder => Some(Self::ZenJxlDecoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZenavifDecoder => Some(Self::ZenAvifDecoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZenheicDecoder => Some(Self::ZenHeicDecoder),
             _ => None,
         }
@@ -530,50 +535,34 @@ impl NamedEncoders {
         use imageflow_types::CodecName;
         match self {
             Self::GifEncoder => CodecName::GifEncoder,
-            #[cfg(feature = "c-codecs")]
             Self::MozJpegEncoder => CodecName::MozjpegEncoder,
             Self::PngQuantEncoder => CodecName::PngquantEncoder,
             Self::LodePngEncoder => CodecName::LodepngEncoder,
-            #[cfg(feature = "c-codecs")]
             Self::WebPEncoder => CodecName::LibwebpEncoder,
-            #[cfg(feature = "c-codecs")]
             Self::LibPngRsEncoder => CodecName::LibpngEncoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenJpegEncoder => CodecName::ZenjpegEncoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenWebPEncoder => CodecName::ZenwebpEncoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenGifEncoder => CodecName::ZengifEncoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenJxlEncoder => CodecName::ZenjxlEncoder,
-            #[cfg(feature = "zen-codecs")]
             Self::ZenAvifEncoder => CodecName::ZenavifEncoder,
         }
     }
 
-    /// Try to convert from a `CodecName`. Returns `None` if the name
-    /// refers to a decoder or a codec not compiled in.
+    /// Convert from a `CodecName`. Returns `None` if the name refers to a decoder.
+    /// Always succeeds for encoder names regardless of feature flags.
     pub fn from_codec_name(name: imageflow_types::CodecName) -> Option<Self> {
         use imageflow_types::CodecName;
         match name {
             CodecName::GifEncoder => Some(Self::GifEncoder),
-            #[cfg(feature = "c-codecs")]
             CodecName::MozjpegEncoder => Some(Self::MozJpegEncoder),
             CodecName::PngquantEncoder => Some(Self::PngQuantEncoder),
             CodecName::LodepngEncoder => Some(Self::LodePngEncoder),
-            #[cfg(feature = "c-codecs")]
             CodecName::LibwebpEncoder => Some(Self::WebPEncoder),
-            #[cfg(feature = "c-codecs")]
             CodecName::LibpngEncoder => Some(Self::LibPngRsEncoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZenjpegEncoder => Some(Self::ZenJpegEncoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZenwebpEncoder => Some(Self::ZenWebPEncoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZengifEncoder => Some(Self::ZenGifEncoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZenjxlEncoder => Some(Self::ZenJxlEncoder),
-            #[cfg(feature = "zen-codecs")]
             CodecName::ZenavifEncoder => Some(Self::ZenAvifEncoder),
             _ => None,
         }
@@ -866,6 +855,87 @@ impl EnabledCodecs {
         formats
     }
 
+    // ── Capability-aware selection ─────────────────────────────────
+
+    /// Returns true if any enabled encoder for `format` has the given capability.
+    pub fn format_supports_lossy(&self, format: imageflow_types::ImageFormat) -> bool {
+        self.encoders.iter().any(|e| {
+            let c = e.caps();
+            c.format == format && c.lossy
+        })
+    }
+
+    pub fn format_supports_lossless(&self, format: imageflow_types::ImageFormat) -> bool {
+        self.encoders.iter().any(|e| {
+            let c = e.caps();
+            c.format == format && c.lossless
+        })
+    }
+
+    pub fn format_supports_animation(&self, format: imageflow_types::ImageFormat) -> bool {
+        self.encoders.iter().any(|e| {
+            let c = e.caps();
+            c.format == format && c.animation
+        })
+    }
+
+    pub fn format_supports_alpha(&self, format: imageflow_types::ImageFormat) -> bool {
+        self.encoders.iter().any(|e| {
+            let c = e.caps();
+            c.format == format && c.alpha
+        })
+    }
+
+    /// Select the best encoder for `format` given the desired mode.
+    /// Walks the priority list, filters by capability, picks the highest-ranked candidate.
+    /// Returns the chosen encoder and a trace of the decision.
+    pub fn select_encoder(
+        &self,
+        format: imageflow_types::ImageFormat,
+        lossless: bool,
+    ) -> Option<(NamedEncoders, Vec<&'static str>)> {
+        let mut trace = Vec::new();
+        let mut best: Option<(NamedEncoders, u8)> = None;
+
+        for &enc in &self.encoders {
+            let caps = enc.caps();
+            if caps.format != format {
+                continue;
+            }
+            if lossless && !caps.lossless {
+                trace.push(if enc.is_zen_codec() {
+                    "zen encoder: no lossless support, skipped"
+                } else {
+                    "c encoder: no lossless support, skipped"
+                });
+                continue;
+            }
+            if !lossless && !caps.lossy {
+                trace.push(if enc.is_zen_codec() {
+                    "zen encoder: no lossy support, skipped"
+                } else {
+                    "c encoder: no lossy support, skipped"
+                });
+                continue;
+            }
+            let rank = if lossless { caps.lossless_rank } else { caps.lossy_rank };
+            match best {
+                None => {
+                    best = Some((enc, rank));
+                    trace.push("first capable encoder found");
+                }
+                Some((_, prev_rank)) if rank > prev_rank => {
+                    best = Some((enc, rank));
+                    trace.push("higher-ranked encoder found, replacing");
+                }
+                _ => {
+                    trace.push("lower-ranked encoder skipped");
+                }
+            }
+        }
+        best.map(|(enc, _)| (enc, trace))
+    }
+
     pub fn create_decoder_for_magic_bytes(
         &self,
         bytes: &[u8],
@@ -883,6 +953,205 @@ impl EnabledCodecs {
             "No ENABLED decoder found for file starting in {:X?}",
             bytes
         ))
+    }
+}
+
+// ── Codec Selector — pure-function format + encoder selection ────────────────
+
+/// Criteria for automatic format selection.
+#[derive(Debug, Clone)]
+pub struct FormatCriteria {
+    pub allowed: imageflow_types::AllowedFormats,
+    pub has_alpha: bool,
+    pub has_animation: bool,
+    pub lossless: Option<bool>,
+    pub source_lossless: Option<bool>,
+    pub pixel_count: u64,
+    pub quality_profile: Option<imageflow_types::QualityProfile>,
+}
+
+impl Default for FormatCriteria {
+    fn default() -> Self {
+        Self {
+            allowed: imageflow_types::AllowedFormats::web_safe(),
+            has_alpha: false,
+            has_animation: false,
+            lossless: None,
+            source_lossless: None,
+            pixel_count: 0,
+            quality_profile: None,
+        }
+    }
+}
+
+/// Result of a codec selection decision, with full trace.
+#[derive(Debug, Clone)]
+pub struct Selection<T: core::fmt::Debug + Clone> {
+    pub chosen: T,
+    pub trace: Vec<&'static str>,
+}
+
+/// Combined format + encoder selection result.
+#[derive(Debug, Clone)]
+pub struct FullSelection {
+    pub format: imageflow_types::OutputImageFormat,
+    pub encoder: NamedEncoders,
+    pub trace: Vec<&'static str>,
+}
+
+/// Pure-function codec selector. No `Context` dependency — fully unit-testable.
+pub struct CodecSelector<'a> {
+    pub codecs: &'a EnabledCodecs,
+}
+
+impl<'a> CodecSelector<'a> {
+    pub fn new(codecs: &'a EnabledCodecs) -> Self {
+        Self { codecs }
+    }
+
+    /// Select the best output format for the given criteria.
+    pub fn select_format(
+        &self,
+        c: &FormatCriteria,
+    ) -> Option<Selection<imageflow_types::OutputImageFormat>> {
+        use imageflow_types::{ImageFormat, OutputImageFormat};
+
+        let allowed = &c.allowed;
+        let mut trace: Vec<&'static str> = Vec::new();
+
+        if !allowed.any_formats_enabled() {
+            trace.push("no formats enabled in AllowedFormats");
+            return None;
+        }
+
+        // Animation path
+        if c.has_animation {
+            trace.push("source has animation");
+            if c.lossless == Some(true) {
+                if self.can_encode_animated(ImageFormat::Webp) && allowed.webp == Some(true) {
+                    trace.push("webp: animated lossless available");
+                    return Some(Selection { chosen: OutputImageFormat::Webp, trace });
+                }
+            }
+            if self.can_encode_animated(ImageFormat::Avif) && allowed.avif == Some(true) {
+                trace.push("avif: animated encoding available");
+                return Some(Selection { chosen: OutputImageFormat::Avif, trace });
+            }
+            if self.can_encode_animated(ImageFormat::Webp) && allowed.webp == Some(true) {
+                trace.push("webp: animated encoding available");
+                return Some(Selection { chosen: OutputImageFormat::Webp, trace });
+            }
+            trace.push("gif: animation fallback");
+            return Some(Selection { chosen: OutputImageFormat::Gif, trace });
+        }
+
+        // JXL always wins if available (best compression across all modes)
+        if self.codecs.has_encoder_for_format(ImageFormat::Jxl) && allowed.jxl == Some(true) {
+            trace.push("jxl: best compression, selected");
+            return Some(Selection { chosen: OutputImageFormat::Jxl, trace });
+        }
+
+        let choose_lossless =
+            c.lossless == Some(true) || c.source_lossless == Some(true);
+
+        // Lossless path
+        if choose_lossless {
+            trace.push("lossless path");
+            if allowed.webp == Some(true) && self.codecs.format_supports_lossless(ImageFormat::Webp)
+            {
+                trace.push("webp: lossless, good compression");
+                return Some(Selection { chosen: OutputImageFormat::Webp, trace });
+            }
+            if allowed.png == Some(true) {
+                trace.push("png: lossless fallback");
+                return Some(Selection { chosen: OutputImageFormat::Png, trace });
+            }
+            if allowed.avif == Some(true)
+                && self.codecs.format_supports_lossless(ImageFormat::Avif)
+            {
+                trace.push("avif: lossless available");
+                return Some(Selection { chosen: OutputImageFormat::Avif, trace });
+            }
+        }
+
+        // Lossy with alpha: AVIF > WebP > PNG
+        if c.has_alpha {
+            trace.push("alpha required");
+            if allowed.avif == Some(true) && self.codecs.has_encoder_for_format(ImageFormat::Avif) {
+                trace.push("avif: best lossy alpha compression");
+                return Some(Selection { chosen: OutputImageFormat::Avif, trace });
+            }
+            if allowed.webp == Some(true) {
+                trace.push("webp: lossy alpha fallback");
+                return Some(Selection { chosen: OutputImageFormat::Webp, trace });
+            }
+            if allowed.png == Some(true) {
+                trace.push("png: alpha fallback");
+                return Some(Selection { chosen: OutputImageFormat::Png, trace });
+            }
+        }
+
+        // Lossy without alpha: AVIF for small images, then JPEG, WebP
+        trace.push("lossy opaque path");
+        if c.pixel_count < 3_000_000
+            && allowed.avif == Some(true)
+            && self.codecs.has_encoder_for_format(ImageFormat::Avif)
+        {
+            trace.push("avif: good compression for < 3Mpx");
+            return Some(Selection { chosen: OutputImageFormat::Avif, trace });
+        }
+
+        if allowed.jpeg == Some(true) {
+            trace.push("jpeg: default lossy opaque");
+            return Some(Selection { chosen: OutputImageFormat::Jpeg, trace });
+        }
+        if allowed.webp == Some(true) {
+            trace.push("webp: lossy fallback");
+            return Some(Selection { chosen: OutputImageFormat::Webp, trace });
+        }
+        if allowed.avif == Some(true) && self.codecs.has_encoder_for_format(ImageFormat::Avif) {
+            trace.push("avif: last resort lossy");
+            return Some(Selection { chosen: OutputImageFormat::Avif, trace });
+        }
+        if allowed.png == Some(true) {
+            trace.push("png: last resort");
+            return Some(Selection { chosen: OutputImageFormat::Png, trace });
+        }
+        if allowed.gif == Some(true) {
+            trace.push("gif: last resort");
+            return Some(Selection { chosen: OutputImageFormat::Gif, trace });
+        }
+
+        trace.push("no suitable format found");
+        None
+    }
+
+    /// Select the best encoder implementation for a format+mode.
+    pub fn select_encoder(
+        &self,
+        format: imageflow_types::ImageFormat,
+        lossless: bool,
+    ) -> Option<Selection<NamedEncoders>> {
+        self.codecs
+            .select_encoder(format, lossless)
+            .map(|(enc, trace)| Selection { chosen: enc, trace })
+    }
+
+    /// Combined: pick format, then pick encoder.
+    pub fn select(&self, criteria: &FormatCriteria) -> Option<FullSelection> {
+        let format_sel = self.select_format(criteria)?;
+        let lossless = criteria.lossless.unwrap_or(false);
+        let format = format_sel.chosen;
+        let img_format = format.to_image_format()?;
+
+        let encoder_sel = self.select_encoder(img_format, lossless)?;
+        let mut trace = format_sel.trace;
+        trace.extend(encoder_sel.trace);
+        Some(FullSelection { format, encoder: encoder_sel.chosen, trace })
+    }
+
+    fn can_encode_animated(&self, format: imageflow_types::ImageFormat) -> bool {
+        self.codecs.format_supports_animation(format)
     }
 }
 
