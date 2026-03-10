@@ -115,6 +115,32 @@ fn run_command_bytes(input: Vec<u8>, command: &str) -> Vec<u8> {
     output
 }
 
+/// Run a JSON-node pipeline with in-memory bytes input.
+fn run_preset_bytes(input: Vec<u8>, w: u32, h: u32, preset: EncoderPreset) -> Vec<u8> {
+    test_init();
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Constrain(Constraint {
+            mode: ConstraintMode::Within,
+            w: Some(w),
+            h: Some(h),
+            hints: None,
+            gravity: None,
+            canvas_color: None,
+        }),
+        Node::Encode { io_id: 1, preset },
+    ];
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, input).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    let execute =
+        Execute001 { graph_recording: None, security: None, framewise: Framewise::Steps(steps) };
+    ctx.execute_1(execute).unwrap();
+    let output = ctx.take_output_buffer(1).unwrap();
+    assert!(!output.is_empty(), "empty output for preset");
+    output
+}
+
 fn resolve_source_url(source: &str) -> String {
     if source.starts_with("http://") || source.starts_with("https://") {
         source.to_owned()
@@ -688,6 +714,39 @@ fn animated_gif_to_webp() {
     assert_webp(&output, "animated→webp");
 }
 
+/// Animated GIF → JXL (first frame only — JXL animation not yet enabled).
+#[test]
+fn animated_gif_to_jxl() {
+    let input = animated_gif_3_frames();
+    let output = run_preset_bytes(input, 64, 64, EncoderPreset::JxlLossy { distance: 1.0 });
+    assert_jxl(&output, "animated→jxl (first frame)");
+}
+
+/// Animated GIF → JXL lossless (first frame only).
+#[test]
+fn animated_gif_to_jxl_lossless() {
+    let input = animated_gif_3_frames();
+    let output = run_preset_bytes(input, 64, 64, EncoderPreset::JxlLossless);
+    assert_jxl(&output, "animated→jxl_ll (first frame)");
+}
+
+/// Animated GIF → AVIF (first frame only — AVIF animation not yet enabled).
+#[test]
+fn animated_gif_to_avif() {
+    let input = animated_gif_3_frames();
+    let avif_preset = EncoderPreset::Format {
+        format: s::OutputImageFormat::Avif,
+        quality_profile: Some(QualityProfile::Good),
+        quality_profile_dpr: None,
+        matte: None,
+        lossless: None,
+        allow: Some(AllowedFormats::avif()),
+        encoder_hints: None,
+    };
+    let output = run_preset_bytes(input, 64, 64, avif_preset);
+    assert_avif(&output, "animated→avif (first frame)");
+}
+
 /// Animated GIF with format=auto.
 #[test]
 fn animated_gif_format_auto() {
@@ -697,6 +756,7 @@ fn animated_gif_format_auto() {
 }
 
 /// Animated GIF with format=auto and modern codec acceptance.
+/// Since AVIF/JXL/WebP animation is not yet enabled, auto should still select GIF.
 #[test]
 fn animated_gif_format_auto_modern() {
     let input = animated_gif_3_frames();
@@ -704,7 +764,26 @@ fn animated_gif_format_auto_modern() {
         input,
         "w=64&h=64&mode=max&format=auto&accept.webp=true&accept.avif=true&accept.jxl=true",
     );
-    assert!(!output.is_empty(), "animated→auto(modern): empty output");
+    assert_gif(&output, "animated→auto(modern) should be GIF (no animated AVIF/JXL/WebP yet)");
+}
+
+/// Static GIF (single frame from S3) → JXL and AVIF via URL command.
+#[test]
+fn static_gif_to_jxl_and_avif() {
+    let jxl = run_preset(SRC_GIF, 300, 300, EncoderPreset::JxlLossy { distance: 1.0 });
+    assert_jxl(&jxl, "static_gif→jxl");
+
+    let avif_preset = EncoderPreset::Format {
+        format: s::OutputImageFormat::Avif,
+        quality_profile: Some(QualityProfile::Good),
+        quality_profile_dpr: None,
+        matte: None,
+        lossless: None,
+        allow: Some(AllowedFormats::avif()),
+        encoder_hints: None,
+    };
+    let avif = run_preset(SRC_GIF, 300, 300, avif_preset);
+    assert_avif(&avif, "static_gif→avif");
 }
 
 // ============================================================================
