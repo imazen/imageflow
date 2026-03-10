@@ -757,7 +757,7 @@ impl Decoder for ZenDecoder {
         ];
 
         // Animation path: use persistent full-frame decoder
-        if self.meta.always_use_frame_decoder || info.has_animation || self.frame_dec.is_some() {
+        if self.meta.always_use_frame_decoder || info.is_animation() || self.frame_dec.is_some() {
             if self.frame_dec.is_none() {
                 let data = self.data.take().unwrap();
                 let target = self.target_frame;
