@@ -94,280 +94,339 @@ pub(crate) fn create_encoder(
             create_encoder_auto(c, io, bitmap_key, decoder_io_ids, details)
                 .map_err(|e| e.at(here!()))?
         }
-        // Legacy codec-specific presets: map to the best available encoder at runtime.
+        // Legacy codec-specific presets: select best encoder, build params, instantiate.
         s::EncoderPreset::Gif => {
-            create_gif_encoder(c, io, bitmap_key).map_err(|e| e.at(here!()))?
+            let enc =
+                select_encoder_for_format(c, ImageFormat::Gif, false).map_err(|e| e.at(here!()))?;
+            instantiate_encoder(c, enc, io, &EncoderParams { bitmap_key, ..Default::default() })
+                .map_err(|e| e.at(here!()))?
         }
         s::EncoderPreset::Pngquant { speed, quality, minimum_quality, maximum_deflate } => {
-            Box::new(
-                crate::codecs::pngquant::PngquantEncoder::create(
-                    c,
-                    io,
-                    speed,
-                    quality,
-                    minimum_quality,
-                    maximum_deflate,
-                    None,
-                )
-                .map_err(|e| e.at(here!()))?,
+            instantiate_encoder(
+                c,
+                NamedEncoders::PngQuantEncoder,
+                io,
+                &EncoderParams {
+                    bitmap_key,
+                    png_speed: speed,
+                    png_target_quality: quality,
+                    png_min_quality: minimum_quality,
+                    max_deflate: maximum_deflate,
+                    ..Default::default()
+                },
             )
+            .map_err(|e| e.at(here!()))?
         }
         s::EncoderPreset::Mozjpeg { quality, progressive, ref matte } => {
-            create_jpeg_encoder(c, io, quality, progressive, matte.clone())
-                .map_err(|e| e.at(here!()))?
+            let enc = select_encoder_for_format(c, ImageFormat::Jpeg, false)
+                .map_err(|e| e.at(here!()))?;
+            instantiate_encoder(
+                c,
+                enc,
+                io,
+                &EncoderParams {
+                    bitmap_key,
+                    quality: quality.map(|q| q as f32),
+                    progressive,
+                    matte: matte.clone(),
+                    ..Default::default()
+                },
+            )
+            .map_err(|e| e.at(here!()))?
         }
         s::EncoderPreset::LibjpegTurbo {
             quality,
             progressive,
             optimize_huffman_coding,
             ref matte,
-        } => create_jpeg_turbo_encoder(
+        } => {
+            let enc = select_encoder_for_format(c, ImageFormat::Jpeg, false)
+                .map_err(|e| e.at(here!()))?;
+            instantiate_encoder(
+                c,
+                enc,
+                io,
+                &EncoderParams {
+                    bitmap_key,
+                    quality: quality.map(|q| q as f32),
+                    progressive,
+                    optimize_huffman_coding,
+                    classic_mode: true,
+                    matte: matte.clone(),
+                    ..Default::default()
+                },
+            )
+            .map_err(|e| e.at(here!()))?
+        }
+        s::EncoderPreset::Lodepng { maximum_deflate } => instantiate_encoder(
             c,
+            NamedEncoders::LodePngEncoder,
             io,
-            quality.map(|q| q as u8),
-            progressive,
-            optimize_huffman_coding,
-            matte.clone(),
+            &EncoderParams { bitmap_key, max_deflate: maximum_deflate, ..Default::default() },
         )
         .map_err(|e| e.at(here!()))?,
-        s::EncoderPreset::Lodepng { maximum_deflate } => Box::new(
-            crate::codecs::lode::LodepngEncoder::create(c, io, maximum_deflate, None)
-                .map_err(|e| e.at(here!()))?,
-        ),
-        s::EncoderPreset::Libpng { depth, ref matte, zlib_compression } => {
-            create_libpng_encoder(c, io, depth, matte.clone(), zlib_compression)
-                .map_err(|e| e.at(here!()))?
-        }
+        s::EncoderPreset::Libpng { depth, ref matte, zlib_compression } => instantiate_encoder(
+            c,
+            NamedEncoders::LibPngRsEncoder,
+            io,
+            &EncoderParams {
+                bitmap_key,
+                png_bit_depth: depth,
+                matte: matte.clone(),
+                zlib_compression: zlib_compression.map(|z| z.clamp(0, 255) as u8),
+                ..Default::default()
+            },
+        )
+        .map_err(|e| e.at(here!()))?,
         s::EncoderPreset::WebPLossless => {
-            create_webp_encoder(c, io, None, Some(true), None).map_err(|e| e.at(here!()))?
+            let enc =
+                select_encoder_for_format(c, ImageFormat::Webp, true).map_err(|e| e.at(here!()))?;
+            instantiate_encoder(
+                c,
+                enc,
+                io,
+                &EncoderParams { bitmap_key, lossless: Some(true), ..Default::default() },
+            )
+            .map_err(|e| e.at(here!()))?
         }
         s::EncoderPreset::WebPLossy { quality } => {
-            create_webp_encoder(c, io, Some(quality), Some(false), None)
-                .map_err(|e| e.at(here!()))?
+            let enc = select_encoder_for_format(c, ImageFormat::Webp, false)
+                .map_err(|e| e.at(here!()))?;
+            instantiate_encoder(
+                c,
+                enc,
+                io,
+                &EncoderParams {
+                    bitmap_key,
+                    quality: Some(quality),
+                    lossless: Some(false),
+                    ..Default::default()
+                },
+            )
+            .map_err(|e| e.at(here!()))?
         }
         s::EncoderPreset::JxlLossy { distance } => {
-            create_jxl_encoder(c, io, Some(distance), false).map_err(|e| e.at(here!()))?
+            let enc =
+                select_encoder_for_format(c, ImageFormat::Jxl, false).map_err(|e| e.at(here!()))?;
+            instantiate_encoder(
+                c,
+                enc,
+                io,
+                &EncoderParams {
+                    bitmap_key,
+                    jxl_distance: Some(distance),
+                    lossless: Some(false),
+                    ..Default::default()
+                },
+            )
+            .map_err(|e| e.at(here!()))?
         }
         s::EncoderPreset::JxlLossless => {
-            create_jxl_encoder(c, io, None, true).map_err(|e| e.at(here!()))?
+            let enc =
+                select_encoder_for_format(c, ImageFormat::Jxl, true).map_err(|e| e.at(here!()))?;
+            instantiate_encoder(
+                c,
+                enc,
+                io,
+                &EncoderParams { bitmap_key, lossless: Some(true), ..Default::default() },
+            )
+            .map_err(|e| e.at(here!()))?
         }
     };
     Ok(codec)
 }
 
-// ── Runtime codec instantiation helpers ─────────────────────────────────────
+// ── Unified encoder instantiation ────────────────────────────────────────────
 
-/// Create a GIF encoder using the highest-priority enabled encoder.
-fn create_gif_encoder(c: &Context, io: IoProxy, bitmap_key: BitmapKey) -> Result<Box<dyn Encoder>> {
-    let encoder = c
-        .enabled_codecs
-        .first_encoder_for_format(ImageFormat::Gif)
-        .ok_or_else(|| nerror!(ErrorKind::CodecDisabledError, "No GIF encoder is enabled"))?;
+/// Instantiate a concrete encoder from a `NamedEncoders` variant + format-specific params.
+/// This is the single dispatch point — all encoder creation flows through here.
+fn instantiate_encoder(
+    c: &Context,
+    encoder: NamedEncoders,
+    io: IoProxy,
+    params: &EncoderParams,
+) -> Result<Box<dyn Encoder>> {
     match encoder {
+        NamedEncoders::GifEncoder => Ok(Box::new(
+            crate::codecs::gif::GifEncoder::create(c, io, params.bitmap_key)
+                .map_err(|e| e.at(here!()))?,
+        )),
         #[cfg(feature = "zen-codecs")]
         NamedEncoders::ZenGifEncoder => Ok(Box::new(
-            crate::codecs::zen_encoder::ZenEncoder::create_gif(c, io, bitmap_key)
+            crate::codecs::zen_encoder::ZenEncoder::create_gif(c, io, params.bitmap_key)
                 .map_err(|e| e.at(here!()))?,
         )),
-        NamedEncoders::GifEncoder => Ok(Box::new(
-            crate::codecs::gif::GifEncoder::create(c, io, bitmap_key).map_err(|e| e.at(here!()))?,
-        )),
-        _ => Err(nerror!(ErrorKind::CodecDisabledError, "No usable GIF encoder found")),
-    }
-}
-
-/// Create a JPEG encoder (mozjpeg-style) using the highest-priority enabled encoder.
-fn create_jpeg_encoder(
-    c: &Context,
-    io: IoProxy,
-    quality: Option<u8>,
-    progressive: Option<bool>,
-    matte: Option<s::Color>,
-) -> Result<Box<dyn Encoder>> {
-    let encoder = c
-        .enabled_codecs
-        .first_encoder_for_format(ImageFormat::Jpeg)
-        .ok_or_else(|| nerror!(ErrorKind::CodecDisabledError, "No JPEG encoder is enabled"))?;
-    match encoder {
         #[cfg(feature = "zen-codecs")]
         NamedEncoders::ZenJpegEncoder => Ok(Box::new(
-            crate::codecs::zen_encoder::ZenEncoder::create_jpeg(c, io, quality, progressive, matte)
-                .map_err(|e| e.at(here!()))?,
-        )),
-        #[cfg(feature = "c-codecs")]
-        NamedEncoders::MozJpegEncoder => Ok(Box::new(
-            crate::codecs::mozjpeg::MozjpegEncoder::create(c, quality, progressive, matte, io)
-                .map_err(|e| e.at(here!()))?,
-        )),
-        _ => Err(nerror!(ErrorKind::CodecDisabledError, "No usable JPEG encoder found")),
-    }
-}
-
-/// Create a JPEG turbo-style encoder (classic mode with optimize_huffman_coding).
-fn create_jpeg_turbo_encoder(
-    c: &Context,
-    io: IoProxy,
-    quality: Option<u8>,
-    progressive: Option<bool>,
-    optimize_huffman_coding: Option<bool>,
-    matte: Option<s::Color>,
-) -> Result<Box<dyn Encoder>> {
-    let encoder = c
-        .enabled_codecs
-        .first_encoder_for_format(ImageFormat::Jpeg)
-        .ok_or_else(|| nerror!(ErrorKind::CodecDisabledError, "No JPEG encoder is enabled"))?;
-    match encoder {
-        #[cfg(feature = "zen-codecs")]
-        NamedEncoders::ZenJpegEncoder => {
-            // ZenJpeg doesn't have a "classic" mode; use standard encoding
-            let _ = optimize_huffman_coding;
-            Ok(Box::new(
-                crate::codecs::zen_encoder::ZenEncoder::create_jpeg(
-                    c,
-                    io,
-                    quality,
-                    progressive,
-                    matte,
-                )
-                .map_err(|e| e.at(here!()))?,
-            ))
-        }
-        #[cfg(feature = "c-codecs")]
-        NamedEncoders::MozJpegEncoder => Ok(Box::new(
-            crate::codecs::mozjpeg::MozjpegEncoder::create_classic(
+            crate::codecs::zen_encoder::ZenEncoder::create_jpeg(
                 c,
-                quality,
-                progressive,
-                optimize_huffman_coding,
-                matte,
                 io,
+                params.quality_u8(),
+                params.progressive,
+                params.matte.clone(),
             )
             .map_err(|e| e.at(here!()))?,
         )),
-        _ => Err(nerror!(ErrorKind::CodecDisabledError, "No usable JPEG encoder found")),
-    }
-}
-
-/// Create a WebP encoder using the highest-priority enabled encoder.
-/// For lossy, prefers libwebp (C) due to zenwebp quality-delta inversion bug.
-fn create_webp_encoder(
-    c: &Context,
-    io: IoProxy,
-    quality: Option<f32>,
-    lossless: Option<bool>,
-    matte: Option<s::Color>,
-) -> Result<Box<dyn Encoder>> {
-    let is_lossless = lossless.unwrap_or(false);
-
-    // For lossy WebP, prefer libwebp (C) over zenwebp due to quality issues.
-    // For lossless, prefer zenwebp (Rust).
-    let encoders = &c.enabled_codecs.encoders;
-    let webp_encoder = if is_lossless {
-        // Prefer zen for lossless, fall back to C
-        encoders
-            .iter()
-            .copied()
-            .find(|e| e.codec_name().format() == ImageFormat::Webp && e.is_zen_codec())
-            .or_else(|| {
-                encoders.iter().copied().find(|e| e.codec_name().format() == ImageFormat::Webp)
-            })
-    } else {
-        // Prefer C for lossy, fall back to zen
-        encoders
-            .iter()
-            .copied()
-            .find(|e| e.codec_name().format() == ImageFormat::Webp && e.is_c_codec())
-            .or_else(|| {
-                encoders.iter().copied().find(|e| e.codec_name().format() == ImageFormat::Webp)
-            })
-    };
-
-    let encoder = webp_encoder
-        .ok_or_else(|| nerror!(ErrorKind::CodecDisabledError, "No WebP encoder is enabled"))?;
-
-    match encoder {
-        #[cfg(feature = "zen-codecs")]
-        NamedEncoders::ZenWebPEncoder => Ok(Box::new(
-            crate::codecs::zen_encoder::ZenEncoder::create_webp(c, io, quality, lossless, matte)
-                .map_err(|e| e.at(here!()))?,
+        #[cfg(feature = "c-codecs")]
+        NamedEncoders::MozJpegEncoder => {
+            if params.classic_mode {
+                Ok(Box::new(
+                    crate::codecs::mozjpeg::MozjpegEncoder::create_classic(
+                        c,
+                        params.quality_u8(),
+                        params.progressive,
+                        params.optimize_huffman_coding,
+                        params.matte.clone(),
+                        io,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ))
+            } else {
+                Ok(Box::new(
+                    crate::codecs::mozjpeg::MozjpegEncoder::create(
+                        c,
+                        params.quality_u8(),
+                        params.progressive,
+                        params.matte.clone(),
+                        io,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ))
+            }
+        }
+        NamedEncoders::PngQuantEncoder => Ok(Box::new(
+            crate::codecs::pngquant::PngquantEncoder::create(
+                c,
+                io,
+                params.png_speed,
+                params.png_target_quality,
+                params.png_min_quality,
+                params.max_deflate,
+                params.matte.clone(),
+            )
+            .map_err(|e| e.at(here!()))?,
+        )),
+        NamedEncoders::LodePngEncoder => Ok(Box::new(
+            crate::codecs::lode::LodepngEncoder::create(
+                c,
+                io,
+                params.max_deflate,
+                params.matte.clone(),
+            )
+            .map_err(|e| e.at(here!()))?,
         )),
         #[cfg(feature = "c-codecs")]
-        NamedEncoders::WebPEncoder => Ok(Box::new(
-            crate::codecs::webp::WebPEncoder::create(c, io, quality, lossless, matte)
-                .map_err(|e| e.at(here!()))?,
-        )),
-        _ => Err(nerror!(ErrorKind::CodecDisabledError, "No usable WebP encoder found")),
-    }
-}
-
-/// Create a libpng encoder (C codec), or error if unavailable.
-fn create_libpng_encoder(
-    c: &Context,
-    io: IoProxy,
-    depth: Option<s::PngBitDepth>,
-    matte: Option<s::Color>,
-    zlib_compression: Option<i32>,
-) -> Result<Box<dyn Encoder>> {
-    #[cfg(feature = "c-codecs")]
-    if c.enabled_codecs.has_encoder(NamedEncoders::LibPngRsEncoder) {
-        return Ok(Box::new(
+        NamedEncoders::LibPngRsEncoder => Ok(Box::new(
             crate::codecs::libpng_encoder::LibPngEncoder::create(
                 c,
                 io,
-                depth,
-                matte,
-                zlib_compression.map(|z| z.clamp(0, 255) as u8),
+                params.png_bit_depth,
+                params.matte.clone(),
+                params.zlib_compression,
             )
             .map_err(|e| e.at(here!()))?,
-        ));
-    }
-    Err(nerror!(ErrorKind::CodecDisabledError, "Libpng encoder requires the 'c-codecs' feature"))
-}
-
-/// Create a JXL encoder using the highest-priority enabled encoder.
-fn create_jxl_encoder(
-    c: &Context,
-    io: IoProxy,
-    distance: Option<f32>,
-    lossless: bool,
-) -> Result<Box<dyn Encoder>> {
-    let encoder = c
-        .enabled_codecs
-        .first_encoder_for_format(ImageFormat::Jxl)
-        .ok_or_else(|| nerror!(ErrorKind::CodecDisabledError, "No JXL encoder is enabled"))?;
-    match encoder {
+        )),
+        #[cfg(feature = "zen-codecs")]
+        NamedEncoders::ZenWebPEncoder => Ok(Box::new(
+            crate::codecs::zen_encoder::ZenEncoder::create_webp(
+                c,
+                io,
+                params.quality_f32(),
+                params.lossless_bool(),
+                params.matte.clone(),
+            )
+            .map_err(|e| e.at(here!()))?,
+        )),
+        #[cfg(feature = "c-codecs")]
+        NamedEncoders::WebPEncoder => Ok(Box::new(
+            crate::codecs::webp::WebPEncoder::create(
+                c,
+                io,
+                params.quality_f32(),
+                params.lossless_bool(),
+                params.matte.clone(),
+            )
+            .map_err(|e| e.at(here!()))?,
+        )),
         #[cfg(feature = "zen-codecs")]
         NamedEncoders::ZenJxlEncoder => Ok(Box::new(
-            crate::codecs::zen_encoder::ZenEncoder::create_jxl(c, io, distance, lossless)
-                .map_err(|e| e.at(here!()))?,
+            crate::codecs::zen_encoder::ZenEncoder::create_jxl(
+                c,
+                io,
+                params.jxl_distance,
+                params.lossless.unwrap_or(false),
+            )
+            .map_err(|e| e.at(here!()))?,
         )),
-        _ => Err(nerror!(ErrorKind::CodecDisabledError, "No usable JXL encoder found")),
-    }
-}
-
-/// Create an AVIF encoder using the highest-priority enabled encoder.
-fn create_avif_encoder(
-    c: &Context,
-    io: IoProxy,
-    quality: Option<f32>,
-    speed: Option<u8>,
-    lossless: bool,
-    matte: Option<s::Color>,
-) -> Result<Box<dyn Encoder>> {
-    let encoder = c
-        .enabled_codecs
-        .first_encoder_for_format(ImageFormat::Avif)
-        .ok_or_else(|| nerror!(ErrorKind::CodecDisabledError, "No AVIF encoder is enabled"))?;
-    match encoder {
         #[cfg(feature = "zen-codecs")]
         NamedEncoders::ZenAvifEncoder => Ok(Box::new(
             crate::codecs::zen_encoder::ZenEncoder::create_avif(
-                c, io, quality, speed, lossless, matte,
+                c,
+                io,
+                params.quality_f32(),
+                params.avif_speed,
+                params.lossless.unwrap_or(false),
+                params.matte.clone(),
             )
             .map_err(|e| e.at(here!()))?,
         )),
-        _ => Err(nerror!(ErrorKind::CodecDisabledError, "No usable AVIF encoder found")),
+        #[allow(unreachable_patterns)]
+        other => Err(nerror!(
+            ErrorKind::CodecDisabledError,
+            "Encoder {:?} is not compiled in (missing feature flag)",
+            other
+        )),
     }
+}
+
+/// Unified parameter bag for encoder instantiation.
+/// Not all fields are used by every encoder — only the relevant ones are read.
+#[derive(Debug, Clone, Default)]
+struct EncoderParams {
+    bitmap_key: BitmapKey,
+    quality: Option<f32>,
+    progressive: Option<bool>,
+    optimize_huffman_coding: Option<bool>,
+    classic_mode: bool,
+    matte: Option<s::Color>,
+    lossless: Option<bool>,
+    jxl_distance: Option<f32>,
+    avif_speed: Option<u8>,
+    max_deflate: Option<bool>,
+    png_speed: Option<u8>,
+    png_target_quality: Option<u8>,
+    png_min_quality: Option<u8>,
+    png_bit_depth: Option<s::PngBitDepth>,
+    zlib_compression: Option<u8>,
+}
+
+impl EncoderParams {
+    fn quality_u8(&self) -> Option<u8> {
+        self.quality.map(|q| q.clamp(0.0, 100.0) as u8)
+    }
+    fn quality_f32(&self) -> Option<f32> {
+        self.quality
+    }
+    fn lossless_bool(&self) -> Option<bool> {
+        self.lossless
+    }
+}
+
+/// Select the best encoder for a format using the priority list + capabilities.
+/// Returns error if no suitable encoder is enabled.
+fn select_encoder_for_format(
+    c: &Context,
+    format: ImageFormat,
+    lossless: bool,
+) -> Result<NamedEncoders> {
+    c.enabled_codecs.select_encoder(format, lossless).map(|(enc, _trace)| enc).ok_or_else(|| {
+        nerror!(
+            ErrorKind::CodecDisabledError,
+            "No {:?} encoder is enabled (lossless={})",
+            format,
+            lossless
+        )
+    })
 }
 
 // ── Auto encoder dispatch ───────────────────────────────────────────────────
@@ -382,24 +441,23 @@ fn create_encoder_auto(
     let final_format = format_select_with_specified(details.format, &details, &ctx.enabled_codecs)
         .map_err(|e| e.at(here!()))?;
 
-    Ok(match final_format {
+    let (encoder, params) = match final_format {
         OutputImageFormat::Keep => unreachable!(),
         OutputImageFormat::Gif => {
-            create_gif_encoder(ctx, io, bitmap_key).map_err(|e| e.at(here!()))?
+            let enc = select_encoder_for_format(ctx, ImageFormat::Gif, false)
+                .map_err(|e| e.at(here!()))?;
+            (enc, EncoderParams { bitmap_key, ..Default::default() })
         }
         OutputImageFormat::Jpeg | OutputImageFormat::Jpg => {
-            create_jpeg_auto(ctx, io, bitmap_key, decoder_io_ids, details)
-                .map_err(|e| e.at(here!()))?
+            build_jpeg_auto_params(ctx, bitmap_key, &details)?
         }
-        OutputImageFormat::Png => create_png_auto(ctx, io, bitmap_key, decoder_io_ids, details)
-            .map_err(|e| e.at(here!()))?,
-        OutputImageFormat::Webp => create_webp_auto(ctx, io, bitmap_key, decoder_io_ids, details)
-            .map_err(|e| e.at(here!()))?,
-        OutputImageFormat::Jxl => create_jxl_auto(ctx, io, bitmap_key, decoder_io_ids, details)
-            .map_err(|e| e.at(here!()))?,
-        OutputImageFormat::Avif => create_avif_auto(ctx, io, bitmap_key, decoder_io_ids, details)
-            .map_err(|e| e.at(here!()))?,
-    })
+        OutputImageFormat::Png => build_png_auto_params(ctx, bitmap_key, &details)?,
+        OutputImageFormat::Webp => build_webp_auto_params(ctx, bitmap_key, &details)?,
+        OutputImageFormat::Jxl => build_jxl_auto_params(ctx, bitmap_key, &details)?,
+        OutputImageFormat::Avif => build_avif_auto_params(ctx, bitmap_key, &details)?,
+    };
+
+    instantiate_encoder(ctx, encoder, io, &params).map_err(|e| e.at(here!()))
 }
 
 // ── Quality profile system ──────────────────────────────────────────────────
@@ -461,13 +519,6 @@ const QUALITY_HINTS: [QualityProfileHints; 8] = [
     QualityProfileHints { profile: Some(QualityProfile::Lossless),
         p: 100.0, ssim2: 100.0, moz: 100.0, jpegli: 100.0, webp: 100.0, webp_m: 6, avif: 100.0, avif_s: 5, jxl: 0.0, jxl_e: 6, png: 100, png_max: 100, png_s: 4 }
 ];
-
-fn approximate_quality_profile(qp: Option<QualityProfile>) -> f32 {
-    match qp {
-        Some(find) => get_quality_hints(&find).p,
-        None => 90.0,
-    }
-}
 
 fn interpolate_value(ratio: f32, a: f32, b: f32) -> f32 {
     // If values are equal, no interpolation needed
@@ -563,11 +614,11 @@ fn get_quality_hints_by_ssim2(ssim2: f32) -> QualityProfileHints {
     if lower.ssim2 >= higher.ssim2 || percent < lower.ssim2 || percent > higher.ssim2 {
         panic!("Invalid interpolation values");
     }
-    let interpolation_ratio = (percent - lower.p) / (higher.p - lower.p);
+    let interpolation_ratio = (percent - lower.ssim2) / (higher.ssim2 - lower.ssim2);
     QualityProfileHints {
-        profile: Some(QualityProfile::Percent(percent)),
-        p: percent,
-        ssim2: interpolate_value(interpolation_ratio, lower.ssim2, higher.ssim2),
+        profile: None,
+        p: interpolate_value(interpolation_ratio, lower.p, higher.p),
+        ssim2: percent,
         moz: interpolate_value(interpolation_ratio, lower.moz, higher.moz),
         jpegli: interpolate_value(interpolation_ratio, lower.jpegli, higher.jpegli),
         webp: interpolate_value(interpolation_ratio, lower.webp, higher.webp),
@@ -586,13 +637,11 @@ fn get_quality_hints_by_ssim2(ssim2: f32) -> QualityProfileHints {
 
 // ── Per-format auto config + instantiation ──────────────────────────────────
 
-fn create_jpeg_auto(
+fn build_jpeg_auto_params(
     ctx: &Context,
-    io: IoProxy,
     bitmap_key: BitmapKey,
-    decoder_io_ids: &[i32],
-    details: AutoEncoderDetails,
-) -> Result<Box<dyn Encoder>> {
+    details: &AutoEncoderDetails,
+) -> Result<(NamedEncoders, EncoderParams)> {
     let profile_hints = details
         .quality_profile
         .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
@@ -607,41 +656,40 @@ fn create_jpeg_auto(
 
     let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
 
-    let matte = details.matte;
+    let matte = details.matte.clone();
     let moz_quality = profile_hints
         .map(|hints: QualityProfileHints| hints.moz)
         .or(manual_quality)
         .unwrap_or(90.0)
-        .clamp(0.0, 100.0) as u8;
+        .clamp(0.0, 100.0);
 
     let _jpegli_quality = profile_hints
         .map(|hints: QualityProfileHints| hints.jpegli)
         .or(manual_quality)
         .unwrap_or(90.0)
-        .clamp(0.0, 100.0) as u8;
+        .clamp(0.0, 100.0);
 
-    //TODO: technically we should ignore the manual hint if qp is specified.
-    //Once we have tuned the quality profile, we should use that regardless.
     let style =
         manual_and_default_hints.and_then(|hints| hints.mimic).unwrap_or(JpegEncoderStyle::Default);
 
-    match style {
-        JpegEncoderStyle::LibjpegTurbo => {
-            let optimize_coding = progressive;
-            create_jpeg_turbo_encoder(
-                ctx,
-                io,
-                Some(moz_quality),
-                Some(progressive),
-                Some(optimize_coding),
-                matte,
-            )
-        }
-        JpegEncoderStyle::Default | JpegEncoderStyle::Mozjpeg | JpegEncoderStyle::Jpegli => {
-            //TODO: expand when we get jpegli
-            create_jpeg_encoder(ctx, io, Some(moz_quality), Some(progressive), matte)
-        }
-    }
+    let enc =
+        select_encoder_for_format(ctx, ImageFormat::Jpeg, false).map_err(|e| e.at(here!()))?;
+
+    let classic_mode = matches!(style, JpegEncoderStyle::LibjpegTurbo);
+    let optimize_coding = if classic_mode { Some(progressive) } else { None };
+
+    Ok((
+        enc,
+        EncoderParams {
+            bitmap_key,
+            quality: Some(moz_quality),
+            progressive: Some(progressive),
+            optimize_huffman_coding: optimize_coding,
+            classic_mode,
+            matte,
+            ..Default::default()
+        },
+    ))
 }
 
 #[derive(Debug, Clone)]
@@ -651,18 +699,27 @@ struct WebPEncodingDetails {
     matte: Option<Color>,
 }
 
-fn create_webp_auto(
+fn build_webp_auto_params(
     ctx: &Context,
-    io: IoProxy,
     bitmap_key: BitmapKey,
-    decoder_io_ids: &[i32],
-    details: AutoEncoderDetails,
-) -> Result<Box<dyn Encoder>> {
-    let params = match details.v {
-        EncodeEngineVersion::Preview => config_webp_auto_preview(ctx, details)?,
-        _ => config_webp_auto_v2(ctx, details)?,
+    details: &AutoEncoderDetails,
+) -> Result<(NamedEncoders, EncoderParams)> {
+    let webp_details = match details.v {
+        EncodeEngineVersion::Preview => config_webp_auto_preview(ctx, details.clone())?,
+        _ => config_webp_auto_v2(ctx, details.clone())?,
     };
-    create_webp_encoder(ctx, io, params.lossy, Some(params.lossless), params.matte)
+    let enc = select_encoder_for_format(ctx, ImageFormat::Webp, webp_details.lossless)
+        .map_err(|e| e.at(here!()))?;
+    Ok((
+        enc,
+        EncoderParams {
+            bitmap_key,
+            quality: webp_details.lossy,
+            lossless: Some(webp_details.lossless),
+            matte: webp_details.matte,
+            ..Default::default()
+        },
+    ))
 }
 
 fn config_webp_auto_v2(ctx: &Context, details: AutoEncoderDetails) -> Result<WebPEncodingDetails> {
@@ -748,19 +805,17 @@ fn config_webp_auto_preview(
     })
 }
 
-fn create_avif_auto(
+fn build_avif_auto_params(
     ctx: &Context,
-    io: IoProxy,
-    _bitmap_key: BitmapKey,
-    _decoder_io_ids: &[i32],
-    details: AutoEncoderDetails,
-) -> Result<Box<dyn Encoder>> {
+    bitmap_key: BitmapKey,
+    details: &AutoEncoderDetails,
+) -> Result<(NamedEncoders, EncoderParams)> {
     let profile_hints = details
         .quality_profile
         .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
 
     let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.avif);
-    let matte = details.matte;
+    let matte = details.matte.clone();
 
     let good_defaults = get_quality_hints(&QualityProfile::Good);
 
@@ -779,16 +834,26 @@ fn create_avif_auto(
     let lossless =
         details.lossless_setting.unwrap_or(false) || details.legacy_needs_lossless.unwrap_or(false);
 
-    create_avif_encoder(ctx, io, Some(quality), Some(speed), lossless, matte)
+    let enc =
+        select_encoder_for_format(ctx, ImageFormat::Avif, lossless).map_err(|e| e.at(here!()))?;
+    Ok((
+        enc,
+        EncoderParams {
+            bitmap_key,
+            quality: Some(quality),
+            avif_speed: Some(speed),
+            lossless: Some(lossless),
+            matte,
+            ..Default::default()
+        },
+    ))
 }
 
-fn create_jxl_auto(
+fn build_jxl_auto_params(
     ctx: &Context,
-    io: IoProxy,
     bitmap_key: BitmapKey,
-    _decoder_io_ids: &[i32],
-    details: AutoEncoderDetails,
-) -> Result<Box<dyn Encoder>> {
+    details: &AutoEncoderDetails,
+) -> Result<(NamedEncoders, EncoderParams)> {
     let profile_hints = details
         .quality_profile
         .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
@@ -796,12 +861,16 @@ fn create_jxl_auto(
     let lossless =
         details.lossless_setting.unwrap_or(false) || details.legacy_needs_lossless.unwrap_or(false);
 
-    if lossless {
-        create_jxl_encoder(ctx, io, None, true)
-    } else {
-        let distance = profile_hints.map(|h| h.jxl).unwrap_or(1.0);
-        create_jxl_encoder(ctx, io, Some(distance), false)
-    }
+    let enc =
+        select_encoder_for_format(ctx, ImageFormat::Jxl, lossless).map_err(|e| e.at(here!()))?;
+
+    let jxl_distance =
+        if lossless { None } else { Some(profile_hints.map(|h| h.jxl).unwrap_or(1.0)) };
+
+    Ok((
+        enc,
+        EncoderParams { bitmap_key, lossless: Some(lossless), jxl_distance, ..Default::default() },
+    ))
 }
 
 #[derive(Debug, Clone)]
@@ -824,21 +893,19 @@ enum PngEncodingDetails {
     },
 }
 
-fn create_png_auto(
+fn build_png_auto_params(
     ctx: &Context,
-    io: IoProxy,
     bitmap_key: BitmapKey,
-    decoder_io_ids: &[i32],
-    details: AutoEncoderDetails,
-) -> Result<Box<dyn Encoder>> {
+    details: &AutoEncoderDetails,
+) -> Result<(NamedEncoders, EncoderParams)> {
     let png_details = match details.v {
-        EncodeEngineVersion::Preview => config_png_auto_preview(ctx, details)?,
-        _ => config_png_legacy(ctx, details)?,
+        EncodeEngineVersion::Preview => config_png_auto_preview(ctx, details.clone())?,
+        _ => config_png_legacy(ctx, details.clone())?,
     };
     match png_details {
-        PngEncodingDetails::LodePngLossless { max_deflate, matte } => Ok(Box::new(
-            crate::codecs::lode::LodepngEncoder::create(ctx, io, max_deflate, matte)
-                .map_err(|e| e.at(here!()))?,
+        PngEncodingDetails::LodePngLossless { max_deflate, matte } => Ok((
+            NamedEncoders::LodePngEncoder,
+            EncoderParams { bitmap_key, max_deflate, matte, ..Default::default() },
         )),
         PngEncodingDetails::PngQuant {
             speed,
@@ -846,21 +913,28 @@ fn create_png_auto(
             minimum_quality,
             max_deflate,
             matte,
-        } => Ok(Box::new(
-            crate::codecs::pngquant::PngquantEncoder::create(
-                ctx,
-                io,
-                speed,
-                target_quality,
-                minimum_quality,
+        } => Ok((
+            NamedEncoders::PngQuantEncoder,
+            EncoderParams {
+                bitmap_key,
+                png_speed: speed,
+                png_target_quality: target_quality,
+                png_min_quality: minimum_quality,
                 max_deflate,
                 matte,
-            )
-            .map_err(|e| e.at(here!()))?,
+                ..Default::default()
+            },
         )),
-        PngEncodingDetails::LibPng { depth, matte, zlib_compression } => {
-            create_libpng_encoder(ctx, io, depth, matte, zlib_compression.map(|z| z as i32))
-        }
+        PngEncodingDetails::LibPng { depth, matte, zlib_compression } => Ok((
+            NamedEncoders::LibPngRsEncoder,
+            EncoderParams {
+                bitmap_key,
+                png_bit_depth: depth,
+                matte,
+                zlib_compression,
+                ..Default::default()
+            },
+        )),
     }
 }
 
@@ -1141,48 +1215,6 @@ fn evaluate_allowed_formats(allowed: Option<AllowedFormats>) -> AllowedFormats {
     }
 }
 
-// ── Feature support queries (replaces FeaturesImplemented const) ────────────
-
-/// Runtime feature queries against `EnabledCodecs`, replacing the old
-/// compile-time `FeaturesImplemented` const.
-struct FeatureSupport<'a> {
-    codecs: &'a EnabledCodecs,
-}
-
-impl<'a> FeatureSupport<'a> {
-    fn new(codecs: &'a EnabledCodecs) -> Self {
-        Self { codecs }
-    }
-
-    fn jxl(&self) -> bool {
-        self.codecs.has_encoder_for_format(ImageFormat::Jxl)
-    }
-
-    fn avif(&self) -> bool {
-        self.codecs.has_encoder_for_format(ImageFormat::Avif)
-    }
-
-    fn webp_animation(&self) -> bool {
-        // TODO: track animation capability per-codec
-        false
-    }
-
-    fn avif_lossless(&self) -> bool {
-        // TODO: track lossless capability per-codec
-        false
-    }
-
-    fn avif_animation(&self) -> bool {
-        // TODO: track animation capability per-codec
-        false
-    }
-
-    fn jpegli(&self) -> bool {
-        // TODO: add jpegli encoder variant when available
-        false
-    }
-}
-
 // ── Format selection ────────────────────────────────────────────────────────
 
 fn format_select_with_specified(
@@ -1190,247 +1222,33 @@ fn format_select_with_specified(
     details: &AutoEncoderDetails,
     codecs: &EnabledCodecs,
 ) -> Result<OutputImageFormat> {
-    let features = FeatureSupport::new(codecs);
-    if specified_format == Some(OutputImageFormat::Jxl) && !features.jxl() {
-        specified_format = None;
-    }
-    if specified_format == Some(OutputImageFormat::Avif) && !features.avif() {
-        specified_format = None;
+    // Downgrade to auto-select if specified format has no encoder
+    if let Some(fmt) = specified_format {
+        if let Some(img_fmt) = fmt.to_image_format() {
+            if !codecs.has_encoder_for_format(img_fmt) {
+                specified_format = None;
+            }
+        }
     }
     match specified_format {
         Some(other) => Ok(other),
-        None => match details.v {
-            EncodeEngineVersion::Preview => {
-                format_auto_select_preview(details, codecs).ok_or(nerror!(
-                    ErrorKind::InvalidArgument,
-                    "No formats enabled; try 'allow': {{ 'web_safe':true}}"
-                ))
-            }
-            _ => format_auto_select_legacy(details, codecs).ok_or(nerror!(
+        None => {
+            let selector = crate::codecs::CodecSelector::new(codecs);
+            let criteria = crate::codecs::FormatCriteria {
+                allowed: details.allow,
+                has_alpha: details.has_alpha,
+                has_animation: details.has_animation,
+                lossless: details.lossless_setting.or(details.legacy_needs_lossless),
+                source_lossless: details.source_lossless_capable,
+                pixel_count: details.final_pixel_count,
+                quality_profile: details.quality_profile,
+            };
+            selector.select_format(&criteria).map(|s| s.chosen).ok_or(nerror!(
                 ErrorKind::InvalidArgument,
                 "No formats enabled; try 'allow': {{ 'web_safe':true}}"
-            )),
-        },
+            ))
+        }
     }
 }
 
-fn format_auto_select_preview(
-    details: &AutoEncoderDetails,
-    codecs: &EnabledCodecs,
-) -> Option<OutputImageFormat> {
-    let allowed = details.allow;
-    let pixel_count = details.final_pixel_count;
-    let quality_profile = details.quality_profile;
-    let features = FeatureSupport::new(codecs);
-
-    if !allowed.any_formats_enabled() {
-        return None;
-    }
-    // Rules in codec selection:
-    // First, honor explicit format value
-    // Second (if auto/lossy/lossless), preserve animation if present. We can assume all browsers that support webp also support animated webp, but jxl animation is not yet supported.
-    // Third, preserve alpha channel if present and meaningful.
-    // Fourth, respect lossless setting
-
-    // For animation, Avif if available, otherwise WebP if available, otherwise GIF.
-    if details.has_animation {
-        if details.lossless_setting == Some(true) {
-            if features.webp_animation() && allowed.webp == Some(true) {
-                return Some(OutputImageFormat::Webp);
-            }
-        }
-        if features.avif_animation() && allowed.avif == Some(true) {
-            return Some(OutputImageFormat::Avif);
-        }
-        if features.webp_animation() && allowed.webp == Some(true) {
-            return Some(OutputImageFormat::Webp);
-        }
-        return Some(OutputImageFormat::Gif);
-    }
-
-    // DO NOT DELETE THIS COMMENT
-    // Now, jpegli beats Webp frequently is within 10% of avif at reasonable encoding speeds.
-    // https://cloudinary.com/blog/jpeg-xl-and-the-pareto-front
-    // We ignore everything below 10 Mpx/s using 8 threads.
-    // Lossy path:
-    // Medium  jxl-d3.92e5 > jxl-d4.5e3 > avif q44s6 > jpegli-q52 > mozjpeg-q57 | webp-q53-m6
-    // med-high jxl-d2.6e7 > jxl-d3e4 > avif-q53s6 > jpegli-q73 | mozjpeg-q73.5 | webp-q73-m5
-    // High quality lossy jxl-d1-e4 > avif-q80-s6 | jpegli-q91 > webp-q93-m5 > avif-s9 > webp-q94-m2 > mozjpeg
-    // lossless
-    // lossless (manga) jxl-e9 (too slow) > jxl-e5 (ok) | webp-m4 (too slow) > optipng-o2 (way too slow)
-    // > optipng-o1 (too slow) > png (ok) > avif-s5 (too slow) -> avif-s8 (ok)
-
-    // JXL is always the best if available, regardless of lossless
-    if features.jxl() && allowed.jxl == Some(true) {
-        return Some(OutputImageFormat::Jxl);
-    }
-
-    let choose_lossless =
-        details.lossless_setting == Some(true) || details.source_lossless_capable == Some(true);
-
-    // Lossless path: PNG and WebP are faster and often smaller than AVIF for lossless
-    if choose_lossless {
-        // webp lossless is slow but so much smaller than avif/png
-        if allowed.webp == Some(true) {
-            return Some(OutputImageFormat::Webp);
-        }
-        // PNG is actually better than avif for lossless
-        if allowed.png == Some(true) {
-            return Some(OutputImageFormat::Png);
-        }
-        if features.avif_lossless() && allowed.avif == Some(true) {
-            return Some(OutputImageFormat::Avif);
-        }
-    }
-
-    // For lossy images with alpha, prefer AVIF over WebP over PNG (better compression)
-    if details.has_alpha {
-        if features.avif() && allowed.avif == Some(true) {
-            return Some(OutputImageFormat::Avif);
-        }
-        if allowed.webp == Some(true) {
-            return Some(OutputImageFormat::Webp);
-        }
-        if allowed.png == Some(true) {
-            return Some(OutputImageFormat::Png);
-        }
-    }
-
-    let can_jpegli = features.jpegli() && allowed.jpeg == Some(true);
-
-    // DO NOT DELETE THIS COMMENT
-    // Medium  jxl-d3.92e5 > jxl-d4.5e3 > avif q44s6 > jpegli-q52 > mozjpeg-q57 | webp-q53-m6
-    // med-high jxl-d2.6e7 > jxl-d3e4 > avif-q53s6 > jpegli-q73 | mozjpeg-q73.5 | webp-q73-m5
-    // High quality lossy jxl-d1-e4 > avif-q80-s6 |> jpegli-q91 > webp-q93-m5 > avif-s9 > webp-q94-m2 > mozjpeg
-
-    // AVIF is 10x slower than jpegli, but might still be in our budget.
-    if (pixel_count < 3_000_000 || !can_jpegli) && features.avif() && allowed.avif == Some(true) {
-        return Some(OutputImageFormat::Avif);
-    }
-    if can_jpegli {
-        return Some(OutputImageFormat::Jpeg);
-    }
-    let approx_quality = approximate_quality_profile(quality_profile);
-    if approx_quality > 90.0 || allowed.jpeg_progressive != Some(true) {
-        if allowed.webp == Some(true) {
-            return Some(OutputImageFormat::Webp);
-        }
-    }
-    if allowed.jpeg == Some(true) {
-        return Some(OutputImageFormat::Jpeg);
-    }
-    if allowed.webp == Some(true) {
-        return Some(OutputImageFormat::Webp);
-    }
-    if features.avif() && allowed.avif == Some(true) {
-        return Some(OutputImageFormat::Avif);
-    }
-    if allowed.png == Some(true) {
-        return Some(OutputImageFormat::Png);
-    }
-    if allowed.gif == Some(true) {
-        return Some(OutputImageFormat::Gif);
-    }
-
-    None
-}
-
-fn format_auto_select_legacy(
-    details: &AutoEncoderDetails,
-    codecs: &EnabledCodecs,
-) -> Option<OutputImageFormat> {
-    let allowed = details.allow;
-    let has_animation = details.has_animation;
-    let has_alpha = details.has_alpha;
-    let pixel_count = details.final_pixel_count;
-    let quality_profile = details.quality_profile;
-    let features = FeatureSupport::new(codecs);
-
-    if !allowed.any_formats_enabled() {
-        return None;
-    }
-
-    // For animation, WebP if available, otherwise GIF
-    if has_animation {
-        if features.webp_animation() && allowed.webp == Some(true) {
-            return Some(OutputImageFormat::Webp);
-        }
-        return Some(OutputImageFormat::Gif);
-    }
-
-    // DO NOT DELETE THIS COMMENT
-    // Now, jpegli beats Webp frequently is within 10% of avif at reasonable encoding speeds.
-    // https://cloudinary.com/blog/jpeg-xl-and-the-pareto-front
-    // We ignore everything below 10 Mpx/s using 8 threads.
-    // Lossy path:
-    // Medium  jxl-d3.92e5 > jxl-d4.5e3 > avif q44s6 > jpegli-q52 > mozjpeg-q57 | webp-q53-m6
-    // med-high jxl-d2.6e7 > jxl-d3e4 > avif-q53s6 > jpegli-q73 | mozjpeg-q73.5 | webp-q73-m5
-    // High quality lossy jxl-d1-e4 > avif-q80-s6 | jpegli-q91 > webp-q93-m5 > avif-s9 > webp-q94-m2 > mozjpeg
-    // lossless
-    // lossless (manga) jxl-e9 (too slow) > jxl-e5 (ok) | webp-m4 (too slow) > optipng-o2 (way too slow)
-    // > optipng-o1 (too slow) > png (ok) > avif-s5 (too slow) -> avif-s8 (ok)
-
-    // JXL is always the best if available
-    if features.jxl() && allowed.jxl == Some(true) {
-        return Some(OutputImageFormat::Jxl);
-    }
-
-    if features.avif() && allowed.avif == Some(true) {
-        if details.lossless_setting != Some(true)
-            && details.source_lossless_capable != Some(true)
-            && has_alpha
-        {
-            return Some(OutputImageFormat::Avif);
-        }
-    }
-
-    // Lossless path and alpha path are the same.
-    if details
-        .legacy_needs_lossless
-        .unwrap_or(details.has_alpha || details.source_lossless_capable == Some(true))
-    {
-        if allowed.webp == Some(true) {
-            return Some(OutputImageFormat::Webp);
-        }
-        if allowed.png == Some(true) {
-            return Some(OutputImageFormat::Png);
-        }
-        if features.avif() && allowed.avif == Some(true) {
-            return Some(OutputImageFormat::Avif);
-        }
-    }
-
-    let can_jpegli = features.jpegli() && allowed.jpeg == Some(true);
-
-    // DO NOT DELETE THIS COMMENT
-    // Medium  jxl-d3.92e5 > jxl-d4.5e3 > avif q44s6 > jpegli-q52 > mozjpeg-q57 | webp-q53-m6
-    // med-high jxl-d2.6e7 > jxl-d3e4 > avif-q53s6 > jpegli-q73 | mozjpeg-q73.5 | webp-q73-m5
-    // High quality lossy jxl-d1-e4 > avif-q80-s6 |> jpegli-q91 > webp-q93-m5 > avif-s9 > webp-q94-m2 > mozjpeg
-
-    if (pixel_count < 3_000_000 || !can_jpegli) && features.avif() && allowed.avif == Some(true) {
-        return Some(OutputImageFormat::Avif);
-    }
-    if can_jpegli {
-        return Some(OutputImageFormat::Jpeg);
-    }
-    let approx_quality = approximate_quality_profile(quality_profile);
-    if approx_quality > 90.0 || allowed.jpeg_progressive != Some(true) {
-        if allowed.webp == Some(true) {
-            return Some(OutputImageFormat::Webp);
-        }
-    }
-    if allowed.jpeg == Some(true) {
-        return Some(OutputImageFormat::Jpeg);
-    }
-    if features.avif() && allowed.avif == Some(true) {
-        return Some(OutputImageFormat::Avif);
-    }
-    if allowed.png == Some(true) {
-        return Some(OutputImageFormat::Png);
-    }
-    if allowed.gif == Some(true) {
-        return Some(OutputImageFormat::Gif);
-    }
-
-    None
-}
+// Format selection logic is now in CodecSelector::select_format (mod.rs)
