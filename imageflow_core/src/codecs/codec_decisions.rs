@@ -296,17 +296,12 @@ impl QualityIntent {
 
     /// Direct numeric quality (no profile, no DPR adjustment).
     pub fn from_value(quality: f32) -> Self {
-        Self {
-            generic_quality: quality.clamp(0.0, 100.0),
-            profile: None,
-            dpr: None,
-        }
+        Self { generic_quality: quality.clamp(0.0, 100.0), profile: None, dpr: None }
     }
 
     /// Is this requesting lossless encoding?
     pub fn is_lossless(&self) -> bool {
-        self.profile == Some(QualityProfile::Lossless)
-            || self.generic_quality >= 100.0
+        self.profile == Some(QualityProfile::Lossless) || self.generic_quality >= 100.0
     }
 
     // ── Per-codec quality lookups (for C codecs that don't have
@@ -314,8 +309,8 @@ impl QualityIntent {
 
     /// Quality value for mozjpeg (0–100).
     pub fn mozjpeg_quality(&self) -> u8 {
-        codec_quality_from_generic(self.generic_quality, &MOZJPEG_QUALITY_TABLE)
-            .clamp(0.0, 100.0) as u8
+        codec_quality_from_generic(self.generic_quality, &MOZJPEG_QUALITY_TABLE).clamp(0.0, 100.0)
+            as u8
     }
 
     /// Quality value for libwebp (0–100).
@@ -349,14 +344,12 @@ impl QualityIntent {
     /// AVIF encoder speed (0–10, higher = faster/lower quality).
     pub fn avif_speed(&self) -> u8 {
         // Higher quality → slower encoding for better results
-        codec_quality_from_generic(self.generic_quality, &AVIF_SPEED_TABLE)
-            .clamp(0.0, 10.0) as u8
+        codec_quality_from_generic(self.generic_quality, &AVIF_SPEED_TABLE).clamp(0.0, 10.0) as u8
     }
 
     /// JXL effort level (0–10, higher = slower/better compression).
     pub fn jxl_effort(&self) -> u8 {
-        codec_quality_from_generic(self.generic_quality, &JXL_EFFORT_TABLE)
-            .clamp(0.0, 10.0) as u8
+        codec_quality_from_generic(self.generic_quality, &JXL_EFFORT_TABLE).clamp(0.0, 10.0) as u8
     }
 
     /// Build an [`EncoderConfig`] for the given encoder using this quality intent.
@@ -387,10 +380,7 @@ impl QualityIntent {
             },
             ImageFormat::Png => {
                 if lossless {
-                    EncoderConfig::Png(PngConfig::Lossless {
-                        max_deflate: None,
-                        matte,
-                    })
+                    EncoderConfig::Png(PngConfig::Lossless { max_deflate: None, matte })
                 } else {
                     let (min_q, max_q) = self.png_quality_range();
                     EncoderConfig::Png(PngConfig::Quantized {
@@ -1460,7 +1450,8 @@ mod tests {
         );
         assert_eq!(EncoderConfig::Gif.format(), ImageFormat::Gif);
         assert_eq!(
-            EncoderConfig::Jxl { distance: Some(1.0), generic_quality: None, lossless: false }.format(),
+            EncoderConfig::Jxl { distance: Some(1.0), generic_quality: None, lossless: false }
+                .format(),
             ImageFormat::Jxl
         );
         assert_eq!(
@@ -1718,9 +1709,8 @@ mod tests {
     #[test]
     fn jxl_distance_inversely_monotonic() {
         // Higher generic quality → lower distance (better quality)
-        let values: Vec<f32> = (0..=10)
-            .map(|i| QualityIntent::from_value(i as f32 * 10.0).jxl_distance())
-            .collect();
+        let values: Vec<f32> =
+            (0..=10).map(|i| QualityIntent::from_value(i as f32 * 10.0).jxl_distance()).collect();
         for w in values.windows(2) {
             assert!(w[1] <= w[0], "jxl distance not inversely monotonic: {} -> {}", w[0], w[1]);
         }
@@ -1734,9 +1724,8 @@ mod tests {
 
     #[test]
     fn avif_quality_monotonic() {
-        let values: Vec<f32> = (0..=10)
-            .map(|i| QualityIntent::from_value(i as f32 * 10.0).avif_quality())
-            .collect();
+        let values: Vec<f32> =
+            (0..=10).map(|i| QualityIntent::from_value(i as f32 * 10.0).avif_quality()).collect();
         for w in values.windows(2) {
             assert!(w[1] >= w[0], "avif quality not monotonic: {} -> {}", w[0], w[1]);
         }
@@ -1947,7 +1936,10 @@ mod tests {
         let zen_cfg = q.build_config(NamedEncoders::ZenJpegEncoder, None);
         let c_cfg = q.build_config(NamedEncoders::MozJpegEncoder, None);
         match (zen_cfg, c_cfg) {
-            (EncoderConfig::Jpeg { quality: zen_q, .. }, EncoderConfig::Jpeg { quality: c_q, .. }) => {
+            (
+                EncoderConfig::Jpeg { quality: zen_q, .. },
+                EncoderConfig::Jpeg { quality: c_q, .. },
+            ) => {
                 // Zen gets generic_quality (73), C gets calibrated mozjpeg quality (also 73)
                 // In this case they happen to match because (73, 73) is an anchor point
                 assert_eq!(zen_q, 73);
@@ -1968,7 +1960,11 @@ mod tests {
                 EncoderConfig::WebP { quality: Some(c_q), .. },
             ) => {
                 // Zen gets generic (55.0), C gets calibrated (53.0)
-                assert!((zen_q - 55.0).abs() < 0.01, "zen should get generic_quality 55, got {}", zen_q);
+                assert!(
+                    (zen_q - 55.0).abs() < 0.01,
+                    "zen should get generic_quality 55, got {}",
+                    zen_q
+                );
                 assert!((c_q - 53.0).abs() < 0.01, "C should get calibrated 53, got {}", c_q);
             }
             _ => panic!("expected two lossy WebP configs"),
@@ -2010,9 +2006,7 @@ mod tests {
             quality: Some(QualityIntent::from_profile(QualityProfile::High, Some(2.0))),
             ..Default::default()
         };
-        let result = decide(&c)
-            .select_and_configure(&ImageFacts::default(), &intent)
-            .unwrap();
+        let result = decide(&c).select_and_configure(&ImageFacts::default(), &intent).unwrap();
         assert_eq!(result.format, ImageFormat::Jpeg);
         // High + DPR 2x should produce quality > Good@3x
         match result.config {
