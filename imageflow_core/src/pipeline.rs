@@ -18,7 +18,7 @@ use crate::io::IoStore;
 use imageflow_types::*;
 use zencodec::Orientation;
 use zenpixels::PixelBuffer;
-use zenpixels_convert::{PixelBufferConvertExt, PixelBufferConvertTypedExt as _};
+use zenpixels_convert::PixelBufferConvertTypedExt as _;
 
 /// Execute a pipeline of steps against an I/O store.
 pub fn execute(

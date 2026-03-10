@@ -24,8 +24,8 @@ pub struct ImageflowContext {
 
 /// JSON response handle — owns the response bytes.
 pub struct ImageflowJsonResponse {
-    status_code: i32,
-    json: Vec<u8>,
+    pub status_code: i32,
+    pub json: Vec<u8>,
 }
 
 impl ImageflowContext {

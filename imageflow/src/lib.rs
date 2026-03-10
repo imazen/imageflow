@@ -14,14 +14,25 @@ pub use imageflow_types as types;
 ///
 /// let input = std::fs::read("input.jpg").unwrap();
 /// let output = process(&input, &[
-///     Step::Decode(DecodeStep { io_id: 0, ..Default::default() }),
+///     Step::Decode(DecodeStep { io_id: 0, color: None, hints: None, ultrahdr: None }),
 ///     Step::Constrain(ConstrainStep {
+///         mode: ConstraintMode::Within,
 ///         w: Some(800),
 ///         h: Some(600),
-///         mode: ConstraintMode::Within,
-///         ..Default::default()
+///         gravity: None,
+///         background: None,
+///         hints: None,
 ///     }),
-///     Step::Encode(EncodeStep { io_id: 1, ..Default::default() }),
+///     Step::Encode(EncodeStep {
+///         io_id: 1,
+///         format: None,
+///         quality: None,
+///         color: None,
+///         ultrahdr: None,
+///         prefer_lossless_jpeg: false,
+///         hints: None,
+///         matte: None,
+///     }),
 /// ]).unwrap();
 /// std::fs::write("output.jpg", output).unwrap();
 /// ```

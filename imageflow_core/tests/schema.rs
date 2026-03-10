@@ -1,60 +1,48 @@
-// We need to make sure the schema is updated by calling that endpoint.
-// Call the endpoint and make sure the schema is updated.
+// Verify that the JSON API endpoints respond correctly.
 use imageflow_core::Context;
+
 #[test]
-fn test_schema_endpoint() {
-    let mut context = Context::create().unwrap();
+fn test_version_info_endpoint() {
+    let context = Context::new();
 
-    // Call the schema endpoint to get the current schema
-    let (json_response, result) = context.message("v1/schema/openapi/latest/get", &[]);
-    assert!(result.is_ok(), "Schema endpoint should not return an error");
+    let json_response = context.send_json("v2/get_version_info", b"{}");
 
-    let status_code = json_response.status_code;
-    assert_eq!(status_code, 200, "Schema endpoint should return 200 OK");
-    let json_bytes = json_response.response_json;
+    assert_eq!(json_response.status_code, 200, "Version info endpoint should return 200 OK");
 
-    // Parse the response wrapper as JSON
-    let response_json: serde_json::Value = serde_json::from_slice(&json_bytes).unwrap();
-    assert!(response_json.is_object(), "Response should be a JSON object");
+    let response_json: serde_json::Value =
+        serde_json::from_slice(&json_response.response_json).unwrap();
+    assert!(response_json["success"].as_bool().unwrap_or(false), "Response should indicate success");
 
-    // The actual schema is in the 'data' field of the response, as a JSON-encoded string.
-    let data_field = response_json.get("data").expect("Response JSON should have a 'data' field");
-    let schema_string =
-        data_field.as_str().expect("'data' field should be a string containing the schema");
-    let schema_json: serde_json::Value = serde_json::from_str(schema_string)
-        .expect("Failed to parse schema string from 'data' field");
-
-    // Verify the schema contains expected top-level keys
-    assert!(schema_json.is_object(), "Schema should be a JSON object");
-
-    // Check for some expected schema properties
-    let schema_obj = schema_json.as_object().unwrap();
-
-    let mut root_children_str = String::new();
-    for key in schema_obj.keys() {
-        root_children_str += key;
-        root_children_str += ", ";
-    }
+    // Check that version_info data is present
+    let data = response_json.get("data").expect("Response should have a 'data' field");
+    let version_info = data.get("version_info").expect("Data should contain 'version_info'");
 
     assert!(
-        schema_obj.contains_key("openapi"),
-        "Schema should contain openapi key, only contains: {:?}",
-        root_children_str
+        version_info.get("version").is_some(),
+        "version_info should contain a 'version' field"
     );
     assert!(
-        schema_obj.contains_key("components"),
-        "Schema should contain components key, only contains: {:?}",
-        root_children_str
+        version_info.get("codecs").is_some(),
+        "version_info should contain a 'codecs' field"
     );
+
+    let codecs = version_info["codecs"].as_array().expect("codecs should be an array");
+    assert!(!codecs.is_empty(), "codecs list should not be empty");
+}
+
+#[test]
+fn test_unknown_endpoint_returns_error() {
+    let context = Context::new();
+
+    let json_response = context.send_json("v1/nonexistent", b"{}");
+
+    // Should return an error status for unknown methods
+    assert_ne!(json_response.status_code, 200, "Unknown endpoint should not return 200");
+
+    let response_json: serde_json::Value =
+        serde_json::from_slice(&json_response.response_json).unwrap();
     assert!(
-        schema_obj.contains_key("paths"),
-        "Schema should contain paths key, only contains: {:?}",
-        root_children_str
+        !response_json["success"].as_bool().unwrap_or(true),
+        "Unknown endpoint should not report success"
     );
-
-    // Verify the schema is not empty
-    assert!(!schema_obj.is_empty(), "Schema should not be empty");
-
-    // Clean up
-    context.destroy().unwrap();
 }
