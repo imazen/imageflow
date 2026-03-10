@@ -18,7 +18,7 @@ use crate::io::IoStore;
 use imageflow_types::*;
 use zencodec::Orientation;
 use zenpixels::PixelBuffer;
-use zenpixels_convert::PixelBufferConvertExt;
+use zenpixels_convert::{PixelBufferConvertExt, PixelBufferConvertTypedExt as _};
 
 /// Execute a pipeline of steps against an I/O store.
 pub fn execute(
@@ -55,7 +55,7 @@ pub fn probe_image(data: &[u8]) -> Result<ImageInfo, FlowError> {
             Some(info.orientation.exif_value() as u8)
         },
         color_profile: None, // TODO: extract ICC/CICP info
-        has_ultrahdr: info.has_gain_map,
+        has_ultrahdr: false, // TODO: zencodec ImageInfo no longer has has_gain_map
     })
 }
 
