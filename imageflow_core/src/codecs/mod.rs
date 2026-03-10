@@ -195,10 +195,16 @@ impl NamedDecoders {
     /// Returns true if this decoder can be instantiated with the current feature flags.
     pub fn is_compiled_in(&self) -> bool {
         match self {
-            Self::MozJpegRsDecoder | Self::ImageRsJpegDecoder | Self::LibPngRsDecoder
+            Self::MozJpegRsDecoder
+            | Self::ImageRsJpegDecoder
+            | Self::LibPngRsDecoder
             | Self::WebPDecoder => cfg!(feature = "c-codecs"),
-            Self::ZenJpegDecoder | Self::ZenWebPDecoder | Self::ZenGifDecoder
-            | Self::ZenJxlDecoder | Self::ZenAvifDecoder | Self::ZenHeicDecoder => {
+            Self::ZenJpegDecoder
+            | Self::ZenWebPDecoder
+            | Self::ZenGifDecoder
+            | Self::ZenJxlDecoder
+            | Self::ZenAvifDecoder
+            | Self::ZenHeicDecoder => {
                 cfg!(feature = "zen-codecs")
             }
             Self::ImageRsPngDecoder | Self::GifRsDecoder => true,
@@ -363,8 +369,11 @@ impl NamedEncoders {
             Self::MozJpegEncoder | Self::WebPEncoder | Self::LibPngRsEncoder => {
                 cfg!(feature = "c-codecs")
             }
-            Self::ZenJpegEncoder | Self::ZenWebPEncoder | Self::ZenGifEncoder
-            | Self::ZenJxlEncoder | Self::ZenAvifEncoder => cfg!(feature = "zen-codecs"),
+            Self::ZenJpegEncoder
+            | Self::ZenWebPEncoder
+            | Self::ZenGifEncoder
+            | Self::ZenJxlEncoder
+            | Self::ZenAvifEncoder => cfg!(feature = "zen-codecs"),
             Self::GifEncoder | Self::PngQuantEncoder | Self::LodePngEncoder => true,
         }
     }
@@ -374,48 +383,103 @@ impl NamedEncoders {
         use imageflow_types::ImageFormat;
         match self {
             Self::GifEncoder => EncoderCaps {
-                format: ImageFormat::Gif, lossy: true, lossless: false,
-                animation: true, alpha: true, lossy_rank: 2, lossless_rank: 0,
+                format: ImageFormat::Gif,
+                lossy: true,
+                lossless: false,
+                animation: true,
+                alpha: true,
+                lossy_rank: 2,
+                lossless_rank: 0,
             },
             Self::MozJpegEncoder => EncoderCaps {
-                format: ImageFormat::Jpeg, lossy: true, lossless: false,
-                animation: false, alpha: false, lossy_rank: 3, lossless_rank: 0,
+                format: ImageFormat::Jpeg,
+                lossy: true,
+                lossless: false,
+                animation: false,
+                alpha: false,
+                lossy_rank: 3,
+                lossless_rank: 0,
             },
             Self::PngQuantEncoder => EncoderCaps {
-                format: ImageFormat::Png, lossy: true, lossless: false,
-                animation: false, alpha: true, lossy_rank: 2, lossless_rank: 0,
+                format: ImageFormat::Png,
+                lossy: true,
+                lossless: false,
+                animation: false,
+                alpha: true,
+                lossy_rank: 2,
+                lossless_rank: 0,
             },
             Self::LodePngEncoder => EncoderCaps {
-                format: ImageFormat::Png, lossy: false, lossless: true,
-                animation: false, alpha: true, lossy_rank: 0, lossless_rank: 2,
+                format: ImageFormat::Png,
+                lossy: false,
+                lossless: true,
+                animation: false,
+                alpha: true,
+                lossy_rank: 0,
+                lossless_rank: 2,
             },
             Self::WebPEncoder => EncoderCaps {
-                format: ImageFormat::Webp, lossy: true, lossless: true,
-                animation: false, alpha: true, lossy_rank: 2, lossless_rank: 2,
+                format: ImageFormat::Webp,
+                lossy: true,
+                lossless: true,
+                animation: false,
+                alpha: true,
+                lossy_rank: 2,
+                lossless_rank: 2,
             },
             Self::LibPngRsEncoder => EncoderCaps {
-                format: ImageFormat::Png, lossy: false, lossless: true,
-                animation: false, alpha: true, lossy_rank: 0, lossless_rank: 2,
+                format: ImageFormat::Png,
+                lossy: false,
+                lossless: true,
+                animation: false,
+                alpha: true,
+                lossy_rank: 0,
+                lossless_rank: 2,
             },
             Self::ZenJpegEncoder => EncoderCaps {
-                format: ImageFormat::Jpeg, lossy: true, lossless: false,
-                animation: false, alpha: false, lossy_rank: 3, lossless_rank: 0,
+                format: ImageFormat::Jpeg,
+                lossy: true,
+                lossless: false,
+                animation: false,
+                alpha: false,
+                lossy_rank: 3,
+                lossless_rank: 0,
             },
             Self::ZenWebPEncoder => EncoderCaps {
-                format: ImageFormat::Webp, lossy: true, lossless: true,
-                animation: false, alpha: true, lossy_rank: 2, lossless_rank: 2,
+                format: ImageFormat::Webp,
+                lossy: true,
+                lossless: true,
+                animation: false,
+                alpha: true,
+                lossy_rank: 2,
+                lossless_rank: 2,
             },
             Self::ZenGifEncoder => EncoderCaps {
-                format: ImageFormat::Gif, lossy: true, lossless: false,
-                animation: true, alpha: true, lossy_rank: 2, lossless_rank: 0,
+                format: ImageFormat::Gif,
+                lossy: true,
+                lossless: false,
+                animation: true,
+                alpha: true,
+                lossy_rank: 2,
+                lossless_rank: 0,
             },
             Self::ZenJxlEncoder => EncoderCaps {
-                format: ImageFormat::Jxl, lossy: true, lossless: true,
-                animation: false, alpha: true, lossy_rank: 3, lossless_rank: 3,
+                format: ImageFormat::Jxl,
+                lossy: true,
+                lossless: true,
+                animation: false,
+                alpha: true,
+                lossy_rank: 3,
+                lossless_rank: 3,
             },
             Self::ZenAvifEncoder => EncoderCaps {
-                format: ImageFormat::Avif, lossy: true, lossless: false,
-                animation: false, alpha: true, lossy_rank: 3, lossless_rank: 0,
+                format: ImageFormat::Avif,
+                lossy: true,
+                lossless: false,
+                animation: false,
+                alpha: true,
+                lossy_rank: 3,
+                lossless_rank: 0,
             },
         }
     }
@@ -1051,8 +1115,7 @@ impl<'a> CodecSelector<'a> {
             return Some(Selection { chosen: OutputImageFormat::Jxl, trace });
         }
 
-        let choose_lossless =
-            c.lossless == Some(true) || c.source_lossless == Some(true);
+        let choose_lossless = c.lossless == Some(true) || c.source_lossless == Some(true);
 
         // Lossless path
         if choose_lossless {
@@ -1066,8 +1129,7 @@ impl<'a> CodecSelector<'a> {
                 trace.push("png: lossless fallback");
                 return Some(Selection { chosen: OutputImageFormat::Png, trace });
             }
-            if allowed.avif == Some(true)
-                && self.codecs.format_supports_lossless(ImageFormat::Avif)
+            if allowed.avif == Some(true) && self.codecs.format_supports_lossless(ImageFormat::Avif)
             {
                 trace.push("avif: lossless available");
                 return Some(Selection { chosen: OutputImageFormat::Avif, trace });
@@ -1366,5 +1428,470 @@ impl CodecInstanceContainer {
                 self.io_id
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod codec_selector_tests {
+    use super::*;
+    use imageflow_types::{AllowedFormats, ImageFormat, OutputImageFormat};
+
+    // ── Test helpers ─────────────────────────────────────────────────────────
+
+    /// Build an EnabledCodecs with exactly the given encoders (no decoders needed for selection tests).
+    fn codecs_with_encoders(encoders: &[NamedEncoders]) -> EnabledCodecs {
+        EnabledCodecs {
+            decoders: smallvec::SmallVec::new(),
+            encoders: smallvec::SmallVec::from_slice(encoders),
+        }
+    }
+
+    /// All zen encoders for every format.
+    fn all_zen_encoders() -> EnabledCodecs {
+        codecs_with_encoders(&[
+            NamedEncoders::ZenJpegEncoder,
+            NamedEncoders::ZenWebPEncoder,
+            NamedEncoders::ZenGifEncoder,
+            NamedEncoders::ZenJxlEncoder,
+            NamedEncoders::ZenAvifEncoder,
+            NamedEncoders::PngQuantEncoder,
+            NamedEncoders::LodePngEncoder,
+        ])
+    }
+
+    /// Only C encoders (legacy-style).
+    fn c_only_encoders() -> EnabledCodecs {
+        codecs_with_encoders(&[
+            NamedEncoders::MozJpegEncoder,
+            NamedEncoders::LibPngRsEncoder,
+            NamedEncoders::WebPEncoder,
+            NamedEncoders::PngQuantEncoder,
+            NamedEncoders::LodePngEncoder,
+            NamedEncoders::GifEncoder,
+        ])
+    }
+
+    /// Minimal: only JPEG + PNG (web_safe without GIF).
+    fn jpeg_png_only() -> EnabledCodecs {
+        codecs_with_encoders(&[NamedEncoders::MozJpegEncoder, NamedEncoders::LodePngEncoder])
+    }
+
+    fn selector(codecs: &EnabledCodecs) -> CodecSelector<'_> {
+        CodecSelector::new(codecs)
+    }
+
+    // ── Format selection: basic paths ────────────────────────────────────────
+
+    #[test]
+    fn no_formats_enabled_returns_none() {
+        let codecs = all_zen_encoders();
+        let sel = selector(&codecs);
+        let result = sel.select_format(&FormatCriteria {
+            allowed: AllowedFormats::none(),
+            ..Default::default()
+        });
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn web_safe_opaque_selects_jpeg() {
+        let codecs = c_only_encoders();
+        let sel = selector(&codecs);
+        let result = sel
+            .select_format(&FormatCriteria {
+                allowed: AllowedFormats::web_safe(),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Jpeg);
+        assert!(result.trace.iter().any(|t| t.contains("jpeg")));
+    }
+
+    #[test]
+    fn jxl_wins_when_enabled() {
+        let codecs = all_zen_encoders();
+        let sel = selector(&codecs);
+        let result = sel
+            .select_format(&FormatCriteria { allowed: AllowedFormats::all(), ..Default::default() })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Jxl);
+        assert!(result.trace.iter().any(|t| t.contains("jxl")));
+    }
+
+    #[test]
+    fn jxl_disabled_falls_through() {
+        let codecs = all_zen_encoders();
+        let sel = selector(&codecs);
+        let mut allowed = AllowedFormats::all();
+        allowed.jxl = None;
+        let result = sel.select_format(&FormatCriteria { allowed, ..Default::default() }).unwrap();
+        // Without JXL, lossy opaque small image → AVIF (pixel_count=0 < 3M)
+        assert_eq!(result.chosen, OutputImageFormat::Avif);
+    }
+
+    // ── Format selection: alpha ──────────────────────────────────────────────
+
+    #[test]
+    fn alpha_prefers_avif_when_available() {
+        let codecs = all_zen_encoders();
+        let sel = selector(&codecs);
+        let mut allowed = AllowedFormats::all();
+        allowed.jxl = None; // disable JXL so alpha path is reached
+        let result = sel
+            .select_format(&FormatCriteria { allowed, has_alpha: true, ..Default::default() })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Avif);
+        assert!(result.trace.iter().any(|t| t.contains("alpha")));
+    }
+
+    #[test]
+    fn alpha_falls_to_webp_without_avif() {
+        let codecs = c_only_encoders(); // has WebP but no AVIF
+        let sel = selector(&codecs);
+        let mut allowed = AllowedFormats::all();
+        allowed.avif = None;
+        allowed.jxl = None;
+        let result = sel
+            .select_format(&FormatCriteria { allowed, has_alpha: true, ..Default::default() })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Webp);
+    }
+
+    #[test]
+    fn alpha_falls_to_png_without_avif_or_webp() {
+        let codecs = jpeg_png_only();
+        let sel = selector(&codecs);
+        let result = sel
+            .select_format(&FormatCriteria {
+                allowed: AllowedFormats::web_safe(),
+                has_alpha: true,
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Png);
+    }
+
+    // ── Format selection: lossless ───────────────────────────────────────────
+
+    #[test]
+    fn lossless_prefers_webp_when_available() {
+        let codecs = all_zen_encoders();
+        let sel = selector(&codecs);
+        let mut allowed = AllowedFormats::all();
+        allowed.jxl = None;
+        let result = sel
+            .select_format(&FormatCriteria { allowed, lossless: Some(true), ..Default::default() })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Webp);
+    }
+
+    #[test]
+    fn lossless_falls_to_png_without_webp() {
+        let codecs = jpeg_png_only();
+        let sel = selector(&codecs);
+        let result = sel
+            .select_format(&FormatCriteria {
+                allowed: AllowedFormats::web_safe(),
+                lossless: Some(true),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Png);
+    }
+
+    #[test]
+    fn source_lossless_triggers_lossless_path() {
+        let codecs = all_zen_encoders();
+        let sel = selector(&codecs);
+        let mut allowed = AllowedFormats::all();
+        allowed.jxl = None;
+        let result = sel
+            .select_format(&FormatCriteria {
+                allowed,
+                source_lossless: Some(true),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Webp);
+    }
+
+    // ── Format selection: lossy opaque ───────────────────────────────────────
+
+    #[test]
+    fn small_image_prefers_avif_over_jpeg() {
+        let codecs = all_zen_encoders();
+        let sel = selector(&codecs);
+        let mut allowed = AllowedFormats::all();
+        allowed.jxl = None;
+        let result = sel
+            .select_format(&FormatCriteria {
+                allowed,
+                pixel_count: 1_000_000, // 1 Mpx < 3 Mpx threshold
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Avif);
+    }
+
+    #[test]
+    fn large_image_prefers_jpeg_over_avif() {
+        let codecs = all_zen_encoders();
+        let sel = selector(&codecs);
+        let mut allowed = AllowedFormats::all();
+        allowed.jxl = None;
+        let result = sel
+            .select_format(&FormatCriteria {
+                allowed,
+                pixel_count: 5_000_000, // 5 Mpx > 3 Mpx threshold
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Jpeg);
+    }
+
+    // ── Format selection: animation ──────────────────────────────────────────
+
+    #[test]
+    fn animation_prefers_gif_fallback_without_animated_encoders() {
+        let codecs = c_only_encoders(); // C WebP doesn't have animation caps
+        let sel = selector(&codecs);
+        let result = sel
+            .select_format(&FormatCriteria {
+                allowed: AllowedFormats::all(),
+                has_animation: true,
+                ..Default::default()
+            })
+            .unwrap();
+        // C encoders don't advertise animation support, so GIF fallback
+        assert_eq!(result.chosen, OutputImageFormat::Gif);
+    }
+
+    #[test]
+    fn animation_lossless_prefers_webp_when_animated() {
+        // Zen WebP encoder supports animation
+        let codecs = all_zen_encoders();
+        let sel = selector(&codecs);
+        let webp_caps = NamedEncoders::ZenWebPEncoder.caps();
+        if webp_caps.animation {
+            let result = sel
+                .select_format(&FormatCriteria {
+                    allowed: AllowedFormats::all(),
+                    has_animation: true,
+                    lossless: Some(true),
+                    ..Default::default()
+                })
+                .unwrap();
+            assert_eq!(result.chosen, OutputImageFormat::Webp);
+        }
+    }
+
+    // ── Encoder selection ────────────────────────────────────────────────────
+
+    #[test]
+    fn select_encoder_picks_first_capable() {
+        let codecs =
+            codecs_with_encoders(&[NamedEncoders::ZenJpegEncoder, NamedEncoders::MozJpegEncoder]);
+        let sel = selector(&codecs);
+        let result = sel.select_encoder(ImageFormat::Jpeg, false).unwrap();
+        // Both are capable; ZenJpeg has lossy_rank=3 (excellent), MozJpeg has lossy_rank=3
+        // First with equal rank wins (priority order)
+        assert!(
+            result.chosen == NamedEncoders::ZenJpegEncoder
+                || result.chosen == NamedEncoders::MozJpegEncoder
+        );
+    }
+
+    #[test]
+    fn select_encoder_skips_wrong_format() {
+        let codecs =
+            codecs_with_encoders(&[NamedEncoders::MozJpegEncoder, NamedEncoders::LodePngEncoder]);
+        let sel = selector(&codecs);
+        // LodePng is lossless-only, so query lossless mode
+        let result = sel.select_encoder(ImageFormat::Png, true).unwrap();
+        assert_eq!(result.chosen, NamedEncoders::LodePngEncoder);
+    }
+
+    #[test]
+    fn select_encoder_none_for_missing_format() {
+        let codecs = codecs_with_encoders(&[NamedEncoders::MozJpegEncoder]);
+        let sel = selector(&codecs);
+        let result = sel.select_encoder(ImageFormat::Png, false);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn select_encoder_respects_lossless_capability() {
+        // MozJpeg is lossy-only
+        let codecs = codecs_with_encoders(&[NamedEncoders::MozJpegEncoder]);
+        let sel = selector(&codecs);
+        let result = sel.select_encoder(ImageFormat::Jpeg, true);
+        assert!(result.is_none(), "JPEG encoders don't support lossless");
+    }
+
+    #[test]
+    fn select_encoder_prefers_higher_rank() {
+        // PngQuant has lossy_rank=2 (good), LodePng has lossy_rank=1 (functional)
+        let codecs =
+            codecs_with_encoders(&[NamedEncoders::LodePngEncoder, NamedEncoders::PngQuantEncoder]);
+        let sel = selector(&codecs);
+        let result = sel.select_encoder(ImageFormat::Png, false).unwrap();
+        assert_eq!(result.chosen, NamedEncoders::PngQuantEncoder);
+    }
+
+    // ── Full selection (format + encoder) ────────────────────────────────────
+
+    #[test]
+    fn full_select_combines_format_and_encoder() {
+        let codecs = c_only_encoders();
+        let sel = selector(&codecs);
+        let result = sel
+            .select(&FormatCriteria { allowed: AllowedFormats::web_safe(), ..Default::default() })
+            .unwrap();
+        assert_eq!(result.format, OutputImageFormat::Jpeg);
+        assert_eq!(result.encoder, NamedEncoders::MozJpegEncoder);
+        assert!(!result.trace.is_empty());
+    }
+
+    #[test]
+    fn full_select_none_when_format_enabled_but_no_encoder() {
+        // Allowed formats include AVIF but no AVIF encoder registered
+        let codecs = codecs_with_encoders(&[]); // empty
+        let sel = selector(&codecs);
+        let mut allowed = AllowedFormats::none();
+        allowed.avif = Some(true);
+        let result = sel.select(&FormatCriteria { allowed, ..Default::default() });
+        assert!(result.is_none());
+    }
+
+    // ── Trace inspection ─────────────────────────────────────────────────────
+
+    #[test]
+    fn trace_records_decision_steps() {
+        let codecs = all_zen_encoders();
+        let sel = selector(&codecs);
+        let result = sel
+            .select_format(&FormatCriteria { allowed: AllowedFormats::all(), ..Default::default() })
+            .unwrap();
+        assert_eq!(result.chosen, OutputImageFormat::Jxl);
+        // Trace should mention JXL selection reason
+        assert!(
+            result.trace.iter().any(|t| t.contains("jxl")),
+            "trace should mention jxl: {:?}",
+            result.trace
+        );
+    }
+
+    #[test]
+    fn encoder_trace_shows_skip_reasons() {
+        let codecs = codecs_with_encoders(&[
+            NamedEncoders::LodePngEncoder, // PNG, not JPEG
+            NamedEncoders::MozJpegEncoder, // JPEG, correct
+        ]);
+        let sel = selector(&codecs);
+        let result = sel.select_encoder(ImageFormat::Jpeg, false).unwrap();
+        assert_eq!(result.chosen, NamedEncoders::MozJpegEncoder);
+    }
+
+    // ── Capability queries ───────────────────────────────────────────────────
+
+    #[test]
+    fn caps_are_consistent() {
+        // Every encoder should report the correct format
+        for enc in &[
+            NamedEncoders::MozJpegEncoder,
+            NamedEncoders::ZenJpegEncoder,
+            NamedEncoders::WebPEncoder,
+            NamedEncoders::ZenWebPEncoder,
+            NamedEncoders::GifEncoder,
+            NamedEncoders::ZenGifEncoder,
+            NamedEncoders::ZenJxlEncoder,
+            NamedEncoders::ZenAvifEncoder,
+            NamedEncoders::PngQuantEncoder,
+            NamedEncoders::LodePngEncoder,
+            NamedEncoders::LibPngRsEncoder,
+        ] {
+            let caps = enc.caps();
+            // At least one of lossy or lossless must be true
+            assert!(caps.lossy || caps.lossless, "{:?} reports neither lossy nor lossless", enc);
+            // Ranks for supported modes must be > 0
+            if caps.lossy {
+                assert!(caps.lossy_rank > 0, "{:?} lossy_rank is 0", enc);
+            }
+            if caps.lossless {
+                assert!(caps.lossless_rank > 0, "{:?} lossless_rank is 0", enc);
+            }
+        }
+    }
+
+    #[test]
+    fn is_compiled_in_consistent_with_features() {
+        // These pure-Rust encoders are always compiled in:
+        assert!(NamedEncoders::PngQuantEncoder.is_compiled_in());
+        assert!(NamedEncoders::LodePngEncoder.is_compiled_in());
+        assert!(NamedEncoders::GifEncoder.is_compiled_in());
+    }
+
+    // ── Priority ordering ────────────────────────────────────────────────────
+
+    #[test]
+    fn priority_order_matters_for_equal_rank() {
+        // If two encoders have the same rank, first in list wins
+        let codecs_a =
+            codecs_with_encoders(&[NamedEncoders::ZenJpegEncoder, NamedEncoders::MozJpegEncoder]);
+        let codecs_b =
+            codecs_with_encoders(&[NamedEncoders::MozJpegEncoder, NamedEncoders::ZenJpegEncoder]);
+        let zen_rank = NamedEncoders::ZenJpegEncoder.caps().lossy_rank;
+        let moz_rank = NamedEncoders::MozJpegEncoder.caps().lossy_rank;
+
+        let result_a = selector(&codecs_a).select_encoder(ImageFormat::Jpeg, false).unwrap();
+        let result_b = selector(&codecs_b).select_encoder(ImageFormat::Jpeg, false).unwrap();
+
+        if zen_rank == moz_rank {
+            // Equal rank: first in list wins
+            assert_eq!(result_a.chosen, NamedEncoders::ZenJpegEncoder);
+            assert_eq!(result_b.chosen, NamedEncoders::MozJpegEncoder);
+        } else if zen_rank > moz_rank {
+            // Higher rank always wins regardless of position
+            assert_eq!(result_a.chosen, NamedEncoders::ZenJpegEncoder);
+            assert_eq!(result_b.chosen, NamedEncoders::ZenJpegEncoder);
+        } else {
+            assert_eq!(result_a.chosen, NamedEncoders::MozJpegEncoder);
+            assert_eq!(result_b.chosen, NamedEncoders::MozJpegEncoder);
+        }
+    }
+
+    // ── EnabledCodecs helper methods ─────────────────────────────────────────
+
+    #[test]
+    fn has_encoder_for_format_works() {
+        let codecs = c_only_encoders();
+        assert!(codecs.has_encoder_for_format(ImageFormat::Jpeg));
+        assert!(codecs.has_encoder_for_format(ImageFormat::Png));
+        assert!(codecs.has_encoder_for_format(ImageFormat::Webp));
+        assert!(!codecs.has_encoder_for_format(ImageFormat::Jxl));
+        assert!(!codecs.has_encoder_for_format(ImageFormat::Avif));
+    }
+
+    #[test]
+    fn format_supports_lossy_and_lossless() {
+        let codecs = all_zen_encoders();
+        assert!(codecs.format_supports_lossy(ImageFormat::Jpeg));
+        assert!(!codecs.format_supports_lossless(ImageFormat::Jpeg));
+        assert!(codecs.format_supports_lossy(ImageFormat::Webp));
+        assert!(codecs.format_supports_lossless(ImageFormat::Webp));
+        assert!(codecs.format_supports_lossy(ImageFormat::Png));
+        assert!(codecs.format_supports_lossless(ImageFormat::Png));
+    }
+
+    #[test]
+    fn empty_codecs_returns_none_for_everything() {
+        let codecs = codecs_with_encoders(&[]);
+        let sel = selector(&codecs);
+        assert!(sel.select_encoder(ImageFormat::Jpeg, false).is_none());
+        assert!(sel.select_encoder(ImageFormat::Png, true).is_none());
+        // Format selection may still pick a format (e.g. GIF), but full select will fail
+        let full = sel
+            .select(&FormatCriteria { allowed: AllowedFormats::web_safe(), ..Default::default() });
+        assert!(full.is_none());
     }
 }
