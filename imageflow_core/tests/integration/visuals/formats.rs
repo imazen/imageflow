@@ -1450,41 +1450,56 @@ fn cb_jxl_to_gif() {
 }
 
 // ── JXL animated corpus-builder ─────────────────────────────────────────
+// corpus-builder/jxl-animated is empty, but jxl-encoder/animation has real files
+
+const JXL_ANIM_DIR: &str = "/mnt/v/output/jxl-encoder/animation";
+
+fn jxl_anim_scan(target: &str) -> (usize, Vec<(PathBuf, String)>) {
+    // Try corpus-builder first
+    let (ok1, fail1) = cb_scan("jxl-animated", "jxl", target);
+    // Also scan the jxl-encoder animation output
+    let dir = Path::new(JXL_ANIM_DIR);
+    if !dir.exists() {
+        return (ok1, fail1);
+    }
+    let (ok2, fail2) = corpus_scan(dir, "jxl", target, 50000);
+    (ok1 + ok2, [fail1, fail2].concat())
+}
 
 #[test]
 fn cb_jxl_anim_to_png() {
-    let (ok, fail) = cb_scan("jxl-animated", "jxl", "png");
-    report_corpus("cb_jxl_anim", "png", ok, &fail);
+    let (ok, fail) = jxl_anim_scan("png");
+    report_corpus("jxl_anim", "png", ok, &fail);
 }
 
 #[test]
 fn cb_jxl_anim_to_jpg() {
-    let (ok, fail) = cb_scan("jxl-animated", "jxl", "jpg");
-    report_corpus("cb_jxl_anim", "jpg", ok, &fail);
+    let (ok, fail) = jxl_anim_scan("jpg");
+    report_corpus("jxl_anim", "jpg", ok, &fail);
 }
 
 #[test]
 fn cb_jxl_anim_to_webp() {
-    let (ok, fail) = cb_scan("jxl-animated", "jxl", "webp");
-    report_corpus("cb_jxl_anim", "webp", ok, &fail);
+    let (ok, fail) = jxl_anim_scan("webp");
+    report_corpus("jxl_anim", "webp", ok, &fail);
 }
 
 #[test]
 fn cb_jxl_anim_to_jxl() {
-    let (ok, fail) = cb_scan("jxl-animated", "jxl", "jxl");
-    report_corpus("cb_jxl_anim", "jxl", ok, &fail);
+    let (ok, fail) = jxl_anim_scan("jxl");
+    report_corpus("jxl_anim", "jxl", ok, &fail);
 }
 
 #[test]
 fn cb_jxl_anim_to_avif() {
-    let (ok, fail) = cb_scan("jxl-animated", "jxl", "avif");
-    report_corpus("cb_jxl_anim", "avif", ok, &fail);
+    let (ok, fail) = jxl_anim_scan("avif");
+    report_corpus("jxl_anim", "avif", ok, &fail);
 }
 
 #[test]
 fn cb_jxl_anim_to_gif() {
-    let (ok, fail) = cb_scan("jxl-animated", "jxl", "gif");
-    report_corpus("cb_jxl_anim", "gif", ok, &fail);
+    let (ok, fail) = jxl_anim_scan("gif");
+    report_corpus("jxl_anim", "gif", ok, &fail);
 }
 
 // ── GIF static corpus-builder ───────────────────────────────────────────
