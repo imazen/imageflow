@@ -1846,3 +1846,133 @@ fn icc_grayscale_to_jpg() {
 fn icc_grayscale_to_png() {
     icc_profile_scan("grayscale", "png");
 }
+
+// ── Decode error files ──────────────────────────────────────────────────
+// Malformed/truncated/corrupt files that must produce errors, never panics.
+
+const DECODE_ERRORS_DIR: &str = "/mnt/v/output/corpus-builder/decode-errors";
+
+/// Run every file in decode-errors/ through imageflow targeting each format.
+/// Asserts: no panics. Errors are expected and counted.
+fn decode_error_scan(target: &str) {
+    test_init();
+    let dir = Path::new(DECODE_ERRORS_DIR);
+    if !dir.exists() {
+        eprintln!("skipping decode-errors: not found");
+        return;
+    }
+
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
+        .unwrap()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_file())
+        .collect();
+    files.sort();
+
+    let mut errors = 0usize;
+    let mut successes = 0usize;
+    let mut panics = Vec::new();
+
+    for path in &files {
+        let bytes = match std::fs::read(path) {
+            Ok(b) => b,
+            Err(e) => {
+                eprintln!("  read error: {} — {e}", path.display());
+                errors += 1;
+                continue;
+            }
+        };
+
+        let command = format!("w=100&h=100&mode=max&format={target}");
+        let steps = vec![Node::CommandString {
+            kind: CommandStringKind::ImageResizer4,
+            value: command,
+            decode: Some(0),
+            encode: Some(1),
+            watermarks: None,
+        }];
+
+        let result = std::panic::catch_unwind(|| {
+            let mut ctx = Context::create().unwrap();
+            ctx.add_input_vector(0, bytes)?;
+            ctx.add_output_buffer(1)?;
+            let _ = ctx.tell_decoder(0, DecoderCommand::IgnoreColorProfileErrors);
+            let execute = Execute001 {
+                graph_recording: None,
+                security: None,
+                framewise: Framewise::Steps(steps),
+            };
+            ctx.execute_1(execute)
+        });
+
+        let fname = path.file_name().unwrap_or_default().to_string_lossy();
+        match result {
+            Ok(Ok(_)) => {
+                // Some files (wrong extension, gamma=0) may decode successfully
+                successes += 1;
+            }
+            Ok(Err(_)) => {
+                errors += 1;
+            }
+            Err(panic_info) => {
+                let msg = if let Some(s) = panic_info.downcast_ref::<&str>() {
+                    s.to_string()
+                } else if let Some(s) = panic_info.downcast_ref::<String>() {
+                    s.clone()
+                } else {
+                    "unknown panic".to_string()
+                };
+                panics.push((fname.to_string(), msg));
+            }
+        }
+    }
+
+    let total = files.len();
+    eprintln!(
+        "decode-errors→{target}: {total} files, {errors} errors, {successes} successes, {} panics",
+        panics.len()
+    );
+
+    if !panics.is_empty() {
+        for (name, msg) in &panics {
+            eprintln!("  PANIC: {name} — {msg}");
+        }
+    }
+    assert!(
+        panics.is_empty(),
+        "{} files caused panics in decode-errors→{target}: {:?}",
+        panics.len(),
+        panics.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn decode_errors_to_jpg() {
+    decode_error_scan("jpg");
+}
+
+#[test]
+fn decode_errors_to_png() {
+    decode_error_scan("png");
+}
+
+#[test]
+fn decode_errors_to_webp() {
+    decode_error_scan("webp");
+}
+
+#[test]
+fn decode_errors_to_jxl() {
+    decode_error_scan("jxl");
+}
+
+#[test]
+fn decode_errors_to_avif() {
+    decode_error_scan("avif");
+}
+
+#[test]
+fn decode_errors_to_gif() {
+    decode_error_scan("gif");
+}
