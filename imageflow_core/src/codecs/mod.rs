@@ -16,6 +16,7 @@ pub use lode::write_png;
 
 mod auto;
 pub(crate) mod cms;
+pub mod codec_decisions;
 mod image_png_decoder;
 pub(crate) mod moxcms_transform;
 pub(crate) mod source_profile;
