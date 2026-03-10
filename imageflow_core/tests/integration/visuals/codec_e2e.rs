@@ -107,11 +107,8 @@ fn run_command_bytes(input: Vec<u8>, command: &str) -> Vec<u8> {
     let mut ctx = Context::create().unwrap();
     ctx.add_input_vector(0, input).unwrap();
     ctx.add_output_buffer(1).unwrap();
-    let execute = Execute001 {
-        graph_recording: None,
-        security: None,
-        framewise: Framewise::Steps(steps),
-    };
+    let execute =
+        Execute001 { graph_recording: None, security: None, framewise: Framewise::Steps(steps) };
     ctx.execute_1(execute).unwrap();
     let output = ctx.take_output_buffer(1).unwrap();
     assert!(!output.is_empty(), "empty output for command: {command}");
@@ -168,13 +165,23 @@ fn assert_jxl(bytes: &[u8], label: &str) {
     let is_codestream = bytes.len() >= 2 && bytes[0] == 0xFF && bytes[1] == 0x0A;
     let is_container =
         bytes.len() >= 12 && &bytes[4..8] == b"JXL " || bytes.len() >= 2 && bytes[0..2] == [0, 0];
-    assert!(is_codestream || is_container, "{label}: not JXL (len={}, first 4={:?})", bytes.len(), &bytes[..bytes.len().min(4)]);
+    assert!(
+        is_codestream || is_container,
+        "{label}: not JXL (len={}, first 4={:?})",
+        bytes.len(),
+        &bytes[..bytes.len().min(4)]
+    );
 }
 
 fn assert_avif(bytes: &[u8], label: &str) {
     // AVIF is ISOBMFF: starts with a box length + 'ftyp'
     let has_ftyp = bytes.len() >= 8 && &bytes[4..8] == b"ftyp";
-    assert!(has_ftyp, "{label}: not AVIF/HEIF (len={}, first 8={:?})", bytes.len(), &bytes[..bytes.len().min(8)]);
+    assert!(
+        has_ftyp,
+        "{label}: not AVIF/HEIF (len={}, first 8={:?})",
+        bytes.len(),
+        &bytes[..bytes.len().min(8)]
+    );
 }
 
 /// Assert the output is a valid image in the expected format.
@@ -226,12 +233,8 @@ fn url_source_format_matrix() {
 /// JXL and AVIF via URL command string (these use Node::Encode presets, not format= param).
 #[test]
 fn url_to_jxl_all_sources() {
-    let sources = [
-        ("jpeg", SRC_JPEG),
-        ("png", SRC_PNG),
-        ("webp_ll", SRC_WEBP_LL),
-        ("gif", SRC_GIF),
-    ];
+    let sources =
+        [("jpeg", SRC_JPEG), ("png", SRC_PNG), ("webp_ll", SRC_WEBP_LL), ("gif", SRC_GIF)];
 
     for (src_name, src) in &sources {
         let label = format!("preset:{src_name}→jxl");
@@ -242,12 +245,8 @@ fn url_to_jxl_all_sources() {
 
 #[test]
 fn url_to_avif_all_sources() {
-    let sources = [
-        ("jpeg", SRC_JPEG),
-        ("png", SRC_PNG),
-        ("webp_ll", SRC_WEBP_LL),
-        ("gif", SRC_GIF),
-    ];
+    let sources =
+        [("jpeg", SRC_JPEG), ("png", SRC_PNG), ("webp_ll", SRC_WEBP_LL), ("gif", SRC_GIF)];
 
     let avif_preset = EncoderPreset::Format {
         format: s::OutputImageFormat::Avif,
@@ -280,12 +279,8 @@ fn srcset_explicit_format_quality() {
         ("webp_ll", SRC_WEBP_LL),
     ];
 
-    let srcset_configs = [
-        ("jpeg-80", "jpg"),
-        ("webp-80", "webp"),
-        ("png-90", "png"),
-        ("gif", "gif"),
-    ];
+    let srcset_configs =
+        [("jpeg-80", "jpg"), ("webp-80", "webp"), ("png-90", "png"), ("gif", "gif")];
 
     for (src_name, src) in &sources {
         for (srcset_val, expected_fmt) in &srcset_configs {
@@ -328,7 +323,8 @@ fn srcset_dpr_variations() {
 fn srcset_lossless() {
     // Note: `webp,lossless` and `png,lossless` in srcset both produce lossless output.
     // The actual format depends on the srcset parser and codec availability.
-    let lossless_configs = [("webp lossless", "webp,lossless,300w"), ("png lossless", "png,lossless,300w")];
+    let lossless_configs =
+        [("webp lossless", "webp,lossless,300w"), ("png lossless", "png,lossless,300w")];
 
     for (label_suffix, srcset_val) in &lossless_configs {
         let label = format!("srcset:lossless {label_suffix}");
@@ -357,12 +353,10 @@ fn format_auto_with_modern_codecs() {
 
     for (label, src) in &sources {
         // Accept all modern formats
-        let cmd = "w=300&h=300&mode=max&format=auto&accept.webp=true&accept.avif=true&accept.jxl=true";
+        let cmd =
+            "w=300&h=300&mode=max&format=auto&accept.webp=true&accept.avif=true&accept.jxl=true";
         let output = run_command(src, cmd);
-        assert!(
-            !output.is_empty(),
-            "format=auto failed for {label}: empty output"
-        );
+        assert!(!output.is_empty(), "format=auto failed for {label}: empty output");
         // We don't assert specific format — auto-selection depends on image characteristics.
         // The point is: it shouldn't crash or produce empty output.
     }
@@ -379,7 +373,11 @@ fn format_auto_web_safe_only() {
     let is_web_safe = output.starts_with(&[0xFF, 0xD8, 0xFF])
         || output.starts_with(&[0x89, b'P', b'N', b'G'])
         || output.starts_with(b"GIF");
-    assert!(is_web_safe, "auto:jpeg→web_safe: unexpected format (first 4={:?})", &output[..output.len().min(4)]);
+    assert!(
+        is_web_safe,
+        "auto:jpeg→web_safe: unexpected format (first 4={:?})",
+        &output[..output.len().min(4)]
+    );
 
     // Alpha → should produce PNG (only alpha-capable web_safe format)
     let output = run_command(SRC_PNG_ALPHA, "w=200&h=200&mode=max&format=auto");
@@ -469,7 +467,11 @@ fn json_format_preset_matrix() {
     ];
 
     let presets: Vec<(&str, EncoderPreset, &str)> = vec![
-        ("mozjpeg_q80", EncoderPreset::Mozjpeg { quality: Some(80), progressive: None, matte: None }, "jpg"),
+        (
+            "mozjpeg_q80",
+            EncoderPreset::Mozjpeg { quality: Some(80), progressive: None, matte: None },
+            "jpg",
+        ),
         ("png32", EncoderPreset::libpng32(), "png"),
         ("webp_lossy", EncoderPreset::WebPLossy { quality: 80.0 }, "webp"),
         ("webp_lossless", EncoderPreset::WebPLossless, "webp"),
