@@ -1,6 +1,7 @@
 mod animation;
 mod canvas;
 mod codec;
+mod codec_e2e;
 mod color;
 mod formats;
 mod icc;

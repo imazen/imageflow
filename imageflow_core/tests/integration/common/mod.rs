@@ -69,8 +69,14 @@ fn global_manager() -> &'static ChecksumManager {
             cache_dir,
         );
 
-        // Diff output directory
-        let diff_dir = workspace_root.join(".image-cache/diffs");
+        // Diff output directory — prefer /mnt/v/output/imageflow/diffs if it exists,
+        // otherwise fall back to .image-cache/diffs in the workspace.
+        let preferred_diff_dir = Path::new("/mnt/v/output/imageflow/diffs");
+        let diff_dir = if preferred_diff_dir.exists() {
+            preferred_diff_dir.to_path_buf()
+        } else {
+            workspace_root.join(".image-cache/diffs")
+        };
         let _ = std::fs::create_dir_all(&diff_dir);
 
         // Never use update_mode — it prunes old baselines and replaces them.
@@ -98,15 +104,14 @@ fn handle_check_result(result: &Result<CheckResult, zensim_regress::RegressError
         Ok(CheckResult::NoBaseline { .. }) => {
             panic!("No baseline. Run with CREATE_BASELINES=1 to create the initial baseline.");
         }
-        Ok(CheckResult::Failed { report, .. }) => {
-            let msg = report
-                .as_ref()
-                .map(|r| format!("{r}"))
-                .unwrap_or_else(|| "checksum mismatch, no pixel comparison available".to_string());
-            panic!("{msg}");
+        Ok(result @ CheckResult::Failed { .. }) => {
+            panic!("{result}");
         }
         Err(e) => {
             panic!("comparison error: {e}");
+        }
+        Ok(other) => {
+            panic!("unexpected check result: {other}");
         }
     }
 }
