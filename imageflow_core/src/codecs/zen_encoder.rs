@@ -7,7 +7,7 @@ use crate::{Context, ErrorKind, FlowError, Result};
 use imageflow_types::PixelFormat;
 use std::io::Write;
 
-use zc::encode::{DynEncoderConfig, DynFullFrameEncoder};
+use zencodec::encode::{DynEncoderConfig, DynFullFrameEncoder};
 
 use super::zen_decoder::ZenDecoder;
 
@@ -169,7 +169,7 @@ impl ZenEncoder {
                 "The ZenAvif encoder has been disabled"
             ));
         }
-        use zc::encode::EncoderConfig as _;
+        use zencodec::encode::EncoderConfig as _;
         let mut config = zenavif::AvifEncoderConfig::new();
         if lossless {
             config = config.with_lossless(true);
@@ -204,7 +204,7 @@ impl ZenEncoder {
                 "The ZenJxl encoder has been disabled"
             ));
         }
-        use zc::encode::EncoderConfig as _;
+        use zencodec::encode::EncoderConfig as _;
         let config = if lossless {
             zenjxl::JxlEncoderConfig::new().with_lossless(true)
         } else {

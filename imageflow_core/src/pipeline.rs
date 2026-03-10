@@ -16,7 +16,7 @@
 use crate::error::FlowError;
 use crate::io::IoStore;
 use imageflow_types::*;
-use zc::Orientation;
+use zencodec::Orientation;
 use zenpixels::PixelBuffer;
 use zenpixels_convert::PixelBufferConvertExt;
 

@@ -10,9 +10,9 @@ use imageflow_types::PixelLayout;
 use std::any::Any;
 use std::borrow::Cow;
 
-use zc::decode::{DecodeRowSink, DynDecoderConfig, DynFullFrameDecoder, SinkError};
-use zc::ImageInfo as ZenImageInfo;
-use zc::OwnedFullFrame;
+use zencodec::decode::{DecodeRowSink, DynDecoderConfig, DynFullFrameDecoder, SinkError};
+use zencodec::ImageInfo as ZenImageInfo;
+use zencodec::OwnedFullFrame;
 
 /// Format-specific metadata needed by the unified decoder.
 struct FormatMeta {
@@ -118,7 +118,7 @@ pub struct ZenDecoder {
     ignore_color_profile: bool,
     ignore_color_profile_errors: bool,
     // Resource limits for decode jobs
-    resource_limits: Option<zc::ResourceLimits>,
+    resource_limits: Option<zencodec::ResourceLimits>,
     // Format metadata
     meta: FormatMeta,
     // Whether has_more_frames is known
@@ -185,7 +185,7 @@ impl ZenDecoder {
         let limit = c.security.max_decode_size.as_ref().or(c.security.max_frame_size.as_ref());
         if let Some(limit) = limit {
             let max_bytes = (limit.megapixels * 1_000_000.0 * 4.0) as u64;
-            let mut limits = zc::ResourceLimits::default();
+            let mut limits = zencodec::ResourceLimits::default();
             limits.max_pixels = Some(max_bytes / 4);
             limits.max_memory_bytes = Some(max_bytes);
             decoder.resource_limits = Some(limits);
@@ -326,7 +326,7 @@ impl ZenDecoder {
     }
 
     /// Create a DynDecodeJob with resource limits applied.
-    fn make_job(&self) -> Box<dyn zc::decode::DynDecodeJob<'_> + '_> {
+    fn make_job(&self) -> Box<dyn zencodec::decode::DynDecodeJob<'_> + '_> {
         let config = match &self.mode {
             DecodeMode::Zencodec(config) => config,
             _ => unreachable!(),
