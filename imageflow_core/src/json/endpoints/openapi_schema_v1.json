@@ -567,6 +567,33 @@
           }
         }
       },
+      "AvifEncoderHints": {
+        "type": "object",
+        "properties": {
+          "alpha_quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "speed": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "BoolKeep": {
         "type": "string",
         "enum": [
@@ -689,6 +716,98 @@
             "$ref": "#/components/schemas/JobResult"
           }
         }
+      },
+      "CodecConfig": {
+        "type": "object",
+        "description": "Controls which codec implementations are used and their priority.\n\nApplication order: preset → enable → disable → prefer.\n\nThis selects *which implementations* handle each format (e.g., mozjpeg\nvs zenjpeg for JPEG), not which formats are enabled. Use\n`DecodeFormatConfig` / `EncodeFormatConfig` for format-level control.",
+        "properties": {
+          "disable": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CodecName"
+            },
+            "description": "Remove these codec implementations entirely (applied after enable)."
+          },
+          "enable": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CodecName"
+            },
+            "description": "Re-add codec implementations removed by the preset (applied after preset)."
+          },
+          "prefer": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CodecName"
+            },
+            "description": "Move these codec implementations to the front of their format group\n(highest priority). Order within this list is preserved (applied after disable)."
+          },
+          "preset": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CodecPreset",
+                "description": "Named preset that sets the initial codec implementation ordering.\nDefault (when absent): `Modern` (zen primary, C fallback)."
+              }
+            ]
+          }
+        }
+      },
+      "CodecName": {
+        "type": "string",
+        "description": "Identifies a specific codec implementation (decoder or encoder).\nNames are stable across versions. Unknown names fail deserialization.",
+        "enum": [
+          "mozjpeg_decoder",
+          "image_rs_jpeg_decoder",
+          "libpng_decoder",
+          "image_rs_png_decoder",
+          "libwebp_decoder",
+          "gif_rs_decoder",
+          "zenjpeg_decoder",
+          "zenwebp_decoder",
+          "zengif_decoder",
+          "zenjxl_decoder",
+          "zenavif_decoder",
+          "zenheic_decoder",
+          "zenbmp_decoder",
+          "zenpnm_decoder",
+          "zenfarbfeld_decoder",
+          "mozjpeg_encoder",
+          "libpng_encoder",
+          "libwebp_encoder",
+          "pngquant_encoder",
+          "lodepng_encoder",
+          "gif_encoder",
+          "zenjpeg_encoder",
+          "zenwebp_encoder",
+          "zengif_encoder",
+          "zenjxl_encoder",
+          "zenavif_encoder",
+          "zenbmp_encoder",
+          "zenpnm_encoder",
+          "zenfarbfeld_encoder"
+        ]
+      },
+      "CodecPreset": {
+        "type": "string",
+        "description": "Named codec implementation preset. Sets the initial priority ordering\nand availability of codec implementations (e.g., mozjpeg vs zenjpeg).",
+        "enum": [
+          "legacy",
+          "transitional",
+          "modern",
+          "experimental"
+        ]
       },
       "Color": {
         "oneOf": [
@@ -944,6 +1063,43 @@
           "fit_pad"
         ]
       },
+      "DecodeFormatConfig": {
+        "type": "object",
+        "description": "Controls which image formats are enabled for decoding.\n\nApplication order: preset → enable → disable.\n\nWhen no preset is specified, all compiled-in formats are enabled by default.\nUse `preset` to start from a named baseline, then layer `enable` and\n`disable` on top.",
+        "properties": {
+          "disable": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImageFormat"
+            },
+            "description": "Disable decoding for these formats (applied after enable)."
+          },
+          "enable": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImageFormat"
+            },
+            "description": "Enable decoding for these formats (applied after preset)."
+          },
+          "preset": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FormatPreset",
+                "description": "Named preset that sets which formats are initially enabled for decoding.\nWhen absent, all compiled-in formats are enabled."
+              }
+            ]
+          }
+        }
+      },
       "DecodeResult": {
         "type": "object",
         "required": [
@@ -1057,6 +1213,43 @@
       "EmptyRequest": {
         "type": "object"
       },
+      "EncodeFormatConfig": {
+        "type": "object",
+        "description": "Controls which image formats are enabled for encoding.\n\nApplication order: preset → enable → disable.\n\nWhen no preset is specified, all compiled-in formats are enabled by default.\nUse `preset` to start from a named baseline, then layer `enable` and\n`disable` on top.",
+        "properties": {
+          "disable": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImageFormat"
+            },
+            "description": "Disable encoding for these formats (applied after enable)."
+          },
+          "enable": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImageFormat"
+            },
+            "description": "Enable encoding for these formats (applied after preset)."
+          },
+          "preset": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FormatPreset",
+                "description": "Named preset that sets which formats are initially enabled for encoding.\nWhen absent, all compiled-in formats are enabled."
+              }
+            ]
+          }
+        }
+      },
       "EncodeResult": {
         "type": "object",
         "required": [
@@ -1094,6 +1287,16 @@
       "EncoderHints": {
         "type": "object",
         "properties": {
+          "avif": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AvifEncoderHints"
+              }
+            ]
+          },
           "gif": {
             "oneOf": [
               {
@@ -1111,6 +1314,16 @@
               },
               {
                 "$ref": "#/components/schemas/JpegEncoderHints"
+              }
+            ]
+          },
+          "jxl": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JxlEncoderHints"
               }
             ]
           },
@@ -1587,84 +1800,37 @@
       "ExecutionSecurity": {
         "type": "object",
         "properties": {
-          "enable_avif_decoding": {
-            "type": [
-              "boolean",
-              "null"
+          "codecs": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CodecConfig",
+                "description": "Codec implementation selection and priority configuration."
+              }
             ]
           },
-          "enable_avif_encoding": {
-            "type": [
-              "boolean",
-              "null"
+          "decode_formats": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DecodeFormatConfig",
+                "description": "Which image formats are enabled for decoding."
+              }
             ]
           },
-          "enable_gif_decoding": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "enable_gif_encoding": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "enable_heic_decoding": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "enable_jpeg_decoding": {
-            "type": [
-              "boolean",
-              "null"
-            ],
-            "description": "Per-format decoder kill bits. `Some(false)` disables all decoders for that format."
-          },
-          "enable_jpeg_encoding": {
-            "type": [
-              "boolean",
-              "null"
-            ],
-            "description": "Per-format encoder kill bits. `Some(false)` disables all encoders for that format."
-          },
-          "enable_jxl_decoding": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "enable_jxl_encoding": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "enable_png_decoding": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "enable_png_encoding": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "enable_webp_decoding": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "enable_webp_encoding": {
-            "type": [
-              "boolean",
-              "null"
+          "encode_formats": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EncodeFormatConfig",
+                "description": "Which image formats are enabled for encoding."
+              }
             ]
           },
           "max_decode_size": {
@@ -1706,13 +1872,6 @@
               }
             ]
           },
-          "prefer_c_codecs": {
-            "type": [
-              "boolean",
-              "null"
-            ],
-            "description": "Prefer C library codecs over pure-Rust when both are available.\nDefault: `None` (false — prefer pure-Rust)."
-          },
           "process_timeout_ms": {
             "type": [
               "integer",
@@ -1721,20 +1880,6 @@
             "format": "int64",
             "description": "Processing timeout in milliseconds. Operations exceeding this are cancelled.\nDefault: 30000 (30 seconds). `None` = no timeout.",
             "minimum": 0
-          },
-          "use_c_codecs": {
-            "type": [
-              "boolean",
-              "null"
-            ],
-            "description": "Allow C library codecs (mozjpeg, libpng, libwebp). `Some(false)` disables all C codecs.\nDefault: `None` (use compile-time defaults)."
-          },
-          "use_safe_codecs": {
-            "type": [
-              "boolean",
-              "null"
-            ],
-            "description": "Allow pure-Rust codecs (zenjpeg, zenwebp, zengif, zenjxl). `Some(false)` disables all.\nDefault: `None` (use compile-time defaults)."
           }
         }
       },
@@ -1764,6 +1909,15 @@
           "fastest",
           "n_cubic",
           "n_cubic_sharp"
+        ]
+      },
+      "FormatPreset": {
+        "type": "string",
+        "description": "Named format preset for controlling which image formats are enabled.",
+        "enum": [
+          "web_safe",
+          "modern_web_safe",
+          "all"
         ]
       },
       "FramePerformance": {
@@ -1939,6 +2093,22 @@
             }
           }
         }
+      },
+      "ImageFormat": {
+        "type": "string",
+        "description": "Image format identifier for format-level enable/disable.",
+        "enum": [
+          "jpeg",
+          "png",
+          "gif",
+          "webp",
+          "bmp",
+          "pnm",
+          "farbfeld",
+          "jxl",
+          "avif",
+          "heic"
+        ]
       },
       "ImageInfo": {
         "type": "object",
@@ -2596,6 +2766,31 @@
           "success": {
             "type": "boolean",
             "example": false
+          }
+        }
+      },
+      "JxlEncoderHints": {
+        "type": "object",
+        "properties": {
+          "distance": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "lossless": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "quality": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
           }
         }
       },

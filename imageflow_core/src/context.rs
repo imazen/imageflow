@@ -38,7 +38,7 @@ pub struct Context {
 
     pub enabled_codecs: EnabledCodecs,
 
-    pub security: imageflow_types::ExecutionSecurity,
+    pub security: Box<imageflow_types::ExecutionSecurity>,
 
     pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>,
 
@@ -325,7 +325,7 @@ impl Context {
             bitmaps: RefCell::new(
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
-            security: imageflow_types::ExecutionSecurity::sane_defaults(),
+            security: Box::new(imageflow_types::ExecutionSecurity::sane_defaults()),
             allocations: RefCell::new(AllocationContainer::new()),
 
             captured_bitmap_keys: None,
@@ -348,7 +348,7 @@ impl Context {
             bitmaps: RefCell::new(
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
-            security: imageflow_types::ExecutionSecurity::sane_defaults(),
+            security: Box::new(imageflow_types::ExecutionSecurity::sane_defaults()),
             allocations: RefCell::new(AllocationContainer::new()),
 
             captured_bitmap_keys: None,
@@ -370,7 +370,7 @@ impl Context {
             bitmaps: RefCell::new(
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
-            security: imageflow_types::ExecutionSecurity::sane_defaults(),
+            security: Box::new(imageflow_types::ExecutionSecurity::sane_defaults()),
             allocations: RefCell::new(AllocationContainer::new()),
 
             captured_bitmap_keys: None,
@@ -674,51 +674,79 @@ impl Context {
         if let Some(timeout_ms) = s.process_timeout_ms {
             self.cancellation_token.set_timeout(std::time::Duration::from_millis(timeout_ms));
         }
-        // Codec configuration
+        // Codec implementation configuration (preset → enable → disable → prefer)
         if let Some(codec_cfg) = s.codecs {
             self.apply_codec_config(codec_cfg);
+        }
+        // Format-level configuration (applied after codec config)
+        if let Some(decode_fmt) = s.decode_formats {
+            self.apply_decode_format_config(decode_fmt);
+        }
+        if let Some(encode_fmt) = s.encode_formats {
+            self.apply_encode_format_config(encode_fmt);
         }
     }
 
     fn apply_codec_config(&mut self, cfg: s::CodecConfig) {
         use crate::codecs::EnabledCodecs;
 
-        let has_preset_mode =
-            cfg.preset.is_some() || cfg.prefer.is_some() || cfg.disable.is_some();
-        let has_allowlist = cfg.allow_only.is_some();
-
-        if has_preset_mode && has_allowlist {
-            // TODO: return a proper error instead of logging — for now, allowlist wins
-            eprintln!(
-                "warning: CodecConfig has both preset/prefer/disable and allow_only; \
-                 using allow_only and ignoring preset mode fields"
-            );
+        // Preset: reset to named baseline
+        if let Some(preset) = cfg.preset {
+            self.enabled_codecs = EnabledCodecs::from_preset(preset);
         }
+        // Enable: re-add codec implementations the preset may have excluded
+        if let Some(ref enable) = cfg.enable {
+            self.enabled_codecs.apply_enable(enable);
+        }
+        // Disable: remove specific codec implementations
+        if let Some(ref disable) = cfg.disable {
+            self.enabled_codecs.apply_disable(disable);
+        }
+        // Prefer: reorder (move to front of format group)
+        if let Some(ref prefer) = cfg.prefer {
+            self.enabled_codecs.apply_prefer(prefer);
+        }
+    }
 
-        if let Some(ref allow_only) = cfg.allow_only {
-            // Allowlist mode: replace codec lists entirely
-            self.enabled_codecs = EnabledCodecs::from_allowlist(allow_only);
-        } else {
-            // Preset mode: start from preset (or keep current default)
-            if let Some(preset) = cfg.preset {
-                self.enabled_codecs = EnabledCodecs::from_preset(preset);
-            }
-            // Apply prefer (reorder)
-            if let Some(ref prefer) = cfg.prefer {
-                self.enabled_codecs.apply_prefer(prefer);
-            }
-            // Apply disable (remove specific codecs)
-            if let Some(ref disable) = cfg.disable {
-                self.enabled_codecs.apply_disable(disable);
+    fn apply_decode_format_config(&mut self, cfg: s::DecodeFormatConfig) {
+        // Preset: start from format baseline
+        if let Some(preset) = cfg.preset {
+            let allowed = preset.formats();
+            // Disable all decode formats not in the preset
+            for &fmt in s::ImageFormat::ALL {
+                if !allowed.contains(&fmt) {
+                    self.enabled_codecs.apply_disable_decode_formats(&[fmt]);
+                }
             }
         }
-
-        // Format-level kills apply in either mode
-        if let Some(ref formats) = cfg.disable_decode {
-            self.enabled_codecs.apply_disable_decode_formats(formats);
+        // Enable: re-add decoders for these formats
+        if let Some(ref enable) = cfg.enable {
+            self.enabled_codecs.apply_enable_decode_formats(enable);
         }
-        if let Some(ref formats) = cfg.disable_encode {
-            self.enabled_codecs.apply_disable_encode_formats(formats);
+        // Disable: remove decoders for these formats
+        if let Some(ref disable) = cfg.disable {
+            self.enabled_codecs.apply_disable_decode_formats(disable);
+        }
+    }
+
+    fn apply_encode_format_config(&mut self, cfg: s::EncodeFormatConfig) {
+        // Preset: start from format baseline
+        if let Some(preset) = cfg.preset {
+            let allowed = preset.formats();
+            // Disable all encode formats not in the preset
+            for &fmt in s::ImageFormat::ALL {
+                if !allowed.contains(&fmt) {
+                    self.enabled_codecs.apply_disable_encode_formats(&[fmt]);
+                }
+            }
+        }
+        // Enable: re-add encoders for these formats
+        if let Some(ref enable) = cfg.enable {
+            self.enabled_codecs.apply_enable_encode_formats(enable);
+        }
+        // Disable: remove encoders for these formats
+        if let Some(ref disable) = cfg.disable {
+            self.enabled_codecs.apply_disable_encode_formats(disable);
         }
     }
 
@@ -1020,14 +1048,14 @@ impl Drop for Context {
 #[test]
 fn test_context_size() {
     eprintln!("std::mem::sizeof(Context) = {}", std::mem::size_of::<Context>());
-    assert!(std::mem::size_of::<Context>() < 400);
+    assert!(std::mem::size_of::<Context>() < 350);
 }
 
 #[test]
 fn test_thread_safe_context_size() {
     println!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
     eprintln!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
-    assert!(std::mem::size_of::<ThreadSafeContext>() <= 540);
+    assert!(std::mem::size_of::<ThreadSafeContext>() <= 520);
 }
 
 #[test]

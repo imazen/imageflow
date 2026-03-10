@@ -723,24 +723,35 @@ impl EnabledCodecs {
         }
     }
 
-    /// Build from an explicit allowlist of codec names (ordered).
-    /// Names not compiled in are silently skipped.
-    pub fn from_allowlist(codecs: &[imageflow_types::CodecName]) -> Self {
-        let mut decoders = smallvec::SmallVec::new();
-        let mut encoders = smallvec::SmallVec::new();
-        for &name in codecs {
+    /// Add codec implementations that are not already present.
+    /// Uses the default ordering to determine where each codec is inserted
+    /// (appended at end if not in default list). Codecs not compiled in are
+    /// silently skipped.
+    pub fn apply_enable(&mut self, enable: &[imageflow_types::CodecName]) {
+        for &name in enable {
             if let Some(d) = NamedDecoders::from_codec_name(name) {
-                if !decoders.contains(&d) {
-                    decoders.push(d);
+                if !self.decoders.contains(&d) {
+                    self.decoders.push(d);
                 }
             }
             if let Some(e) = NamedEncoders::from_codec_name(name) {
-                if !encoders.contains(&e) {
-                    encoders.push(e);
+                if !self.encoders.contains(&e) {
+                    self.encoders.push(e);
                 }
             }
         }
-        EnabledCodecs { decoders, encoders }
+    }
+
+    /// Apply `disable` list: remove named codec implementations.
+    pub fn apply_disable(&mut self, disable: &[imageflow_types::CodecName]) {
+        for &name in disable {
+            if let Some(d) = NamedDecoders::from_codec_name(name) {
+                self.decoders.retain(|item| item != &d);
+            }
+            if let Some(e) = NamedEncoders::from_codec_name(name) {
+                self.encoders.retain(|item| item != &e);
+            }
+        }
     }
 
     /// Apply `prefer` list: move named codecs to front of their respective lists.
@@ -762,29 +773,43 @@ impl EnabledCodecs {
         }
     }
 
-    /// Apply `disable` list: remove named codecs.
-    pub fn apply_disable(&mut self, disable: &[imageflow_types::CodecName]) {
-        for &name in disable {
-            if let Some(d) = NamedDecoders::from_codec_name(name) {
-                self.decoders.retain(|item| item != &d);
-            }
-            if let Some(e) = NamedEncoders::from_codec_name(name) {
-                self.encoders.retain(|item| item != &e);
-            }
-        }
-    }
-
-    /// Apply format-level decoder kills.
+    /// Disable all decoders for the given formats.
     pub fn apply_disable_decode_formats(&mut self, formats: &[imageflow_types::ImageFormat]) {
         for &fmt in formats {
             self.decoders.retain(|d| d.codec_name().format() != fmt);
         }
     }
 
-    /// Apply format-level encoder kills.
+    /// Disable all encoders for the given formats.
     pub fn apply_disable_encode_formats(&mut self, formats: &[imageflow_types::ImageFormat]) {
         for &fmt in formats {
             self.encoders.retain(|e| e.codec_name().format() != fmt);
+        }
+    }
+
+    /// Re-enable decoders for the given formats using the default decoder list.
+    /// Only adds decoders that are compiled in and not already present.
+    pub fn apply_enable_decode_formats(&mut self, formats: &[imageflow_types::ImageFormat]) {
+        let defaults = Self::default();
+        for &fmt in formats {
+            for d in &defaults.decoders {
+                if d.codec_name().format() == fmt && !self.decoders.contains(d) {
+                    self.decoders.push(*d);
+                }
+            }
+        }
+    }
+
+    /// Re-enable encoders for the given formats using the default encoder list.
+    /// Only adds encoders that are compiled in and not already present.
+    pub fn apply_enable_encode_formats(&mut self, formats: &[imageflow_types::ImageFormat]) {
+        let defaults = Self::default();
+        for &fmt in formats {
+            for e in &defaults.encoders {
+                if e.codec_name().format() == fmt && !self.encoders.contains(e) {
+                    self.encoders.push(*e);
+                }
+            }
         }
     }
 
@@ -828,8 +853,9 @@ impl EnabledCodecs {
 
     /// Returns the deduplicated set of formats that have at least one encoder,
     /// in priority order (first encoder for each format determines ordering).
-    pub fn available_encode_formats(&self) -> smallvec::SmallVec<[imageflow_types::ImageFormat; 8]>
-    {
+    pub fn available_encode_formats(
+        &self,
+    ) -> smallvec::SmallVec<[imageflow_types::ImageFormat; 8]> {
         let mut formats = smallvec::SmallVec::new();
         for e in &self.encoders {
             let fmt = e.codec_name().format();

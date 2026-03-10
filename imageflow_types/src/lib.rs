@@ -1174,8 +1174,8 @@ pub struct FrameSizeLimit {
 
 // ── Codec configuration types ──────────────────────────────────────────
 
-/// Named codec preset. Sets the initial priority ordering and availability
-/// of codec implementations.
+/// Named codec implementation preset. Sets the initial priority ordering
+/// and availability of codec implementations (e.g., mozjpeg vs zenjpeg).
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -1192,6 +1192,20 @@ pub enum CodecPreset {
     Modern,
     /// Pure Rust only. No C codec libraries used.
     Experimental,
+}
+
+/// Named format preset for controlling which image formats are enabled.
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum FormatPreset {
+    /// Only JPEG, PNG, GIF. Universally supported by all browsers.
+    WebSafe,
+    /// JPEG, PNG, GIF, WebP. Supported by 97%+ of browsers.
+    ModernWebSafe,
+    /// All formats enabled (JPEG, PNG, GIF, WebP, JXL, AVIF, HEIC, BMP, PNM, Farbfeld).
+    All,
 }
 
 /// Identifies a specific codec implementation (decoder or encoder).
@@ -1312,10 +1326,9 @@ impl CodecName {
             | Self::LibwebpEncoder
             | Self::ZenwebpEncoder => ImageFormat::Webp,
 
-            Self::GifRsDecoder
-            | Self::ZengifDecoder
-            | Self::GifEncoder
-            | Self::ZengifEncoder => ImageFormat::Gif,
+            Self::GifRsDecoder | Self::ZengifDecoder | Self::GifEncoder | Self::ZengifEncoder => {
+                ImageFormat::Gif
+            }
 
             Self::ZenjxlDecoder | Self::ZenjxlEncoder => ImageFormat::Jxl,
             Self::ZenavifDecoder | Self::ZenavifEncoder => ImageFormat::Avif,
@@ -1345,58 +1358,113 @@ pub enum ImageFormat {
     Heic,
 }
 
-/// Codec selection and priority configuration.
+impl ImageFormat {
+    /// All known image formats.
+    pub const ALL: &'static [ImageFormat] = &[
+        ImageFormat::Jpeg,
+        ImageFormat::Png,
+        ImageFormat::Gif,
+        ImageFormat::Webp,
+        ImageFormat::Bmp,
+        ImageFormat::Pnm,
+        ImageFormat::Farbfeld,
+        ImageFormat::Jxl,
+        ImageFormat::Avif,
+        ImageFormat::Heic,
+    ];
+}
+
+impl FormatPreset {
+    /// Returns the set of formats enabled by this preset.
+    pub fn formats(self) -> &'static [ImageFormat] {
+        match self {
+            FormatPreset::WebSafe => &[ImageFormat::Jpeg, ImageFormat::Png, ImageFormat::Gif],
+            FormatPreset::ModernWebSafe => {
+                &[ImageFormat::Jpeg, ImageFormat::Png, ImageFormat::Gif, ImageFormat::Webp]
+            }
+            FormatPreset::All => ImageFormat::ALL,
+        }
+    }
+}
+
+/// Controls which image formats are enabled for decoding.
 ///
-/// Two mutually exclusive modes:
+/// Application order: preset → enable → disable.
 ///
-/// **Preset mode** (incremental): Start from a named `preset`, optionally
-/// `prefer` specific codecs (move to front) and `disable` others.
+/// When no preset is specified, all compiled-in formats are enabled by default.
+/// Use `preset` to start from a named baseline, then layer `enable` and
+/// `disable` on top.
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct DecodeFormatConfig {
+    /// Named preset that sets which formats are initially enabled for decoding.
+    /// When absent, all compiled-in formats are enabled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preset: Option<FormatPreset>,
+
+    /// Enable decoding for these formats (applied after preset).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable: Option<Vec<ImageFormat>>,
+
+    /// Disable decoding for these formats (applied after enable).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disable: Option<Vec<ImageFormat>>,
+}
+
+/// Controls which image formats are enabled for encoding.
 ///
-/// **Allowlist mode** (explicit): Provide `allow_only` with an ordered list
-/// of codecs. Only those codecs are available, in the specified priority order.
+/// Application order: preset → enable → disable.
 ///
-/// Both modes can combine with `disable_decode` / `disable_encode` for
-/// format-level kills.
+/// When no preset is specified, all compiled-in formats are enabled by default.
+/// Use `preset` to start from a named baseline, then layer `enable` and
+/// `disable` on top.
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct EncodeFormatConfig {
+    /// Named preset that sets which formats are initially enabled for encoding.
+    /// When absent, all compiled-in formats are enabled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preset: Option<FormatPreset>,
+
+    /// Enable encoding for these formats (applied after preset).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable: Option<Vec<ImageFormat>>,
+
+    /// Disable encoding for these formats (applied after enable).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disable: Option<Vec<ImageFormat>>,
+}
+
+/// Controls which codec implementations are used and their priority.
 ///
-/// If `allow_only` is set alongside `preset`, `prefer`, or `disable`,
-/// configuration is rejected with an error.
+/// Application order: preset → enable → disable → prefer.
+///
+/// This selects *which implementations* handle each format (e.g., mozjpeg
+/// vs zenjpeg for JPEG), not which formats are enabled. Use
+/// `DecodeFormatConfig` / `EncodeFormatConfig` for format-level control.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
 pub struct CodecConfig {
-    // ── Preset mode (incremental) ──────────────────────────────────
-
-    /// Named preset that sets the initial codec priority ordering.
-    /// Default (when entire `codecs` field is absent): `Modern`.
+    /// Named preset that sets the initial codec implementation ordering.
+    /// Default (when absent): `Modern` (zen primary, C fallback).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub preset: Option<CodecPreset>,
 
-    /// Move these codecs to the front of their format group (highest priority).
-    /// Order within this list is preserved. Applied after preset.
+    /// Re-add codec implementations removed by the preset (applied after preset).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub prefer: Option<Vec<CodecName>>,
+    pub enable: Option<Vec<CodecName>>,
 
-    /// Remove these codecs entirely. Applied after prefer.
+    /// Remove these codec implementations entirely (applied after enable).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub disable: Option<Vec<CodecName>>,
 
-    // ── Allowlist mode (explicit, ordered) ─────────────────────────
-
-    /// Explicit ordered allowlist. Only these codecs are available, in this
-    /// priority order. Incompatible with `preset`/`prefer`/`disable`.
-    /// Codec names not compiled in are silently skipped.
+    /// Move these codec implementations to the front of their format group
+    /// (highest priority). Order within this list is preserved (applied after disable).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub allow_only: Option<Vec<CodecName>>,
-
-    // ── Format-level kills (either mode) ───────────────────────────
-
-    /// Disable decoding for entire formats. Applied last.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub disable_decode: Option<Vec<ImageFormat>>,
-
-    /// Disable encoding for entire formats. Applied last.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub disable_encode: Option<Vec<ImageFormat>>,
+    pub prefer: Option<Vec<CodecName>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -1417,7 +1485,15 @@ pub struct ExecutionSecurity {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_encoder_threads: Option<u32>,
 
-    /// Codec selection and priority configuration.
+    /// Which image formats are enabled for decoding.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decode_formats: Option<DecodeFormatConfig>,
+
+    /// Which image formats are enabled for encoding.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub encode_formats: Option<EncodeFormatConfig>,
+
+    /// Codec implementation selection and priority configuration.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub codecs: Option<CodecConfig>,
 }
@@ -1430,6 +1506,8 @@ impl ExecutionSecurity {
             max_encode_size: None,
             process_timeout_ms: Some(30_000),
             max_encoder_threads: None,
+            decode_formats: None,
+            encode_formats: None,
             codecs: None,
         }
     }
@@ -1440,6 +1518,8 @@ impl ExecutionSecurity {
             max_encode_size: None,
             process_timeout_ms: None,
             max_encoder_threads: None,
+            decode_formats: None,
+            encode_formats: None,
             codecs: None,
         }
     }
@@ -1452,18 +1532,30 @@ impl ExecutionSecurity {
         self
     }
 
-    /// Set codec configuration.
+    /// Set codec implementation configuration.
     pub fn with_codecs(mut self, config: CodecConfig) -> Self {
         self.codecs = Some(config);
         self
     }
 
-    /// Use the Legacy preset (C codecs only, no zen codecs).
+    /// Set decode format configuration.
+    pub fn with_decode_formats(mut self, config: DecodeFormatConfig) -> Self {
+        self.decode_formats = Some(config);
+        self
+    }
+
+    /// Set encode format configuration.
+    pub fn with_encode_formats(mut self, config: EncodeFormatConfig) -> Self {
+        self.encode_formats = Some(config);
+        self
+    }
+
+    /// Use the Legacy codec preset (C codecs only, no zen codecs).
     pub fn legacy(self) -> Self {
         self.with_codecs(CodecConfig { preset: Some(CodecPreset::Legacy), ..Default::default() })
     }
 
-    /// Use the Transitional preset (C primary, zen supplements).
+    /// Use the Transitional codec preset (C primary, zen supplements).
     pub fn transitional(self) -> Self {
         self.with_codecs(CodecConfig {
             preset: Some(CodecPreset::Transitional),
@@ -1471,12 +1563,12 @@ impl ExecutionSecurity {
         })
     }
 
-    /// Use the Modern preset (zen primary, C fallback). This is the default.
+    /// Use the Modern codec preset (zen primary, C fallback). This is the default.
     pub fn modern(self) -> Self {
         self.with_codecs(CodecConfig { preset: Some(CodecPreset::Modern), ..Default::default() })
     }
 
-    /// Use the Experimental preset (pure Rust, no C codecs).
+    /// Use the Experimental codec preset (pure Rust, no C codecs).
     pub fn experimental(self) -> Self {
         self.with_codecs(CodecConfig {
             preset: Some(CodecPreset::Experimental),
