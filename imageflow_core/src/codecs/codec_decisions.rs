@@ -95,6 +95,22 @@ impl FormatAndEncoder {
     }
 }
 
+/// Complete decision: format + encoder + config + quality, ready to instantiate.
+#[derive(Debug, Clone)]
+pub struct FullCodecDecision {
+    pub format: ImageFormat,
+    pub encoder: NamedEncoders,
+    pub config: EncoderConfig,
+    pub quality: QualityIntent,
+    pub trace: Vec<SelectionStep>,
+}
+
+impl FullCodecDecision {
+    pub fn trace_summary(&self) -> String {
+        self.trace.iter().map(|s| s.to_string()).collect::<Vec<_>>().join("\n")
+    }
+}
+
 // ── Input types ──────────────────────────────────────────────────────────
 
 /// Observable facts about the image being encoded.
@@ -132,6 +148,11 @@ pub struct EncodingIntent {
     /// Pre-resolved format choice (`Keep` already resolved to source format).
     /// If `Some`, used when an encoder exists; otherwise falls back to auto.
     pub specified_format: Option<ImageFormat>,
+    /// Quality intent (resolved from profile + DPR).
+    /// If `None`, `QualityIntent::default()` (Good, no DPR) is used.
+    pub quality: Option<QualityIntent>,
+    /// Matte color for alpha-to-opaque conversion.
+    pub matte: Option<Color>,
 }
 
 impl Default for EncodingIntent {
@@ -141,6 +162,8 @@ impl Default for EncodingIntent {
             lossless: None,
             quality_profile: None,
             specified_format: None,
+            quality: None,
+            matte: None,
         }
     }
 }
@@ -330,6 +353,69 @@ impl QualityIntent {
     pub fn jxl_effort(&self) -> u8 {
         codec_quality_from_generic(self.generic_quality, &JXL_EFFORT_TABLE)
             .clamp(0.0, 10.0) as u8
+    }
+
+    /// Build an [`EncoderConfig`] for the given encoder using this quality intent.
+    ///
+    /// Returns default config for each format/encoder.  The caller can further
+    /// customize the returned config (e.g. via `EncoderHints` overrides).
+    pub fn build_config(&self, encoder: NamedEncoders, matte: Option<Color>) -> EncoderConfig {
+        let lossless = self.is_lossless();
+        match encoder.caps().format {
+            ImageFormat::Jpeg => EncoderConfig::Jpeg {
+                quality: self.mozjpeg_quality(),
+                progressive: true,
+                classic: false,
+                optimize_huffman: false,
+                matte,
+            },
+            ImageFormat::Png => {
+                if lossless {
+                    EncoderConfig::Png(PngConfig::Lossless {
+                        max_deflate: None,
+                        matte,
+                    })
+                } else {
+                    let (min_q, max_q) = self.png_quality_range();
+                    EncoderConfig::Png(PngConfig::Quantized {
+                        speed: 4,
+                        target_quality: max_q,
+                        min_quality: min_q,
+                        max_deflate: None,
+                        matte,
+                    })
+                }
+            }
+            ImageFormat::Webp => {
+                if lossless {
+                    EncoderConfig::WebP { quality: None, lossless: true, matte }
+                } else {
+                    EncoderConfig::WebP {
+                        quality: Some(self.libwebp_quality()),
+                        lossless: false,
+                        matte,
+                    }
+                }
+            }
+            ImageFormat::Gif => EncoderConfig::Gif,
+            ImageFormat::Jxl => {
+                if lossless {
+                    EncoderConfig::Jxl { distance: None, lossless: true }
+                } else {
+                    EncoderConfig::Jxl {
+                        distance: Some(self.jxl_distance()),
+                        lossless: false,
+                    }
+                }
+            }
+            ImageFormat::Avif => EncoderConfig::Avif {
+                quality: self.avif_quality(),
+                speed: self.avif_speed(),
+                lossless,
+                matte,
+            },
+            _ => EncoderConfig::Gif, // unreachable for known encoders
+        }
     }
 }
 
@@ -754,6 +840,24 @@ impl<'a> CodecDecision<'a> {
         let enc_decision = self.select_encoder(fmt_decision.chosen, !want_lossless)?;
         trace.extend(enc_decision.trace);
         Some(FormatAndEncoder { format: fmt_decision.chosen, encoder: enc_decision.chosen, trace })
+    }
+
+    /// Full pipeline: select format + encoder + build config.
+    pub fn select_and_configure(
+        &self,
+        facts: &ImageFacts,
+        intent: &EncodingIntent,
+    ) -> Option<FullCodecDecision> {
+        let selection = self.select(facts, intent)?;
+        let quality = intent.quality.unwrap_or_default();
+        let config = quality.build_config(selection.encoder, intent.matte.clone());
+        Some(FullCodecDecision {
+            format: selection.format,
+            encoder: selection.encoder,
+            config,
+            quality,
+            trace: selection.trace,
+        })
     }
 
     // ── Security ─────────────────────────────────────────────────────
@@ -1683,5 +1787,170 @@ mod tests {
             let effort = QualityIntent::from_value(q as f32).jxl_effort();
             assert!(effort <= 10, "JXL effort {} out of range at q={}", effort, q);
         }
+    }
+
+    // ── build_config ──────────────────────────────────────────────────
+
+    #[test]
+    fn build_config_jpeg_lossy() {
+        let q = QualityIntent::from_value(73.0);
+        let cfg = q.build_config(NamedEncoders::MozJpegEncoder, None);
+        match cfg {
+            EncoderConfig::Jpeg { quality, progressive, .. } => {
+                assert_eq!(quality, 73);
+                assert!(progressive);
+            }
+            _ => panic!("expected Jpeg config"),
+        }
+    }
+
+    #[test]
+    fn build_config_webp_lossy() {
+        let q = QualityIntent::from_value(73.0);
+        let cfg = q.build_config(NamedEncoders::WebPEncoder, None);
+        match cfg {
+            EncoderConfig::WebP { quality, lossless, .. } => {
+                assert!(!lossless);
+                assert!(quality.is_some());
+            }
+            _ => panic!("expected WebP config"),
+        }
+    }
+
+    #[test]
+    fn build_config_webp_lossless() {
+        let q = QualityIntent::from_profile(QualityProfile::Lossless, None);
+        let cfg = q.build_config(NamedEncoders::ZenWebPEncoder, None);
+        match cfg {
+            EncoderConfig::WebP { quality, lossless, .. } => {
+                assert!(lossless);
+                assert!(quality.is_none());
+            }
+            _ => panic!("expected WebP config"),
+        }
+    }
+
+    #[test]
+    fn build_config_jxl_lossy() {
+        let q = QualityIntent::from_value(73.0);
+        let cfg = q.build_config(NamedEncoders::ZenJxlEncoder, None);
+        match cfg {
+            EncoderConfig::Jxl { distance, lossless } => {
+                assert!(!lossless);
+                let d = distance.unwrap();
+                assert!(d > 0.0 && d < 25.0, "distance {} out of range", d);
+            }
+            _ => panic!("expected Jxl config"),
+        }
+    }
+
+    #[test]
+    fn build_config_jxl_lossless() {
+        let q = QualityIntent::from_profile(QualityProfile::Lossless, None);
+        let cfg = q.build_config(NamedEncoders::ZenJxlEncoder, None);
+        match cfg {
+            EncoderConfig::Jxl { distance, lossless } => {
+                assert!(lossless);
+                assert!(distance.is_none());
+            }
+            _ => panic!("expected Jxl config"),
+        }
+    }
+
+    #[test]
+    fn build_config_avif() {
+        let q = QualityIntent::from_value(73.0);
+        let cfg = q.build_config(NamedEncoders::ZenAvifEncoder, None);
+        match cfg {
+            EncoderConfig::Avif { quality, speed, lossless, .. } => {
+                assert!(!lossless);
+                assert!(quality > 0.0 && quality <= 100.0);
+                assert!(speed <= 10);
+            }
+            _ => panic!("expected Avif config"),
+        }
+    }
+
+    #[test]
+    fn build_config_png_lossy_is_quantized() {
+        let q = QualityIntent::from_value(73.0);
+        let cfg = q.build_config(NamedEncoders::PngQuantEncoder, None);
+        match cfg {
+            EncoderConfig::Png(PngConfig::Quantized { min_quality, target_quality, .. }) => {
+                assert!(min_quality <= target_quality);
+            }
+            _ => panic!("expected PngConfig::Quantized, got {:?}", cfg),
+        }
+    }
+
+    #[test]
+    fn build_config_png_lossless() {
+        let q = QualityIntent::from_profile(QualityProfile::Lossless, None);
+        let cfg = q.build_config(NamedEncoders::LodePngEncoder, None);
+        assert!(matches!(cfg, EncoderConfig::Png(PngConfig::Lossless { .. })));
+    }
+
+    #[test]
+    fn build_config_gif() {
+        let q = QualityIntent::default();
+        let cfg = q.build_config(NamedEncoders::GifEncoder, None);
+        assert!(matches!(cfg, EncoderConfig::Gif));
+    }
+
+    #[test]
+    fn build_config_passes_matte() {
+        let matte = Some(Color::Srgb(imageflow_types::ColorSrgb::Hex("FF0000".to_string())));
+        let q = QualityIntent::from_value(80.0);
+        let cfg = q.build_config(NamedEncoders::MozJpegEncoder, matte.clone());
+        match cfg {
+            EncoderConfig::Jpeg { matte: m, .. } => assert_eq!(m, matte),
+            _ => panic!("expected Jpeg"),
+        }
+    }
+
+    // ── select_and_configure ──────────────────────────────────────────
+
+    #[test]
+    fn select_and_configure_returns_matching_format() {
+        let c = all_zen();
+        let result = decide(&c)
+            .select_and_configure(
+                &ImageFacts::default(),
+                &EncodingIntent { allowed: all_allowed(), ..Default::default() },
+            )
+            .unwrap();
+        assert_eq!(result.format, result.config.format());
+    }
+
+    #[test]
+    fn select_and_configure_with_quality() {
+        let c = c_only();
+        let intent = EncodingIntent {
+            allowed: web_safe(),
+            quality: Some(QualityIntent::from_profile(QualityProfile::High, Some(2.0))),
+            ..Default::default()
+        };
+        let result = decide(&c)
+            .select_and_configure(&ImageFacts::default(), &intent)
+            .unwrap();
+        assert_eq!(result.format, ImageFormat::Jpeg);
+        // High + DPR 2x should produce quality > Good@3x
+        match result.config {
+            EncoderConfig::Jpeg { quality, .. } => {
+                let good_q = QualityIntent::default().mozjpeg_quality();
+                assert!(quality > good_q, "High@2x ({}) should be > Good@3x ({})", quality, good_q);
+            }
+            _ => panic!("expected Jpeg config"),
+        }
+    }
+
+    #[test]
+    fn select_and_configure_none_when_no_codecs() {
+        let c = codecs(&[]);
+        let result = decide(&c).select_and_configure(
+            &ImageFacts::default(),
+            &EncodingIntent { allowed: web_safe(), ..Default::default() },
+        );
+        assert!(result.is_none());
     }
 }
