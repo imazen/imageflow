@@ -1317,6 +1317,24 @@ fn cb_webp_anim_to_jpg() {
     report_corpus("cb_webp_anim", "jpg", ok, &fail);
 }
 
+#[test]
+fn cb_webp_anim_to_webp() {
+    let (ok, fail) = cb_scan("webp-animated", "webp", "webp");
+    report_corpus("cb_webp_anim", "webp", ok, &fail);
+}
+
+#[test]
+fn cb_webp_anim_to_jxl() {
+    let (ok, fail) = cb_scan("webp-animated", "webp", "jxl");
+    report_corpus("cb_webp_anim", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_webp_anim_to_avif() {
+    let (ok, fail) = cb_scan("webp-animated", "webp", "avif");
+    report_corpus("cb_webp_anim", "avif", ok, &fail);
+}
+
 // ── AVIF corpus-builder ─────────────────────────────────────────────────
 
 #[test]
@@ -1361,6 +1379,30 @@ fn cb_avif_to_gif() {
 fn cb_avif_anim_to_png() {
     let (ok, fail) = cb_scan("avif-animated", "avif", "png");
     report_corpus("cb_avif_anim", "png", ok, &fail);
+}
+
+#[test]
+fn cb_avif_anim_to_jpg() {
+    let (ok, fail) = cb_scan("avif-animated", "avif", "jpg");
+    report_corpus("cb_avif_anim", "jpg", ok, &fail);
+}
+
+#[test]
+fn cb_avif_anim_to_webp() {
+    let (ok, fail) = cb_scan("avif-animated", "avif", "webp");
+    report_corpus("cb_avif_anim", "webp", ok, &fail);
+}
+
+#[test]
+fn cb_avif_anim_to_jxl() {
+    let (ok, fail) = cb_scan("avif-animated", "avif", "jxl");
+    report_corpus("cb_avif_anim", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_avif_anim_to_avif() {
+    let (ok, fail) = cb_scan("avif-animated", "avif", "avif");
+    report_corpus("cb_avif_anim", "avif", ok, &fail);
 }
 
 #[test]
@@ -1413,6 +1455,30 @@ fn cb_jxl_to_gif() {
 fn cb_jxl_anim_to_png() {
     let (ok, fail) = cb_scan("jxl-animated", "jxl", "png");
     report_corpus("cb_jxl_anim", "png", ok, &fail);
+}
+
+#[test]
+fn cb_jxl_anim_to_jpg() {
+    let (ok, fail) = cb_scan("jxl-animated", "jxl", "jpg");
+    report_corpus("cb_jxl_anim", "jpg", ok, &fail);
+}
+
+#[test]
+fn cb_jxl_anim_to_webp() {
+    let (ok, fail) = cb_scan("jxl-animated", "jxl", "webp");
+    report_corpus("cb_jxl_anim", "webp", ok, &fail);
+}
+
+#[test]
+fn cb_jxl_anim_to_jxl() {
+    let (ok, fail) = cb_scan("jxl-animated", "jxl", "jxl");
+    report_corpus("cb_jxl_anim", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_jxl_anim_to_avif() {
+    let (ok, fail) = cb_scan("jxl-animated", "jxl", "avif");
+    report_corpus("cb_jxl_anim", "avif", ok, &fail);
 }
 
 #[test]
@@ -1477,6 +1543,24 @@ fn cb_gif_anim_to_png() {
 fn cb_gif_anim_to_jpg() {
     let (ok, fail) = cb_scan("gif-animated", "gif", "jpg");
     report_corpus("cb_gif_anim", "jpg", ok, &fail);
+}
+
+#[test]
+fn cb_gif_anim_to_webp() {
+    let (ok, fail) = cb_scan("gif-animated", "gif", "webp");
+    report_corpus("cb_gif_anim", "webp", ok, &fail);
+}
+
+#[test]
+fn cb_gif_anim_to_jxl() {
+    let (ok, fail) = cb_scan("gif-animated", "gif", "jxl");
+    report_corpus("cb_gif_anim", "jxl", ok, &fail);
+}
+
+#[test]
+fn cb_gif_anim_to_avif() {
+    let (ok, fail) = cb_scan("gif-animated", "gif", "avif");
+    report_corpus("cb_gif_anim", "avif", ok, &fail);
 }
 
 // ── Wide-gamut corpus-builder ───────────────────────────────────────────
