@@ -14,6 +14,13 @@ use imageflow_types::{
 use std::path::{Path, PathBuf};
 
 // ============================================================================
+// Test corpus base URL (R2-hosted)
+// ============================================================================
+
+/// Public R2 URL for the test corpus. Change to custom domain when available.
+const CORPUS_BASE_URL: &str = "https://pub-d8ada59f59e24a12b65c6d53f96f3780.r2.dev";
+
+// ============================================================================
 // Test source URLs (S3-hosted)
 // ============================================================================
 
@@ -810,6 +817,115 @@ fn collect_files_recursive(dir: &Path, extension: &str, out: &mut Vec<PathBuf>, 
     }
 }
 
+// ============================================================================
+// Remote corpus download + cache (R2 fallback for CI)
+// ============================================================================
+
+/// Root directory for cached corpus downloads.
+fn corpus_cache_root() -> PathBuf {
+    let workspace_root =
+        Path::new(env!("CARGO_MANIFEST_DIR")).parent().expect("CARGO_MANIFEST_DIR has no parent");
+    workspace_root.join(".image-cache/corpus")
+}
+
+/// Parse a manifest.tsv (filename\tsize per line) and return entries matching the extension.
+fn parse_manifest_for_ext(manifest: &str, extension: &str, max: usize) -> Vec<(String, u64)> {
+    manifest
+        .lines()
+        .filter_map(|line| {
+            let (filename, size_str) = line.split_once('\t')?;
+            let ext = Path::new(filename).extension()?.to_str()?;
+            if ext.eq_ignore_ascii_case(extension) {
+                Some((filename.to_string(), size_str.parse::<u64>().ok()?))
+            } else {
+                None
+            }
+        })
+        .take(max)
+        .collect()
+}
+
+/// Ensure corpus files for `r2_prefix` are cached locally.
+/// Downloads the manifest, then fetches up to `max_files` files matching `extension`.
+/// Returns the cache directory path, or None if download failed.
+fn ensure_corpus_cached(r2_prefix: &str, extension: &str, max_files: usize) -> Option<PathBuf> {
+    let cache_dir = corpus_cache_root().join(r2_prefix);
+
+    // Fetch manifest
+    let manifest_url = format!("{}/{}/manifest.tsv", CORPUS_BASE_URL, r2_prefix);
+    let manifest_bytes = match imageflow_http_helpers::fetch_bytes(&manifest_url) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("  failed to fetch manifest for {r2_prefix}: {e}");
+            return None;
+        }
+    };
+    let manifest = String::from_utf8_lossy(&manifest_bytes);
+    let entries = parse_manifest_for_ext(&manifest, extension, max_files);
+
+    if entries.is_empty() {
+        eprintln!("  no {extension} files in {r2_prefix} manifest");
+        return None;
+    }
+
+    // Download missing files
+    let mut downloaded = 0usize;
+    let mut cached = 0usize;
+    for (filename, _size) in &entries {
+        let file_path = cache_dir.join(filename);
+        if file_path.exists() {
+            cached += 1;
+            continue;
+        }
+        let url = format!("{}/{}/{}", CORPUS_BASE_URL, r2_prefix, filename);
+        match imageflow_http_helpers::fetch_bytes(&url) {
+            Ok(bytes) => {
+                if let Some(parent) = file_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                if std::fs::write(&file_path, &bytes).is_ok() {
+                    downloaded += 1;
+                }
+            }
+            Err(e) => {
+                eprintln!("  failed to download {r2_prefix}/{filename}: {e}");
+            }
+        }
+    }
+
+    if downloaded > 0 || cached > 0 {
+        eprintln!(
+            "  corpus {r2_prefix}/*.{extension}: {cached} cached, {downloaded} downloaded, {} total",
+            cached + downloaded
+        );
+        Some(cache_dir)
+    } else {
+        None
+    }
+}
+
+/// Resolve a corpus directory: use local path if it exists, otherwise download from R2.
+fn resolve_corpus_dir(
+    local_dir: &Path,
+    r2_prefix: &str,
+    extension: &str,
+    max_files: usize,
+) -> Option<PathBuf> {
+    if local_dir.is_dir() {
+        return Some(local_dir.to_path_buf());
+    }
+    // Check if cache already has files
+    let cache_dir = corpus_cache_root().join(r2_prefix);
+    if cache_dir.is_dir() {
+        let mut files = Vec::new();
+        collect_files_recursive(&cache_dir, extension, &mut files, 1);
+        if !files.is_empty() {
+            return Some(cache_dir);
+        }
+    }
+    ensure_corpus_cached(r2_prefix, extension, max_files)
+}
+
 /// Report corpus results: print summary and save failures to a log file.
 fn report_corpus(
     format_name: &str,
@@ -858,186 +974,110 @@ fn report_corpus(
 
 // ── JPEG corpus ────────────────────────────────────────────────────────────
 
+fn scraping_corpus(local: &str, r2_prefix: &str, ext: &str, target: &str, max: usize) {
+    let local_dir = Path::new(local);
+    let dir = match resolve_corpus_dir(local_dir, r2_prefix, ext, max) {
+        Some(d) => d,
+        None => {
+            eprintln!("skipping {r2_prefix}: not available locally or from R2");
+            return;
+        }
+    };
+    let (ok, fail) = corpus_scan(&dir, ext, target, max);
+    report_corpus(r2_prefix, target, ok, &fail);
+}
+
 #[test]
 fn corpus_jpeg_to_jpeg() {
-    let dir = Path::new("/mnt/v/datasets/scraping/jpeg");
-    if !dir.exists() {
-        eprintln!("skipping corpus_jpeg_to_jpeg: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "jpg", "jpg", 200);
-    report_corpus("jpeg", "jpg", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/jpeg", "source_jpegs", "jpg", "jpg", 200);
 }
 
 #[test]
 fn corpus_jpeg_to_webp() {
-    let dir = Path::new("/mnt/v/datasets/scraping/jpeg");
-    if !dir.exists() {
-        eprintln!("skipping corpus_jpeg_to_webp: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "jpg", "webp", 200);
-    report_corpus("jpeg", "webp", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/jpeg", "source_jpegs", "jpg", "webp", 200);
 }
 
 #[test]
 fn corpus_jpeg_to_png() {
-    let dir = Path::new("/mnt/v/datasets/scraping/jpeg");
-    if !dir.exists() {
-        eprintln!("skipping corpus_jpeg_to_png: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "jpg", "png", 200);
-    report_corpus("jpeg", "png", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/jpeg", "source_jpegs", "jpg", "png", 200);
 }
 
 // ── WebP corpus ────────────────────────────────────────────────────────────
 
 #[test]
 fn corpus_webp_to_jpeg() {
-    let dir = Path::new("/mnt/v/datasets/scraping/webp");
-    if !dir.exists() {
-        eprintln!("skipping corpus_webp_to_jpeg: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "webp", "jpg", 200);
-    report_corpus("webp", "jpg", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/webp", "webp", "webp", "jpg", 200);
 }
 
 #[test]
 fn corpus_webp_to_png() {
-    let dir = Path::new("/mnt/v/datasets/scraping/webp");
-    if !dir.exists() {
-        eprintln!("skipping corpus_webp_to_png: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "webp", "png", 200);
-    report_corpus("webp", "png", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/webp", "webp", "webp", "png", 200);
 }
 
 #[test]
 fn corpus_webp_to_webp() {
-    let dir = Path::new("/mnt/v/datasets/scraping/webp");
-    if !dir.exists() {
-        eprintln!("skipping corpus_webp_to_webp: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "webp", "webp", 200);
-    report_corpus("webp", "webp", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/webp", "webp", "webp", "webp", 200);
 }
 
 // ── JXL corpus ─────────────────────────────────────────────────────────────
 
 #[test]
 fn corpus_jxl_to_jpeg() {
-    let dir = Path::new("/mnt/v/datasets/scraping/jxl");
-    if !dir.exists() {
-        eprintln!("skipping corpus_jxl_to_jpeg: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "jxl", "jpg", 200);
-    report_corpus("jxl", "jpg", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/jxl", "jxl", "jxl", "jpg", 200);
 }
 
 #[test]
 fn corpus_jxl_to_png() {
-    let dir = Path::new("/mnt/v/datasets/scraping/jxl");
-    if !dir.exists() {
-        eprintln!("skipping corpus_jxl_to_png: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "jxl", "png", 200);
-    report_corpus("jxl", "png", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/jxl", "jxl", "jxl", "png", 200);
 }
 
 #[test]
 fn corpus_jxl_to_webp() {
-    let dir = Path::new("/mnt/v/datasets/scraping/jxl");
-    if !dir.exists() {
-        eprintln!("skipping corpus_jxl_to_webp: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "jxl", "webp", 200);
-    report_corpus("jxl", "webp", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/jxl", "jxl", "jxl", "webp", 200);
 }
 
 // ── AVIF corpus ────────────────────────────────────────────────────────────
 
 #[test]
 fn corpus_avif_to_jpeg() {
-    let dir = Path::new("/mnt/v/datasets/scraping/avif");
-    if !dir.exists() {
-        eprintln!("skipping corpus_avif_to_jpeg: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "avif", "jpg", 200);
-    report_corpus("avif", "jpg", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/avif", "avif", "avif", "jpg", 200);
 }
 
 #[test]
 fn corpus_avif_to_png() {
-    let dir = Path::new("/mnt/v/datasets/scraping/avif");
-    if !dir.exists() {
-        eprintln!("skipping corpus_avif_to_png: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "avif", "png", 200);
-    report_corpus("avif", "png", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/avif", "avif", "avif", "png", 200);
 }
 
 #[test]
 fn corpus_avif_to_webp() {
-    let dir = Path::new("/mnt/v/datasets/scraping/avif");
-    if !dir.exists() {
-        eprintln!("skipping corpus_avif_to_webp: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "avif", "webp", 200);
-    report_corpus("avif", "webp", ok, &fail);
+    scraping_corpus("/mnt/v/datasets/scraping/avif", "avif", "avif", "webp", 200);
 }
 
 // ── HEIC corpus ────────────────────────────────────────────────────────────
 
 #[test]
 fn corpus_heic_to_jpeg() {
-    let dir = Path::new("/mnt/v/heic");
-    if !dir.exists() {
-        eprintln!("skipping corpus_heic_to_jpeg: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "heic", "jpg", 50);
-    report_corpus("heic", "jpg", ok, &fail);
+    scraping_corpus("/mnt/v/heic", "heic", "heic", "jpg", 50);
 }
 
 #[test]
 fn corpus_heic_to_png() {
-    let dir = Path::new("/mnt/v/heic");
-    if !dir.exists() {
-        eprintln!("skipping corpus_heic_to_png: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "heic", "png", 50);
-    report_corpus("heic", "png", ok, &fail);
+    scraping_corpus("/mnt/v/heic", "heic", "heic", "png", 50);
 }
 
 // ── Weird/conformance corpus ───────────────────────────────────────────────
 
 #[test]
 fn corpus_weird_avif_to_png() {
-    let dir = Path::new("/mnt/v/datasets/scraping/weird/avif");
-    if !dir.exists() {
-        eprintln!("skipping corpus_weird_avif_to_png: {dir:?} not found");
-        return;
-    }
-    let (ok, fail) = corpus_scan(dir, "avif", "png", 100);
-    report_corpus("weird_avif", "png", ok, &fail);
+    // R2 weird/ has avif subdirs; resolve_corpus_dir handles recursive scan
+    scraping_corpus("/mnt/v/datasets/scraping/weird/avif", "weird", "avif", "png", 100);
 }
 
 #[test]
 fn corpus_weird_jxl_to_png() {
     let dir = Path::new("/mnt/v/datasets/scraping/weird/jxl");
     if !dir.exists() {
-        eprintln!("skipping corpus_weird_jxl_to_png: {dir:?} not found");
+        eprintln!("skipping corpus_weird_jxl_to_png: no local JXL weird files and not in R2");
         return;
     }
     let (ok, fail) = corpus_scan(dir, "jxl", "png", 100);
@@ -1048,7 +1088,7 @@ fn corpus_weird_jxl_to_png() {
 fn corpus_weird_webp_to_png() {
     let dir = Path::new("/mnt/v/datasets/scraping/weird/webp");
     if !dir.exists() {
-        eprintln!("skipping corpus_weird_webp_to_png: {dir:?} not found");
+        eprintln!("skipping corpus_weird_webp_to_png: no local WebP weird files and not in R2");
         return;
     }
     let (ok, fail) = corpus_scan(dir, "webp", "png", 100);
@@ -1057,50 +1097,49 @@ fn corpus_weird_webp_to_png() {
 
 // ── ICC profile corpus (non-sRGB) ─────────────────────────────────────────
 
-#[test]
-fn corpus_icc_adobe_rgb_to_jpeg() {
-    let dir = Path::new("/mnt/v/datasets/non-srgb-by-profile/adobe-rgb");
-    if !dir.exists() {
-        eprintln!("skipping corpus_icc_adobe_rgb_to_jpeg: {dir:?} not found");
-        return;
-    }
+fn icc_corpus(subdir: &str, target: &str) {
+    let local_dir = Path::new("/mnt/v/datasets/non-srgb-by-profile").join(subdir);
+    // R2 has non-srgb-by-profile/{subdir}/files — download the whole prefix,
+    // then scan the subdir within the cache.
+    let dir = if local_dir.is_dir() {
+        local_dir
+    } else {
+        // Ensure files cached for this subdir (download from non-srgb-by-profile prefix)
+        // The manifest entries are like "adobe-rgb/file.webp" so they'll go into
+        // .image-cache/corpus/non-srgb-by-profile/adobe-rgb/file.webp
+        let r2_prefix = "non-srgb-by-profile";
+        for ext in &["webp", "jpg", "png"] {
+            let _ = ensure_corpus_cached(r2_prefix, ext, 100);
+        }
+        let cache_dir = corpus_cache_root().join(r2_prefix).join(subdir);
+        if !cache_dir.is_dir() {
+            eprintln!("skipping icc/{subdir}: not available locally or from R2");
+            return;
+        }
+        cache_dir
+    };
     // Mix of .webp and .jpg files — scan both
-    let (ok_webp, fail_webp) = corpus_scan(dir, "webp", "jpg", 100);
-    let (ok_jpg, fail_jpg) = corpus_scan(dir, "jpg", "jpg", 100);
+    let (ok_webp, fail_webp) = corpus_scan(&dir, "webp", target, 100);
+    let (ok_jpg, fail_jpg) = corpus_scan(&dir, "jpg", target, 100);
     let ok = ok_webp + ok_jpg;
     let mut fail = fail_webp;
     fail.extend(fail_jpg);
-    report_corpus("icc_adobe_rgb", "jpg", ok, &fail);
+    report_corpus(&format!("icc_{subdir}"), target, ok, &fail);
+}
+
+#[test]
+fn corpus_icc_adobe_rgb_to_jpeg() {
+    icc_corpus("adobe-rgb", "jpg");
 }
 
 #[test]
 fn corpus_icc_display_p3_to_jpeg() {
-    let dir = Path::new("/mnt/v/datasets/non-srgb-by-profile/display-p3");
-    if !dir.exists() {
-        eprintln!("skipping corpus_icc_display_p3_to_jpeg: {dir:?} not found");
-        return;
-    }
-    let (ok_webp, fail_webp) = corpus_scan(dir, "webp", "jpg", 100);
-    let (ok_jpg, fail_jpg) = corpus_scan(dir, "jpg", "jpg", 100);
-    let ok = ok_webp + ok_jpg;
-    let mut fail = fail_webp;
-    fail.extend(fail_jpg);
-    report_corpus("icc_display_p3", "jpg", ok, &fail);
+    icc_corpus("display-p3", "jpg");
 }
 
 #[test]
 fn corpus_icc_prophoto_to_jpeg() {
-    let dir = Path::new("/mnt/v/datasets/non-srgb-by-profile/prophoto-rgb");
-    if !dir.exists() {
-        eprintln!("skipping corpus_icc_prophoto_to_jpeg: {dir:?} not found");
-        return;
-    }
-    let (ok_webp, fail_webp) = corpus_scan(dir, "webp", "jpg", 100);
-    let (ok_jpg, fail_jpg) = corpus_scan(dir, "jpg", "jpg", 100);
-    let ok = ok_webp + ok_jpg;
-    let mut fail = fail_webp;
-    fail.extend(fail_jpg);
-    report_corpus("icc_prophoto", "jpg", ok, &fail);
+    icc_corpus("prophoto-rgb", "jpg");
 }
 
 // ── corpus-builder comprehensive tests ────────────────────────────────────
@@ -1118,11 +1157,14 @@ fn cb_scan_limit(
     target: &str,
     max: usize,
 ) -> (usize, Vec<(PathBuf, String)>) {
-    let dir = Path::new(CORPUS_BUILDER).join(subdir);
-    if !dir.exists() {
-        eprintln!("skipping corpus-builder/{subdir}: not found");
-        return (0, vec![]);
-    }
+    let local_dir = Path::new(CORPUS_BUILDER).join(subdir);
+    let dir = match resolve_corpus_dir(&local_dir, subdir, ext, max) {
+        Some(d) => d,
+        None => {
+            eprintln!("skipping corpus-builder/{subdir}: not available locally or from R2");
+            return (0, vec![]);
+        }
+    };
     corpus_scan(&dir, ext, target, max)
 }
 
@@ -1475,9 +1517,9 @@ fn cb_jxl_to_gif() {
 const JXL_ANIM_DIR: &str = "/mnt/v/output/jxl-encoder/animation";
 
 fn jxl_anim_scan(target: &str) -> (usize, Vec<(PathBuf, String)>) {
-    // Try corpus-builder first
+    // Try corpus-builder first (with R2 fallback)
     let (ok1, fail1) = cb_scan("jxl-animated", "jxl", target);
-    // Also scan the jxl-encoder animation output
+    // Also scan the jxl-encoder animation output (local only)
     let dir = Path::new(JXL_ANIM_DIR);
     if !dir.exists() {
         return (ok1, fail1);
@@ -1604,11 +1646,20 @@ fn cb_gif_anim_to_avif() {
 const WIDE_GAMUT_EXTS: &[&str] = &["jpg", "png", "avif", "webp", "jxl", "heic"];
 
 fn cb_wide_gamut_to(target: &str) {
-    let dir = Path::new(CORPUS_BUILDER).join("wide-gamut");
-    if !dir.exists() {
-        eprintln!("skipping corpus-builder/wide-gamut: not found");
-        return;
-    }
+    let local_dir = Path::new(CORPUS_BUILDER).join("wide-gamut");
+    let dir = if local_dir.is_dir() {
+        local_dir
+    } else {
+        for ext in WIDE_GAMUT_EXTS {
+            let _ = ensure_corpus_cached("wide-gamut", ext, 500);
+        }
+        let cache = corpus_cache_root().join("wide-gamut");
+        if !cache.is_dir() {
+            eprintln!("skipping corpus-builder/wide-gamut: not available locally or from R2");
+            return;
+        }
+        cache
+    };
     let mut ok_total = 0;
     let mut fail_total = Vec::new();
     for ext in WIDE_GAMUT_EXTS {
@@ -1649,11 +1700,20 @@ fn cb_wide_gamut_to_avif() {
 const WEIRD_EXTS: &[&str] = &["avif", "jxl", "webp", "png", "jpg"];
 
 fn cb_weird_to(target: &str) {
-    let dir = Path::new(CORPUS_BUILDER).join("weird");
-    if !dir.exists() {
-        eprintln!("skipping corpus-builder/weird: not found");
-        return;
-    }
+    let local_dir = Path::new(CORPUS_BUILDER).join("weird");
+    let dir = if local_dir.is_dir() {
+        local_dir
+    } else {
+        for ext in WEIRD_EXTS {
+            let _ = ensure_corpus_cached("weird", ext, 500);
+        }
+        let cache = corpus_cache_root().join("weird");
+        if !cache.is_dir() {
+            eprintln!("skipping corpus-builder/weird: not available locally or from R2");
+            return;
+        }
+        cache
+    };
     let mut ok_total = 0;
     let mut fail_total = Vec::new();
     for ext in WEIRD_EXTS {
@@ -1694,9 +1754,10 @@ fn cb_weird_to_avif() {
 const REPRO_EXTS: &[&str] = &["avif", "jxl", "webp", "png", "jpg", "gif", "heic"];
 
 fn cb_repro_to(target: &str) {
+    // repro-images not uploaded to R2 (190k+ files, dir walk takes >60s)
     let dir = Path::new(CORPUS_BUILDER).join("repro-images");
     if !dir.exists() {
-        eprintln!("skipping corpus-builder/repro-images: not found");
+        eprintln!("skipping corpus-builder/repro-images: not found (local only)");
         return;
     }
     let mut ok_total = 0;
@@ -1732,13 +1793,15 @@ fn cb_repro_to_webp() {
 const HEIC_DIR: &str = "/mnt/v/heic";
 
 fn heic_scan(target: &str) {
-    let dir = Path::new(HEIC_DIR);
-    if !dir.exists() {
-        eprintln!("skipping heic: not found");
-        return;
-    }
-    // collect_files_recursive uses eq_ignore_ascii_case, so "heic" matches .HEIC
-    let (ok, fail) = corpus_scan(dir, "heic", target, 500);
+    let local_dir = Path::new(HEIC_DIR);
+    let dir = match resolve_corpus_dir(local_dir, "heic", "heic", 500) {
+        Some(d) => d,
+        None => {
+            eprintln!("skipping heic: not available locally or from R2");
+            return;
+        }
+    };
+    let (ok, fail) = corpus_scan(&dir, "heic", target, 500);
     report_corpus("heic", target, ok, &fail);
 }
 
@@ -1772,11 +1835,22 @@ fn heic_to_jxl() {
 const NON_SRGB_DIR: &str = "/mnt/v/datasets/non-srgb-by-profile";
 
 fn icc_profile_scan(subdir: &str, target: &str) {
-    let dir = Path::new(NON_SRGB_DIR).join(subdir);
-    if !dir.exists() {
-        eprintln!("skipping non-srgb-by-profile/{subdir}: not found");
-        return;
-    }
+    let local_dir = Path::new(NON_SRGB_DIR).join(subdir);
+    let dir = if local_dir.is_dir() {
+        local_dir
+    } else {
+        // Download from R2 — manifest entries include subdir prefix
+        let r2_prefix = "non-srgb-by-profile";
+        for ext in &["jpg", "png", "avif", "webp", "jxl"] {
+            let _ = ensure_corpus_cached(r2_prefix, ext, 500);
+        }
+        let cache = corpus_cache_root().join(r2_prefix).join(subdir);
+        if !cache.is_dir() {
+            eprintln!("skipping non-srgb-by-profile/{subdir}: not available locally or from R2");
+            return;
+        }
+        cache
+    };
     let mut ok_total = 0;
     let mut fail_total = Vec::new();
     for ext in &["jpg", "png", "avif", "webp", "jxl", "tiff", "tif"] {
@@ -1856,11 +1930,21 @@ const DECODE_ERRORS_DIR: &str = "/mnt/v/output/corpus-builder/decode-errors";
 /// Asserts: no panics. Errors are expected and counted.
 fn decode_error_scan(target: &str) {
     test_init();
-    let dir = Path::new(DECODE_ERRORS_DIR);
-    if !dir.exists() {
-        eprintln!("skipping decode-errors: not found");
-        return;
+    let local_dir = Path::new(DECODE_ERRORS_DIR);
+    let dir = match resolve_corpus_dir(local_dir, "decode-errors", "bin", 500) {
+        Some(d) => d,
+        None => {
+            eprintln!("skipping decode-errors: not available locally or from R2");
+            return;
+        }
+    };
+    // Also ensure non-.bin extensions are cached (jpg, png, gif, etc.)
+    if !local_dir.is_dir() {
+        for ext in &["jpg", "png", "gif", "webp", "jxl", "avif"] {
+            let _ = ensure_corpus_cached("decode-errors", ext, 500);
+        }
     }
+    let dir = &dir;
 
     let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
         .unwrap()
