@@ -11,19 +11,24 @@ tolerance off-by-one
 ## test_watermark_image dice_fitcrop_90pct
 tolerance off-by-one
 ~ extra-ark-0befdcb767:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ brute-pulse-dfd87e28bf:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## test_watermark_image_command_string_with_bgcolor dice_aaeeff
 tolerance off-by-one
 ~ extra-ark-0befdcb767:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ brute-pulse-dfd87e28bf:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## test_watermark_image_command_string dice_fitcrop_90pct
 tolerance off-by-one
 ~ extra-ark-0befdcb767:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ brute-pulse-dfd87e28bf:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## test_watermark_image_pixel_margins webp_700px_offset
 tolerance off-by-one
 ~ lazy-colt-ab2ccbfaf3:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ local-snail-f215891de4:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## test_watermark_image_small webp_within_90pct
 tolerance off-by-one
 ~ grand-sloth-8c5b9b6295:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ bald-loom-47629eaaa3:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch

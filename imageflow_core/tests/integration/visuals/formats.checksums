@@ -20,6 +20,7 @@ tolerance zensim:95 (dissim 0.05)
 ## gif_to_jxl_lossy 300x300_jxl_d1
 tolerance zensim:95 (dissim 0.05)
 ~ lean-ring-b6b19cfdeb:sea  x86_64-avx512  @41573149  new-baseline
+~ numb-bat-959ba851c4:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## gif_to_png 300x300_png32
 tolerance zensim:99 (dissim 0.01)
@@ -48,6 +49,7 @@ tolerance zensim:99 (dissim 0.01)
 ## jpeg_to_jxl_lossy 300x300_jxl_d1
 tolerance zensim:95 (dissim 0.05)
 ~ fast-dock-4af2a6c0f6:sea  x86_64-avx512  @41573149  new-baseline
+~ real-mule-e18e46fc91:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## jpeg_to_png 300x300_png32
 tolerance zensim:99 (dissim 0.01)
@@ -60,6 +62,7 @@ tolerance zensim:99 (dissim 0.01)
 ## jpeg_to_webp_lossy 300x300_webp_q80
 tolerance zensim:95 (dissim 0.05)
 ~ crisp-frog-38c80bab06:sea  x86_64-avx512  @41573149  new-baseline
+~ funny-ant-0484be988f:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## passthrough_jxl_lossless passthrough_jxl_ll
 tolerance zensim:99 (dissim 0.01)
@@ -80,6 +83,7 @@ tolerance zensim:50 (dissim 0.50)
 ## png_alpha_to_jpeg 200x200_jpeg_q90
 tolerance zensim:95 (dissim 0.05)
 ~ odd-slate-edf551a32c:sea  x86_64-avx512  @41573149  new-baseline
+~ lined-hare-499e3e3b0a:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## png_alpha_to_png 200x200_png32
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
@@ -92,6 +96,7 @@ tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 ## png_alpha_to_webp_lossy 200x200_webp_q80
 tolerance zensim:90 (dissim 0.10)
 ~ aged-boot-f204fac4e3:sea  x86_64-avx512  @41573149  new-baseline
+~ rough-poppy-3c55be3eb8:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## png_to_avif 400x400_avif
 tolerance zensim:45 (dissim 0.55)
@@ -104,6 +109,7 @@ tolerance zensim:50 (dissim 0.50)
 ## png_to_jpeg 400x400_q80
 tolerance zensim:95 (dissim 0.05)
 ~ quiet-dust-043020baa5:sea  x86_64-avx512  @41573149  new-baseline
+~ dense-eel-daa1c7f95b:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## png_to_jxl_lossless 400x400_jxl_ll
 tolerance zensim:99 (dissim 0.01)
@@ -112,6 +118,7 @@ tolerance zensim:99 (dissim 0.01)
 ## png_to_jxl_lossy 400x400_jxl_d1
 tolerance zensim:95 (dissim 0.05)
 ~ plain-jade-753843f928:sea  x86_64-avx512  @41573149  new-baseline
+~ cool-lace-64f99a1ac4:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## png_to_png 400x400_png32
 tolerance zensim:99 (dissim 0.01)
@@ -124,6 +131,7 @@ tolerance zensim:99 (dissim 0.01)
 ## png_to_webp_lossy 400x400_webp_q80
 tolerance zensim:95 (dissim 0.05)
 ~ born-eel-212ffaad68:sea  x86_64-avx512  @41573149  new-baseline
+~ sandy-drum-abcde6705d:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## webp_lossless_to_gif 200x200_gif
 tolerance zensim:50 (dissim 0.50)
@@ -132,10 +140,12 @@ tolerance zensim:50 (dissim 0.50)
 ## webp_lossless_to_jpeg 200x200_jpeg_q80
 tolerance zensim:95 (dissim 0.05)
 ~ airy-squid-c0e92b8a70:sea  x86_64-avx512  @41573149  new-baseline
+~ mild-cobra-4baefe6d9a:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## webp_lossless_to_jxl_lossy 200x200_jxl_d1
 tolerance zensim:95 (dissim 0.05)
 ~ swift-mesa-ef43e67dd5:sea  x86_64-avx512  @41573149  new-baseline
+~ regal-hill-c9b1692f10:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## webp_lossless_to_png 200x200_png32
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
@@ -144,6 +154,7 @@ tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 ## webp_lossless_to_webp_lossy 200x200_webp_q80
 tolerance zensim:95 (dissim 0.05)
 ~ neat-moth-f85e66dbe4:sea  x86_64-avx512  @41573149  new-baseline
+~ sharp-crow-b7255483ae:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## webp_lossy_to_jpeg 300x300_jpeg_q80
 tolerance zensim:95 (dissim 0.05)
@@ -152,7 +163,9 @@ tolerance zensim:95 (dissim 0.05)
 ## webp_lossy_to_jxl_lossy 300x300_jxl_d1
 tolerance zensim:95 (dissim 0.05)
 ~ level-raven-6f309543ef:sea  x86_64-avx512  @41573149  new-baseline
+~ loud-ore-f7d80db773:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## webp_lossy_to_png 300x300_png32
 tolerance zensim:99 (dissim 0.01)
 ~ damp-clay-22ccabff02:sea  x86_64-avx512  @41573149  new-baseline
+~ fatal-den-9b700ee723:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch

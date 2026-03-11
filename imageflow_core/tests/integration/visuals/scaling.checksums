@@ -35,3 +35,4 @@ tolerance off-by-one
 ## test_scale_image waterhouse_robidoux_400x300
 tolerance off-by-one
 ~ cool-gust-d812df6d94:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ lucid-moss-959df0ab04:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch

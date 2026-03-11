@@ -31,6 +31,7 @@ tolerance off-by-one
 ## test_webp_to_webp_quality q5_100x100
 tolerance zensim:95 (dissim 0.05)
 ~ false-reed-eb43f7fd24:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ half-petal-5031e6e4c0:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## test_transparent_webp_to_webp lossless_100x100
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
@@ -68,10 +69,12 @@ tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 ## test_crop_with_preshrink 170x220_crop
 tolerance off-by-one
 ~ legal-node-3033e4844b:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ north-wolf-9af41f4dd0:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## test_jpeg_crop waterhouse_100x200
 tolerance off-by-one
 ~ stiff-mast-ed651e0e0d:sea  x86_64-avx512  @c4c85640  auto-accepted
+~ mere-pike-aa13208189:sea  x86_64-avx512  @420b8b97  zen-codec-dispatch
 
 ## test_problematic_png_lossy crop_1230x760
 tolerance zensim:95 (dissim 0.05)
