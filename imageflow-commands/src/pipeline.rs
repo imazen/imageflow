@@ -37,8 +37,11 @@ pub enum Step {
     Orient(OrientStep),
     FlipH,
     FlipV,
+    #[serde(alias = "rotate_90")]
     Rotate90,
+    #[serde(alias = "rotate_180")]
     Rotate180,
+    #[serde(alias = "rotate_270")]
     Rotate270,
     Transpose,
 

@@ -35,6 +35,8 @@ pub enum ConstraintMode {
     Fit,
     /// Scale so the smaller dimension matches. Result is at most target size.
     Within,
+    /// Ensure the image is at least as large as the target. Upscale if needed.
+    LargerThan,
     /// Fit then crop to exact target dimensions.
     FitCrop,
     /// Within then crop to exact target dimensions.
@@ -86,7 +88,9 @@ pub enum Filter {
     RobidouxFast,
     Lanczos,
     LanczosSharp,
+    #[serde(alias = "lanczos_2")]
     Lanczos2,
+    #[serde(alias = "lanczos_2_sharp")]
     Lanczos2Sharp,
     Ginseng,
     GinsengSharp,
@@ -100,7 +104,9 @@ pub enum Filter {
     Cubic,
     CubicSharp,
     CubicFast,
+    #[serde(alias = "n_cubic")]
     NCubic,
+    #[serde(alias = "n_cubic_sharp")]
     NCubicSharp,
     Jinc,
     Linear,

@@ -63,12 +63,20 @@ pub enum ColorFilterStep {
     GrayscaleNtsc,
     /// Equal-weight grayscale.
     GrayscaleFlat,
+    /// R-Y channel grayscale (legacy imageflow filter).
+    GrayscaleRy,
     /// Sepia tone.
     Sepia,
     /// Color inversion.
     Invert,
     /// Multiply alpha channel (0.0–1.0).
     Alpha(f32),
+    /// Contrast adjustment factor (1.0 = no change).
+    Contrast(f32),
+    /// Brightness adjustment factor (1.0 = no change).
+    Brightness(f32),
+    /// Saturation adjustment factor (1.0 = no change).
+    Saturation(f32),
 }
 
 /// Oklab L-channel sharpening (no color fringing).
