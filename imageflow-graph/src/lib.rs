@@ -38,9 +38,12 @@ mod node;
 
 pub use builder::GraphBuilder;
 pub use compiler::CompiledGraph;
-pub use engine::GraphEngine;
+pub use engine::{
+    EncodeOutput, ExecutionContext, ExecutionResult, FrameHandle, GraphEngine, StepOutput,
+};
 pub use error::{GraphError, Result};
 pub use estimate::{FrameEstimate, FrameInfo};
 pub use node::{
-    EdgeKind, GraphNode, NodeDef, NodeIndex, NodeResult, StableNodeId, StreamingSupport,
+    EdgeKind, GraphNode, InternalParams, NodeDef, NodeIndex, NodeParams, NodeResult, StableNodeId,
+    StreamingSupport,
 };

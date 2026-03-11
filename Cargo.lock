@@ -1443,6 +1443,8 @@ dependencies = [
  "heic-decoder",
  "hex",
  "image",
+ "imageflow-commands",
+ "imageflow-graph",
  "imageflow_c_components",
  "imageflow_helpers",
  "imageflow_http_helpers",

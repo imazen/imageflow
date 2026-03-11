@@ -1,4 +1,5 @@
 pub(crate) mod v1;
+pub(crate) mod v2;
 use super::parse_json;
 use crate::internal_prelude::works_everywhere::*;
 use crate::json::*;
@@ -13,6 +14,11 @@ use std::io::Write;
 use std::path::Path;
 
 pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonResponse> {
+    // Route v2/* to the new graph engine
+    if method.starts_with("v2/") {
+        return v2::invoke(context, method, json);
+    }
+
     let redirect = match method {
         "v0.1/build" => "v1/build",
         "v0.1/get_image_info" => "v1/get_image_info",
