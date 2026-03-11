@@ -264,3 +264,99 @@ impl graph::ExecutionContext for V2ExecutionAdapter<'_> {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Minimal JPEG: 1x1 pixel, valid enough to register as input.
+    const TINY_JPEG_HEX: &str = "FFD8FFE000104A46494600010101004800480000\
+        FFDB004300FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\
+        FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\
+        FFC2000B080001000101011100FFC40014100100000000000000000000000000000000\
+        FFDA0008010100013F10";
+
+    fn build_request_json(steps_json: &str) -> String {
+        format!(
+            r#"{{
+                "io": [
+                    {{ "io_id": 0, "direction": "in", "bytes_hex": "{}" }},
+                    {{ "io_id": 1, "direction": "out", "output_buffer": null }}
+                ],
+                "pipeline": {{ "steps": {} }},
+                "security": null
+            }}"#,
+            TINY_JPEG_HEX, steps_json
+        )
+    }
+
+    #[test]
+    fn v2_build_parses_and_routes() {
+        let json = build_request_json(
+            r#"[
+                { "decode": { "io_id": 0 } },
+                { "constrain": { "mode": "fit", "w": 100, "h": 100 } },
+                { "encode": { "io_id": 1, "format": "jpeg" } }
+            ]"#,
+        );
+
+        let mut ctx = Context::create().unwrap();
+        let response = crate::json::invoke(&mut ctx, "v2/build", json.as_bytes());
+
+        // Should fail at execution (adapter not implemented), not at parsing/routing/compilation
+        let err = response.unwrap_err();
+        let msg = format!("{}", err);
+        assert!(
+            msg.contains("not yet implemented"),
+            "Expected 'not yet implemented' error, got: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn v2_execute_parses_and_routes() {
+        let json = r#"{
+            "pipeline": {
+                "steps": [
+                    { "flip_h": null },
+                    { "flip_v": null }
+                ]
+            }
+        }"#;
+
+        let mut ctx = Context::create().unwrap();
+        let response = crate::json::invoke(&mut ctx, "v2/execute", json.as_bytes());
+
+        // Should fail at execution, not at routing/parsing
+        let err = response.unwrap_err();
+        let msg = format!("{}", err);
+        assert!(
+            msg.contains("not yet implemented"),
+            "Expected 'not yet implemented' error, got: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn v2_unknown_endpoint_returns_error() {
+        let mut ctx = Context::create().unwrap();
+        let response = crate::json::invoke(&mut ctx, "v2/nonexistent", b"{}");
+        assert!(response.is_err());
+    }
+
+    #[test]
+    fn v2_build_invalid_json_returns_parse_error() {
+        let mut ctx = Context::create().unwrap();
+        let response = crate::json::invoke(&mut ctx, "v2/build", b"not json");
+        assert!(response.is_err());
+    }
+
+    #[test]
+    fn v1_routing_unaffected() {
+        // Verify v1 endpoints still work after adding v2 routing
+        let mut ctx = Context::create().unwrap();
+        let response = crate::json::invoke(&mut ctx, "v1/get_version_info", b"{}");
+        let resp = response.unwrap();
+        assert!(resp.status_2xx());
+    }
+}
