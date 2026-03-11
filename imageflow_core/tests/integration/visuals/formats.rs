@@ -1976,3 +1976,290 @@ fn decode_errors_to_avif() {
 fn decode_errors_to_gif() {
     decode_error_scan("gif");
 }
+
+// ── Inline malformed WebP inputs ────────────────────────────────────────
+// Crafted byte sequences targeting zenwebp decoder panic paths.
+// These don't depend on external files, so they run in CI.
+
+/// Build a minimal RIFF WEBP container around the given payload.
+/// The RIFF size field is set to `payload.len() + 4` (for "WEBP").
+fn riff_webp(payload: &[u8]) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(12 + payload.len());
+    buf.extend_from_slice(b"RIFF");
+    let size = (payload.len() + 4) as u32;
+    buf.extend_from_slice(&size.to_le_bytes());
+    buf.extend_from_slice(b"WEBP");
+    buf.extend_from_slice(payload);
+    buf
+}
+
+/// Build a RIFF WEBP container but lie about the RIFF size.
+fn riff_webp_with_size(riff_size: u32, payload: &[u8]) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(12 + payload.len());
+    buf.extend_from_slice(b"RIFF");
+    buf.extend_from_slice(&riff_size.to_le_bytes());
+    buf.extend_from_slice(b"WEBP");
+    buf.extend_from_slice(payload);
+    buf
+}
+
+/// Build a chunk: fourcc + declared_size (LE u32) + data.
+fn webp_chunk(fourcc: &[u8; 4], declared_size: u32, data: &[u8]) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(8 + data.len());
+    buf.extend_from_slice(fourcc);
+    buf.extend_from_slice(&declared_size.to_le_bytes());
+    buf.extend_from_slice(data);
+    buf
+}
+
+/// Build a minimal VP8 chunk payload (keyframe tag + magic + dimensions).
+fn vp8_header(width: u16, height: u16) -> Vec<u8> {
+    let mut data = Vec::new();
+    // 3-byte tag: bit 0 = 0 means keyframe, rest irrelevant
+    data.extend_from_slice(&[0x00, 0x00, 0x00]);
+    // VP8 magic: 9d 01 2a
+    data.extend_from_slice(&[0x9d, 0x01, 0x2a]);
+    data.extend_from_slice(&width.to_le_bytes());
+    data.extend_from_slice(&height.to_le_bytes());
+    data
+}
+
+/// Build a minimal VP8L chunk payload (signature + header with dimensions).
+fn vp8l_header(width: u16, height: u16) -> Vec<u8> {
+    let mut data = Vec::new();
+    data.push(0x2f); // VP8L signature
+                     // Header: version=0, width-1 in bits 0..13, height-1 in bits 14..27
+    let w = (width as u32).saturating_sub(1) & 0x3FFF;
+    let h = (height as u32).saturating_sub(1) & 0x3FFF;
+    let header = w | (h << 14); // version 0 = bits 29..31 = 0
+    data.extend_from_slice(&header.to_le_bytes());
+    data
+}
+
+/// Build a VP8X extended header payload (10 bytes).
+fn vp8x_header(flags: u8, width: u32, height: u32) -> Vec<u8> {
+    let mut data = Vec::new();
+    // Byte 0: flags (bit 1=animation, bit 4=alpha, bit 5=icc)
+    data.push(flags);
+    data.extend_from_slice(&[0u8; 3]); // reserved bytes
+                                       // Canvas width - 1 as 24-bit LE
+    let w = width.saturating_sub(1);
+    data.push((w & 0xFF) as u8);
+    data.push(((w >> 8) & 0xFF) as u8);
+    data.push(((w >> 16) & 0xFF) as u8);
+    // Canvas height - 1 as 24-bit LE
+    let h = height.saturating_sub(1);
+    data.push((h & 0xFF) as u8);
+    data.push(((h >> 8) & 0xFF) as u8);
+    data.push(((h >> 16) & 0xFF) as u8);
+    data
+}
+
+/// Run a single malformed input through imageflow, catching panics.
+/// Returns Ok(()) if no panic, Err(msg) if panic.
+fn run_malformed_webp(name: &str, data: Vec<u8>) -> Result<(), String> {
+    let result = std::panic::catch_unwind(|| {
+        let mut ctx = Context::create().unwrap();
+        ctx.add_input_vector(0, data)?;
+        ctx.add_output_buffer(1)?;
+        let _ = ctx.tell_decoder(0, DecoderCommand::IgnoreColorProfileErrors);
+        let execute = Execute001 {
+            graph_recording: None,
+            security: None,
+            framewise: Framewise::Steps(vec![Node::CommandString {
+                kind: CommandStringKind::ImageResizer4,
+                value: "w=100&h=100&mode=max&format=png".to_string(),
+                decode: Some(0),
+                encode: Some(1),
+                watermarks: None,
+            }]),
+        };
+        ctx.execute_1(execute)
+    });
+
+    match result {
+        Ok(Ok(_)) => {
+            eprintln!("  {name}: decoded successfully (unexpected but not a panic)");
+            Ok(())
+        }
+        Ok(Err(e)) => {
+            eprintln!("  {name}: error (expected): {e}");
+            Ok(())
+        }
+        Err(panic_info) => {
+            let msg = if let Some(s) = panic_info.downcast_ref::<&str>() {
+                s.to_string()
+            } else if let Some(s) = panic_info.downcast_ref::<String>() {
+                s.clone()
+            } else {
+                "unknown panic".to_string()
+            };
+            eprintln!("  {name}: PANIC — {msg}");
+            Err(format!("{name}: {msg}"))
+        }
+    }
+}
+
+#[test]
+fn malformed_webp_no_panics() {
+    test_init();
+    let mut panics = Vec::new();
+
+    let cases: Vec<(&str, Vec<u8>)> = vec![
+        // ── Oversized chunk declarations (trigger OOB slice at lines 1094/1112) ──
+        ("vp8_oversized_chunk", riff_webp(&webp_chunk(b"VP8 ", 100_000, &vp8_header(100, 100)))),
+        ("vp8l_oversized_chunk", riff_webp(&webp_chunk(b"VP8L", 100_000, &vp8l_header(100, 100)))),
+        // ── Truncated VP8 data ──
+        ("vp8_truncated_after_header", riff_webp(&webp_chunk(b"VP8 ", 10, &vp8_header(100, 100)))),
+        ("vp8l_truncated_after_header", riff_webp(&webp_chunk(b"VP8L", 5, &vp8l_header(100, 100)))),
+        // ── Zero dimensions ──
+        ("vp8_zero_width", riff_webp(&webp_chunk(b"VP8 ", 10, &vp8_header(0, 100)))),
+        ("vp8_zero_height", riff_webp(&webp_chunk(b"VP8 ", 10, &vp8_header(100, 0)))),
+        ("vp8_zero_both", riff_webp(&webp_chunk(b"VP8 ", 10, &vp8_header(0, 0)))),
+        // ── Huge dimensions ──
+        ("vp8_huge_dimensions", riff_webp(&webp_chunk(b"VP8 ", 10, &vp8_header(16383, 16383)))),
+        ("vp8l_huge_dimensions", riff_webp(&webp_chunk(b"VP8L", 5, &vp8l_header(16383, 16383)))),
+        // ── Bad magic / signature ──
+        (
+            "vp8_bad_magic",
+            riff_webp(&webp_chunk(b"VP8 ", 10, &{
+                let mut d = vp8_header(100, 100);
+                d[3] = 0xFF; // corrupt 9d → FF
+                d
+            })),
+        ),
+        (
+            "vp8_non_keyframe",
+            riff_webp(&webp_chunk(b"VP8 ", 10, &{
+                let mut d = vp8_header(100, 100);
+                d[0] = 0x01; // bit 0 = 1 means not keyframe
+                d
+            })),
+        ),
+        (
+            "vp8l_bad_signature",
+            riff_webp(&webp_chunk(b"VP8L", 5, &{
+                let mut d = vp8l_header(100, 100);
+                d[0] = 0x00; // not 0x2f
+                d
+            })),
+        ),
+        (
+            "vp8l_bad_version",
+            riff_webp(&webp_chunk(b"VP8L", 5, &{
+                let mut d = vp8l_header(100, 100);
+                // Set version bits (29..31) to non-zero
+                d[4] |= 0x20; // set bit 29
+                d
+            })),
+        ),
+        // ── RIFF size lies ──
+        (
+            "riff_size_too_large",
+            riff_webp_with_size(1_000_000, &webp_chunk(b"VP8 ", 10, &vp8_header(100, 100))),
+        ),
+        ("riff_size_zero", riff_webp_with_size(0, &webp_chunk(b"VP8 ", 10, &vp8_header(100, 100)))),
+        ("riff_size_four", riff_webp_with_size(4, &webp_chunk(b"VP8 ", 10, &vp8_header(100, 100)))),
+        // ── Empty / minimal containers ──
+        ("empty_riff_webp", riff_webp(&[])),
+        ("riff_webp_one_byte", riff_webp(&[0x00])),
+        ("vp8_empty_chunk", riff_webp(&webp_chunk(b"VP8 ", 0, &[]))),
+        ("vp8l_empty_chunk", riff_webp(&webp_chunk(b"VP8L", 0, &[]))),
+        // ── VP8X extended format edge cases ──
+        ("vp8x_no_subchunks", riff_webp(&webp_chunk(b"VP8X", 10, &vp8x_header(0, 100, 100)))),
+        (
+            "vp8x_animated_no_anmf",
+            riff_webp(&webp_chunk(b"VP8X", 10, &vp8x_header(0x02, 100, 100))),
+        ),
+        ("vp8x_alpha_no_alph_chunk", {
+            let mut payload = webp_chunk(b"VP8X", 10, &vp8x_header(0x10, 100, 100));
+            // Add a VP8 chunk after VP8X but no ALPH
+            payload.extend_from_slice(&webp_chunk(b"VP8 ", 10, &vp8_header(100, 100)));
+            riff_webp(&payload)
+        }),
+        ("vp8x_oversized_subchunk", {
+            let mut payload = webp_chunk(b"VP8X", 10, &vp8x_header(0, 100, 100));
+            // Sub-chunk claiming 500000 bytes
+            payload.extend_from_slice(&webp_chunk(b"VP8 ", 500_000, &vp8_header(100, 100)));
+            riff_webp(&payload)
+        }),
+        ("vp8x_alph_oversized", {
+            let mut payload = webp_chunk(b"VP8X", 10, &vp8x_header(0x10, 100, 100));
+            // ALPH chunk claiming huge size
+            payload.extend_from_slice(&webp_chunk(b"ALPH", 500_000, &[0u8; 4]));
+            // VP8 chunk
+            payload.extend_from_slice(&webp_chunk(b"VP8 ", 10, &vp8_header(100, 100)));
+            riff_webp(&payload)
+        }),
+        ("vp8x_iccp_oversized", {
+            let mut payload = webp_chunk(b"VP8X", 10, &vp8x_header(0x20, 100, 100));
+            // ICC chunk claiming huge size
+            payload.extend_from_slice(&webp_chunk(b"ICCP", 500_000, &[0u8; 4]));
+            payload.extend_from_slice(&webp_chunk(b"VP8L", 5, &vp8l_header(100, 100)));
+            riff_webp(&payload)
+        }),
+        // ── Animated WebP edge cases ──
+        ("vp8x_animated_truncated_anmf", {
+            let mut payload = webp_chunk(b"VP8X", 10, &vp8x_header(0x02, 100, 100));
+            // ANMF chunk with declared size 24 but only 8 bytes of data
+            payload.extend_from_slice(&webp_chunk(b"ANMF", 24, &[0u8; 8]));
+            riff_webp(&payload)
+        }),
+        ("vp8x_animated_anmf_zero_size", {
+            let mut payload = webp_chunk(b"VP8X", 10, &vp8x_header(0x02, 100, 100));
+            payload.extend_from_slice(&webp_chunk(b"ANMF", 0, &[]));
+            riff_webp(&payload)
+        }),
+        ("vp8x_animated_anmf_oversized", {
+            let mut payload = webp_chunk(b"VP8X", 10, &vp8x_header(0x02, 100, 100));
+            // ANMF claims 1MB but has 30 bytes
+            payload.extend_from_slice(&webp_chunk(b"ANMF", 1_000_000, &[0u8; 30]));
+            riff_webp(&payload)
+        }),
+        // ── Dimension / size mismatches ──
+        (
+            "vp8_dimensions_mismatch_riff",
+            // VP8 says 200x200 but chunk is tiny
+            riff_webp(&webp_chunk(b"VP8 ", 10, &vp8_header(200, 200))),
+        ),
+        ("vp8x_dimensions_vs_vp8", {
+            // VP8X says 100x100, VP8 says 200x200
+            let mut payload = webp_chunk(b"VP8X", 10, &vp8x_header(0, 100, 100));
+            payload.extend_from_slice(&webp_chunk(b"VP8 ", 10, &vp8_header(200, 200)));
+            riff_webp(&payload)
+        }),
+        // ── Random garbage after valid-looking header ──
+        ("vp8_garbage_data", {
+            let mut header = vp8_header(50, 50);
+            header.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE]);
+            riff_webp(&webp_chunk(b"VP8 ", header.len() as u32, &header))
+        }),
+        ("vp8l_garbage_data", {
+            let mut header = vp8l_header(50, 50);
+            header.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE]);
+            riff_webp(&webp_chunk(b"VP8L", header.len() as u32, &header))
+        }),
+        // ── Unknown chunk types ──
+        ("unknown_chunk_only", riff_webp(&webp_chunk(b"FAKE", 4, &[0u8; 4]))),
+        ("multiple_unknown_chunks", {
+            let mut payload = webp_chunk(b"XXXX", 4, &[0u8; 4]);
+            payload.extend_from_slice(&webp_chunk(b"YYYY", 4, &[0u8; 4]));
+            payload.extend_from_slice(&webp_chunk(b"ZZZZ", 4, &[0u8; 4]));
+            riff_webp(&payload)
+        }),
+    ];
+
+    for (name, data) in cases {
+        if let Err(msg) = run_malformed_webp(name, data) {
+            panics.push(msg);
+        }
+    }
+
+    eprintln!("malformed_webp: {} cases, {} panics", 35, panics.len());
+    assert!(
+        panics.is_empty(),
+        "Malformed WebP inputs caused {} panics:\n{}",
+        panics.len(),
+        panics.join("\n")
+    );
+}
