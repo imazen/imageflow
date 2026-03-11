@@ -5,7 +5,7 @@
 use imageflow_core::Context;
 use imageflow_types as s;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// Helper to create a context
 fn create_context() -> Box<Context> {
