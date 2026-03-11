@@ -17,8 +17,8 @@ use std::path::{Path, PathBuf};
 // Test corpus base URL (R2-hosted)
 // ============================================================================
 
-/// Public R2 URL for the test corpus. Change to custom domain when available.
-const CORPUS_BASE_URL: &str = "https://pub-d8ada59f59e24a12b65c6d53f96f3780.r2.dev";
+/// Public R2 URL for the test corpus.
+const CORPUS_BASE_URL: &str = "https://test-corpus.imageflow.org";
 
 // ============================================================================
 // Test source URLs (S3-hosted)
