@@ -11,6 +11,8 @@ members = [
     "imageflow_tool",
     "c_components",
 #    "c_components/tests",
+    "imageflow-commands",
+    "imageflow-graph",
 ]
 resolver = "2"
 

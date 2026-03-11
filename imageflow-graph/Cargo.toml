@@ -1,0 +1,10 @@
+[package]
+name = "imageflow-graph"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Graph-based image processing engine for the imageflow/zen ecosystem"
+license = "Apache-2.0 OR MIT"
+
+[dependencies]
+imageflow-commands = { path = "../imageflow-commands" }

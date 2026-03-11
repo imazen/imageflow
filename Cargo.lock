@@ -1379,6 +1379,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "imageflow-commands"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "imageflow-graph"
+version = "0.1.0"
+dependencies = [
+ "imageflow-commands",
+]
+
+[[package]]
 name = "imageflow_abi"
 version = "0.1.0"
 dependencies = [

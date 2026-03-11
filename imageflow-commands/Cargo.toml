@@ -1,0 +1,17 @@
+[package]
+name = "imageflow-commands"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Image processing command types for the imageflow/zen ecosystem"
+license = "Apache-2.0 OR MIT"
+
+[dependencies]
+serde = { version = "1", default-features = false, features = ["derive", "alloc"] }
+
+[dev-dependencies]
+serde_json = "1"
+
+[features]
+default = ["std"]
+std = ["serde/std"]
