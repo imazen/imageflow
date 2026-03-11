@@ -3,6 +3,7 @@ mod canvas;
 mod codec;
 mod codec_e2e;
 mod color;
+mod composition;
 mod formats;
 mod icc;
 mod idct;

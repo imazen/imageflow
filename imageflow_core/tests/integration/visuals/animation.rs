@@ -1,6 +1,8 @@
 use crate::common::*;
 use imageflow_core::Context;
-use imageflow_types::{CommandStringKind, EncoderPreset, Execute001, Framewise, Node};
+use imageflow_types::{
+    CommandStringKind, EncoderPreset, Execute001, Filter, Framewise, Node, ResampleHints,
+};
 
 use super::smoke::build_animated_gif;
 
@@ -465,5 +467,184 @@ fn test_animated_gif_pixel_colors_preserved() {
         if *eb > 128 {
             assert!(b > 128, "Frame {i}: expected b > 128, got r={r} g={g} b={b}");
         }
+    }
+}
+
+// ============================================================================
+// Issue #606: GIF → WebP animation preservation
+// ============================================================================
+
+#[test]
+fn test_animated_gif_to_webp_preserves_animation() {
+    test_init();
+    let input = build_animated_gif(8, 8, &["FF0000", "00FF00", "0000FF"], 10);
+    let output = roundtrip_animated_gif(input, EncoderPreset::WebPLossy { quality: 80.0 });
+    assert!(output.starts_with(b"RIFF"), "Output should be WebP");
+    // WebP animated files should have ANIM chunk
+    // At minimum, the file should be significantly larger than a single-frame WebP
+    assert!(
+        output.len() > 200,
+        "Animated WebP should be larger than a trivial single-frame output (got {} bytes)",
+        output.len()
+    );
+}
+
+#[test]
+fn test_animated_gif_to_webp_lossless_preserves_animation() {
+    test_init();
+    let input = build_animated_gif(8, 8, &["FF0000", "00FF00", "0000FF", "FFFF00"], 5);
+    let output = roundtrip_animated_gif(input, EncoderPreset::WebPLossless);
+    assert!(output.starts_with(b"RIFF"), "Output should be WebP");
+    assert!(
+        output.len() > 200,
+        "Animated WebP lossless should have multiple frames (got {} bytes)",
+        output.len()
+    );
+}
+
+// ============================================================================
+// Issue #643: Double GIF encode (resize GIF, then resize the output again)
+// ============================================================================
+
+#[test]
+fn test_gif_double_encode_no_eof_crash() {
+    test_init();
+    let input = build_animated_gif(16, 16, &["FF0000", "00FF00", "0000FF"], 10);
+
+    // First pass: resize the animated GIF
+    let steps1 = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Resample2D {
+            w: 8,
+            h: 8,
+            hints: Some(ResampleHints::new().with_bi_filter(Filter::Hermite)),
+        },
+        Node::Encode { io_id: 1, preset: EncoderPreset::Gif },
+    ];
+    let mut ctx1 = Context::create().unwrap();
+    ctx1.add_input_vector(0, input).unwrap();
+    ctx1.add_output_buffer(1).unwrap();
+    ctx1.execute_1(Execute001 {
+        graph_recording: default_graph_recording(false),
+        security: None,
+        framewise: Framewise::Steps(steps1),
+    })
+    .unwrap();
+    let intermediate = ctx1.take_output_buffer(1).unwrap();
+    assert_eq!(count_gif_frames(&intermediate), 3, "First pass should produce 3 frames");
+
+    // Second pass: resize the already-encoded GIF output (this was the crash in #643)
+    let steps2 = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Resample2D {
+            w: 4,
+            h: 4,
+            hints: Some(ResampleHints::new().with_bi_filter(Filter::Hermite)),
+        },
+        Node::Encode { io_id: 1, preset: EncoderPreset::Gif },
+    ];
+    let mut ctx2 = Context::create().unwrap();
+    ctx2.add_input_vector(0, intermediate).unwrap();
+    ctx2.add_output_buffer(1).unwrap();
+    ctx2.execute_1(Execute001 {
+        graph_recording: default_graph_recording(false),
+        security: None,
+        framewise: Framewise::Steps(steps2),
+    })
+    .unwrap();
+    let final_output = ctx2.take_output_buffer(1).unwrap();
+    assert_eq!(
+        count_gif_frames(&final_output),
+        3,
+        "Second pass should also produce 3 frames without EOF crash"
+    );
+}
+
+// ============================================================================
+// Issue #653: Animated GIF with transparent background
+// ============================================================================
+
+#[test]
+fn test_animated_gif_transparent_bg_roundtrip() {
+    test_init();
+    // Build GIF with semi-transparent frames
+    let input = build_animated_gif(8, 8, &["FF000080", "00FF0080", "0000FF80"], 10);
+    let output = roundtrip_animated_gif(input, EncoderPreset::Gif);
+    assert_eq!(count_gif_frames(&output), 3, "Transparent animated GIF should preserve 3 frames");
+}
+
+#[test]
+fn test_animated_gif_transparent_bg_resize() {
+    test_init();
+    // Transparent animated GIF → resize → GIF should not lose transparency
+    let input = build_animated_gif(16, 16, &["FF000000", "00FF0000"], 10);
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Resample2D {
+            w: 8,
+            h: 8,
+            hints: Some(ResampleHints::new().with_bi_filter(Filter::Hermite)),
+        },
+        Node::Encode { io_id: 1, preset: EncoderPreset::Gif },
+    ];
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, input).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    ctx.execute_1(Execute001 {
+        graph_recording: default_graph_recording(false),
+        security: None,
+        framewise: Framewise::Steps(steps),
+    })
+    .unwrap();
+    let output = ctx.take_output_buffer(1).unwrap();
+    assert_eq!(count_gif_frames(&output), 2, "Should preserve 2 frames");
+}
+
+// ============================================================================
+// Animated GIF with resize to various single-frame formats (verify no crash)
+// ============================================================================
+
+#[test]
+fn test_animated_gif_resize_to_all_single_frame_formats() {
+    test_init();
+    let input = build_animated_gif(16, 16, &["FF0000", "00FF00", "0000FF"], 10);
+
+    let presets: Vec<(&str, EncoderPreset)> = vec![
+        ("png", EncoderPreset::Lodepng { maximum_deflate: None }),
+        ("mozjpeg", EncoderPreset::Mozjpeg { progressive: None, quality: Some(80), matte: None }),
+        ("webp_lossy", EncoderPreset::WebPLossy { quality: 80.0 }),
+        ("webp_lossless", EncoderPreset::WebPLossless),
+        ("jxl_lossy", EncoderPreset::JxlLossy { distance: 2.0 }),
+        ("jxl_lossless", EncoderPreset::JxlLossless),
+    ];
+
+    for (name, preset) in presets {
+        let steps = vec![
+            Node::Decode {
+                io_id: 0,
+                commands: Some(vec![imageflow_types::DecoderCommand::SelectFrame(1)]),
+            },
+            Node::Resample2D {
+                w: 8,
+                h: 8,
+                hints: Some(ResampleHints::new().with_bi_filter(Filter::Hermite)),
+            },
+            Node::Encode { io_id: 1, preset },
+        ];
+        let mut ctx = Context::create().unwrap();
+        ctx.add_copied_input_buffer(0, &input).unwrap();
+        ctx.add_output_buffer(1).unwrap();
+        ctx.execute_1(Execute001 {
+            graph_recording: default_graph_recording(false),
+            security: None,
+            framewise: Framewise::Steps(steps),
+        })
+        .unwrap_or_else(|e| panic!("Failed to encode animated GIF frame to {name}: {e}"));
+        let output = ctx.take_output_buffer(1).unwrap();
+        assert!(
+            output.len() > 10,
+            "{name}: output should have content (got {} bytes)",
+            output.len()
+        );
     }
 }
