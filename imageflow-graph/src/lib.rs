@@ -30,11 +30,15 @@
 //!   passthrough when no pixel operations are needed.
 
 mod builder;
+pub mod codec_selector;
 mod compiler;
 mod engine;
 mod error;
 mod estimate;
+pub mod key_router;
 mod node;
+pub mod quality;
+pub mod srcset;
 
 pub use builder::GraphBuilder;
 pub use compiler::CompiledGraph;
