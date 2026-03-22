@@ -55,7 +55,7 @@ pub fn probe_image(data: &[u8]) -> Result<ImageInfo, FlowError> {
             Some(info.orientation.exif_value() as u8)
         },
         color_profile: None, // TODO: extract ICC/CICP info
-        has_ultrahdr: false, // TODO: zencodec ImageInfo no longer has has_gain_map
+        has_ultrahdr: info.gain_map.is_present() || info.supplements.gain_map,
     })
 }
 
