@@ -1,6 +1,9 @@
 
 ### Contributing code - legally
 
+> **Note:** The contributor agreement URL (imageresizing.net/licenses/contribute) below may be
+> outdated. Please contact support@imageresizing.net to verify the current agreement before signing.
+
 We reserve the right to relicense this software (or portions thereof) in order to ensure its sustainability. To make this possible, we have [a Contributor Agreement](http://imageresizing.net/licenses/contribute) lifted from the Apache foundation.
 
 Small commits can simply include this statement: 
