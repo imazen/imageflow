@@ -1,4 +1,4 @@
-
+> **Historical.** These development instructions are from the original C-based imageflow project and do not apply to the pure-Rust imageflow4 rewrite.
 
 # Auto-formatting source code
 
