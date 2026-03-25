@@ -1,5 +1,7 @@
 # Async roadmap
 
+> **Historical.** This sketch was written when futures 0.1 was current. futures 0.3 has been stable since 2019.
+
 Currently very few components support end-to-end async.  Lang progress has been years slower than expected.
 
 * Write bidirectional adapters for C# <-> Rust features/streams, and benchmark
