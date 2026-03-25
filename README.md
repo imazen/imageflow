@@ -1,3 +1,5 @@
+> **Note:** This README is from the original imageflow project and has not been updated for the imageflow4 pure-Rust rewrite. The C dependencies, old crate list, and server descriptions below do not apply to imageflow4.
+
 ## ![imageflow](https://www.imageflow.io/images/imageflow.svg) optimal images at incredible speeds
 
 [![tests](https://github.com/imazen/imageflow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imazen/imageflow/actions/workflows/ci.yml)  [![state: release candidate](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
