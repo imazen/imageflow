@@ -23,8 +23,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # Zen ecosystem
-zenpixels = { version = "0.1", default-features = false, features = ["imgref", "planar"] }
-zenpixels-convert = { path = "../zenpixels/zenpixels-convert", default-features = false, features = ["std", "imgref", "pipeline"] }
+zenpixels = { version = "0.2.0", default-features = false, features = ["imgref", "planar"] }
+zenpixels-convert = { version = "0.2.0", default-features = false, features = ["std", "imgref", "pipeline"] }
 # TODO: re-enable "png" once zenpng compiles (has uncommitted WIP changes against updated zencodec)
 # TODO: re-enable "jxl-decode", "jxl-encode" once zenjxl-decoder merge conflict is resolved
 zencodecs = { path = "../zencodecs", default-features = false, features = ["jpeg", "webp", "gif", "avif-decode", "avif-encode", "heic-decode", "bitmaps-bmp"] }
@@ -32,8 +32,8 @@ zenlayout = { path = "../zenlayout", default-features = false, features = ["std"
 zenresize = { path = "../zenresize", default-features = false, features = ["std", "layout"] }
 zenfilters = { path = "../zenfilters", default-features = false, features = ["srgb-filters"] }
 zenjpeg = { path = "../zenjpeg/zenjpeg", features = ["decoder"] }
-garb = { version = "0.2.4", default-features = false, features = ["std", "experimental"] }
-zencodec = { path = "../zencodec" }
+garb = { version = "0.2.5", default-features = false, features = ["std", "experimental"] }
+zencodec = { version = "0.1.0" }
 ultrahdr-core = { path = "../ultrahdr/ultrahdr-core" }
 ultrahdr-rs = { path = "../ultrahdr/ultrahdr" }
 
@@ -51,10 +51,6 @@ bytemuck = { version = "1.14", features = ["derive"] }
 
 # Patch crates.io deps to use local path versions (sub-codecs reference published versions)
 [patch.crates-io]
-zenpixels = { path = "../zenpixels/zenpixels" }
-zenpixels-convert = { path = "../zenpixels/zenpixels-convert" }
-zencodec = { path = "../zencodec" }
-enough = { path = "../../enough/crates/enough" }
 zenlayout = { path = "../zenlayout" }
 
 [profile.release]
