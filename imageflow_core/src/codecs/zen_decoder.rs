@@ -205,7 +205,7 @@ impl ZenDecoder {
     }
 
     pub fn create_heic(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
-        let config = heic_decoder::HeicDecoderConfig::new();
+        let config = heic::HeicDecoderConfig::new();
         Ok(Self::new_zencodec(Box::new(config), io, HEIC_META))
     }
 
