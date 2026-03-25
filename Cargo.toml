@@ -33,7 +33,7 @@ zenresize = { path = "../zenresize", default-features = false, features = ["std"
 zenfilters = { path = "../zenfilters", default-features = false, features = ["srgb-filters"] }
 zenjpeg = { path = "../zenjpeg/zenjpeg", features = ["decoder"] }
 garb = { version = "0.2.5", default-features = false, features = ["std", "experimental"] }
-zencodec = { version = "0.1.0" }
+zencodec = { version = "0.1.2" }
 ultrahdr-core = { path = "../ultrahdr/ultrahdr-core" }
 ultrahdr-rs = { path = "../ultrahdr/ultrahdr" }
 
