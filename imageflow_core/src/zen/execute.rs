@@ -1,15 +1,13 @@
 //! Top-level execution: v2 Framewise → zenpipe streaming pipeline → encoded output.
 //!
-//! Handles three modes:
+//! Handles two Framewise modes:
 //! - **Steps**: Linear `Vec<Node>` — sequential pipeline.
 //! - **Graph**: DAG with explicit edges — compositing, fan-out, watermarks.
 //!
-//! Streaming behavior:
-//! - Decode: full-frame (JPEG/PNG borrow input data, can't produce `'static` decoders).
-//! - Pipeline: streaming strips via zenpipe (zero materialization between operations).
-//! - Encode: streaming strips via `push_rows()` / `finish()` on `DynEncoder`.
+//! Fully streaming: decode (row batches) → process (strips) → encode (push_rows).
+//! No full-frame materialization for JPEG/PNG. Formats that don't support
+//! streaming decode (WebP, TIFF) fall back to full-frame + MaterializedSource.
 
-use std::borrow::Cow;
 use std::collections::HashMap;
 
 use imageflow_types::{self as s, Framewise, Node};
@@ -18,6 +16,8 @@ use zennode::NodeDef as _;
 use zenpipe::Source as _;
 
 use super::translate::{self, TranslateError, TranslatedPipeline};
+
+// ─── Error type ───
 
 /// Error from the zen pipeline execution.
 #[derive(Debug)]
@@ -49,6 +49,8 @@ impl From<zenpipe::PipeError> for ZenError {
     fn from(e: zenpipe::PipeError) -> Self { Self::Pipeline(e) }
 }
 
+// ─── Result type ───
+
 /// Output from a single encode operation.
 pub struct ZenEncodeResult {
     pub io_id: i32,
@@ -58,6 +60,8 @@ pub struct ZenEncodeResult {
     pub mime_type: &'static str,
     pub extension: &'static str,
 }
+
+// ─── Public API ───
 
 /// Probe an image and return metadata without decoding pixels.
 pub fn zen_get_image_info(
@@ -85,7 +89,6 @@ fn execute_steps(
     steps: &[Node],
     io_buffers: &HashMap<i32, Vec<u8>>,
 ) -> Result<Vec<ZenEncodeResult>, ZenError> {
-    // 1. Translate v2 nodes → zennode instances + codec config.
     let pipeline = translate::translate_nodes(steps)?;
 
     let decode_io_id = pipeline.decode_io_id.ok_or_else(|| {
@@ -94,21 +97,15 @@ fn execute_steps(
     let encode_io_id = pipeline.encode_io_id.ok_or_else(|| {
         ZenError::Io("no encode node in pipeline".into())
     })?;
-
     let input_data = io_buffers.get(&decode_io_id).ok_or_else(|| {
         ZenError::Io(format!("no input buffer for io_id {decode_io_id}"))
     })?;
 
-    // 2. Probe, resolve format, decode.
-    let (decision, source) = probe_and_decode(input_data, &pipeline)?;
+    let (decision, source) = probe_resolve_decode(input_data, &pipeline)?;
 
-    // 3. Build streaming pipeline.
     let converters: &[&dyn zenpipe::bridge::NodeConverter] = &[];
-    let pipe_result = zenpipe::bridge::build_pipeline(
-        source, &pipeline.nodes, converters,
-    )?;
+    let pipe_result = zenpipe::bridge::build_pipeline(source, &pipeline.nodes, converters)?;
 
-    // 4. Stream-encode.
     stream_encode(pipe_result.source, &decision, encode_io_id)
 }
 
@@ -118,32 +115,23 @@ fn execute_graph(
     graph: &s::Graph,
     io_buffers: &HashMap<i32, Vec<u8>>,
 ) -> Result<Vec<ZenEncodeResult>, ZenError> {
-    // 1. Topological sort: v2 Graph has string keys + Edge{from, to, kind}.
-    //    Build ordered node list and map string IDs to DAG indices.
+    // Topological sort: v2 Graph has string keys + Edge{from, to, kind}.
     let mut id_order: Vec<String> = graph.nodes.keys().cloned().collect();
-    // Sort by numeric key for deterministic order (v2 convention: keys are "0", "1", ...)
     id_order.sort_by(|a, b| {
         a.parse::<i32>().unwrap_or(i32::MAX).cmp(&b.parse::<i32>().unwrap_or(i32::MAX))
     });
 
-    let id_to_idx: HashMap<String, usize> = id_order.iter().enumerate()
-        .map(|(i, id)| (id.clone(), i))
-        .collect();
-    // Also map i32 keys for edge lookup (v2 edges use i32 from/to).
     let i32_to_idx: HashMap<i32, usize> = id_order.iter().enumerate()
         .filter_map(|(i, id)| id.parse::<i32>().ok().map(|n| (n, i)))
         .collect();
 
-    // 2. Translate each node, tracking decode/encode io_ids and building DagNodes.
     let mut dag_nodes: Vec<zenpipe::DagNode> = Vec::new();
-    let mut decode_io_ids: Vec<(usize, i32)> = Vec::new(); // (dag_idx, io_id)
+    let mut decode_io_ids: Vec<(usize, i32)> = Vec::new();
     let mut encode_io_ids: Vec<(usize, i32)> = Vec::new();
     let mut encode_pipeline: Option<TranslatedPipeline> = None;
 
     for (dag_idx, id) in id_order.iter().enumerate() {
         let node = &graph.nodes[id];
-
-        // Translate node → zennode instance.
         let mut partial = translate::translate_nodes(&[node.clone()])?;
 
         if let Some(io_id) = partial.decode_io_id {
@@ -154,49 +142,40 @@ fn execute_graph(
             encode_pipeline = Some(partial.clone_config());
         }
 
-        // Build input list from v2 edges.
         let inputs: Vec<usize> = graph.edges.iter()
             .filter(|e| i32_to_idx.get(&e.to).copied() == Some(dag_idx))
             .filter_map(|e| i32_to_idx.get(&e.from).copied())
             .collect();
 
-        // Use the first pixel-processing node, or a placeholder for decode/encode.
         let instance = if !partial.nodes.is_empty() {
             partial.nodes.remove(0)
         } else {
-            // Decode/encode nodes: create a placeholder that the bridge will separate.
-            create_placeholder_node(node)
+            create_encode_role_placeholder()
         };
 
         dag_nodes.push(zenpipe::DagNode { instance, inputs });
     }
 
-    // 3. Decode all input sources.
+    // Decode all input sources.
     let registry = AllowedFormats::all();
     let mut sources: Vec<(usize, Box<dyn zenpipe::Source>)> = Vec::new();
-
     for (dag_idx, io_id) in &decode_io_ids {
         let input_data = io_buffers.get(io_id).ok_or_else(|| {
             ZenError::Io(format!("no input buffer for io_id {io_id}"))
         })?;
-        let source = decode_to_source(input_data, &registry)?;
-        sources.push((*dag_idx, source));
+        sources.push((*dag_idx, decode_to_source(input_data, &registry)?));
     }
 
-    // 4. Build DAG pipeline via zenpipe.
+    // Build DAG pipeline.
     let converters: &[&dyn zenpipe::bridge::NodeConverter] = &[];
-    let pipe_result = zenpipe::bridge::build_pipeline_dag(
-        sources, &dag_nodes, converters,
-    )?;
+    let pipe_result = zenpipe::bridge::build_pipeline_dag(sources, &dag_nodes, converters)?;
 
-    // 5. Resolve format + quality from the encode node.
-    let first_decode_io = decode_io_ids.first().map(|(_, id)| *id).unwrap_or(0);
-    let first_input = io_buffers.get(&first_decode_io).ok_or_else(|| {
+    // Resolve format + quality from the first input.
+    let first_input = io_buffers.get(&decode_io_ids[0].1).ok_or_else(|| {
         ZenError::Io("no input for format probe".into())
     })?;
     let info = zencodecs::from_bytes(first_input)
         .map_err(|e| ZenError::Codec(format!("probe: {e}")))?;
-    let facts = ImageFacts::from_image_info(&info);
 
     let codec_intent = encode_pipeline
         .as_ref()
@@ -206,26 +185,24 @@ fn execute_graph(
         .unwrap_or_default();
 
     let decision = select_format_from_intent(
-        &codec_intent, &facts, &registry, &CodecPolicy::default(),
-    )
-    .map_err(|e| ZenError::Codec(format!("format selection: {e}")))?;
+        &codec_intent, &ImageFacts::from_image_info(&info),
+        &registry, &CodecPolicy::default(),
+    ).map_err(|e| ZenError::Codec(format!("format selection: {e}")))?;
 
-    // 6. Stream-encode.
     let encode_io_id = encode_io_ids.first().map(|(_, id)| *id).unwrap_or(1);
     stream_encode(pipe_result.source, &decision, encode_io_id)
 }
 
-// ─── Shared helpers ───
+// ─── Decode ───
 
-/// Probe source, resolve format, decode to MaterializedSource.
-fn probe_and_decode(
+/// Probe, resolve format/quality, and build a streaming decode source.
+fn probe_resolve_decode(
     input_data: &[u8],
     pipeline: &TranslatedPipeline,
 ) -> Result<(zencodecs::FormatDecision, Box<dyn zenpipe::Source>), ZenError> {
     let registry = AllowedFormats::all();
     let info = zencodecs::from_bytes(input_data)
         .map_err(|e| ZenError::Codec(format!("probe: {e}")))?;
-    let facts = ImageFacts::from_image_info(&info);
 
     let codec_intent = pipeline.preset.as_ref()
         .map(|p| &p.intent)
@@ -233,36 +210,28 @@ fn probe_and_decode(
         .unwrap_or_default();
 
     let decision = select_format_from_intent(
-        &codec_intent, &facts, &registry, &CodecPolicy::default(),
-    )
-    .map_err(|e| ZenError::Codec(format!("format selection: {e}")))?;
+        &codec_intent, &ImageFacts::from_image_info(&info),
+        &registry, &CodecPolicy::default(),
+    ).map_err(|e| ZenError::Codec(format!("format selection: {e}")))?;
 
-    let source = decode_to_source(input_data, &registry)?;
-    Ok((decision, source))
+    Ok((decision, decode_to_source(input_data, &registry)?))
 }
 
-/// Build a decode source — streaming if possible, full-frame fallback.
-///
-/// Tries `build_streaming_decoder()` first (works for JPEG, PNG, GIF, AVIF, HEIC
-/// via `job_static()` + `Cow::Owned`). Falls back to full-frame decode +
-/// `MaterializedSource` for formats that don't support streaming.
+/// Build a streaming decode source. Tries row-level streaming first
+/// (JPEG, PNG, GIF, AVIF, HEIC), falls back to full-frame + MaterializedSource.
 fn decode_to_source(
     data: &[u8],
     registry: &AllowedFormats,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
-    // Try streaming decode first (JPEG, PNG, GIF, AVIF, HEIC).
-    // Format is discovered lazily from the first decoded batch.
     match zencodecs::DecodeRequest::new(data)
         .with_registry(registry)
         .build_streaming_decoder()
     {
         Ok(streaming) => {
-            let source = zenpipe::codec::DecoderSource::new(streaming)
-                .map_err(|e| ZenError::Pipeline(e))?;
+            let source = zenpipe::codec::DecoderSource::new(streaming)?;
             Ok(Box::new(source))
         }
         Err(_) => {
-            // Fall back to full-frame decode (WebP, TIFF, etc.).
             let decoded = zencodecs::DecodeRequest::new(data)
                 .with_registry(registry)
                 .decode_full_frame()
@@ -271,15 +240,15 @@ fn decode_to_source(
             let w = decoded.width();
             let h = decoded.height();
             let format = decoded.descriptor();
-            let buf = decoded.into_buffer();
-            let bytes = buf.copy_to_contiguous_bytes();
-            let source = zenpipe::sources::MaterializedSource::from_data(bytes, w, h, format);
-            Ok(Box::new(source))
+            let bytes = decoded.into_buffer().copy_to_contiguous_bytes();
+            Ok(Box::new(zenpipe::sources::MaterializedSource::from_data(bytes, w, h, format)))
         }
     }
 }
 
-/// Pull strips from pipeline source, push directly to encoder.
+// ─── Encode ───
+
+/// Stream pipeline output into an encoder via EncoderSink.
 fn stream_encode(
     mut source: Box<dyn zenpipe::Source>,
     decision: &zencodecs::FormatDecision,
@@ -289,32 +258,19 @@ fn stream_encode(
     let out_h = source.height();
     let out_format = source.format();
 
-    let registry = AllowedFormats::all();
     let streaming_enc = zencodecs::EncodeRequest::new(decision.format)
         .with_quality(decision.quality.quality)
         .with_lossless(decision.lossless)
-        .with_registry(&registry)
+        .with_registry(&AllowedFormats::all())
         .build_streaming_encoder(out_w, out_h)
         .map_err(|e| ZenError::Codec(format!("encoder: {e}")))?;
 
-    let mut encoder = streaming_enc.encoder;
+    let mut sink = zenpipe::codec::EncoderSink::new(streaming_enc.encoder, out_format);
+    zenpipe::execute(source.as_mut(), &mut sink)?;
 
-    while let Some(strip) = source.next()? {
-        let pixels = zenpixels::PixelSlice::new(
-            strip.as_strided_bytes(),
-            strip.width(),
-            strip.rows(),
-            strip.stride(),
-            out_format,
-        )
-        .map_err(|e| ZenError::Codec(format!("pixel slice: {e}")))?;
-
-        encoder.push_rows(pixels)
-            .map_err(|e| ZenError::Codec(format!("push_rows: {e}")))?;
-    }
-
-    let output = encoder.finish()
-        .map_err(|e| ZenError::Codec(format!("finish: {e}")))?;
+    let output = sink.take_output().ok_or_else(|| {
+        ZenError::Codec("encoder produced no output".into())
+    })?;
 
     Ok(vec![ZenEncodeResult {
         io_id: encode_io_id,
@@ -326,36 +282,20 @@ fn stream_encode(
     }])
 }
 
-/// Create a placeholder zennode instance for decode/encode nodes in the DAG.
-/// These are separated out by the bridge — the placeholder just needs a valid schema.
-fn create_placeholder_node(node: &Node) -> Box<dyn zennode::NodeInstance> {
-    // Use zencodecs QualityIntentNode as a benign Encode-role placeholder,
-    // or a minimal decode placeholder. The bridge separates these by role.
-    match node {
-        Node::Decode { .. } => {
-            zencodecs::zennode_defs::QUALITY_INTENT_NODE_NODE
-                .create_default()
-                .expect("placeholder creation")
-        }
-        Node::Encode { .. } => {
-            zencodecs::zennode_defs::QUALITY_INTENT_NODE_NODE
-                .create_default()
-                .expect("placeholder creation")
-        }
-        _ => {
-            // Shouldn't reach here — translate_nodes already handles pixel ops.
-            zencodecs::zennode_defs::QUALITY_INTENT_NODE_NODE
-                .create_default()
-                .expect("placeholder creation")
-        }
-    }
+// ─── Helpers ───
+
+/// Create a placeholder Encode-role node for DAG slots that are decode/encode.
+/// The bridge separates these by role — the placeholder just needs a valid schema.
+fn create_encode_role_placeholder() -> Box<dyn zennode::NodeInstance> {
+    zencodecs::zennode_defs::QUALITY_INTENT_NODE_NODE
+        .create_default()
+        .expect("placeholder creation")
 }
 
-// Helper: TranslatedPipeline doesn't implement Clone, but we need the config.
 impl TranslatedPipeline {
     pub(crate) fn clone_config(&self) -> TranslatedPipeline {
         TranslatedPipeline {
-            nodes: Vec::new(), // don't clone the heavy part
+            nodes: Vec::new(),
             preset: self.preset.as_ref().map(|p| super::preset_map::PresetMapping {
                 intent: p.intent.clone(),
                 explicit_format: p.explicit_format,
