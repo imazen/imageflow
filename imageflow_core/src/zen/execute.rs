@@ -362,12 +362,64 @@ fn probe_resolve_decode(
 
     let mut source = decode_to_source(input_data, &registry)?;
 
-    // sRGB compatibility: convert decoded pixels to RGBA8 sRGB.
-    // This matches v2 behavior where CMS transforms to sRGB during decode.
-    // The conversion is a no-op if already in RGBA8 sRGB.
+    // ICC color management: if the source has an embedded ICC profile that
+    // isn't sRGB, transform to sRGB using moxcms. This matches v2 behavior
+    // where CMS transforms to sRGB during decode.
+    source = apply_icc_transform(source, &info)?;
+
+    // Format conversion: ensure RGBA8 sRGB pixel format for downstream.
     source = ensure_srgb_rgba8(source)?;
 
     Ok((decision, source))
+}
+
+/// Apply ICC→sRGB transform if the source image has a non-sRGB ICC profile.
+///
+/// On failure (unsupported pixel format, bad ICC data), returns the source
+/// unchanged — falling back to format-only conversion.
+fn apply_icc_transform(
+    source: Box<dyn zenpipe::Source>,
+    info: &zencodecs::ImageInfo,
+) -> Result<Box<dyn zenpipe::Source>, ZenError> {
+    let src_icc = match &info.source_color.icc_profile {
+        Some(icc) if !icc.is_empty() => icc.clone(),
+        _ => return Ok(source), // No ICC profile — assume sRGB
+    };
+
+    // Build the transform first to check if it will work, before consuming source.
+    let srgb_icc = srgb_icc_profile();
+    let src_format = source.format();
+    let pixel_format = src_format.pixel_format();
+
+    // Pre-check: try to build the CMS transform without consuming the source.
+    use zenpipe::ColorManagement as _;
+    let transform = zenpipe::MoxCms.build_transform_for_format(
+        &src_icc, &srgb_icc, pixel_format, pixel_format,
+    );
+
+    match transform {
+        Ok(row_transform) => {
+            let dst_icc: std::sync::Arc<[u8]> = std::sync::Arc::from(srgb_icc.as_slice());
+            let transformed = zenpipe::sources::IccTransformSource::from_transform(
+                source, row_transform, dst_icc,
+            );
+            Ok(Box::new(transformed))
+        }
+        Err(_e) => {
+            // ICC transform not possible for this pixel format.
+            // Fall back to format-only conversion (preserves source).
+            Ok(source)
+        }
+    }
+}
+
+/// Get the sRGB ICC profile bytes.
+fn srgb_icc_profile() -> Vec<u8> {
+    use std::sync::OnceLock;
+    static SRGB: OnceLock<Vec<u8>> = OnceLock::new();
+    SRGB.get_or_init(|| {
+        moxcms::ColorProfile::new_srgb().encode().unwrap_or_default()
+    }).clone()
 }
 
 /// Wrap a source with a format conversion to RGBA8 sRGB if needed.
