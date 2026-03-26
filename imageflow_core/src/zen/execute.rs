@@ -1,12 +1,15 @@
 //! Top-level execution: v2 Framewise → zenpipe streaming pipeline → encoded output.
 //!
-//! This is the main entry point for the zen pipeline. It:
-//! 1. Translates v2 `Node` variants into zenode instances
-//! 2. Probes the source image via zencodecs
-//! 3. Resolves format + quality via zencodecs selection engine
-//! 4. Builds a streaming pipeline via zenpipe
-//! 5. Executes: decode → process → encode
+//! Pipeline stages:
+//! 1. Translate v2 `Node` variants into zenode instances
+//! 2. Probe source image via zencodecs
+//! 3. Resolve format + quality via zencodecs selection engine
+//! 4. Decode full frame → `MaterializedSource` (streaming decode blocked on codec
+//!    lifetime constraints — JPEG/PNG `ScanlineReader` borrows input `&[u8]`)
+//! 5. Stream through zenpipe (strip-based, zero-materialization between operations)
+//! 6. Stream-encode: pull strips from pipeline, push directly to encoder
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use imageflow_types::{self as s, Framewise, Node};
@@ -68,8 +71,21 @@ pub fn zen_get_image_info(
 
 /// Execute a v2 Framewise pipeline through the zen streaming engine.
 ///
-/// `io_buffers` maps io_id → input bytes. Returns encode results
-/// for each output.
+/// `io_buffers` maps io_id → input bytes. Returns encode results for each output.
+///
+/// # Streaming behavior
+///
+/// - **Decode**: full-frame via `decode_full_frame()`, then wrapped in `MaterializedSource`.
+///   JPEG/PNG streaming decoders borrow input data with a non-`'static` lifetime,
+///   which is incompatible with `build_pipeline`'s `Box<dyn Source>` (`'static`).
+///   The decoded frame is consumed row-by-row by the pipeline — it's the *pipeline*
+///   that streams, not the decoder.
+///
+/// - **Pipeline**: fully streaming via zenpipe. Adjacent operations pull strips from
+///   upstream. A 5-step pipeline uses strip-height × width memory, not 5 full frames.
+///
+/// - **Encode**: streaming via `push_rows()` / `finish()` on `DynEncoder`. Strips from
+///   the pipeline are pushed directly into the encoder — no intermediate full-frame buffer.
 pub fn execute_framewise(
     framewise: &Framewise,
     io_buffers: &HashMap<i32, Vec<u8>>,
@@ -77,8 +93,6 @@ pub fn execute_framewise(
     let nodes = match framewise {
         Framewise::Steps(steps) => steps.clone(),
         Framewise::Graph(_graph) => {
-            // TODO: topological sort the graph into a linear sequence.
-            // For now, only linear steps are supported.
             return Err(ZenError::Translate(TranslateError::Unsupported(
                 "graph mode not yet supported in zen pipeline — use steps".into(),
             )));
@@ -113,10 +127,12 @@ pub fn execute_framewise(
         .cloned()
         .unwrap_or_default();
 
-    let decision = select_format_from_intent(&codec_intent, &facts, &registry, &CodecPolicy::default())
-        .map_err(|e| ZenError::Codec(format!("format selection failed: {e}")))?;
+    let decision = select_format_from_intent(
+        &codec_intent, &facts, &registry, &CodecPolicy::default(),
+    )
+    .map_err(|e| ZenError::Codec(format!("format selection failed: {e}")))?;
 
-    // 4. Decode full frame (no streaming decoder available).
+    // 4. Decode full frame → MaterializedSource.
     let decoded = zencodecs::DecodeRequest::new(input_data)
         .with_registry(&registry)
         .decode_full_frame()
@@ -126,47 +142,53 @@ pub fn execute_framewise(
     let decode_h = decoded.height();
     let decode_format: zenpipe::PixelFormat = decoded.descriptor();
 
-    // Create a MaterializedSource from the decoded pixel buffer.
     let pixel_buf = decoded.into_buffer();
     let pixel_data = pixel_buf.copy_to_contiguous_bytes();
     let source = zenpipe::sources::MaterializedSource::from_data(
-        pixel_data,
-        decode_w,
-        decode_h,
-        decode_format,
+        pixel_data, decode_w, decode_h, decode_format,
     );
 
-    // 5. Build zenpipe pipeline from zenode instances.
-    // No custom converters needed — the bridge handles geometry/layout nodes directly.
+    // 5. Build streaming pipeline from zenode instances.
     let converters: &[&dyn zenpipe::bridge::NodeConverter] = &[];
-
     let pipe_result = zenpipe::bridge::build_pipeline(
-        Box::new(source),
-        &pipeline.nodes,
-        converters,
+        Box::new(source), &pipeline.nodes, converters,
     )?;
 
-    // 6. Materialize the pipeline output, then one-shot encode.
-    // (Streaming encode requires Box<dyn DynEncoder + Send> but StreamingEncoder
-    // only provides Box<dyn DynEncoder>. One-shot encode avoids the mismatch.)
-    let materialized = pipe_result.materialize()?;
-    let out_w = materialized.pixels.width();
-    let out_h = materialized.pixels.height();
-    let out_format = materialized.pixels.format();
-    let has_alpha = out_format.has_alpha();
+    let out_w = pipe_result.source.width();
+    let out_h = pipe_result.source.height();
+    let out_format = pipe_result.source.format();
 
-    let data = materialized.pixels.data();
-    let stride = materialized.pixels.stride();
-    let pixel_slice = zenpixels::PixelSlice::new(
-        data, out_w, out_h, stride, out_format,
-    ).map_err(|e| ZenError::Codec(format!("pixel slice construction failed: {e}")))?;
-
-    let output = zencodecs::EncodeRequest::new(decision.format)
+    // 6. Stream-encode: build encoder, pull strips from pipeline, push to encoder.
+    let streaming_enc = zencodecs::EncodeRequest::new(decision.format)
         .with_quality(decision.quality.quality)
         .with_lossless(decision.lossless)
         .with_registry(&registry)
-        .encode(pixel_slice, has_alpha)
-        .map_err(|e| ZenError::Codec(format!("encode failed: {e}")))?;
+        .build_streaming_encoder(out_w, out_h)
+        .map_err(|e| ZenError::Codec(format!("streaming encoder creation failed: {e}")))?;
+
+    // Stream strips directly into the encoder — no Send bound needed, no Sink trait,
+    // no intermediate full-frame buffer. Just a loop.
+    let mut pipe_source = pipe_result.source;
+    let mut encoder = streaming_enc.encoder;
+
+    while let Some(strip) = pipe_source.next()? {
+        let pixels = zenpixels::PixelSlice::new(
+            strip.as_strided_bytes(),
+            strip.width(),
+            strip.rows(),
+            strip.stride(),
+            out_format,
+        )
+        .map_err(|e| ZenError::Codec(format!("pixel slice: {e}")))?;
+
+        encoder
+            .push_rows(pixels)
+            .map_err(|e| ZenError::Codec(format!("encode push_rows: {e}")))?;
+    }
+
+    let output = encoder
+        .finish()
+        .map_err(|e| ZenError::Codec(format!("encode finish: {e}")))?;
 
     Ok(vec![ZenEncodeResult {
         io_id: encode_io_id,
