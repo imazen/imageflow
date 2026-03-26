@@ -176,6 +176,56 @@ Operations that return `Unsupported` in translate.rs and need zennode nodes:
 - **Ordering**: zenpipe's `ordering.rs` has canonical_sort + optimize_node_order. Imageflow tells it which strategy.
 - **v3 wire format**: Separate types (NodeV3, Build003) — v2 types frozen. Design documented but not implemented yet.
 
+## What I'd Do Differently
+
+### Don't build execute.rs incrementally
+
+I built execute.rs by starting with the simplest case (linear steps, JPEG in, JPEG out) and bolting on features one at a time: CommandString expansion, CreateCanvas, CaptureBitmapKey, DAG mode, sRGB conversion. Each addition created a new code path instead of generalizing the existing one. The result is 644 lines of spaghetti with 9 branches (3 decode × 3 encode).
+
+**Next time**: Start from zenpipe's `orchestrate::stream()` API which already handles the probe→decode→pipeline→encode flow. Write the v2→zennode translation, hand the nodes to orchestrate, collect results. Add features by adding zennode nodes, not by adding code paths in execute.rs.
+
+### Don't stash bytes on Context
+
+I added `zen_input_bytes: HashMap<i32, Vec<u8>>` to Context and hooked every `add_input_*` method to copy bytes into it. This doubles memory for every input and is fragile (easy to miss a code path — `add_input_buffer` was missed initially).
+
+**Next time**: Add `IoProxy::read_to_vec(&mut self) -> Vec<u8>` (seek to 0, read all, seek back). Read bytes on demand from the existing IoProxy when the zen pipeline needs them. Zero extra copies.
+
+### Don't invent CapturedBitmap
+
+I created `CapturedBitmap { width, height, pixels, format }` — a poor man's pixel buffer. Then I added `zen_captured_bitmaps` to Context and `#[cfg(feature)]` branches in test code.
+
+**Next time**: Encode to farbfeld (or BMP — both are lossless, trivial format) at the capture point. Store as an output buffer with a synthetic io_id (e.g., `io_id = -capture_id - 1`). The test infrastructure reads the buffer and decodes it. No new types, no feature gates in tests, no raw pixel management.
+
+### Don't handle CreateCanvas as a special source in execute.rs
+
+I added a `create_canvas` field to `TranslatedPipeline` and a separate 50-line code path in execute.rs for canvas sources. This duplicates the encode/capture logic.
+
+**Next time**: Make CreateCanvas a zennode node with `NodeRole::Decode` (source role). The zenpipe bridge separates Decode-role nodes and uses them to build sources. The orchestration layer sees "decode config says solid color" and creates a filled MaterializedSource. No special case in execute.rs.
+
+### Don't put sRGB conversion in execute.rs
+
+I added `ensure_srgb_rgba8()` as an ad-hoc wrapper around the decode source. It converts the pixel format descriptor but doesn't do ICC transforms. Real images with Display P3 or Adobe RGB ICC profiles need moxcms, not a format swap.
+
+**Next time**: ICC→sRGB should be a pipeline option, not a post-decode hack. zenpipe has `IccTransformSource`. The bridge should insert it when the user requests sRGB output (v2 compat default). This is a zenpipe bridge enhancement — add a `color_management: Option<CmsPolicy>` to `ProcessConfig`.
+
+### Don't fix zen crate API issues with workarounds in imageflow
+
+When the JPEG streaming decoder needed `'static` but produced `'a`, I first tried transmute, then Box::leak, then job_static(). Each was a workaround for a zencodec trait limitation. The right fix was changing the trait: `job(self)` consuming. That took longer to land but was permanent.
+
+**Next time**: When a zen crate API doesn't fit, fix the API. Don't accumulate workarounds in the consumer. The consumer (imageflow) should be thin. Every workaround is technical debt that v-next inherits.
+
+### Don't expand CommandString in execute.rs
+
+I added `expand_command_strings()` in execute.rs — 60 lines that probe the source, find the decode io_id (from both Node::Decode and CommandString::decode), call Ir4Expand, inject Decode nodes, and splice expanded steps into the node list. This is graph construction logic that doesn't belong in the execution module.
+
+**Next time**: Handle CommandString in translate.rs (or a separate expansion module). The expansion is a pre-processing step that converts `[CommandString]` → `[Decode, Constrain, Encode, ...]`. It should happen before translation, not interleaved with it. The expanded steps then flow through the normal translate → bridge → execute path.
+
+### Do build integration tests from day one
+
+I wrote the execute.rs pipeline first, then the heaptrack profiling binary, then the endpoint wiring, and only added integration tests late. By then, architectural issues (DuplicateIoId, missing decode info, CaptureBitmapKey) surfaced as test failures that required ad-hoc fixes.
+
+**Next time**: Write one integration test that exercises the full JSON API path (Build001 → zen pipeline → output buffer → verify) before building execute.rs. Let the test drive the API design. The test tells you immediately when a design choice doesn't fit the real usage pattern.
+
 ## What to Read First
 
 1. `IMAGEFLOW3-PLAN.md` — overall design (v2/v3 versioning, ordering, file structure)
