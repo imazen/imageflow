@@ -17,6 +17,47 @@ use zenpipe::Source as _;
 
 use super::translate::{self, TranslateError, TranslatedPipeline};
 
+// ─── Tracing ───
+
+/// Build a pipeline with optional tracing.
+///
+/// When `ZENPIPE_TRACE=1` (or `ZENPIPE_TRACE=full`), enables tracing and
+/// prints the pipeline trace to stderr after compilation. When
+/// `ZENPIPE_TRACE=svg`, also writes an SVG to `/tmp/zenpipe_trace.svg`.
+///
+/// Zero cost when the env var is unset — `build_pipeline` is called directly.
+fn build_pipeline_maybe_traced(
+    source: Box<dyn zenpipe::Source>,
+    nodes: &[Box<dyn zennode::NodeInstance>],
+    converters: &[&dyn zenpipe::bridge::NodeConverter],
+) -> Result<zenpipe::PipelineResult, zenpipe::PipeError> {
+    let trace_mode = std::env::var("ZENPIPE_TRACE").unwrap_or_default();
+    if trace_mode.is_empty() {
+        return zenpipe::bridge::build_pipeline(source, nodes, converters);
+    }
+
+    let config = if trace_mode == "full" || trace_mode == "svg" {
+        zenpipe::trace::TraceConfig::full()
+    } else {
+        zenpipe::trace::TraceConfig::metadata_only()
+    };
+
+    let (result, trace) =
+        zenpipe::bridge::build_pipeline_traced(source, nodes, converters, &config)?;
+
+    // Print trace to stderr.
+    eprintln!("{}", trace.graph.to_text());
+
+    // Write SVG if requested.
+    if trace_mode == "svg" {
+        let svg = trace.graph.to_svg();
+        let _ = std::fs::write("/tmp/zenpipe_trace.svg", &svg);
+        eprintln!("[trace] SVG written to /tmp/zenpipe_trace.svg");
+    }
+
+    Ok(result)
+}
+
 // ─── Error type ───
 
 /// Error from the zen pipeline execution.
@@ -147,7 +188,7 @@ fn execute_steps(
 
         let converters = super::converter::imageflow_converters();
         let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
-        let pipe_result = zenpipe::bridge::build_pipeline(source, &pipeline.nodes, converters)?;
+        let pipe_result = build_pipeline_maybe_traced(source, &pipeline.nodes, converters)?;
 
         let out_w = pipe_result.source.width();
         let out_h = pipe_result.source.height();
@@ -239,7 +280,7 @@ fn execute_steps(
 
     let converters = super::converter::imageflow_converters();
     let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
-    let pipe_result = zenpipe::bridge::build_pipeline(source, &pipeline.nodes, converters)?;
+    let pipe_result = build_pipeline_maybe_traced(source, &pipeline.nodes, converters)?;
 
     // Check encode dimensions against security limits.
     if has_encode {
