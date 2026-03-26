@@ -18,6 +18,7 @@ mod preset_map;
 mod execute;
 mod context_bridge;
 mod captured;
+mod converter;
 pub mod riapi;
 
 pub use captured::CapturedBitmap;

@@ -135,7 +135,8 @@ fn execute_steps(
         let source = create_canvas_source(canvas)?;
         let source = ensure_srgb_rgba8(source)?;
 
-        let converters: &[&dyn zenpipe::bridge::NodeConverter] = &[];
+        let converters = super::converter::imageflow_converters();
+        let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
         let pipe_result = zenpipe::bridge::build_pipeline(source, &pipeline.nodes, converters)?;
 
         let out_w = pipe_result.source.width();
@@ -189,7 +190,8 @@ fn execute_steps(
 
     let (decision, source) = probe_resolve_decode(input_data, &pipeline)?;
 
-    let converters: &[&dyn zenpipe::bridge::NodeConverter] = &[];
+    let converters = super::converter::imageflow_converters();
+    let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
     let pipe_result = zenpipe::bridge::build_pipeline(source, &pipeline.nodes, converters)?;
 
     let mut captures = HashMap::new();
@@ -310,7 +312,8 @@ fn execute_graph(
     }
 
     // Build DAG pipeline.
-    let converters: &[&dyn zenpipe::bridge::NodeConverter] = &[];
+    let converters = super::converter::imageflow_converters();
+    let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
     let pipe_result = zenpipe::bridge::build_pipeline_dag(sources, &dag_nodes, converters)?;
 
     // Resolve format + quality from the first input.
