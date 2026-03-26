@@ -3769,7 +3769,6 @@ name = "zenblend"
 version = "0.1.0"
 dependencies = [
  "archmage 0.9.12",
- "libm",
  "magetypes",
  "safe_unaligned_simd",
  "wide",

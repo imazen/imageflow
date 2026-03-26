@@ -413,8 +413,16 @@ fn probe_resolve_decode(
     source = apply_icc_transform(source, &info)?;
 
     // PNG gAMA/cHRM: if no ICC profile, try to synthesize from PNG metadata.
+    // Only apply gAMA-only transforms when HonorGamaOnly is set (v2 compat).
     if info.source_color.icc_profile.is_none() && info.format == zencodecs::ImageFormat::Png {
-        source = apply_png_gamma_transform(source, input_data)?;
+        let honor_gama_only = decoder_commands
+            .as_ref()
+            .and_then(|cmds| cmds.iter().find_map(|c| match c {
+                imageflow_types::DecoderCommand::HonorGamaOnly(v) => Some(*v),
+                _ => None,
+            }))
+            .unwrap_or(false);
+        source = apply_png_gamma_transform(source, input_data, honor_gama_only)?;
     }
 
     // Format conversion: ensure RGBA8 sRGB pixel format for downstream.
@@ -483,65 +491,61 @@ fn srgb_icc_profile() -> Vec<u8> {
 /// Synthesize an ICC profile from PNG gAMA (and optional cHRM) metadata.
 ///
 /// If gAMA is close to sRGB (0.45455), returns None (no transform needed).
-/// Otherwise, creates a gamma+primaries ICC v2 profile.
+/// Otherwise, creates a gamma+primaries profile using moxcms.
 fn synthesize_icc_from_gama(
     gamma_scaled: u32,
     chromaticities: &Option<[u32; 8]>,
 ) -> Option<Vec<u8>> {
-    // gAMA is the inverse of the display gamma, scaled by 100000.
-    // sRGB gamma ≈ 45455 (1/2.2). Neutral range per Chrome/Skia: ±5%.
     let gamma_f = gamma_scaled as f64 / 100000.0;
-    let neutral_low = 0.4318;  // 1/2.2 * 0.95
-    let neutral_high = 0.4773; // 1/2.2 * 1.05
+    let neutral_low = 0.4318;
+    let neutral_high = 0.4773;
 
-    // Check if cHRM matches sRGB primaries (if present).
     let chrm_is_srgb = chromaticities.map_or(true, |c| {
         let srgb = [31270u32, 32900, 64000, 33000, 30000, 60000, 15000, 6000];
         c.iter().zip(srgb.iter()).all(|(a, b)| (*a as i64 - *b as i64).unsigned_abs() < 500)
     });
 
-    // If gamma is neutral AND primaries are sRGB → no transform needed.
     if gamma_f >= neutral_low && gamma_f <= neutral_high && chrm_is_srgb {
         return None;
     }
 
-    // Use moxcms to build a profile with the correct gamma.
-    // For non-sRGB gamma: create a profile with the PNG gamma curve and sRGB primaries,
-    // then moxcms will transform from that gamma space to sRGB.
-    let display_gamma = 1.0 / gamma_f; // PNG gAMA is file_gamma = 1/display_gamma
+    // Build profile using moxcms: start from sRGB, update colorimetry + TRC, clear CICP.
+    // Pattern from moxcms issue #154.
+    let display_gamma = 1.0 / gamma_f;
 
-    // Create a gray→RGB profile with the specified gamma.
-    // moxcms ColorProfile::new_gray() with a gamma curve, then convert to RGB.
-    // Simpler: just use the raw ICC builder.
-    build_gamma_icc_profile(display_gamma as f32, chromaticities)
-}
-
-/// Build a minimal ICC v2 RGB profile with a simple gamma curve.
-fn build_gamma_icc_profile(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> {
-    // Use the v2 CMS code path: create an sRGB-primaries profile with custom gamma.
-    // This reuses moxcms's profile creation by cloning sRGB and overriding the TRC.
     let mut profile = moxcms::ColorProfile::new_srgb();
-    // Override the TRC (tone response curve) with a pure gamma.
-    let gamma_fixed = (gamma * 256.0) as u16; // 8.8 fixed point
-    // moxcms doesn't expose TRC override on ColorProfile directly.
-    // Fallback: encode a custom profile from scratch.
-    // Use the profile's encode() as a base and patch the gamma curve.
 
-    // Actually, let's just encode the sRGB profile and modify it.
-    // This is hacky but works for the gamma-only case.
-    let srgb_bytes = profile.encode().ok()?;
+    // Update primaries if cHRM is present and non-sRGB.
+    if let Some(c) = chromaticities {
+        if !chrm_is_srgb {
+            let white = moxcms::XyY::new(
+                c[0] as f64 / 100000.0,
+                c[1] as f64 / 100000.0,
+                1.0,
+            );
+            let primaries = moxcms::ColorPrimaries {
+                red: moxcms::Chromaticity { x: c[2] as f32 / 100000.0, y: c[3] as f32 / 100000.0 },
+                green: moxcms::Chromaticity { x: c[4] as f32 / 100000.0, y: c[5] as f32 / 100000.0 },
+                blue: moxcms::Chromaticity { x: c[6] as f32 / 100000.0, y: c[7] as f32 / 100000.0 },
+            };
+            profile.update_rgb_colorimetry(white, primaries);
+        }
+    }
 
-    // For gamma-only with sRGB primaries, we can skip custom profiles.
-    // The ICC transform sRGB-gamma → sRGB-sRGB handles the gamma correction.
-    // moxcms can parse a minimal curv-based profile.
+    // Override TRC with pure gamma curve (parametric type 0: Y = X^gamma).
+    let trc = moxcms::ToneReprCurve::Parametric(vec![display_gamma as f32]);
+    profile.red_trc = Some(trc.clone());
+    profile.green_trc = Some(trc.clone());
+    profile.blue_trc = Some(trc);
 
-    // Build minimal ICC v2 profile: header + tag table + rTRC/gTRC/bTRC (gamma curves) + rXYZ/gXYZ/bXYZ
-    // This is the simplest valid RGB ICC profile.
-    let icc = build_minimal_icc_v2(gamma, chrm)?;
-    Some(icc)
+    // Clear CICP to prevent it from overriding our TRC (issue #154).
+    profile.cicp = None;
+
+    profile.encode().ok()
 }
 
 /// Build a minimal ICC v2 RGB profile with gamma TRC and optional custom primaries.
+/// Fallback when moxcms profile creation fails.
 fn build_minimal_icc_v2(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> {
     // ICC v2 profile structure:
     // Header (128 bytes) + Tag table (4 + N*12) + Tag data
@@ -767,16 +771,21 @@ fn mat3_inv(m: &[[f64; 3]; 3]) -> Option<[[f64; 3]; 3]> {
 fn apply_png_gamma_transform(
     source: Box<dyn zenpipe::Source>,
     png_data: &[u8],
+    honor_gama_only: bool,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
-    // Quick parse of PNG chunks to find gAMA and cHRM.
     let (gamma, chrm) = parse_png_gama_chrm(png_data);
     let gamma = match gamma {
         Some(g) if g > 0 => g,
-        _ => return Ok(source), // No gAMA — assume sRGB
+        _ => return Ok(source),
     };
 
-    // Also check for sRGB chunk — if present, no transform needed.
     if has_png_srgb_chunk(png_data) {
+        return Ok(source);
+    }
+
+    // gAMA-only (no cHRM) is ignored unless HonorGamaOnly is set.
+    // This matches v2 behavior — most PNGs with gAMA-only are sRGB.
+    if chrm.is_none() && !honor_gama_only {
         return Ok(source);
     }
 
