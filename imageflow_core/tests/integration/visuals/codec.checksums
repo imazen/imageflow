@@ -70,6 +70,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_crop_with_preshrink 170x220_crop
 tolerance off-by-one
 = mild-pond-a88cf0d96f:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ oily-mare-bcae8f82b4:sea  x86_64-avx512  @01675bcc  auto-accepted within tolerance (within off-by-one) vs mild-pond-a88cf0d96f:sea (zensim:99.84 (dissim 0.0016))
 
 ## test_transparent_png_to_png shirt
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
