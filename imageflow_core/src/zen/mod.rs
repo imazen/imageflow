@@ -1,10 +1,17 @@
-//! Zen-crate pipeline bridge for imageflow.
+//! Zen-crate streaming pipeline for imageflow.
 //!
-//! Translates imageflow v2 [`Node`](imageflow_types::Node) operations into
+//! Translates v2 [`Node`](imageflow_types::Node) operations into
 //! [`zennode::NodeInstance`] objects, resolves format/quality via `zencodecs`,
 //! and executes through `zenpipe`'s streaming pipeline.
 //!
-//! This module is gated behind the `zen-pipeline` feature.
+//! # Entry points
+//!
+//! - [`zen_build`] — execute a `Build001` request (extracts IO, runs pipeline)
+//! - [`zen_execute`] — execute a `Framewise` with pre-extracted IO bytes
+//! - [`zen_get_image_info`] — probe without decoding
+//! - [`execute_framewise`] — lower-level, takes `&HashMap<i32, Vec<u8>>`
+//!
+//! Gated behind the `zen-pipeline` feature.
 
 mod translate;
 mod preset_map;
@@ -12,7 +19,11 @@ mod execute;
 mod context_bridge;
 pub mod riapi;
 
-pub use execute::{execute_framewise, zen_get_image_info, ZenError, ZenEncodeResult};
-pub use translate::TranslateError;
-pub use context_bridge::{zen_build, zen_get_image_info as zen_probe, ZenBuildOutput};
+// High-level API (v2 JSON request types in, JobResult out).
+pub use context_bridge::{zen_build, zen_execute, zen_get_image_info, ZenBuildOutput};
+
+// Lower-level API (raw bytes in, ZenEncodeResult out).
+pub use execute::{execute_framewise, ZenError, ZenEncodeResult};
+
+// RIAPI expansion.
 pub use riapi::RiapiEngine;

@@ -1,11 +1,15 @@
-//! Bridge between imageflow v2 request types and the zen pipeline.
+//! Adapter between imageflow v2 JSON API and the zen streaming pipeline.
 //!
-//! Extracts input bytes from `IoObject` list, runs them through
-//! the zen pipeline, and returns results as `JobResult`.
+//! The v2 Context manages IO buffer lifecycle and C ABI. The zen pipeline
+//! takes bytes in and produces bytes out. This module bridges the two:
 //!
-//! Does NOT interact with `Context` IO system — operates on raw bytes.
-//! The caller (endpoint handler) is responsible for storing output bytes
-//! in Context's output buffers if needed.
+//! - Extracts input bytes from `Build001.io` objects
+//! - Runs the framewise pipeline through `execute.rs`
+//! - Returns `JobResult` with encoded output bytes
+//!
+//! Output bytes are returned in `ZenBuildOutput.output_buffers` — the caller
+//! (typically `v1/build` endpoint) is responsible for making them available
+//! to `take_output_buffer()` / `get_output_buffer_ptr()` on the Context.
 
 use std::collections::HashMap;
 
@@ -13,58 +17,49 @@ use imageflow_types as s;
 
 use crate::errors::*;
 
-use super::execute::{self, ZenError};
+use super::execute::{self, ZenError, ZenEncodeResult};
 
-/// Result of a zen pipeline build — encoded bytes + metadata.
+/// Result of a zen pipeline build.
 pub struct ZenBuildOutput {
+    /// v2-compatible job result for JSON serialization.
     pub job_result: s::JobResult,
     /// Encoded output bytes keyed by io_id.
+    /// Caller stores these in Context output buffers.
     pub output_buffers: HashMap<i32, Vec<u8>>,
 }
 
-/// Execute a Build001 request through the zen pipeline.
-///
-/// Extracts input bytes from the `io` objects in the request,
-/// runs the framewise pipeline through zenpipe+zencodecs,
-/// and returns the encoded output bytes alongside a `JobResult`.
+/// Execute a `v1/build` request through the zen pipeline.
 pub fn zen_build(parsed: &s::Build001) -> std::result::Result<ZenBuildOutput, FlowError> {
-    // 1. Extract input bytes from IO objects.
-    let io_bytes = extract_io_bytes(&parsed.io)?;
+    let io_bytes = extract_input_bytes(&parsed.io)?;
 
-    // 2. Execute through zen pipeline.
     let results = execute::execute_framewise(&parsed.framewise, &io_bytes)
-        .map_err(zen_error_to_flow_error)?;
+        .map_err(zen_to_flow)?;
 
-    // 3. Build JobResult and output buffer map.
-    let mut encodes = Vec::new();
-    let mut output_buffers = HashMap::new();
-
-    for result in results {
-        encodes.push(s::EncodeResult {
-            io_id: result.io_id,
-            w: result.width as i32,
-            h: result.height as i32,
-            preferred_mime_type: result.mime_type.to_string(),
-            preferred_extension: result.extension.to_string(),
-            bytes: s::ResultBytes::Elsewhere,
-        });
-        output_buffers.insert(result.io_id, result.bytes);
-    }
-
-    Ok(ZenBuildOutput {
-        job_result: s::JobResult {
-            encodes,
-            decodes: Vec::new(),
-            performance: None,
-        },
-        output_buffers,
-    })
+    Ok(build_output(results))
 }
 
-/// Probe an image and return v2-compatible ImageInfo.
+/// Execute a `v1/execute` request through the zen pipeline.
+///
+/// For `execute`, IO is pre-configured on Context. The caller must pass
+/// the input bytes explicitly since we don't access Context's IO system.
+pub fn zen_execute(
+    framewise: &s::Framewise,
+    io_bytes: &HashMap<i32, Vec<u8>>,
+) -> std::result::Result<ZenBuildOutput, FlowError> {
+    let results = execute::execute_framewise(framewise, io_bytes)
+        .map_err(zen_to_flow)?;
+
+    Ok(build_output(results))
+}
+
+/// Probe an image via zencodecs and return v2-compatible ImageInfo.
 pub fn zen_get_image_info(data: &[u8]) -> std::result::Result<s::ImageInfo, FlowError> {
-    let info = execute::zen_get_image_info(data)
-        .map_err(zen_error_to_flow_error)?;
+    let info = execute::zen_get_image_info(data).map_err(zen_to_flow)?;
+
+    // Query source encoding details for lossless detection.
+    let lossless = info.source_encoding
+        .as_ref()
+        .map_or(false, |se| se.is_lossless());
 
     Ok(s::ImageInfo {
         image_width: info.width as i32,
@@ -73,26 +68,53 @@ pub fn zen_get_image_info(data: &[u8]) -> std::result::Result<s::ImageInfo, Flow
         preferred_extension: info.format.extension().to_string(),
         frame_decodes_into: s::PixelFormat::Bgra32,
         multiple_frames: info.is_animation(),
-        lossless: false, // TODO: check source encoding details
+        lossless,
     })
 }
 
-// ─── Helpers ───
+// ─── Internal ───
+
+fn build_output(results: Vec<ZenEncodeResult>) -> ZenBuildOutput {
+    let mut encodes = Vec::with_capacity(results.len());
+    let mut output_buffers = HashMap::with_capacity(results.len());
+
+    for r in results {
+        encodes.push(s::EncodeResult {
+            io_id: r.io_id,
+            w: r.width as i32,
+            h: r.height as i32,
+            preferred_mime_type: r.mime_type.to_string(),
+            preferred_extension: r.extension.to_string(),
+            bytes: s::ResultBytes::Elsewhere,
+        });
+        output_buffers.insert(r.io_id, r.bytes);
+    }
+
+    ZenBuildOutput {
+        job_result: s::JobResult {
+            encodes,
+            decodes: Vec::new(), // TODO: populate from probe info
+            performance: None,   // TODO: timing instrumentation
+        },
+        output_buffers,
+    }
+}
 
 /// Extract input bytes from Build001 IoObject list.
-fn extract_io_bytes(io_objects: &[s::IoObject]) -> std::result::Result<HashMap<i32, Vec<u8>>, FlowError> {
+///
+/// Only processes `In`-direction objects. Output placeholders are skipped.
+fn extract_input_bytes(io_objects: &[s::IoObject]) -> std::result::Result<HashMap<i32, Vec<u8>>, FlowError> {
     let mut map = HashMap::new();
     for obj in io_objects {
         if obj.direction == s::IoDirection::In {
-            let bytes = io_enum_to_bytes(&obj.io)?;
-            map.insert(obj.io_id, bytes);
+            map.insert(obj.io_id, io_to_bytes(&obj.io)?);
         }
     }
     Ok(map)
 }
 
-/// Convert IoEnum to raw bytes.
-fn io_enum_to_bytes(io: &s::IoEnum) -> std::result::Result<Vec<u8>, FlowError> {
+/// Resolve an IoEnum to raw bytes.
+fn io_to_bytes(io: &s::IoEnum) -> std::result::Result<Vec<u8>, FlowError> {
     match io {
         s::IoEnum::ByteArray(bytes) => Ok(bytes.clone()),
         s::IoEnum::Base64(b64) => {
@@ -107,30 +129,22 @@ fn io_enum_to_bytes(io: &s::IoEnum) -> std::result::Result<Vec<u8>, FlowError> {
         }
         s::IoEnum::Filename(path) => {
             std::fs::read(path)
-                .map_err(|e| nerror!(ErrorKind::DecodingIoError, "cannot read {}: {}", path, e))
+                .map_err(|e| nerror!(ErrorKind::DecodingIoError, "read {}: {}", path, e))
         }
         s::IoEnum::OutputBuffer | s::IoEnum::OutputBase64 => {
-            Err(nerror!(ErrorKind::InvalidArgument, "output buffer has no input bytes"))
+            Err(nerror!(ErrorKind::InvalidArgument, "output IO has no input bytes"))
         }
         s::IoEnum::Placeholder => {
-            Err(nerror!(ErrorKind::InvalidArgument, "placeholder IO not supported"))
+            Err(nerror!(ErrorKind::InvalidArgument, "placeholder IO not resolved"))
         }
     }
 }
 
-fn zen_error_to_flow_error(e: ZenError) -> FlowError {
+fn zen_to_flow(e: ZenError) -> FlowError {
     match e {
-        ZenError::Translate(t) => {
-            nerror!(ErrorKind::InvalidNodeParams, "zen translate: {}", t)
-        }
-        ZenError::Codec(msg) => {
-            nerror!(ErrorKind::ImageEncodingError, "zen codec: {}", msg)
-        }
-        ZenError::Pipeline(p) => {
-            nerror!(ErrorKind::InternalError, "zen pipeline: {}", p)
-        }
-        ZenError::Io(msg) => {
-            nerror!(ErrorKind::InvalidArgument, "zen io: {}", msg)
-        }
+        ZenError::Translate(t) => nerror!(ErrorKind::InvalidNodeParams, "{}", t),
+        ZenError::Codec(msg) => nerror!(ErrorKind::ImageDecodingError, "{}", msg),
+        ZenError::Pipeline(p) => nerror!(ErrorKind::InternalError, "{}", p),
+        ZenError::Io(msg) => nerror!(ErrorKind::InvalidArgument, "{}", msg),
     }
 }

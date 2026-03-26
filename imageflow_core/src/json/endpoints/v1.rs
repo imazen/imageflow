@@ -52,6 +52,17 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
             let output = execute(context, input)?;
             Ok(JsonResponse::ok(output))
         }
+
+        // ── Zen streaming pipeline (requires zen-pipeline feature) ──
+        // Same Build001 wire format and response as v1/build, but uses
+        // zenpipe + zencodecs instead of the v2 graph engine.
+        #[cfg(feature = "zen-pipeline")]
+        "v1/zen-build" => {
+            let input = parse_json::<s::Build001>(json)?;
+            let output = zen_build(context, input)?;
+            Ok(JsonResponse::ok(output))
+        }
+
         _ => Err(nerror!(ErrorKind::InvalidMessageEndpoint)),
     }
 }
@@ -808,4 +819,30 @@ pub(super) fn get_json_schemas_v1() -> Result<GetJsonSchemasV1Response> {
         },
     };
     Ok(GetJsonSchemasV1Response { schemas })
+}
+
+// ─── Zen pipeline endpoints ───
+//
+// These use the zen streaming pipeline (zenpipe + zencodecs) instead of the
+// v2 graph engine. Same Build001 wire format, same response format.
+// Available at `v1/zen-build` and `v1/zen-get-image-info`.
+
+#[cfg(feature = "zen-pipeline")]
+fn zen_build(context: &mut Context, parsed: Build001) -> Result<BuildV1Response> {
+    if let Some(s::Build001Config { security, .. }) = &parsed.builder_config {
+        if let Some(s) = security {
+            context.configure_security(s.clone());
+        }
+    }
+
+    let output = crate::zen::zen_build(&parsed).map_err(|e| e.at(here!()))?;
+
+    // Store encoded output in Context so take_output_buffer() works for C ABI.
+    for (io_id, bytes) in &output.output_buffers {
+        context.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
+        let mut codec = context.get_codec(*io_id).map_err(|e| e.at(here!()))?;
+        codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
+    }
+
+    Ok(BuildV1Response { job_result: output.job_result })
 }
