@@ -607,6 +607,19 @@ impl Context {
 
     /// For executing a complete job
     pub(crate) fn build_inner(&mut self, parsed: s::Build001) -> Result<s::JobResult> {
+        // When zen-default feature is enabled, route through zen pipeline.
+        #[cfg(feature = "zen-default")]
+        {
+            let output = crate::zen::zen_build(&parsed).map_err(|e| e.at(here!()))?;
+            // Store encoded outputs in Context output buffers.
+            for (io_id, bytes) in &output.output_buffers {
+                self.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
+                let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
+                codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
+            }
+            return Ok(output.job_result);
+        }
+
         let g = crate::parsing::GraphTranslator::new()
             .translate_framewise(parsed.framewise)
             .map_err(|e| e.at(here!()))?;
@@ -673,6 +686,12 @@ impl Context {
         Ok(s::ResponsePayload::JobResult(job_result))
     }
     pub(crate) fn execute_inner(&mut self, what: s::Execute001) -> Result<s::JobResult> {
+        // When zen-default feature is enabled, route through zen pipeline.
+        #[cfg(feature = "zen-default")]
+        {
+            return self.zen_execute_inner(what).map_err(|e| e.at(here!()));
+        }
+
         let g = crate::parsing::GraphTranslator::new()
             .translate_framewise(what.framewise)
             .map_err(|e| e.at(here!()))?;

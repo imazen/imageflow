@@ -89,7 +89,9 @@ fn execute_steps(
     steps: &[Node],
     io_buffers: &HashMap<i32, Vec<u8>>,
 ) -> Result<Vec<ZenEncodeResult>, ZenError> {
-    let pipeline = translate::translate_nodes(steps)?;
+    // Pre-process: expand CommandString nodes using source dimensions from probe.
+    let steps = expand_command_strings(steps, io_buffers)?;
+    let pipeline = translate::translate_nodes(&steps)?;
 
     let decode_io_id = pipeline.decode_io_id.ok_or_else(|| {
         ZenError::Io("no decode node in pipeline".into())
@@ -290,6 +292,86 @@ fn create_encode_role_placeholder() -> Box<dyn zennode::NodeInstance> {
     zencodecs::zennode_defs::QUALITY_INTENT_NODE_NODE
         .create_default()
         .expect("placeholder creation")
+}
+
+/// Expand CommandString nodes into concrete steps using RIAPI parsing.
+///
+/// CommandString needs source dimensions for layout computation. We probe
+/// the decode source to get dimensions, then use `Ir4Expand::expand_steps()`
+/// to produce concrete v2 Node steps.
+fn expand_command_strings(
+    steps: &[Node],
+    io_buffers: &HashMap<i32, Vec<u8>>,
+) -> Result<Vec<Node>, ZenError> {
+    // Check if any CommandString nodes exist.
+    let has_command_string = steps.iter().any(|n| matches!(n, Node::CommandString { .. }));
+    if !has_command_string {
+        return Ok(steps.to_vec());
+    }
+
+    // Find decode io_id to probe source dimensions.
+    let decode_io_id = steps.iter().find_map(|n| match n {
+        Node::Decode { io_id, .. } => Some(*io_id),
+        _ => None,
+    });
+
+    let (source_w, source_h, source_mime, source_lossless) = if let Some(io_id) = decode_io_id {
+        if let Some(data) = io_buffers.get(&io_id) {
+            let info = zencodecs::from_bytes(data)
+                .map_err(|e| ZenError::Codec(format!("probe for CommandString: {e}")))?;
+            (
+                info.width as i32,
+                info.height as i32,
+                Some(info.format.mime_type().to_string()),
+                info.source_encoding.as_ref().map_or(false, |se| se.is_lossless()),
+            )
+        } else {
+            (0, 0, None, false)
+        }
+    } else {
+        (0, 0, None, false)
+    };
+
+    // Expand each CommandString into concrete steps.
+    let mut result = Vec::new();
+    for node in steps {
+        match node {
+            Node::CommandString { kind: _, value, decode, encode, watermarks } => {
+                use imageflow_riapi::ir4::*;
+
+                let expand = Ir4Expand {
+                    i: Ir4Command::QueryString(value.clone()),
+                    source: Ir4SourceFrameInfo {
+                        w: source_w,
+                        h: source_h,
+                        fmt: imageflow_types::PixelFormat::Bgra32,
+                        original_mime: source_mime.clone(),
+                        lossless: source_lossless,
+                    },
+                    reference_width: source_w,
+                    reference_height: source_h,
+                    encode_id: *encode,
+                    watermarks: watermarks.clone(),
+                };
+
+                match expand.expand_steps() {
+                    Ok(ir4_result) => {
+                        if let Some(expanded_steps) = ir4_result.steps {
+                            result.extend(expanded_steps);
+                        }
+                    }
+                    Err(e) => {
+                        return Err(ZenError::Translate(TranslateError::InvalidParam(
+                            format!("RIAPI expansion: {e:?}"),
+                        )));
+                    }
+                }
+            }
+            other => result.push(other.clone()),
+        }
+    }
+
+    Ok(result)
 }
 
 impl TranslatedPipeline {

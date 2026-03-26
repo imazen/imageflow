@@ -243,6 +243,9 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
             Err(TranslateError::Unsupported("watermark_red_dot".into()))
         }
 
+        // Internal test node — no-op in zen pipeline.
+        Node::CaptureBitmapKey { .. } => Ok(()),
+
         #[allow(unreachable_patterns)]
         _ => Err(TranslateError::Unsupported(format!("{node:?}"))),
     }

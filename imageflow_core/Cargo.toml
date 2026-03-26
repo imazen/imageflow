@@ -111,11 +111,13 @@ c-codecs = [
     "dep:lcms2", "dep:lcms2-sys",
     "dep:libz-sys",
 ]
-# Zen-crate streaming pipeline (replaces flow/ and codecs/ for execution).
+# Zen-crate streaming pipeline (available alongside v2 engine).
 zen-pipeline = [
     "dep:zenpipe", "dep:zencodecs", "dep:zencodec", "dep:zennode",
     "dep:zenresize", "dep:zenlayout", "dep:zenfilters", "dep:zenpixels",
 ]
+# Route all execute_inner/build_inner through zen pipeline instead of v2 engine.
+zen-default = ["zen-pipeline"]
 # Feature to enable OpenAPI schema generation capabilities
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]
 # Enable schemars-based JSON Schema generation. Enables the corresponding feature in imageflow_types
