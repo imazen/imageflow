@@ -155,11 +155,16 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
                 .and_then(|h| h.down_filter.as_ref())
                 .map(|f| filter_to_str(f).to_string());
             push_resample2d_node(&mut result.nodes, *w, *h, filter)?;
-            // If a background_color (matte) is specified, add RemoveAlpha after resize.
+            // If an opaque background_color (matte) is specified, add RemoveAlpha after resize.
+            // Transparent means "preserve transparency" — no alpha removal.
             if let Some(hints) = hints {
                 if let Some(ref bg) = hints.background_color {
-                    let rgba = color_to_rgba(bg);
-                    push_remove_alpha_node(&mut result.nodes, [rgba[0], rgba[1], rgba[2]])?;
+                    if !matches!(bg, Color::Transparent) {
+                        let rgba = color_to_rgba(bg);
+                        if rgba[3] > 0 {
+                            push_remove_alpha_node(&mut result.nodes, [rgba[0], rgba[1], rgba[2]])?;
+                        }
+                    }
                 }
             }
             Ok(())
@@ -306,11 +311,15 @@ fn translate_constrain(
         }
     }
     push_constrain_node(nodes, &params)?;
-    // If a background_color (matte) is specified, add RemoveAlpha after constrain.
+    // If an opaque background_color (matte) is specified, add RemoveAlpha after constrain.
     if let Some(ref hints) = c.hints {
         if let Some(ref bg) = hints.background_color {
-            let rgba = color_to_rgba(bg);
-            push_remove_alpha_node(nodes, [rgba[0], rgba[1], rgba[2]])?;
+            if !matches!(bg, Color::Transparent) {
+                let rgba = color_to_rgba(bg);
+                if rgba[3] > 0 {
+                    push_remove_alpha_node(nodes, [rgba[0], rgba[1], rgba[2]])?;
+                }
+            }
         }
     }
     // Also check canvas_color as matte for pad modes.

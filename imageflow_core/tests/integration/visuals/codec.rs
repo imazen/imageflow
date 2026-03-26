@@ -386,3 +386,4 @@ fn test_jpeg_alpha_is_opaque() {
         }
     }
 }
+
