@@ -250,22 +250,33 @@ fn decode_to_source(
     data: &[u8],
     registry: &AllowedFormats,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
-    // TODO: Use streaming decode once format negotiation is wired.
-    // build_streaming_decoder() works (JPEG/PNG support Cow::Owned + job_static),
-    // but we need to know the decoder's output pixel format to construct DecoderSource.
-    // For now, use full-frame decode which reports its format via descriptor().
-    let decoded = zencodecs::DecodeRequest::new(data)
+    // Try streaming decode first (JPEG, PNG, GIF, AVIF, HEIC).
+    // Format is discovered lazily from the first decoded batch.
+    match zencodecs::DecodeRequest::new(data)
         .with_registry(registry)
-        .decode_full_frame()
-        .map_err(|e| ZenError::Codec(format!("decode: {e}")))?;
+        .build_streaming_decoder()
+    {
+        Ok(streaming) => {
+            let source = zenpipe::codec::DecoderSource::new(streaming)
+                .map_err(|e| ZenError::Pipeline(e))?;
+            Ok(Box::new(source))
+        }
+        Err(_) => {
+            // Fall back to full-frame decode (WebP, TIFF, etc.).
+            let decoded = zencodecs::DecodeRequest::new(data)
+                .with_registry(registry)
+                .decode_full_frame()
+                .map_err(|e| ZenError::Codec(format!("decode: {e}")))?;
 
-    let w = decoded.width();
-    let h = decoded.height();
-    let format = decoded.descriptor();
-    let buf = decoded.into_buffer();
-    let bytes = buf.copy_to_contiguous_bytes();
-    let source = zenpipe::sources::MaterializedSource::from_data(bytes, w, h, format);
-    Ok(Box::new(source))
+            let w = decoded.width();
+            let h = decoded.height();
+            let format = decoded.descriptor();
+            let buf = decoded.into_buffer();
+            let bytes = buf.copy_to_contiguous_bytes();
+            let source = zenpipe::sources::MaterializedSource::from_data(bytes, w, h, format);
+            Ok(Box::new(source))
+        }
+    }
 }
 
 /// Pull strips from pipeline source, push directly to encoder.
