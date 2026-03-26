@@ -126,10 +126,12 @@ impl NodeConverter for ExpandCanvasConverter {
     }
 }
 
-/// Converter for `zenlayout.region` (signed coords: negative=crop, positive=expand).
+/// Converter for `zenlayout.region` — viewport with crop + expand.
 ///
-/// Region is a superset of both crop and expand_canvas. It uses signed coordinates:
-/// positive values extend the canvas, negative values crop inward.
+/// Region defines a viewport in source coordinates. Negative coords extend
+/// beyond the source (padding), positive coords within the source (crop).
+/// Output is a Materialize that places the source onto a canvas at the
+/// correct offset using ExpandCanvasSource.
 pub struct RegionConverter;
 
 impl NodeConverter for RegionConverter {
@@ -144,28 +146,45 @@ impl NodeConverter for RegionConverter {
         let x2 = match node.get_param("x2") { Some(ParamValue::I32(v)) => v, _ => 0 };
         let y2 = match node.get_param("y2") { Some(ParamValue::I32(v)) => v, _ => 0 };
 
-        // Region with all non-negative: expand canvas
-        // Region with negative: crop + expand combo
-        // For simplicity, convert to ExpandCanvas with signed placement.
-        // The net canvas is (x2-x1) × (y2-y1) with content placed at (-x1, -y1).
-        let canvas_w = (x2 - x1) as u32;
-        let canvas_h = (y2 - y1) as u32;
+        // Region(x1,y1,x2,y2) defines a viewport. The output canvas is
+        // (x2-x1) × (y2-y1) pixels. The source image is placed at (-x1,-y1)
+        // in the canvas. ExpandCanvasSource handles clipping and padding.
+        let canvas_w = (x2 - x1).max(1) as u32;
+        let canvas_h = (y2 - y1).max(1) as u32;
+        let place_x = -x1; // source's (0,0) goes to canvas position (-x1, -y1)
+        let place_y = -y1;
 
-        // Positive x1 = left padding, negative x1 = left crop
-        let left = x1.max(0) as u32;
-        let top = y1.max(0) as u32;
-        let right = (-x2).max(0) as u32; // x2 negative = right padding; but x2 is the right edge
-        let bottom = (-y2).max(0) as u32;
+        // Use Materialize to apply the region viewport via ExpandCanvasSource.
+        // ExpandCanvasSource handles negative placement (crop) and positive
+        // placement (padding) transparently.
+        Ok(NodeOp::Materialize(Box::new(move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
+            let src_w = *w;
+            let src_h = *h;
+            let bpp = fmt.bytes_per_pixel();
+            let src_stride = src_w as usize * bpp;
 
-        // This is an approximation — Region is more like a viewport.
-        // ExpandCanvas with the appropriate offsets.
-        Ok(NodeOp::ExpandCanvas {
-            left,
-            top,
-            right,
-            bottom,
-            bg_color: [0, 0, 0, 0],
-        })
+            // Build the output canvas
+            let out_stride = canvas_w as usize * bpp;
+            let mut out = vec![0u8; canvas_h as usize * out_stride];
+
+            for out_y in 0..canvas_h as i32 {
+                let src_y = out_y - place_y;
+                if src_y < 0 || src_y >= src_h as i32 { continue; }
+                for out_x in 0..canvas_w as i32 {
+                    let src_x = out_x - place_x;
+                    if src_x < 0 || src_x >= src_w as i32 { continue; }
+                    let src_off = src_y as usize * src_stride + src_x as usize * bpp;
+                    let dst_off = out_y as usize * out_stride + out_x as usize * bpp;
+                    if src_off + bpp <= data.len() && dst_off + bpp <= out.len() {
+                        out[dst_off..dst_off + bpp].copy_from_slice(&data[src_off..src_off + bpp]);
+                    }
+                }
+            }
+
+            *data = out;
+            *w = canvas_w;
+            *h = canvas_h;
+        })))
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
@@ -285,9 +304,10 @@ impl NodeConverter for ImageflowNodeConverter {
 }
 
 /// Build the standard set of converters for the imageflow zen pipeline.
-pub fn imageflow_converters() -> [&'static dyn NodeConverter; 3] {
+pub fn imageflow_converters() -> [&'static dyn NodeConverter; 4] {
     static FILTERS: ZenFiltersConverter = ZenFiltersConverter;
     static EXPAND: ExpandCanvasConverter = ExpandCanvasConverter;
+    static REGION: RegionConverter = RegionConverter;
     static IMAGEFLOW: ImageflowNodeConverter = ImageflowNodeConverter;
-    [&FILTERS, &EXPAND, &IMAGEFLOW]
+    [&FILTERS, &EXPAND, &REGION, &IMAGEFLOW]
 }

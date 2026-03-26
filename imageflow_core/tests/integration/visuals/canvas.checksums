@@ -65,3 +65,7 @@ tolerance off-by-one
 ## test_fill_rect_original blue_on_transparent
 tolerance off-by-one
 ~ meek-bear-103bc946d6:sea  x86_64-avx512  @2ea9b519  auto-accepted
+
+## test_pixels_region pixel_coords
+tolerance off-by-one
+~ civic-marsh-9025d01eeb:sea  x86_64-avx512  @0d032f73  auto-accepted
