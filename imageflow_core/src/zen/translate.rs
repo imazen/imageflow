@@ -148,9 +148,6 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         Node::Constrain(c) => translate_constrain(c, &mut result.nodes),
 
         Node::Resample2D { w, h, hints } => {
-            // Resample2D is a forced resize — each must execute independently
-            // (not coalesced with adjacent constrains, since sequential resizes
-            // are intentional in v2 pipelines like double-resize for blur).
             let filter = hints.as_ref()
                 .and_then(|h| h.down_filter.as_ref())
                 .map(|f| filter_to_str(f).to_string());

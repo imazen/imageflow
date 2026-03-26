@@ -1,8 +1,8 @@
 ## test_negatives_in_command_string red_leaf_negative_height
 tolerance off-by-one
 = short-fern-3a18947ea1:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ hefty-hive-6c9c6425bb:sea  x86_64-avx512  @0a8f6a9b  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
 ~ like-glow-fcd087632e:sea  x86_64-avx512  @9ba39526  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
+~ red-den-be43032de3:sea  x86_64-avx512  @fdd8f2a4  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
 
 ## test_rot_90_and_red_dot landscape_70x70
 tolerance off-by-one
