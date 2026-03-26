@@ -38,6 +38,7 @@ tolerance off-by-one
 ## test_simple_filters Saturation(1.0)
 tolerance off-by-one
 = fixed-bud-debef595dc:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs fixed-bud-debef595dc:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters Saturation(-0.2)
 tolerance off-by-one
@@ -52,6 +53,7 @@ tolerance off-by-one
 ## test_white_balance_image_threshold_5 t0.5
 tolerance off-by-one
 = funny-ridge-b6510558f0:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ apt-lion-da943ad82f:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs funny-ridge-b6510558f0:sea (zensim:99.71 (dissim 0.0029))
 
 ## test_simple_filters GrayscaleFlat
 tolerance off-by-one
@@ -61,6 +63,7 @@ tolerance off-by-one
 ## test_simple_filters Brightness(1.0)
 tolerance off-by-one
 = red-foam-e67b1515b9:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs red-foam-e67b1515b9:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters GrayscaleNtsc
 tolerance off-by-one

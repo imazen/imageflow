@@ -19,6 +19,7 @@ tolerance off-by-one
 ## test_watermark_image_small webp_within_90pct
 tolerance off-by-one
 = oral-cliff-ee411f978a:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs oral-cliff-ee411f978a:sea (zensim:99.50 (dissim 0.0050))
 
 ## test_watermark_jpeg_over_pnga gamma_test_30pct
 tolerance off-by-one
@@ -29,6 +30,7 @@ tolerance off-by-one
 ## test_watermark_image_command_string_with_bgcolor dice_aaeeff
 tolerance off-by-one
 = ripe-marsh-dd75ce382a:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs ripe-marsh-dd75ce382a:sea (zensim:99.50 (dissim 0.0050))
 
 ## test_watermark_image_pixel_margins webp_700px_offset
 tolerance off-by-one

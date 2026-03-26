@@ -7,6 +7,7 @@ tolerance max-delta:2 zensim:80 (dissim 0.20) pixels-changed:100.0%
 ## test_scale_rings hermite_400x400
 tolerance off-by-one
 = salty-nest-6d4fa00ed3:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ giant-trout-418f5be2ec:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs salty-nest-6d4fa00ed3:sea (zensim:99.31 (dissim 0.0069))
 
 ## test_scale_image waterhouse_robidoux_400x300
 tolerance off-by-one
@@ -31,6 +32,7 @@ tolerance off-by-one
 ## webp_lossless_alpha_decode_and_scale 100x100
 tolerance off-by-one
 = clean-ore-a59f8abf2c:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ funny-grape-f5de6b839a:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs clean-ore-a59f8abf2c:sea (zensim:99.85 (dissim 0.0015))
 
 ## webp_lossy_alpha_decode_and_scale 100x100
 tolerance off-by-one
@@ -39,3 +41,4 @@ tolerance off-by-one
 ## webp_lossy_noalpha_decode_and_scale mountain_100x100
 tolerance off-by-one
 = open-shell-b210964ea9:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ same-moon-a6405fbf4b:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs open-shell-b210964ea9:sea (zensim:99.84 (dissim 0.0016))

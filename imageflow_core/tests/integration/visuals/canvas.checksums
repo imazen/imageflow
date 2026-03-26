@@ -12,6 +12,7 @@ tolerance off-by-one
 ## test_detect_whitespace blue_on_transparent
 tolerance off-by-one
 = steep-wolf-3fcacdd24a:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ meek-bear-103bc946d6:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs steep-wolf-3fcacdd24a:sea (zensim:99.77 (dissim 0.0023))
 
 ## test_crop red_canvas_blue_strip
 tolerance off-by-one
@@ -55,6 +56,7 @@ tolerance off-by-one
 ## test_round_image_corners_transparent waterhouse_400x300_r100
 tolerance off-by-one
 = north-doe-e6e0c779a0:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ safe-crab-ecaa72b540:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs north-doe-e6e0c779a0:sea (zensim:99.73 (dissim 0.0027))
 
 ## test_expand_rect fill_expand_hermite_linear
 tolerance off-by-one

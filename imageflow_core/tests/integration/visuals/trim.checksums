@@ -5,11 +5,12 @@ tolerance zensim:99 (dissim 0.01)
 ## test_trim_resize_whitespace_with_padding 450x450_gray
 tolerance zensim:99 (dissim 0.01)
 = apt-colt-7f54f13622:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ murky-chip-330ce44330:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs apt-colt-7f54f13622:sea (zensim:99.21 (dissim 0.0079))
 
 ## test_trim_resize_whitespace_without_padding 450x450_gray
 tolerance zensim:99 (dissim 0.01)
 = own-spire-30310bace0:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ prone-den-314d60fe89:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs own-spire-30310bace0:sea (zensim:99.84 (dissim 0.0016))
+~ prone-den-314d60fe89:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs own-spire-30310bace0:sea (zensim:99.84 (dissim 0.0016))
 
 ## test_trim_whitespace transparent_shirt
 tolerance zensim:99 (dissim 0.01)
