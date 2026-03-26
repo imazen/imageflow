@@ -32,6 +32,7 @@ tolerance zensim:95 (dissim 0.05)
 ## decode_rgb_with_cmyk_profile_jpeg wrenches_ignore_icc
 tolerance off-by-one
 = great-snail-b22fce67f5:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ raw-hound-660874c876:sea  x86_64-avx512  @d2f2f0b7  auto-accepted within tolerance (within off-by-one) vs great-snail-b22fce67f5:sea (zensim:99.27 (dissim 0.0073))
 
 ## test_transparent_webp_to_webp lossless_100x100
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
@@ -41,7 +42,7 @@ tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 tolerance zensim:99 (dissim 0.01)
 = rapid-olive-5907234423:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ moved-tuna-df63ab2c17:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs rapid-olive-5907234423:sea (zensim:97.94 (dissim 0.021), 11.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
-~ first-node-ab5566beef:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs rapid-olive-5907234423:sea (zensim:99.81 (dissim 0.0019))
+~ first-node-ab5566beef:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs rapid-olive-5907234423:sea (zensim:99.81 (dissim 0.0019))
 
 ## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg
 tolerance zensim:99 (dissim 0.01)
