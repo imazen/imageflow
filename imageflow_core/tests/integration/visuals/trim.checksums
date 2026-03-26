@@ -1,11 +1,12 @@
 ## test_trim_whitespace_with_padding gray_bg
 tolerance zensim:99 (dissim 0.01)
 = oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ known-quay-b60c8ecec1:sea  x86_64-avx512  @c4319ddb  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs oval-flow-0956d8f4f7:sea (zensim:98.87 (dissim 0.011))
 
 ## test_trim_resize_whitespace_with_padding 450x450_gray
 tolerance zensim:99 (dissim 0.01)
 = apt-colt-7f54f13622:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ murky-chip-330ce44330:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs apt-colt-7f54f13622:sea (zensim:99.21 (dissim 0.0079))
+~ murky-chip-330ce44330:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs apt-colt-7f54f13622:sea (zensim:99.21 (dissim 0.0079))
 
 ## test_trim_resize_whitespace_without_padding 450x450_gray
 tolerance zensim:99 (dissim 0.01)
@@ -21,3 +22,4 @@ tolerance zensim:99 (dissim 0.01)
 ## test_trim_whitespace_with_padding_no_resize gray_bg
 tolerance zensim:99 (dissim 0.01)
 = oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ known-quay-b60c8ecec1:sea  x86_64-avx512  @c4319ddb  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs oval-flow-0956d8f4f7:sea (zensim:98.87 (dissim 0.011))

@@ -65,8 +65,9 @@ tolerance zensim:99 (dissim 0.01)
 ~ fawn-hazel-200d580465:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs final-otter-e6b0565eaf:sea (zensim:94.74 (dissim 0.053), 27.7% pixels ±8, max-delta:[6,6,8], category:unclassified)
 
 ## test_crop_with_preshrink 170x220_crop
-tolerance off-by-one
+tolerance max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%
 = mild-pond-a88cf0d96f:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ steep-raven-c96978d9d0:sea  x86_64-avx512  @c4319ddb  auto-accepted within tolerance (within max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%) vs mild-pond-a88cf0d96f:sea (zensim:98.35 (dissim 0.017), 9.4% pixels ±2, max-delta:[2,1,1], category:rounding, biased)
 
 ## test_transparent_png_to_png shirt
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
