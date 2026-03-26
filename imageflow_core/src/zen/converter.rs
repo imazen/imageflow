@@ -308,7 +308,48 @@ impl NodeConverter for ImageflowNodeConverter {
                     .downcast_ref::<super::translate::RemoveAlphaNode>()
                     .map(|n| n.matte)
                     .unwrap_or([255, 255, 255]);
-                Ok(NodeOp::RemoveAlpha { matte })
+                // v2 blends matte in linear light space, not sRGB.
+                // Use Materialize to do the blend manually in linear.
+                let [mr, mg, mb] = matte;
+                Ok(NodeOp::Materialize(Box::new(move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
+                    let bpp = fmt.bytes_per_pixel();
+                    if bpp < 4 { return; } // No alpha to remove
+                    let pw = *w as usize;
+                    let ph = *h as usize;
+                    // sRGB matte → linear
+                    let ml_r = srgb_byte_to_linear(mr);
+                    let ml_g = srgb_byte_to_linear(mg);
+                    let ml_b = srgb_byte_to_linear(mb);
+
+                    // In-place: RGBA → RGB with linear-space matte blend
+                    let mut out = Vec::with_capacity(pw * ph * 3);
+                    for y in 0..ph {
+                        for x in 0..pw {
+                            let off = (y * pw + x) * bpp;
+                            let sr = data[off] as f32 / 255.0;
+                            let sg = data[off + 1] as f32 / 255.0;
+                            let sb = data[off + 2] as f32 / 255.0;
+                            let a = data[off + 3] as f32 / 255.0;
+
+                            // sRGB → linear
+                            let lr = srgb_to_linear(sr);
+                            let lg = srgb_to_linear(sg);
+                            let lb = srgb_to_linear(sb);
+
+                            // Composite in linear (straight alpha over matte)
+                            let or = lr * a + ml_r * (1.0 - a);
+                            let og = lg * a + ml_g * (1.0 - a);
+                            let ob = lb * a + ml_b * (1.0 - a);
+
+                            // Linear → sRGB
+                            out.push(linear_to_srgb_byte(or));
+                            out.push(linear_to_srgb_byte(og));
+                            out.push(linear_to_srgb_byte(ob));
+                        }
+                    }
+                    *data = out;
+                    *fmt = zenpipe::format::RGB8_SRGB;
+                })))
             }
             _ => Err(PipeError::Op(format!(
                 "imageflow converter: unknown node '{}'",
@@ -333,4 +374,17 @@ pub fn imageflow_converters() -> [&'static dyn NodeConverter; 4] {
     static REGION: RegionConverter = RegionConverter;
     static IMAGEFLOW: ImageflowNodeConverter = ImageflowNodeConverter;
     [&FILTERS, &EXPAND, &REGION, &IMAGEFLOW]
+}
+
+fn srgb_to_linear(s: f32) -> f32 {
+    linear_srgb::iec::srgb_to_linear(s)
+}
+
+fn srgb_byte_to_linear(b: u8) -> f32 {
+    linear_srgb::iec::srgb_to_linear(b as f32 / 255.0)
+}
+
+fn linear_to_srgb_byte(l: f32) -> u8 {
+    let s = linear_srgb::iec::linear_to_srgb(l);
+    (s * 255.0 + 0.5).min(255.0).max(0.0) as u8
 }

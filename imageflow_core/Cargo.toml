@@ -70,6 +70,7 @@ zenresize = { path = "../../zen/zenresize", features = ["zennode"], optional = t
 zenlayout = { path = "../../zen/zenlayout", features = ["zennode"], optional = true }
 zenfilters = { path = "../../zen/zenfilters", features = ["zennode"], optional = true }
 zenpixels = { version = "0.2.0", optional = true }
+linear-srgb = { path = "../../zen/linear-srgb", features = ["iec"], optional = true }
 
 # --- C codec dependencies (optional, gated behind c-codecs feature) ---
 imageflow_c_components = { path = "../c_components", optional = true }
@@ -115,6 +116,7 @@ c-codecs = [
 zen-pipeline = [
     "dep:zenpipe", "dep:zencodecs", "dep:zencodec", "dep:zennode",
     "dep:zenresize", "dep:zenlayout", "dep:zenfilters", "dep:zenpixels",
+    "dep:linear-srgb",
 ]
 # Route all execute_inner/build_inner through zen pipeline instead of v2 engine.
 zen-default = ["zen-pipeline"]

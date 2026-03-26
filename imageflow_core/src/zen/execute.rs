@@ -213,7 +213,10 @@ fn execute_steps(
 
     // Check for animation: if input is animated and encode format supports animation,
     // do a multi-frame passthrough (decode all → encode all).
-    if has_encode && pipeline.nodes.is_empty() {
+    // Skip when SelectFrame is set — that means single-frame extraction, not animation.
+    let has_select_frame = pipeline.decoder_commands.as_ref()
+        .is_some_and(|cmds| cmds.iter().any(|c| matches!(c, imageflow_types::DecoderCommand::SelectFrame(_))));
+    if has_encode && pipeline.nodes.is_empty() && !has_select_frame {
         let registry = AllowedFormats::all();
         let info = zencodecs::from_bytes(input_data)
             .map_err(|e| ZenError::Codec(format!("probe: {e}")))?;
