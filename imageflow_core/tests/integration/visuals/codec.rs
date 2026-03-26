@@ -386,18 +386,3 @@ fn test_jpeg_alpha_is_opaque() {
         }
     }
 }
-
-#[test]
-
-#[test]
-fn debug_transparent_png_pixel_dump() {
-    use imageflow_core::Context;
-    use imageflow_types as s;
-    crate::common::test_init();
-
-    let mut ctx = Context::create().unwrap();
-    crate::common::IoTestTranslator {}.add(&mut ctx, 0,
-        crate::common::IoTestEnum::Url(
-            "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/shirt_transparent.png".to_owned()
-        )).unwrap();
-
