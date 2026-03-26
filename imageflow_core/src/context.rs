@@ -46,6 +46,12 @@ pub struct Context {
 
     /// Bitmap keys captured by CaptureBitmapKey nodes during graph execution.
     captured_bitmap_keys: Option<Box<std::collections::HashMap<i32, BitmapKey>>>,
+
+    /// Input bytes stashed for the zen pipeline (feature-gated).
+    /// Populated by `add_copied_input_buffer`, `add_input_vector`, etc.
+    /// The zen pipeline reads from here instead of the codec containers.
+    #[cfg(feature = "zen-pipeline")]
+    zen_input_bytes: std::collections::HashMap<i32, Vec<u8>>,
 }
 
 // This token is the shared state.
@@ -298,8 +304,9 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-
             captured_bitmap_keys: None,
+            #[cfg(feature = "zen-pipeline")]
+            zen_input_bytes: std::collections::HashMap::new(),
         }))
     }
     fn default_codecs_capacity() -> usize {
@@ -321,8 +328,9 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-
             captured_bitmap_keys: None,
+            #[cfg(feature = "zen-pipeline")]
+            zen_input_bytes: std::collections::HashMap::new(),
         })
     }
     fn create_with_cancellation_token_and_can_panic(
@@ -343,8 +351,9 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-
             captured_bitmap_keys: None,
+            #[cfg(feature = "zen-pipeline")]
+            zen_input_bytes: std::collections::HashMap::new(),
         }))
     }
 
@@ -443,13 +452,17 @@ impl Context {
     }
 
     pub fn add_copied_input_buffer(&mut self, io_id: i32, bytes: &[u8]) -> Result<()> {
-        let io = IoProxy::copy_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
+        #[cfg(feature = "zen-pipeline")]
+        self.zen_input_bytes.insert(io_id, bytes.to_vec());
 
+        let io = IoProxy::copy_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
     pub fn add_input_vector(&mut self, io_id: i32, bytes: Vec<u8>) -> Result<()> {
-        let io = IoProxy::read_vec(self, io_id, bytes).map_err(|e| e.at(here!()))?;
+        #[cfg(feature = "zen-pipeline")]
+        self.zen_input_bytes.insert(io_id, bytes.clone());
 
+        let io = IoProxy::read_vec(self, io_id, bytes).map_err(|e| e.at(here!()))?;
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
 
@@ -643,6 +656,17 @@ impl Context {
         }
     }
 
+    /// Execute through the zen streaming pipeline.
+    ///
+    /// Same API as `execute_1` but uses zenpipe + zencodecs instead of the v2
+    /// graph engine. Requires input buffers to have been added via
+    /// `add_copied_input_buffer` / `add_input_vector`.
+    #[cfg(feature = "zen-pipeline")]
+    pub fn zen_execute_1(&mut self, what: s::Execute001) -> Result<s::ResponsePayload> {
+        let job_result = self.zen_execute_inner(what).map_err(|e| e.at(here!()))?;
+        Ok(s::ResponsePayload::JobResult(job_result))
+    }
+
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
     pub fn execute_1(&mut self, what: s::Execute001) -> Result<s::ResponsePayload> {
         let job_result = self.execute_inner(what).map_err(|e| e.at(here!()))?;
@@ -670,6 +694,29 @@ impl Context {
             encodes: engine.collect_encode_results(),
             performance: Some(perf),
         })
+    }
+
+    /// Execute through the zen streaming pipeline instead of the v2 graph engine.
+    ///
+    /// Uses input bytes stashed by `add_copied_input_buffer` / `add_input_vector`.
+    /// Output bytes are written to Context's output buffers.
+    #[cfg(feature = "zen-pipeline")]
+    pub(crate) fn zen_execute_inner(&mut self, what: s::Execute001) -> Result<s::JobResult> {
+        if let Some(s) = what.security {
+            self.configure_security(s);
+        }
+
+        let output = crate::zen::zen_execute(&what.framewise, &self.zen_input_bytes)
+            .map_err(|e| e.at(here!()))?;
+
+        // Store encoded outputs in Context's output buffer system.
+        for (io_id, bytes) in &output.output_buffers {
+            self.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
+            let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
+            codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
+        }
+
+        Ok(output.job_result)
     }
 
     pub fn get_version_info(&self) -> Result<s::VersionInfo> {

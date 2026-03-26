@@ -6,6 +6,7 @@
 #![cfg(all(feature = "zen-pipeline", feature = "c-codecs"))]
 
 use imageflow_core::{Context, JsonResponse};
+use imageflow_types as s;
 use imageflow_types::*;
 
 /// Helper: send a JSON request to Context and assert success.
@@ -135,4 +136,93 @@ fn zen_build_passthrough_no_ops() {
     let info = zencodecs::from_bytes(&output).unwrap();
     assert_eq!(info.width, 100);
     assert_eq!(info.height, 100);
+}
+
+// ─── Tests using zen_execute_1 (same pattern as integration test suite) ───
+
+/// Execute through zen_execute_1 using the same Context IO pattern as the
+/// existing integration test suite (add_copied_input_buffer + execute_1).
+#[test]
+fn zen_execute_1_resize() {
+    let jpeg_bytes = make_test_jpeg(400, 300);
+
+    let mut ctx = Context::create().unwrap();
+    ctx.add_copied_input_buffer(0, &jpeg_bytes).unwrap();
+    // Don't add output buffer — zen_execute_inner creates it.
+
+    let result = ctx.zen_execute_1(s::Execute001 {
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::Constrain(s::Constraint {
+                mode: s::ConstraintMode::Within,
+                w: Some(200),
+                h: Some(150),
+                hints: None,
+                gravity: None,
+                canvas_color: None,
+            }),
+            s::Node::Encode {
+                io_id: 1,
+                preset: s::EncoderPreset::Mozjpeg {
+                    quality: Some(80),
+                    progressive: Some(true),
+                    matte: None,
+                },
+            },
+        ]),
+        graph_recording: None,
+        security: None,
+    }).unwrap();
+
+    // Verify we got a JobResult.
+    match result {
+        s::ResponsePayload::JobResult(jr) => {
+            assert_eq!(jr.encodes.len(), 1);
+            assert!(jr.encodes[0].w <= 200);
+            assert!(jr.encodes[0].h <= 150);
+        }
+        other => panic!("expected JobResult, got {other:?}"),
+    }
+
+    // Verify output buffer is accessible.
+    let output = ctx.take_output_buffer(1).unwrap();
+    assert!(output.len() > 100);
+    assert_eq!(&output[..2], &[0xFF, 0xD8]);
+}
+
+#[test]
+fn zen_execute_1_flip_rotate() {
+    let jpeg_bytes = make_test_jpeg(200, 100);
+
+    let mut ctx = Context::create().unwrap();
+    ctx.add_copied_input_buffer(0, &jpeg_bytes).unwrap();
+    // Don't add output buffer — zen_execute_inner creates it.
+
+    let result = ctx.zen_execute_1(s::Execute001 {
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::FlipH,
+            s::Node::Rotate90,
+            s::Node::Encode {
+                io_id: 1,
+                preset: s::EncoderPreset::Mozjpeg {
+                    quality: Some(85),
+                    progressive: None,
+                    matte: None,
+                },
+            },
+        ]),
+        graph_recording: None,
+        security: None,
+    }).unwrap();
+
+    match result {
+        s::ResponsePayload::JobResult(jr) => {
+            assert_eq!(jr.encodes.len(), 1);
+            // 200x100 rotated 90° → 100x200.
+            assert_eq!(jr.encodes[0].w, 100);
+            assert_eq!(jr.encodes[0].h, 200);
+        }
+        other => panic!("expected JobResult, got {other:?}"),
+    }
 }
