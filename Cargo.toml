@@ -14,7 +14,7 @@ resolver = "2"
 [workspace.package]
 edition = "2024"
 rust-version = "1.85"
-license = "AGPL-3.0-or-later"
+license = "AGPL-3.0-only OR LicenseRef-Imazen-Commercial"
 authors = ["Lilith River <lilith@imazen.io>"]
 
 [workspace.dependencies]

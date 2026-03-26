@@ -65,7 +65,7 @@ installed ([Install 32-bit](https://aka.ms/vs/16/release/vc_redist.x86.exe) or [
 * Imageflow is dual licensed under a commercial license and the AGPLv3.
 * Imageflow.NET is tri-licensed under a commercial license, the AGPLv3, and the Apache 2 license.
 * Imageflow.NET Server is dual licensed under a commercial license and the AGPLv3.
-* We offer commercial licenses at https://imageresizing.net/pricing
+* We offer commercial licenses at https://www.imazen.io/pricing
 
 
 # Why Imageflow.NET is Apache 2 licensed
