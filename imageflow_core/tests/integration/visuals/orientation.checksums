@@ -60,6 +60,7 @@ tolerance off-by-one
 ## test_crop_exif landscape_1
 tolerance off-by-one
 = royal-rose-c398febefd:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ famed-poppy-0f970efa94:sea  x86_64-avx512  @87e37ba7  auto-accepted within tolerance (within off-by-one) vs royal-rose-c398febefd:sea (zensim:85.17 (dissim 0.15), 11.8% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_crop_exif landscape_2
 tolerance off-by-one
@@ -133,6 +134,7 @@ tolerance off-by-one
 ## test_jpeg_rotation Landscape_1
 tolerance off-by-one
 = major-finch-a36f62a66e:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ hasty-root-36619b3f62:sea  x86_64-avx512  @87e37ba7  auto-accepted within tolerance (within off-by-one) vs major-finch-a36f62a66e:sea (zensim:85.76 (dissim 0.14), 11.5% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_jpeg_rotation Landscape_2
 tolerance off-by-one
