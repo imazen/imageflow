@@ -437,7 +437,9 @@ fn push_constrain_node(
         TranslateError::NodeCreation(format!("zenresize.constrain: {e}"))
     })?;
     for (name, value) in params {
-        node.set_param(name, value.clone());
+        if !node.set_param(name, value.clone()) {
+            eprintln!("warning: set_param({name}, {value:?}) failed on zenresize.constrain");
+        }
     }
     nodes.push(node);
     Ok(())
