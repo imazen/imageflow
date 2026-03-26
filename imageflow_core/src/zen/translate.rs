@@ -159,7 +159,15 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
                     params.push(("down_filter", ParamValue::Str(filter_to_str(filter).into())));
                 }
             }
-            push_constrain_node(&mut result.nodes, &params)
+            push_constrain_node(&mut result.nodes, &params)?;
+            // If a background_color (matte) is specified, add RemoveAlpha after resize.
+            if let Some(hints) = hints {
+                if let Some(ref bg) = hints.background_color {
+                    let rgba = color_to_rgba(bg);
+                    push_remove_alpha_node(&mut result.nodes, [rgba[0], rgba[1], rgba[2]])?;
+                }
+            }
+            Ok(())
         }
 
         Node::Region { x1, y1, x2, y2, background_color } => {
@@ -302,7 +310,24 @@ fn translate_constrain(
             params.push(("down_filter", ParamValue::Str(filter_to_str(filter).into())));
         }
     }
-    push_constrain_node(nodes, &params)
+    push_constrain_node(nodes, &params)?;
+    // If a background_color (matte) is specified, add RemoveAlpha after constrain.
+    if let Some(ref hints) = c.hints {
+        if let Some(ref bg) = hints.background_color {
+            let rgba = color_to_rgba(bg);
+            push_remove_alpha_node(nodes, [rgba[0], rgba[1], rgba[2]])?;
+        }
+    }
+    // Also check canvas_color as matte for pad modes.
+    if let Some(ref canvas) = c.canvas_color {
+        let rgba = color_to_rgba(canvas);
+        if rgba[3] < 255 {
+            // Transparent canvas — no matte needed.
+        } else {
+            push_remove_alpha_node(nodes, [rgba[0], rgba[1], rgba[2]])?;
+        }
+    }
+    Ok(())
 }
 
 // ─── Color filter translation ───
@@ -686,5 +711,52 @@ fn push_round_corners_node(
 ) -> Result<(), TranslateError> {
     let bg = background_color.as_ref().map(color_to_rgba).unwrap_or([0, 0, 0, 0]);
     nodes.push(Box::new(RoundCornersNode { radius, bg_color: bg }));
+    Ok(())
+}
+
+/// A NodeInstance for RemoveAlpha (matte compositing).
+pub(super) struct RemoveAlphaNode {
+    pub(super) matte: [u8; 3],
+}
+
+static REMOVE_ALPHA_SCHEMA: zennode::NodeSchema = zennode::NodeSchema {
+    id: "imageflow.remove_alpha",
+    label: "Remove Alpha",
+    description: "Composite onto matte color and remove alpha channel",
+    group: zennode::NodeGroup::Canvas,
+    role: zennode::NodeRole::Geometry,
+    params: &[],
+    tags: &[],
+    coalesce: None,
+    format: zennode::FormatHint {
+        preferred: zennode::PixelFormatPreference::Any,
+        alpha: zennode::AlphaHandling::Process,
+        changes_dimensions: false,
+        is_neighborhood: false,
+    },
+    version: 1,
+    compat_version: 1,
+    json_key: "remove_alpha",
+    deny_unknown_fields: false,
+};
+
+impl zennode::NodeInstance for RemoveAlphaNode {
+    fn schema(&self) -> &'static zennode::NodeSchema { &REMOVE_ALPHA_SCHEMA }
+    fn to_params(&self) -> zennode::ParamMap { zennode::ParamMap::new() }
+    fn get_param(&self, _name: &str) -> Option<ParamValue> { None }
+    fn set_param(&mut self, _name: &str, _value: ParamValue) -> bool { false }
+    fn as_any(&self) -> &dyn std::any::Any { self }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
+    fn clone_boxed(&self) -> Box<dyn zennode::NodeInstance> {
+        Box::new(RemoveAlphaNode { matte: self.matte })
+    }
+    fn is_identity(&self) -> bool { false }
+}
+
+fn push_remove_alpha_node(
+    nodes: &mut Vec<Box<dyn NodeInstance>>,
+    matte: [u8; 3],
+) -> Result<(), TranslateError> {
+    nodes.push(Box::new(RemoveAlphaNode { matte }));
     Ok(())
 }

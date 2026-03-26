@@ -184,7 +184,7 @@ impl NodeConverter for ImageflowNodeConverter {
     fn can_convert(&self, schema_id: &str) -> bool {
         matches!(
             schema_id,
-            "imageflow.fill_rect" | "imageflow.crop_whitespace" | "imageflow.round_corners"
+            "imageflow.fill_rect" | "imageflow.crop_whitespace" | "imageflow.round_corners" | "imageflow.remove_alpha"
         )
     }
 
@@ -259,6 +259,14 @@ impl NodeConverter for ImageflowNodeConverter {
                         }
                     }
                 })))
+            }
+            "imageflow.remove_alpha" => {
+                let matte = node
+                    .as_any()
+                    .downcast_ref::<super::translate::RemoveAlphaNode>()
+                    .map(|n| n.matte)
+                    .unwrap_or([255, 255, 255]);
+                Ok(NodeOp::RemoveAlpha { matte })
             }
             _ => Err(PipeError::Op(format!(
                 "imageflow converter: unknown node '{}'",
