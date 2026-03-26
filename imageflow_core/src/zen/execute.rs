@@ -412,6 +412,11 @@ fn probe_resolve_decode(
     // where CMS transforms to sRGB during decode.
     source = apply_icc_transform(source, &info)?;
 
+    // PNG gAMA/cHRM: if no ICC profile, try to synthesize from PNG metadata.
+    if info.source_color.icc_profile.is_none() && info.format == zencodecs::ImageFormat::Png {
+        source = apply_png_gamma_transform(source, input_data)?;
+    }
+
     // Format conversion: ensure RGBA8 sRGB pixel format for downstream.
     source = ensure_srgb_rgba8(source)?;
 
@@ -426,9 +431,17 @@ fn apply_icc_transform(
     source: Box<dyn zenpipe::Source>,
     info: &zencodecs::ImageInfo,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
-    let src_icc = match &info.source_color.icc_profile {
-        Some(icc) if !icc.is_empty() => icc.clone(),
-        _ => return Ok(source), // No ICC profile — assume sRGB
+    // 1. Try embedded ICC profile first.
+    let src_icc = if let Some(icc) = &info.source_color.icc_profile {
+        if !icc.is_empty() { Some(icc.clone()) } else { None }
+    } else {
+        None
+    };
+
+    // 2. If no ICC, try to synthesize from gAMA/cHRM (for PNG).
+    let src_icc = match src_icc {
+        Some(icc) => icc,
+        None => return Ok(source), // No ICC — handled below via raw PNG parsing
     };
 
     // Build the transform first to check if it will work, before consuming source.
@@ -465,6 +478,387 @@ fn srgb_icc_profile() -> Vec<u8> {
     SRGB.get_or_init(|| {
         moxcms::ColorProfile::new_srgb().encode().unwrap_or_default()
     }).clone()
+}
+
+/// Synthesize an ICC profile from PNG gAMA (and optional cHRM) metadata.
+///
+/// If gAMA is close to sRGB (0.45455), returns None (no transform needed).
+/// Otherwise, creates a gamma+primaries ICC v2 profile.
+fn synthesize_icc_from_gama(
+    gamma_scaled: u32,
+    chromaticities: &Option<[u32; 8]>,
+) -> Option<Vec<u8>> {
+    // gAMA is the inverse of the display gamma, scaled by 100000.
+    // sRGB gamma ≈ 45455 (1/2.2). Neutral range per Chrome/Skia: ±5%.
+    let gamma_f = gamma_scaled as f64 / 100000.0;
+    let neutral_low = 0.4318;  // 1/2.2 * 0.95
+    let neutral_high = 0.4773; // 1/2.2 * 1.05
+
+    // Check if cHRM matches sRGB primaries (if present).
+    let chrm_is_srgb = chromaticities.map_or(true, |c| {
+        let srgb = [31270u32, 32900, 64000, 33000, 30000, 60000, 15000, 6000];
+        c.iter().zip(srgb.iter()).all(|(a, b)| (*a as i64 - *b as i64).unsigned_abs() < 500)
+    });
+
+    // If gamma is neutral AND primaries are sRGB → no transform needed.
+    if gamma_f >= neutral_low && gamma_f <= neutral_high && chrm_is_srgb {
+        return None;
+    }
+
+    // Use moxcms to build a profile with the correct gamma.
+    // For non-sRGB gamma: create a profile with the PNG gamma curve and sRGB primaries,
+    // then moxcms will transform from that gamma space to sRGB.
+    let display_gamma = 1.0 / gamma_f; // PNG gAMA is file_gamma = 1/display_gamma
+
+    // Create a gray→RGB profile with the specified gamma.
+    // moxcms ColorProfile::new_gray() with a gamma curve, then convert to RGB.
+    // Simpler: just use the raw ICC builder.
+    build_gamma_icc_profile(display_gamma as f32, chromaticities)
+}
+
+/// Build a minimal ICC v2 RGB profile with a simple gamma curve.
+fn build_gamma_icc_profile(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> {
+    // Use the v2 CMS code path: create an sRGB-primaries profile with custom gamma.
+    // This reuses moxcms's profile creation by cloning sRGB and overriding the TRC.
+    let mut profile = moxcms::ColorProfile::new_srgb();
+    // Override the TRC (tone response curve) with a pure gamma.
+    let gamma_fixed = (gamma * 256.0) as u16; // 8.8 fixed point
+    // moxcms doesn't expose TRC override on ColorProfile directly.
+    // Fallback: encode a custom profile from scratch.
+    // Use the profile's encode() as a base and patch the gamma curve.
+
+    // Actually, let's just encode the sRGB profile and modify it.
+    // This is hacky but works for the gamma-only case.
+    let srgb_bytes = profile.encode().ok()?;
+
+    // For gamma-only with sRGB primaries, we can skip custom profiles.
+    // The ICC transform sRGB-gamma → sRGB-sRGB handles the gamma correction.
+    // moxcms can parse a minimal curv-based profile.
+
+    // Build minimal ICC v2 profile: header + tag table + rTRC/gTRC/bTRC (gamma curves) + rXYZ/gXYZ/bXYZ
+    // This is the simplest valid RGB ICC profile.
+    let icc = build_minimal_icc_v2(gamma, chrm)?;
+    Some(icc)
+}
+
+/// Build a minimal ICC v2 RGB profile with gamma TRC and optional custom primaries.
+fn build_minimal_icc_v2(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> {
+    // ICC v2 profile structure:
+    // Header (128 bytes) + Tag table (4 + N*12) + Tag data
+
+    // Primaries: convert chromaticity xy → XYZ (D50 adapted).
+    // Use sRGB primaries as default.
+    let (wx, wy) = chrm.map_or((0.3127f64, 0.3290), |c| (c[0] as f64 / 100000.0, c[1] as f64 / 100000.0));
+    let (rx, ry) = chrm.map_or((0.64, 0.33), |c| (c[2] as f64 / 100000.0, c[3] as f64 / 100000.0));
+    let (gx, gy) = chrm.map_or((0.30, 0.60), |c| (c[4] as f64 / 100000.0, c[5] as f64 / 100000.0));
+    let (bx, by) = chrm.map_or((0.15, 0.06), |c| (c[6] as f64 / 100000.0, c[7] as f64 / 100000.0));
+
+    // Convert xyY → XYZ with Y=1 for white point
+    let w_xyz = xy_to_xyz(wx, wy);
+    let r_xyz = xy_to_xyz(rx, ry);
+    let g_xyz = xy_to_xyz(gx, gy);
+    let b_xyz = xy_to_xyz(bx, by);
+
+    // Compute RGB→XYZ matrix (before chromatic adaptation)
+    let (m_r, m_g, m_b) = compute_rgb_to_xyz_matrix(
+        r_xyz, g_xyz, b_xyz, w_xyz,
+    )?;
+
+    // Chromatic adapt to D50 (ICC PCS) using Bradford
+    let d50 = [0.9642, 1.0000, 0.8249];
+    let chad = bradford_matrix(w_xyz, d50);
+    let mr = mat3_mul_vec3(&chad, &m_r);
+    let mg = mat3_mul_vec3(&chad, &m_g);
+    let mb = mat3_mul_vec3(&chad, &m_b);
+
+    // Build the profile
+    let gamma_fixed = s15fixed16(gamma as f64);
+
+    // 9 tags: rXYZ, gXYZ, bXYZ, rTRC, gTRC, bTRC, wtpt, cprt, desc
+    let n_tags = 9u32;
+    let tag_table_size = 4 + n_tags * 12;
+    let header_size = 128u32;
+
+    // Tag data: each curv tag = 12 bytes (type + reserved + count + gamma)
+    // Each XYZ tag = 20 bytes (type + reserved + 3 × s15Fixed16)
+    // wtpt = 20 bytes, cprt = 12+4 bytes, desc = 12+12 bytes
+
+    let curv_size = 12u32;
+    let xyz_size = 20u32;
+    let cprt_data = b"CC0 ";
+    let cprt_size = (12 + cprt_data.len() as u32 + 3) & !3; // pad to 4
+    let desc_text = b"Synthetic";
+    let desc_size = (12 + 4 + desc_text.len() as u32 + 1 + 12 + 67 + 3) & !3;
+
+    let data_start = header_size + tag_table_size;
+    let mut offset = data_start;
+
+    let mut buf = Vec::with_capacity(512);
+
+    // Placeholder header (128 bytes)
+    buf.resize(128, 0u8);
+
+    // Header fields
+    let total_size_pos = 0; // will be patched
+    buf[4..8].copy_from_slice(b"acsp"); // signature
+    buf[12..16].copy_from_slice(b"mntr"); // device class: monitor
+    buf[16..20].copy_from_slice(b"RGB "); // color space
+    buf[20..24].copy_from_slice(b"XYZ "); // PCS
+    // Date/time: 2024-01-01
+    buf[24..26].copy_from_slice(&2024u16.to_be_bytes());
+    buf[26..28].copy_from_slice(&1u16.to_be_bytes());
+    buf[28..30].copy_from_slice(&1u16.to_be_bytes());
+    buf[36..40].copy_from_slice(b"acsp"); // file signature
+    buf[64..68].copy_from_slice(&s15fixed16(1.0).to_be_bytes()); // illuminant X
+    buf[68..72].copy_from_slice(&s15fixed16(1.0).to_be_bytes()); // Y
+    buf[72..76].copy_from_slice(&s15fixed16(1.0).to_be_bytes()); // Z
+    buf[40..44].copy_from_slice(b"APPL"); // preferred CMM
+    buf[8..12].copy_from_slice(&0x02100000u32.to_be_bytes()); // version 2.1
+
+    // Tag count
+    buf.extend_from_slice(&n_tags.to_be_bytes());
+
+    // Tag table entries: [sig:4][offset:4][size:4]
+    let tags: Vec<(&[u8; 4], u32)> = vec![
+        (b"rXYZ", xyz_size), (b"gXYZ", xyz_size), (b"bXYZ", xyz_size),
+        (b"rTRC", curv_size), (b"gTRC", curv_size), (b"bTRC", curv_size),
+        (b"wtpt", xyz_size), (b"cprt", cprt_size), (b"desc", desc_size),
+    ];
+    for (sig, size) in &tags {
+        buf.extend_from_slice(sig.as_slice());
+        buf.extend_from_slice(&offset.to_be_bytes());
+        buf.extend_from_slice(&size.to_be_bytes());
+        offset += size;
+    }
+
+    // Tag data
+    fn write_xyz(buf: &mut Vec<u8>, xyz: &[f64; 3]) {
+        buf.extend_from_slice(b"XYZ "); // type
+        buf.extend_from_slice(&[0u8; 4]); // reserved
+        for v in xyz {
+            buf.extend_from_slice(&s15fixed16(*v).to_be_bytes());
+        }
+    }
+    fn write_curv_gamma(buf: &mut Vec<u8>, gamma_val: f32) {
+        buf.extend_from_slice(b"curv"); // type
+        buf.extend_from_slice(&[0u8; 4]); // reserved
+        buf.extend_from_slice(&1u32.to_be_bytes()); // count = 1 (gamma)
+        let uf8 = (gamma_val as f64 * 256.0) as u16;
+        buf.extend_from_slice(&uf8.to_be_bytes());
+        buf.extend_from_slice(&[0u8; 2]); // padding
+    }
+
+    write_xyz(&mut buf, &mr);
+    write_xyz(&mut buf, &mg);
+    write_xyz(&mut buf, &mb);
+    write_curv_gamma(&mut buf, gamma);
+    write_curv_gamma(&mut buf, gamma);
+    write_curv_gamma(&mut buf, gamma);
+    // wtpt (D50)
+    write_xyz(&mut buf, &d50);
+    // cprt
+    buf.extend_from_slice(b"text");
+    buf.extend_from_slice(&[0u8; 4]);
+    buf.extend_from_slice(cprt_data);
+    while buf.len() % 4 != 0 { buf.push(0); }
+    // desc (minimal)
+    let desc_start = buf.len();
+    buf.extend_from_slice(b"desc");
+    buf.extend_from_slice(&[0u8; 4]);
+    buf.extend_from_slice(&(desc_text.len() as u32 + 1).to_be_bytes());
+    buf.extend_from_slice(desc_text);
+    buf.push(0);
+    // Unicode and ScriptCode records (empty)
+    buf.extend_from_slice(&[0u8; 4]); // Unicode language code
+    buf.extend_from_slice(&0u32.to_be_bytes()); // Unicode count
+    buf.extend_from_slice(&[0u8; 2]); // ScriptCode code
+    buf.push(0); // ScriptCode count
+    buf.extend_from_slice(&[0u8; 67]); // ScriptCode data
+    while buf.len() % 4 != 0 { buf.push(0); }
+
+    // Patch total size
+    let total = buf.len() as u32;
+    buf[0..4].copy_from_slice(&total.to_be_bytes());
+
+    Some(buf)
+}
+
+fn s15fixed16(v: f64) -> i32 {
+    (v * 65536.0) as i32
+}
+
+fn xy_to_xyz(x: f64, y: f64) -> [f64; 3] {
+    if y.abs() < 1e-10 { return [0.0, 0.0, 0.0]; }
+    [x / y, 1.0, (1.0 - x - y) / y]
+}
+
+fn compute_rgb_to_xyz_matrix(
+    r: [f64; 3], g: [f64; 3], b: [f64; 3], w: [f64; 3],
+) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
+    // Solve: [R G B] * S = W, where S = [Sr, Sg, Sb]
+    let m = [
+        [r[0], g[0], b[0]],
+        [r[1], g[1], b[1]],
+        [r[2], g[2], b[2]],
+    ];
+    let inv = mat3_inv(&m)?;
+    let s = mat3_mul_vec3(&inv, &w);
+
+    Some(([r[0]*s[0], r[1]*s[0], r[2]*s[0]],
+          [g[0]*s[1], g[1]*s[1], g[2]*s[1]],
+          [b[0]*s[2], b[1]*s[2], b[2]*s[2]]))
+}
+
+fn bradford_matrix(src_w: [f64; 3], dst_w: [f64; 3]) -> [[f64; 3]; 3] {
+    // Bradford chromatic adaptation matrix
+    let brad = [
+        [ 0.8951,  0.2664, -0.1614],
+        [-0.7502,  1.7135,  0.0367],
+        [ 0.0389, -0.0685,  1.0296],
+    ];
+    let brad_inv = [
+        [ 0.9870, -0.1471, 0.1600],
+        [ 0.4323,  0.5184, 0.0493],
+        [-0.0085,  0.0400, 0.9685],
+    ];
+    let src_lms = mat3_mul_vec3(&brad, &src_w);
+    let dst_lms = mat3_mul_vec3(&brad, &dst_w);
+    let scale = [
+        [dst_lms[0]/src_lms[0], 0.0, 0.0],
+        [0.0, dst_lms[1]/src_lms[1], 0.0],
+        [0.0, 0.0, dst_lms[2]/src_lms[2]],
+    ];
+    let tmp = mat3_mul(&scale, &brad);
+    mat3_mul(&brad_inv, &tmp)
+}
+
+fn mat3_mul_vec3(m: &[[f64; 3]; 3], v: &[f64; 3]) -> [f64; 3] {
+    [
+        m[0][0]*v[0] + m[0][1]*v[1] + m[0][2]*v[2],
+        m[1][0]*v[0] + m[1][1]*v[1] + m[1][2]*v[2],
+        m[2][0]*v[0] + m[2][1]*v[1] + m[2][2]*v[2],
+    ]
+}
+
+fn mat3_mul(a: &[[f64; 3]; 3], b: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
+    let mut r = [[0.0f64; 3]; 3];
+    for i in 0..3 {
+        for j in 0..3 {
+            r[i][j] = a[i][0]*b[0][j] + a[i][1]*b[1][j] + a[i][2]*b[2][j];
+        }
+    }
+    r
+}
+
+fn mat3_inv(m: &[[f64; 3]; 3]) -> Option<[[f64; 3]; 3]> {
+    let det = m[0][0]*(m[1][1]*m[2][2] - m[1][2]*m[2][1])
+            - m[0][1]*(m[1][0]*m[2][2] - m[1][2]*m[2][0])
+            + m[0][2]*(m[1][0]*m[2][1] - m[1][1]*m[2][0]);
+    if det.abs() < 1e-10 { return None; }
+    let inv_det = 1.0 / det;
+    Some([
+        [(m[1][1]*m[2][2]-m[1][2]*m[2][1])*inv_det, (m[0][2]*m[2][1]-m[0][1]*m[2][2])*inv_det, (m[0][1]*m[1][2]-m[0][2]*m[1][1])*inv_det],
+        [(m[1][2]*m[2][0]-m[1][0]*m[2][2])*inv_det, (m[0][0]*m[2][2]-m[0][2]*m[2][0])*inv_det, (m[0][2]*m[1][0]-m[0][0]*m[1][2])*inv_det],
+        [(m[1][0]*m[2][1]-m[1][1]*m[2][0])*inv_det, (m[0][1]*m[2][0]-m[0][0]*m[2][1])*inv_det, (m[0][0]*m[1][1]-m[0][1]*m[1][0])*inv_det],
+    ])
+}
+
+/// Parse gAMA and optional cHRM from raw PNG bytes, synthesize ICC, and apply transform.
+fn apply_png_gamma_transform(
+    source: Box<dyn zenpipe::Source>,
+    png_data: &[u8],
+) -> Result<Box<dyn zenpipe::Source>, ZenError> {
+    // Quick parse of PNG chunks to find gAMA and cHRM.
+    let (gamma, chrm) = parse_png_gama_chrm(png_data);
+    let gamma = match gamma {
+        Some(g) if g > 0 => g,
+        _ => return Ok(source), // No gAMA — assume sRGB
+    };
+
+    // Also check for sRGB chunk — if present, no transform needed.
+    if has_png_srgb_chunk(png_data) {
+        return Ok(source);
+    }
+
+    let icc = match synthesize_icc_from_gama(gamma, &chrm) {
+        Some(icc) => icc,
+        None => return Ok(source), // Gamma is neutral sRGB — no transform
+    };
+
+    let srgb_icc = srgb_icc_profile();
+    let src_format = source.format();
+    let pixel_format = src_format.pixel_format();
+
+    use zenpipe::ColorManagement as _;
+    let transform = zenpipe::MoxCms.build_transform_for_format(
+        &icc, &srgb_icc, pixel_format, pixel_format,
+    );
+
+    match transform {
+        Ok(row_transform) => {
+            let dst_icc: std::sync::Arc<[u8]> = std::sync::Arc::from(srgb_icc.as_slice());
+            let transformed = zenpipe::sources::IccTransformSource::from_transform(
+                source, row_transform, dst_icc,
+            );
+            Ok(Box::new(transformed))
+        }
+        Err(_) => Ok(source),
+    }
+}
+
+/// Parse PNG gAMA chunk value (scaled by 100000) and optional cHRM from raw bytes.
+fn parse_png_gama_chrm(data: &[u8]) -> (Option<u32>, Option<[u32; 8]>) {
+    let mut gamma = None;
+    let mut chrm = None;
+
+    // PNG signature is 8 bytes, then chunks: [length:4][type:4][data:length][crc:4]
+    if data.len() < 8 || &data[0..8] != b"\x89PNG\r\n\x1a\n" {
+        return (None, None);
+    }
+    let mut pos = 8;
+    while pos + 8 <= data.len() {
+        let len = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
+        let chunk_type = &data[pos+4..pos+8];
+        let chunk_data_start = pos + 8;
+        let chunk_end = chunk_data_start + len + 4; // +4 for CRC
+        if chunk_end > data.len() { break; }
+
+        if chunk_type == b"gAMA" && len == 4 {
+            gamma = Some(u32::from_be_bytes([
+                data[chunk_data_start], data[chunk_data_start+1],
+                data[chunk_data_start+2], data[chunk_data_start+3],
+            ]));
+        } else if chunk_type == b"cHRM" && len == 32 {
+            let d = &data[chunk_data_start..];
+            let read_u32 = |off: usize| u32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]);
+            chrm = Some([
+                read_u32(0), read_u32(4),   // white x, y
+                read_u32(8), read_u32(12),  // red x, y
+                read_u32(16), read_u32(20), // green x, y
+                read_u32(24), read_u32(28), // blue x, y
+            ]);
+        } else if chunk_type == b"IDAT" || chunk_type == b"IEND" {
+            break; // Stop at pixel data
+        }
+        pos = chunk_end;
+    }
+    (gamma, chrm)
+}
+
+/// Check if a PNG has an sRGB chunk.
+fn has_png_srgb_chunk(data: &[u8]) -> bool {
+    if data.len() < 8 || &data[0..8] != b"\x89PNG\r\n\x1a\n" {
+        return false;
+    }
+    let mut pos = 8;
+    while pos + 8 <= data.len() {
+        let len = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
+        let chunk_type = &data[pos+4..pos+8];
+        if chunk_type == b"sRGB" { return true; }
+        if chunk_type == b"IDAT" || chunk_type == b"IEND" { break; }
+        pos += 8 + len + 4;
+    }
+    false
 }
 
 /// Wrap a source with a format conversion to RGBA8 sRGB if needed.
