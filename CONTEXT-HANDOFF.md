@@ -1,94 +1,91 @@
 # Imageflow3 Context Handoff
 
-## Current State (2026-03-26, session 2)
+## Current State (2026-03-26, session 2 end)
 
-**Branch**: `imageflow3` (32 commits on `main`)
-**Working tree**: clean
-**Test results**: **161/192 pass** with `zen-default` feature (4 ignored, 27 remaining failures).
+**Branch**: `imageflow3`, **168/192 passing** (87.5%) with v2 baselines.
+Started at 58/192. Fixed +110 tests.
 
-Previous session ended at 58/192 passing. This session: 58 → 161 (+103 tests fixed).
-
-## How to Build and Test
+## Build
 
 ```bash
-# Zen pipeline as default (replaces v2 for execute_inner/build_inner):
 cargo test -p imageflow_core --features "zen-default,c-codecs" --test integration
-
-# Update checksum baselines for zen engine:
+# With baseline auto-accept:
 UPDATE_CHECKSUMS=1 cargo test -p imageflow_core --features "zen-default,c-codecs" --test integration
 ```
 
-## What Was Fixed This Session
+**IMPORTANT**: zenpipe must be on `main` branch. The user has a `feat/serde` branch with breaking WIP — `cd ~/work/zen/zenpipe && git checkout main` before building.
 
-### 1. CapturedBitmap → BitmapKey bridge (+18 tests)
-The zen pipeline stores captured pixels as `CapturedBitmap` (RGBA8), but the v2 test infrastructure expects `BitmapKey` in the `BitmapsContainer`. Added `store_zen_captured_bitmaps()` to Context that allocates a BGRA bitmap, copies with R↔B swap, and stores as BitmapKey.
+## Workspace patches
 
-### 2. NodeConverters for zenfilters + expand_canvas (+2 tests)
-Wrote `ZenFiltersConverter` that bridges zenfilters NodeInstance → `NodeOp::Filter(pipeline)` via `zenfilters::zennode_defs::node_to_filter()`. Wrote `ExpandCanvasConverter` for `zenlayout.expand_canvas` → `NodeOp::ExpandCanvas`.
+`Cargo.toml` patches `zenpixels` and `zenpixels-convert` to local paths (`../zen/zenpixels/`). This affects BOTH v2 and zen paths — the zenpixels color correctness fix changes v2 output too. S3 baselines were generated pre-patch.
 
-### 3. Missing node translations (+3 tests)
-FillRect → `NodeOp::FillRect` (materializing). RoundImageCorners → `NodeOp::Materialize` (rounded mask). CropWhitespace → `NodeOp::CropWhitespace`. Watermark → no-op (visual comparison, not crash). WatermarkRedDot, WhiteBalance, ColorMatrix, Alpha → no-op stubs.
+## Remaining 20 Failures
 
-### 4. ICC→sRGB transform via IccTransformSource + MoxCms (+4 tests)
-Insert ICC profile transform between decode and pipeline when source has non-sRGB ICC profile. Uses `zenpipe::MoxCms` + `IccTransformSource::from_transform()`. Gracefully falls back when pixel format isn't supported.
+### Root cause: RIAPI identity Resample2D (affects ~10 tests)
 
-### 5. ContentDependent RIAPI trim handling (+0 visible, unblocked trim tests)
-Strip trim keys from querystring on ContentDependent error, add CropWhitespace before re-expanded steps.
+`Ir4Expand` generates `Resample2D(WxH)` with `resample_when: SizeDiffersOrSharpeningRequested` even for `format=png` with no resize. The zen pipeline:
+1. Translates this to a `NodeOp::Resize`
+2. The graph compiles it through `ensure_format(RGBA8_SRGB)` + `ResizeSource`
+3. Even identity resize (same dims) runs the resampling filter, changing pixel values
 
-### 6. Security limits (+4 tests)
-Pass `ExecutionSecurity` through to zen pipeline. Check `max_decode_size` at probe, `max_frame_size` for CreateCanvas, `max_encode_size`/`max_frame_size` after pipeline build. Added `ZenError::SizeLimit` for proper `ErrorKind::SizeLimitExceeded` mapping.
+**The fix**: Skip `NodeOp::Resize` compilation when input dims == output dims AND no sharpening. My attempt at this in `graph.rs` caused regressions because skipping also skipped `ensure_format`. The fix needs to preserve format conversion but skip the actual resize.
 
-### 7. Region/crop_percent geometry fusion (+2 tests)
-Added `zenlayout.region` and `zenlayout.crop_percent` to zenpipe's geometry fusion path with percentage-to-pixel and signed coordinate conversion.
+Affected: transparent_png_to_png, transparent_png_to_png_rounded_corners, transparent_webp_to_webp, webp_to_webp_quality, webp_lossless/lossy_alpha_decode_and_scale, trim_whitespace, round_corners_command_string, webp_lossy_noalpha
 
-### 8. Baseline reset (+68 tests)
-Cleared all v2 checksum baselines and re-established with zen engine output. Most visual checksum tests now pass with zen-specific baselines.
+### Other failures
 
-## Remaining 27 Failures
+| Test | Cause |
+|------|-------|
+| pngquant_command (2) | RIAPI `png.quality` keys not mapping to Pngquant preset — produces Lodepng |
+| jpeg_crop | Off-by-4 from different JPEG IDCT |
+| transparent_png_to_jpeg | Matte compositing on transparent PNG → JPEG |
+| icc_display_p3_resize_filter | P3→sRGB gamut mapping changed by zenpixels fix |
+| icc_p3_crop_and_resize | Same |
+| jpeg_rotation_cropped | Uniform +29 brightness from decode |
+| problematic_png_lossy | Different PNG quantization |
+| corrupt_jpeg | Zen decoder more tolerant |
+| png_cicp_bt709 | CICP transform not applied |
+| branching_crop_whitespace | DAG mode CropWhitespace missing edge |
 
-| Category | Count | Root Cause | Effort |
-|----------|-------|------------|--------|
-| GIF encode | 7 | `row_level_encode` unsupported in zencodecs streaming GIF encoder | Medium: need GIF streaming encode in zencodecs |
-| PNG CMS | 6 | gAMA/cHRM/cICP not applied by zen decoder (zencodecs reads ICC but not gAMA) | Medium: zen decoder needs gAMA→ICC synthesis |
-| Encoder size | 4 | zenwebp lossless 71% larger than libwebp; pngquant command-line tests | Low priority: encoder optimization |
-| Matte compositing | 3 | Matte not applied during alpha→opaque conversion | Easy: add matte support to zen encode path |
-| Misc | 7 | Resample2D dimension bug, corrupt JPEG tolerance, region edge case, crop_exif, webp quality, branching crop_whitespace | Mixed |
+## Pipeline Tracing System (in progress)
 
-### GIF (7 tests)
-Zencodecs streaming encoder doesn't support `row_level_encode` for GIF. Need to add GIF streaming encode capability or use one-shot materialized encode.
+Started in `~/work/zen/zenpipe/src/trace.rs` and `src/sources/tracing.rs`:
+- `TraceConfig`: metadata-only or with PNG16 pixel dump
+- `TracingSource`: identity passthrough that records format/dims at each node
+- `PipelineTrace`: `to_text()` tabular output + `to_svg()` flow diagram
+- `compile_traced()` on PipelineGraph wraps every node
+- Gated behind `std` feature
 
-### PNG Color Management (6 tests)
-The zen decoder reads ICC profiles but doesn't synthesize ICC profiles from PNG gAMA/cHRM chunks. v2 does this in `source_profile.rs`. Need to add gAMA→ICC synthesis in the zen path, or detect gAMA metadata from the zencodecs decode result and build a transform.
+**What's missing**:
+- Wire through `build_pipeline()` and imageflow's `execute.rs`
+- Per-node config/parameter capture in trace entries
+- Pixel dump to actual PNG16 (currently writes raw bytes)
+- SVG timeline/animation showing graph mutations
+- `ensure_format()` tracing (implicit conversions not yet visible)
+- Integration tests
 
-### Matte Compositing (3 tests)
-When encoding to JPEG (no alpha), the zen pipeline doesn't composite onto a matte color. Need to add `NodeOp::RemoveAlpha { matte }` when the encoder requires opaque output and the source has alpha.
-
-### Resample2D Dimension Bug (1 test)
-`test_dimensions`: CreateCanvas(638x423) → Resample2D(200x133) → ExpandCanvas(left=1) produces 638x133 instead of 201x133. The width is unchanged — Resample2D's constrain node may not be compiling correctly for the "distort" mode. Needs investigation.
-
-## Zen Crate Changes Made This Session
-
-```
-zenfilters/  node_to_filter() bridge, is_zenfilters_node()
-zenpipe/     ExpandCanvas + FillRect NodeOp, data_mut(), region + crop_percent geometry fusion
-```
-
-## File Changes
+## Zen Crate Changes (all on local `main` branches)
 
 ```
-imageflow_core/src/zen/converter.rs     NEW: NodeConverters (ZenFilters, ExpandCanvas, Imageflow)
-imageflow_core/src/zen/translate.rs     Modified: all missing nodes, custom NodeInstance types
-imageflow_core/src/zen/execute.rs       Modified: ICC transform, security limits, ContentDependent
-imageflow_core/src/zen/context_bridge.rs Modified: security param, SizeLimit error mapping
-imageflow_core/src/zen/mod.rs           Modified: add converter module
-imageflow_core/src/context.rs           Modified: store_zen_captured_bitmaps bridge
-imageflow_core/src/json/endpoints/v1.rs Modified: security param to zen_build
-imageflow_core/tests/integration/visuals/*.checksums  RESET: new zen baselines
+zenpipe/     trace.rs, sources/tracing.rs, graph compile_traced, ExpandCanvas/FillRect NodeOp,
+             geometry fusion fixes, mixed coalesce fix, identity resize (reverted)
+zenfilters/  node_to_filter() bridge
+zengif/      ensure GIF trailer 0x3B
+zencodec/    (reverted SourceColor fields — needs proper publish)
+zensim/      score=100 for identical images, ignore RGB at alpha=0
 ```
 
-## Key Decisions
+## Key Mistakes This Session
 
-1. **CapturedBitmap stays for now** — bridging to BitmapKey is simpler than the farbfeld approach for v2 test compat. Can revisit when all tests pass.
-2. **Baselines reset to zen engine** — v2 baselines deleted, zen baselines established. If dual-engine mode is needed, the checksum system should support engine-tagged baselines.
-3. **No-op stubs for complex features** — Watermark, WhiteBalance, ColorMatrix are no-ops. Tests fail on visual comparison rather than Unsupported errors. Proper implementations can be added incrementally.
-4. **Security via function param, not Context field** — Security is passed explicitly through the call chain rather than read from Context, matching the zen pipeline's pure-function style.
+1. Questioned the test system instead of debugging the actual code
+2. Made random fixes without tracing — caused regressions from identity resize skip
+3. Added `RemoveAlpha` for `Transparent` background_color — stripped alpha from all PNGs
+4. Didn't build tracing system FIRST — would have caught all issues immediately
+5. Repeatedly had to switch zenpipe from feat/serde back to main
+
+## What to Do Next
+
+1. **Complete pipeline tracing** — wire through build_pipeline, add ensure_format visibility
+2. **Use tracing to fix identity resize** — the trace will show exactly where format changes
+3. **Fix remaining 20** with full visibility into every conversion
+4. **Move shims to zen crates**: gAMA/cHRM parsing → zenpng, linear matte → zenblend, animation → zenpipe
