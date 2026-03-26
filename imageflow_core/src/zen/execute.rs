@@ -499,6 +499,7 @@ fn decode_to_source(
 // ─── Encode ───
 
 /// Stream pipeline output into an encoder via EncoderSink.
+/// Falls back to one-shot materialized encode if streaming isn't supported (e.g., GIF).
 fn stream_encode(
     mut source: Box<dyn zenpipe::Source>,
     decision: &zencodecs::FormatDecision,
@@ -507,20 +508,43 @@ fn stream_encode(
     let out_w = source.width();
     let out_h = source.height();
     let out_format = source.format();
+    let registry = AllowedFormats::all();
 
-    let streaming_enc = zencodecs::EncodeRequest::new(decision.format)
-        .with_quality(decision.quality.quality)
-        .with_lossless(decision.lossless)
-        .with_registry(&AllowedFormats::all())
-        .build_streaming_encoder(out_w, out_h)
-        .map_err(|e| ZenError::Codec(format!("encoder: {e}")))?;
+    // GIF doesn't support streaming row-level encode — always use one-shot.
+    let use_oneshot = matches!(decision.format, zencodecs::ImageFormat::Gif);
 
-    let mut sink = zenpipe::codec::EncoderSink::new(streaming_enc.encoder, out_format);
-    zenpipe::execute(source.as_mut(), &mut sink)?;
+    let output = if !use_oneshot {
+        // Try streaming encode first.
+        let streaming_enc = zencodecs::EncodeRequest::new(decision.format)
+            .with_quality(decision.quality.quality)
+            .with_lossless(decision.lossless)
+            .with_registry(&registry)
+            .build_streaming_encoder(out_w, out_h)
+            .map_err(|e| ZenError::Codec(format!("encoder: {e}")))?;
 
-    let output = sink.take_output().ok_or_else(|| {
-        ZenError::Codec("encoder produced no output".into())
-    })?;
+        let mut sink = zenpipe::codec::EncoderSink::new(streaming_enc.encoder, out_format);
+        zenpipe::execute(source.as_mut(), &mut sink)?;
+        sink.take_output().ok_or_else(|| {
+            ZenError::Codec("encoder produced no output".into())
+        })?
+    } else {
+        // One-shot encode: materialize and encode in one pass.
+        let mat = zenpipe::sources::MaterializedSource::from_source(source)?;
+        let w = mat.width();
+        let h = mat.height();
+        let fmt = mat.format();
+        let data = mat.data();
+        let stride = w as usize * fmt.bytes_per_pixel();
+        let pixel_slice = zenpixels::PixelSlice::new(data, w, h, stride, fmt)
+            .map_err(|e| ZenError::Codec(format!("pixel slice: {e}")))?;
+
+        zencodecs::EncodeRequest::new(decision.format)
+            .with_quality(decision.quality.quality)
+            .with_lossless(decision.lossless)
+            .with_registry(&registry)
+            .encode(pixel_slice, fmt.has_alpha())
+            .map_err(|e| ZenError::Codec(format!("one-shot encode: {e}")))?
+    };
 
     Ok(vec![ZenEncodeResult {
         io_id: encode_io_id,
