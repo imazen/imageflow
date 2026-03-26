@@ -148,18 +148,13 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         Node::Constrain(c) => translate_constrain(c, &mut result.nodes),
 
         Node::Resample2D { w, h, hints } => {
-            // Resample2D is a forced resize to exact dimensions.
-            let mut params: Vec<(&str, ParamValue)> = vec![
-                ("w", ParamValue::U32(*w)),
-                ("h", ParamValue::U32(*h)),
-                ("mode", ParamValue::Str("distort".into())),
-            ];
-            if let Some(hints) = hints {
-                if let Some(ref filter) = hints.down_filter {
-                    params.push(("down_filter", ParamValue::Str(filter_to_str(filter).into())));
-                }
-            }
-            push_constrain_node(&mut result.nodes, &params)?;
+            // Resample2D is a forced resize — each must execute independently
+            // (not coalesced with adjacent constrains, since sequential resizes
+            // are intentional in v2 pipelines like double-resize for blur).
+            let filter = hints.as_ref()
+                .and_then(|h| h.down_filter.as_ref())
+                .map(|f| filter_to_str(f).to_string());
+            push_resample2d_node(&mut result.nodes, *w, *h, filter)?;
             // If a background_color (matte) is specified, add RemoveAlpha after resize.
             if let Some(hints) = hints {
                 if let Some(ref bg) = hints.background_color {
@@ -753,6 +748,66 @@ impl zennode::NodeInstance for RemoveAlphaNode {
         Box::new(RemoveAlphaNode { matte: self.matte })
     }
     fn is_identity(&self) -> bool { false }
+}
+
+/// A NodeInstance for Resample2D — forced resize that must NOT coalesce.
+pub(super) struct Resample2DNode {
+    pub(super) w: u32,
+    pub(super) h: u32,
+    pub(super) filter: Option<String>,
+}
+
+static RESAMPLE2D_SCHEMA: zennode::NodeSchema = zennode::NodeSchema {
+    id: "imageflow.resample2d",
+    label: "Resample 2D",
+    description: "Forced resize to exact dimensions (no coalescing)",
+    group: zennode::NodeGroup::Geometry,
+    role: zennode::NodeRole::Resize,
+    params: &[],
+    tags: &[],
+    coalesce: None, // No coalescing — each resize is independent.
+    format: zennode::FormatHint {
+        preferred: zennode::PixelFormatPreference::Any,
+        alpha: zennode::AlphaHandling::Process,
+        changes_dimensions: true,
+        is_neighborhood: false,
+    },
+    version: 1,
+    compat_version: 1,
+    json_key: "resample2d",
+    deny_unknown_fields: false,
+};
+
+impl zennode::NodeInstance for Resample2DNode {
+    fn schema(&self) -> &'static zennode::NodeSchema { &RESAMPLE2D_SCHEMA }
+    fn to_params(&self) -> zennode::ParamMap {
+        let mut m = zennode::ParamMap::new();
+        m.insert("w".into(), ParamValue::U32(self.w));
+        m.insert("h".into(), ParamValue::U32(self.h));
+        m
+    }
+    fn get_param(&self, name: &str) -> Option<ParamValue> {
+        match name {
+            "w" => Some(ParamValue::U32(self.w)),
+            "h" => Some(ParamValue::U32(self.h)),
+            _ => None,
+        }
+    }
+    fn set_param(&mut self, _name: &str, _value: ParamValue) -> bool { false }
+    fn as_any(&self) -> &dyn std::any::Any { self }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
+    fn clone_boxed(&self) -> Box<dyn zennode::NodeInstance> {
+        Box::new(Resample2DNode { w: self.w, h: self.h, filter: self.filter.clone() })
+    }
+    fn is_identity(&self) -> bool { false }
+}
+
+fn push_resample2d_node(
+    nodes: &mut Vec<Box<dyn NodeInstance>>,
+    w: u32, h: u32, filter: Option<String>,
+) -> Result<(), TranslateError> {
+    nodes.push(Box::new(Resample2DNode { w, h, filter }));
+    Ok(())
 }
 
 fn push_remove_alpha_node(

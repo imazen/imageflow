@@ -203,7 +203,7 @@ impl NodeConverter for ImageflowNodeConverter {
     fn can_convert(&self, schema_id: &str) -> bool {
         matches!(
             schema_id,
-            "imageflow.fill_rect" | "imageflow.crop_whitespace" | "imageflow.round_corners" | "imageflow.remove_alpha"
+            "imageflow.fill_rect" | "imageflow.crop_whitespace" | "imageflow.round_corners" | "imageflow.remove_alpha" | "imageflow.resample2d"
         )
     }
 
@@ -278,6 +278,29 @@ impl NodeConverter for ImageflowNodeConverter {
                         }
                     }
                 })))
+            }
+            "imageflow.resample2d" => {
+                let n = node.as_any()
+                    .downcast_ref::<super::translate::Resample2DNode>()
+                    .ok_or_else(|| PipeError::Op("resample2d: downcast failed".into()))?;
+                let filter = n.filter.as_deref().and_then(|s| match s {
+                    "robidoux" => Some(zenresize::Filter::Robidoux),
+                    "robidoux_sharp" => Some(zenresize::Filter::RobidouxSharp),
+                    "robidoux_fast" => Some(zenresize::Filter::RobidouxFast),
+                    "hermite" => Some(zenresize::Filter::Hermite),
+                    "lanczos" | "lanczos3" => Some(zenresize::Filter::Lanczos),
+                    "mitchell" => Some(zenresize::Filter::Mitchell),
+                    "catmull_rom" => Some(zenresize::Filter::CatmullRom),
+                    "box" => Some(zenresize::Filter::Box),
+                    "triangle" | "linear" => Some(zenresize::Filter::Triangle),
+                    _ => None,
+                });
+                Ok(NodeOp::Resize {
+                    w: n.w,
+                    h: n.h,
+                    filter,
+                    sharpen_percent: None,
+                })
             }
             "imageflow.remove_alpha" => {
                 let matte = node
