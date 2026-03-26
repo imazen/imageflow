@@ -488,8 +488,10 @@ impl Context {
     /// The `'static` lifetime means callers must guarantee the data outlives the Context.
     /// In practice, the ABI layer (imageflow_abi) uses transmute to erase the real lifetime.
     pub fn add_input_buffer(&mut self, io_id: i32, bytes: &'static [u8]) -> Result<()> {
-        let io = IoProxy::read_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
+        #[cfg(feature = "zen-pipeline")]
+        self.zen_input_bytes.insert(io_id, bytes.to_vec());
 
+        let io = IoProxy::read_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
 

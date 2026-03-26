@@ -430,8 +430,10 @@ fn expand_command_strings(
     }
 
     // Find decode io_id to probe source dimensions.
+    // Check both explicit Decode nodes and CommandString's decode field.
     let decode_io_id = steps.iter().find_map(|n| match n {
         Node::Decode { io_id, .. } => Some(*io_id),
+        Node::CommandString { decode: Some(io_id), .. } => Some(*io_id),
         _ => None,
     });
 
@@ -458,6 +460,11 @@ fn expand_command_strings(
         match node {
             Node::CommandString { kind: _, value, decode, encode, watermarks } => {
                 use imageflow_riapi::ir4::*;
+
+                // Inject Decode node if CommandString specifies a decode io_id.
+                if let Some(dec_id) = decode {
+                    result.push(Node::Decode { io_id: *dec_id, commands: None });
+                }
 
                 let expand = Ir4Expand {
                     i: Ir4Command::QueryString(value.clone()),
