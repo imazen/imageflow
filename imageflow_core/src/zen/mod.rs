@@ -17,7 +17,10 @@ mod translate;
 mod preset_map;
 mod execute;
 mod context_bridge;
+mod captured;
 pub mod riapi;
+
+pub use captured::CapturedBitmap;
 
 // High-level API (v2 JSON request types in, JobResult out).
 pub use context_bridge::{zen_build, zen_execute, zen_get_image_info, ZenBuildOutput};

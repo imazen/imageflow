@@ -70,45 +70,131 @@ pub fn zen_get_image_info(
     zencodecs::from_bytes(data).map_err(|e| ZenError::Codec(format!("{e}")))
 }
 
+/// Result of executing a framewise pipeline.
+pub struct ExecuteResult {
+    pub encode_results: Vec<ZenEncodeResult>,
+    pub captured_dimensions: CapturedBitmaps,
+}
+
 /// Execute a v2 Framewise pipeline through the zen streaming engine.
 ///
-/// `io_buffers` maps io_id → input bytes. Returns encode results for each output.
+/// `io_buffers` maps io_id → input bytes. Returns encode results and
+/// any dimensions captured by `CaptureBitmapKey` nodes.
 pub fn execute_framewise(
     framewise: &Framewise,
     io_buffers: &HashMap<i32, Vec<u8>>,
-) -> Result<Vec<ZenEncodeResult>, ZenError> {
+) -> Result<ExecuteResult, ZenError> {
     match framewise {
-        Framewise::Steps(steps) => execute_steps(steps, io_buffers),
-        Framewise::Graph(graph) => execute_graph(graph, io_buffers),
+        Framewise::Steps(steps) => {
+            let (results, captures) = execute_steps(steps, io_buffers)?;
+            Ok(ExecuteResult { encode_results: results, captured_dimensions: captures })
+        }
+        Framewise::Graph(graph) => {
+            let results = execute_graph(graph, io_buffers)?;
+            Ok(ExecuteResult {
+                encode_results: results,
+                captured_dimensions: CapturedBitmaps { captures: HashMap::new() },
+            })
+        }
     }
 }
 
 // ─── Steps mode (linear pipeline) ───
 
+use super::captured::CapturedBitmap;
+
+/// Bitmaps captured by CaptureBitmapKey nodes.
+pub(crate) struct CapturedBitmaps {
+    pub captures: HashMap<i32, CapturedBitmap>,
+}
+
 fn execute_steps(
     steps: &[Node],
     io_buffers: &HashMap<i32, Vec<u8>>,
-) -> Result<Vec<ZenEncodeResult>, ZenError> {
+) -> Result<(Vec<ZenEncodeResult>, CapturedBitmaps), ZenError> {
     // Pre-process: expand CommandString nodes using source dimensions from probe.
     let steps = expand_command_strings(steps, io_buffers)?;
+
+    // Collect capture IDs before translation (CaptureBitmapKey is a no-op in translate).
+    let capture_ids: Vec<i32> = steps.iter().filter_map(|n| match n {
+        Node::CaptureBitmapKey { capture_id } => Some(*capture_id),
+        _ => None,
+    }).collect();
+
     let pipeline = translate::translate_nodes(&steps)?;
 
     let decode_io_id = pipeline.decode_io_id.ok_or_else(|| {
         ZenError::Io("no decode node in pipeline".into())
     })?;
-    let encode_io_id = pipeline.encode_io_id.ok_or_else(|| {
-        ZenError::Io("no encode node in pipeline".into())
-    })?;
     let input_data = io_buffers.get(&decode_io_id).ok_or_else(|| {
         ZenError::Io(format!("no input buffer for io_id {decode_io_id}"))
     })?;
+
+    let has_encode = pipeline.encode_io_id.is_some();
 
     let (decision, source) = probe_resolve_decode(input_data, &pipeline)?;
 
     let converters: &[&dyn zenpipe::bridge::NodeConverter] = &[];
     let pipe_result = zenpipe::bridge::build_pipeline(source, &pipeline.nodes, converters)?;
 
-    stream_encode(pipe_result.source, &decision, encode_io_id)
+    let mut captures = HashMap::new();
+
+    let results = if has_encode && capture_ids.is_empty() {
+        // Standard path: stream directly to encoder.
+        let encode_io_id = pipeline.encode_io_id.unwrap();
+        stream_encode(pipe_result.source, &decision, encode_io_id)?
+    } else if has_encode {
+        // Has both encode and capture: materialize, capture, then one-shot encode.
+        let materialized = pipe_result.materialize()?;
+        let w = materialized.pixels.width();
+        let h = materialized.pixels.height();
+        let fmt = materialized.pixels.format();
+        let data = materialized.pixels.data().to_vec();
+
+        for id in &capture_ids {
+            captures.insert(*id, CapturedBitmap {
+                width: w, height: h, pixels: data.clone(), format: fmt,
+            });
+        }
+
+        // One-shot encode from materialized data.
+        let stride = w as usize * fmt.bytes_per_pixel();
+        let pixel_slice = zenpixels::PixelSlice::new(&data, w, h, stride, fmt)
+            .map_err(|e| ZenError::Codec(format!("pixel slice: {e}")))?;
+
+        let encode_io_id = pipeline.encode_io_id.unwrap();
+        let registry = AllowedFormats::all();
+        let output = zencodecs::EncodeRequest::new(decision.format)
+            .with_quality(decision.quality.quality)
+            .with_lossless(decision.lossless)
+            .with_registry(&registry)
+            .encode(pixel_slice, fmt.has_alpha())
+            .map_err(|e| ZenError::Codec(format!("encode: {e}")))?;
+
+        vec![ZenEncodeResult {
+            io_id: encode_io_id,
+            bytes: output.into_vec(),
+            width: w, height: h,
+            mime_type: decision.format.mime_type(),
+            extension: decision.format.extension(),
+        }]
+    } else {
+        // No encode — materialize for capture only.
+        let materialized = pipe_result.materialize()?;
+        let w = materialized.pixels.width();
+        let h = materialized.pixels.height();
+        let fmt = materialized.pixels.format();
+        let data = materialized.pixels.data().to_vec();
+
+        for id in &capture_ids {
+            captures.insert(*id, CapturedBitmap {
+                width: w, height: h, pixels: data.clone(), format: fmt,
+            });
+        }
+        Vec::new()
+    };
+
+    Ok((results, CapturedBitmaps { captures }))
 }
 
 // ─── Graph mode (DAG with compositing, fan-out) ───

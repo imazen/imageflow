@@ -52,6 +52,12 @@ pub struct Context {
     /// The zen pipeline reads from here instead of the codec containers.
     #[cfg(feature = "zen-pipeline")]
     zen_input_bytes: std::collections::HashMap<i32, Vec<u8>>,
+
+    /// Pixel data captured by CaptureBitmapKey in the zen pipeline.
+    /// Maps capture_id → (width, height, pixel_bytes, bytes_per_pixel).
+    /// Pixel bytes are contiguous rows in the source pixel format.
+    #[cfg(feature = "zen-pipeline")]
+    pub zen_captured_bitmaps: std::collections::HashMap<i32, crate::zen::CapturedBitmap>,
 }
 
 // This token is the shared state.
@@ -307,6 +313,8 @@ impl Context {
             captured_bitmap_keys: None,
             #[cfg(feature = "zen-pipeline")]
             zen_input_bytes: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            zen_captured_bitmaps: std::collections::HashMap::new(),
         }))
     }
     fn default_codecs_capacity() -> usize {
@@ -331,6 +339,8 @@ impl Context {
             captured_bitmap_keys: None,
             #[cfg(feature = "zen-pipeline")]
             zen_input_bytes: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            zen_captured_bitmaps: std::collections::HashMap::new(),
         })
     }
     fn create_with_cancellation_token_and_can_panic(
@@ -354,6 +364,8 @@ impl Context {
             captured_bitmap_keys: None,
             #[cfg(feature = "zen-pipeline")]
             zen_input_bytes: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            zen_captured_bitmaps: std::collections::HashMap::new(),
         }))
     }
 
@@ -611,11 +623,13 @@ impl Context {
         #[cfg(feature = "zen-default")]
         {
             let output = crate::zen::zen_build(&parsed).map_err(|e| e.at(here!()))?;
-            // Store encoded outputs in Context output buffers.
             for (io_id, bytes) in &output.output_buffers {
                 self.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
                 let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
                 codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
+            }
+            for (capture_id, bitmap) in output.captured_bitmaps {
+                self.zen_captured_bitmaps.insert(capture_id, bitmap);
             }
             return Ok(output.job_result);
         }
@@ -733,6 +747,11 @@ impl Context {
             self.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
             let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
             codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
+        }
+
+        // Store captured bitmaps for CaptureBitmapKey compatibility.
+        for (capture_id, bitmap) in output.captured_bitmaps {
+            self.zen_captured_bitmaps.insert(capture_id, bitmap);
         }
 
         Ok(output.job_result)

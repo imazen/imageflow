@@ -240,13 +240,21 @@ pub fn get_result_dimensions(steps: &[s::Node], io: Vec<IoTestEnum>, debug: bool
 
     let result = build_steps(&mut context, &steps, io, None, debug).unwrap();
 
-    let bitmap_key = context
-        .get_captured_bitmap_key(capture_id)
-        .unwrap_or_else(|| panic!("execution failed: {:?}", result));
-    let bitmaps = context.borrow_bitmaps().unwrap();
-    let bm = bitmaps.try_borrow_mut(bitmap_key).unwrap();
-    let (w, h) = bm.size();
-    (w as u32, h as u32)
+    // Try v2 bitmap capture first.
+    if let Some(bitmap_key) = context.get_captured_bitmap_key(capture_id) {
+        let bitmaps = context.borrow_bitmaps().unwrap();
+        let bm = bitmaps.try_borrow_mut(bitmap_key).unwrap();
+        let (w, h) = bm.size();
+        return (w as u32, h as u32);
+    }
+
+    // Fall back to zen pipeline captured bitmaps.
+    #[cfg(feature = "zen-pipeline")]
+    if let Some(bm) = context.zen_captured_bitmaps.get(&capture_id) {
+        return (bm.width, bm.height);
+    }
+
+    panic!("No captured bitmap for capture_id {capture_id}. Result: {result:?}");
 }
 
 /// Just validates that no errors are thrown during job execution

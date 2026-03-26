@@ -26,16 +26,18 @@ pub struct ZenBuildOutput {
     /// Encoded output bytes keyed by io_id.
     /// Caller stores these in Context output buffers.
     pub output_buffers: HashMap<i32, Vec<u8>>,
+    /// Pixel data captured by CaptureBitmapKey nodes.
+    pub captured_bitmaps: HashMap<i32, super::CapturedBitmap>,
 }
 
 /// Execute a `v1/build` request through the zen pipeline.
 pub fn zen_build(parsed: &s::Build001) -> std::result::Result<ZenBuildOutput, FlowError> {
     let io_bytes = extract_input_bytes(&parsed.io)?;
 
-    let results = execute::execute_framewise(&parsed.framewise, &io_bytes)
+    let result = execute::execute_framewise(&parsed.framewise, &io_bytes)
         .map_err(zen_to_flow)?;
 
-    Ok(build_output(results))
+    Ok(build_output(result))
 }
 
 /// Execute a `v1/execute` request through the zen pipeline.
@@ -46,10 +48,10 @@ pub fn zen_execute(
     framewise: &s::Framewise,
     io_bytes: &HashMap<i32, Vec<u8>>,
 ) -> std::result::Result<ZenBuildOutput, FlowError> {
-    let results = execute::execute_framewise(framewise, io_bytes)
+    let result = execute::execute_framewise(framewise, io_bytes)
         .map_err(zen_to_flow)?;
 
-    Ok(build_output(results))
+    Ok(build_output(result))
 }
 
 /// Probe an image via zencodecs and return v2-compatible ImageInfo.
@@ -74,11 +76,11 @@ pub fn zen_get_image_info(data: &[u8]) -> std::result::Result<s::ImageInfo, Flow
 
 // ─── Internal ───
 
-fn build_output(results: Vec<ZenEncodeResult>) -> ZenBuildOutput {
-    let mut encodes = Vec::with_capacity(results.len());
-    let mut output_buffers = HashMap::with_capacity(results.len());
+fn build_output(result: execute::ExecuteResult) -> ZenBuildOutput {
+    let mut encodes = Vec::with_capacity(result.encode_results.len());
+    let mut output_buffers = HashMap::with_capacity(result.encode_results.len());
 
-    for r in results {
+    for r in result.encode_results {
         encodes.push(s::EncodeResult {
             io_id: r.io_id,
             w: r.width as i32,
@@ -93,10 +95,11 @@ fn build_output(results: Vec<ZenEncodeResult>) -> ZenBuildOutput {
     ZenBuildOutput {
         job_result: s::JobResult {
             encodes,
-            decodes: Vec::new(), // TODO: populate from probe info
-            performance: None,   // TODO: timing instrumentation
+            decodes: Vec::new(),
+            performance: None,
         },
         output_buffers,
+        captured_bitmaps: result.captured_dimensions.captures,
     }
 }
 
