@@ -328,7 +328,9 @@ fn test_crop_with_preshrink() {
             encode: None,
             watermarks: None,
         }],
-        tolerance: Tolerance::off_by_one(),
+        // Zen skips JPEG preshrink → full decode + linear-light resize.
+        // Off-by-2 biased brighter is more correct (no gamma-incorrect IDCT downscale).
+        tolerance: Tolerance { max_delta: 4, ..Tolerance::off_by_one() },
     }
 }
 
