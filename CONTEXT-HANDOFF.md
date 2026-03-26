@@ -1,91 +1,76 @@
 # Imageflow3 Context Handoff
 
-## Current State (2026-03-26, session 2 end)
+## Current State (2026-03-26, session 3 end)
 
 **Branch**: `imageflow3`, **168/192 passing** (87.5%) with v2 baselines.
-Started at 58/192. Fixed +110 tests.
+
+## Full Pipeline Tracing System — COMPLETE
+
+Built a 4-layer tracing system in zenpipe (11 commits) + zennode (1 commit).
+Wired into imageflow via `ZENPIPE_TRACE` env var.
+
+### Usage
+
+```bash
+# Print pipeline trace to stderr
+ZENPIPE_TRACE=1 just test-filter transparent_png_to_png
+
+# Full tracing with timing
+ZENPIPE_TRACE=full just test-filter some_test
+
+# Also write SVG diagram
+ZENPIPE_TRACE=svg just test-filter some_test
+```
+
+### Architecture
+
+**Layer 1 (RIAPI)**: `KvPairs::snapshot()` in zennode + `build_riapi_trace()` in bridge.
+**Layer 2 (Bridge)**: `BridgeTrace` with DAG snapshots, node separation, coalescing.
+**Layer 3 (Graph)**: `Tracer` facade — zero-alloc when inactive. Records per-node
+  format/dims, implicit ensure_format entries, content-adaptive detection results.
+**Layer 4 (Execution)**: Per-node cumulative timing via `Arc<Mutex<NodeTiming>>`.
+
+**Key types**: `Tracer`, `TraceConfig`, `PipelineTrace`, `FullPipelineTrace`,
+  `DagSnapshot` (u32 UIDs, edges), `TraceAppender`, `UpstreamMeta`.
+
+**Output formats**: `to_text()`, `to_svg()`, `to_json()`, `to_animated_svg()`.
+
+### Files
+
+| File | What |
+|------|------|
+| `zenpipe/src/trace.rs` | All trace types, Tracer facade, output formatters, animated SVG |
+| `zenpipe/src/graph.rs` | Uses Tracer for compile-time tracing |
+| `zenpipe/src/sources/tracing.rs` | TracingSource with timing |
+| `zenpipe/src/bridge/mod.rs` | BridgeTrace, record_snapshot, build_riapi_trace |
+| `zenpipe/src/orchestrate.rs` | ProcessConfig.trace_config, trace in outputs |
+| `zennode/zennode/src/kv.rs` | KvPairs::snapshot() |
+| `imageflow_core/src/zen/execute.rs` | ZENPIPE_TRACE env var wiring |
+
+## Identity Resize Bug — CONFIRMED by tracing
+
+Trace output for `transparent_png_to_png`:
+```
+[  0] Source      500x500  RGBA8 sRGB +a
+[  1] Resize      500x500  RGBA8 sRGB +a  -> 500x500 Robidoux
+[  2] Output      500x500  RGBA8 sRGB +a
+```
+
+The Resize 500x500 → 500x500 is the identity resize — resampling filter runs on
+same-size input/output, changing pixel values. This affects ~10 of the 20 failures.
+
+**Fix**: In `compile_node_inner` NodeOp::Resize arm, skip the resize when
+`upstream.width() == w && upstream.height() == h && sharpen_percent.is_none()`.
+The ensure_format still needs to run (was the previous attempt's regression).
+
+## Remaining 20 Failures
+
+Same as previous handoff — see CONTEXT-HANDOFF.md in git history for the full table.
 
 ## Build
 
 ```bash
 cargo test -p imageflow_core --features "zen-default,c-codecs" --test integration
-# With baseline auto-accept:
-UPDATE_CHECKSUMS=1 cargo test -p imageflow_core --features "zen-default,c-codecs" --test integration
 ```
 
-**IMPORTANT**: zenpipe must be on `main` branch. The user has a `feat/serde` branch with breaking WIP — `cd ~/work/zen/zenpipe && git checkout main` before building.
-
-## Workspace patches
-
-`Cargo.toml` patches `zenpixels` and `zenpixels-convert` to local paths (`../zen/zenpixels/`). This affects BOTH v2 and zen paths — the zenpixels color correctness fix changes v2 output too. S3 baselines were generated pre-patch.
-
-## Remaining 20 Failures
-
-### Root cause: RIAPI identity Resample2D (affects ~10 tests)
-
-`Ir4Expand` generates `Resample2D(WxH)` with `resample_when: SizeDiffersOrSharpeningRequested` even for `format=png` with no resize. The zen pipeline:
-1. Translates this to a `NodeOp::Resize`
-2. The graph compiles it through `ensure_format(RGBA8_SRGB)` + `ResizeSource`
-3. Even identity resize (same dims) runs the resampling filter, changing pixel values
-
-**The fix**: Skip `NodeOp::Resize` compilation when input dims == output dims AND no sharpening. My attempt at this in `graph.rs` caused regressions because skipping also skipped `ensure_format`. The fix needs to preserve format conversion but skip the actual resize.
-
-Affected: transparent_png_to_png, transparent_png_to_png_rounded_corners, transparent_webp_to_webp, webp_to_webp_quality, webp_lossless/lossy_alpha_decode_and_scale, trim_whitespace, round_corners_command_string, webp_lossy_noalpha
-
-### Other failures
-
-| Test | Cause |
-|------|-------|
-| pngquant_command (2) | RIAPI `png.quality` keys not mapping to Pngquant preset — produces Lodepng |
-| jpeg_crop | Off-by-4 from different JPEG IDCT |
-| transparent_png_to_jpeg | Matte compositing on transparent PNG → JPEG |
-| icc_display_p3_resize_filter | P3→sRGB gamut mapping changed by zenpixels fix |
-| icc_p3_crop_and_resize | Same |
-| jpeg_rotation_cropped | Uniform +29 brightness from decode |
-| problematic_png_lossy | Different PNG quantization |
-| corrupt_jpeg | Zen decoder more tolerant |
-| png_cicp_bt709 | CICP transform not applied |
-| branching_crop_whitespace | DAG mode CropWhitespace missing edge |
-
-## Pipeline Tracing System (in progress)
-
-Started in `~/work/zen/zenpipe/src/trace.rs` and `src/sources/tracing.rs`:
-- `TraceConfig`: metadata-only or with PNG16 pixel dump
-- `TracingSource`: identity passthrough that records format/dims at each node
-- `PipelineTrace`: `to_text()` tabular output + `to_svg()` flow diagram
-- `compile_traced()` on PipelineGraph wraps every node
-- Gated behind `std` feature
-
-**What's missing**:
-- Wire through `build_pipeline()` and imageflow's `execute.rs`
-- Per-node config/parameter capture in trace entries
-- Pixel dump to actual PNG16 (currently writes raw bytes)
-- SVG timeline/animation showing graph mutations
-- `ensure_format()` tracing (implicit conversions not yet visible)
-- Integration tests
-
-## Zen Crate Changes (all on local `main` branches)
-
-```
-zenpipe/     trace.rs, sources/tracing.rs, graph compile_traced, ExpandCanvas/FillRect NodeOp,
-             geometry fusion fixes, mixed coalesce fix, identity resize (reverted)
-zenfilters/  node_to_filter() bridge
-zengif/      ensure GIF trailer 0x3B
-zencodec/    (reverted SourceColor fields — needs proper publish)
-zensim/      score=100 for identical images, ignore RGB at alpha=0
-```
-
-## Key Mistakes This Session
-
-1. Questioned the test system instead of debugging the actual code
-2. Made random fixes without tracing — caused regressions from identity resize skip
-3. Added `RemoveAlpha` for `Transparent` background_color — stripped alpha from all PNGs
-4. Didn't build tracing system FIRST — would have caught all issues immediately
-5. Repeatedly had to switch zenpipe from feat/serde back to main
-
-## What to Do Next
-
-1. **Complete pipeline tracing** — wire through build_pipeline, add ensure_format visibility
-2. **Use tracing to fix identity resize** — the trace will show exactly where format changes
-3. **Fix remaining 20** with full visibility into every conversion
-4. **Move shims to zen crates**: gAMA/cHRM parsing → zenpng, linear matte → zenblend, animation → zenpipe
+**zenpipe MUST be on `main` branch** (user has `feat/serde` with breaking WIP).
