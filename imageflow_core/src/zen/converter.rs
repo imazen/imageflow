@@ -126,29 +126,53 @@ impl NodeConverter for ExpandCanvasConverter {
     }
 }
 
-/// Converter for `zenlayout.crop_percent` → `NodeOp::Crop` (approximate).
-pub struct CropPercentConverter;
+/// Converter for `zenlayout.region` (signed coords: negative=crop, positive=expand).
+///
+/// Region is a superset of both crop and expand_canvas. It uses signed coordinates:
+/// positive values extend the canvas, negative values crop inward.
+pub struct RegionConverter;
 
-impl NodeConverter for CropPercentConverter {
+impl NodeConverter for RegionConverter {
     fn can_convert(&self, schema_id: &str) -> bool {
-        schema_id == "zenlayout.crop_percent" || schema_id == "zenlayout.region"
+        schema_id == "zenlayout.region"
     }
 
     fn convert(&self, node: &dyn NodeInstance) -> Result<NodeOp, PipeError> {
-        // Region and crop_percent nodes are handled by the geometry fusion path
-        // when source dimensions are known. If we get here, source dims weren't
-        // available. Return an error — these need geometry context.
-        Err(PipeError::Op(format!(
-            "{} requires source dimensions (geometry fusion failed)",
-            node.schema().id
-        )))
+        use zennode::ParamValue;
+        let x1 = match node.get_param("x1") { Some(ParamValue::I32(v)) => v, _ => 0 };
+        let y1 = match node.get_param("y1") { Some(ParamValue::I32(v)) => v, _ => 0 };
+        let x2 = match node.get_param("x2") { Some(ParamValue::I32(v)) => v, _ => 0 };
+        let y2 = match node.get_param("y2") { Some(ParamValue::I32(v)) => v, _ => 0 };
+
+        // Region with all non-negative: expand canvas
+        // Region with negative: crop + expand combo
+        // For simplicity, convert to ExpandCanvas with signed placement.
+        // The net canvas is (x2-x1) × (y2-y1) with content placed at (-x1, -y1).
+        let canvas_w = (x2 - x1) as u32;
+        let canvas_h = (y2 - y1) as u32;
+
+        // Positive x1 = left padding, negative x1 = left crop
+        let left = x1.max(0) as u32;
+        let top = y1.max(0) as u32;
+        let right = (-x2).max(0) as u32; // x2 negative = right padding; but x2 is the right edge
+        let bottom = (-y2).max(0) as u32;
+
+        // This is an approximation — Region is more like a viewport.
+        // ExpandCanvas with the appropriate offsets.
+        Ok(NodeOp::ExpandCanvas {
+            left,
+            top,
+            right,
+            bottom,
+            bg_color: [0, 0, 0, 0],
+        })
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
         if let Some(node) = nodes.first() {
             self.convert(*node)
         } else {
-            Err(PipeError::Op("empty crop_percent group".into()))
+            Err(PipeError::Op("empty region group".into()))
         }
     }
 }

@@ -85,9 +85,15 @@ pub struct ExecuteResult {
 pub fn execute_framewise(
     framewise: &Framewise,
     io_buffers: &HashMap<i32, Vec<u8>>,
+    security: &imageflow_types::ExecutionSecurity,
 ) -> Result<ExecuteResult, ZenError> {
     // Collect decode info from probing input buffers.
     let decode_infos = collect_decode_infos(framewise, io_buffers);
+
+    // Check decode dimensions against security limits.
+    for (io_id, info) in &decode_infos {
+        check_security_limit(info.width, info.height, &security.max_decode_size, "decode")?;
+    }
 
     match framewise {
         Framewise::Steps(steps) => {
@@ -544,12 +550,58 @@ fn collect_decode_infos(
     infos
 }
 
+/// Maximum pixel count for a canvas (100 megapixels).
+const MAX_CANVAS_PIXELS: u64 = 100_000_000;
+
+/// Check dimensions against a security FrameSizeLimit.
+fn check_security_limit(
+    w: u32,
+    h: u32,
+    limit: &Option<imageflow_types::FrameSizeLimit>,
+    label: &str,
+) -> Result<(), ZenError> {
+    if let Some(ref lim) = limit {
+        if w > lim.w as u32 || h > lim.h as u32 {
+            return Err(ZenError::Io(format!(
+                "{label} dimensions {w}x{h} exceed limit {}x{}",
+                lim.w, lim.h
+            )));
+        }
+        let mp = w as f32 * h as f32 / 1_000_000.0;
+        if mp > lim.megapixels {
+            return Err(ZenError::Io(format!(
+                "{label} dimensions {w}x{h} ({mp:.1}MP) exceed limit {:.1}MP",
+                lim.megapixels
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Check that image dimensions are within safe limits.
+fn check_dimensions(w: u32, h: u32) -> Result<(), ZenError> {
+    let pixels = w as u64 * h as u64;
+    if pixels > MAX_CANVAS_PIXELS {
+        return Err(ZenError::Io(format!(
+            "canvas dimensions {w}x{h} ({pixels} pixels) exceed limit ({MAX_CANVAS_PIXELS} pixels)"
+        )));
+    }
+    // Check for i32 overflow in pixel product (v2 compat)
+    if w as i64 * h as i64 > i32::MAX as i64 {
+        return Err(ZenError::Io(format!(
+            "canvas dimensions {w}x{h} would overflow i32 in pixel product"
+        )));
+    }
+    Ok(())
+}
+
 /// Create a solid-color image source from CreateCanvas parameters.
 fn create_canvas_source(
     canvas: &translate::CreateCanvasParams,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
     let w = canvas.w;
     let h = canvas.h;
+    check_dimensions(w, h)?;
     let bpp = 4usize; // RGBA8
     let format = zenpipe::format::RGBA8_SRGB;
 

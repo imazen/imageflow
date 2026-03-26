@@ -706,7 +706,7 @@ impl Context {
         // When zen-default feature is enabled, route through zen pipeline.
         #[cfg(feature = "zen-default")]
         {
-            let output = crate::zen::zen_build(&parsed).map_err(|e| e.at(here!()))?;
+            let output = crate::zen::zen_build(&parsed, &self.security).map_err(|e| e.at(here!()))?;
             for (io_id, bytes) in &output.output_buffers {
                 let _ = self.add_output_buffer(*io_id);
                 let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
@@ -821,7 +821,7 @@ impl Context {
             self.configure_security(s);
         }
 
-        let output = crate::zen::zen_execute(&what.framewise, &self.zen_input_bytes)
+        let output = crate::zen::zen_execute(&what.framewise, &self.zen_input_bytes, &self.security)
             .map_err(|e| e.at(here!()))?;
 
         // Store encoded outputs in Context's output buffer system.

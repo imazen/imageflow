@@ -835,7 +835,7 @@ fn zen_build(context: &mut Context, parsed: Build001) -> Result<BuildV1Response>
         }
     }
 
-    let output = crate::zen::zen_build(&parsed).map_err(|e| e.at(here!()))?;
+    let output = crate::zen::zen_build(&parsed, &context.security).map_err(|e| e.at(here!()))?;
 
     // Store encoded output in Context so take_output_buffer() works for C ABI.
     for (io_id, bytes) in &output.output_buffers {

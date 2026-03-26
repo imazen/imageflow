@@ -31,10 +31,10 @@ pub struct ZenBuildOutput {
 }
 
 /// Execute a `v1/build` request through the zen pipeline.
-pub fn zen_build(parsed: &s::Build001) -> std::result::Result<ZenBuildOutput, FlowError> {
+pub fn zen_build(parsed: &s::Build001, security: &s::ExecutionSecurity) -> std::result::Result<ZenBuildOutput, FlowError> {
     let io_bytes = extract_input_bytes(&parsed.io)?;
 
-    let result = execute::execute_framewise(&parsed.framewise, &io_bytes)
+    let result = execute::execute_framewise(&parsed.framewise, &io_bytes, security)
         .map_err(zen_to_flow)?;
 
     Ok(build_output(result))
@@ -47,8 +47,9 @@ pub fn zen_build(parsed: &s::Build001) -> std::result::Result<ZenBuildOutput, Fl
 pub fn zen_execute(
     framewise: &s::Framewise,
     io_bytes: &HashMap<i32, Vec<u8>>,
+    security: &s::ExecutionSecurity,
 ) -> std::result::Result<ZenBuildOutput, FlowError> {
-    let result = execute::execute_framewise(framewise, io_bytes)
+    let result = execute::execute_framewise(framewise, io_bytes, security)
         .map_err(zen_to_flow)?;
 
     Ok(build_output(result))
