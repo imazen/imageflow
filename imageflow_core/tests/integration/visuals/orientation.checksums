@@ -97,3 +97,47 @@ tolerance off-by-one
 ## test_jpeg_rotation Portrait_8
 tolerance off-by-one
 ~ just-pearl-55c0aa0047:sea  x86_64-avx512  @3958986f  auto-accepted
+
+## test_crop_exif landscape_1
+tolerance off-by-one
+~ famed-poppy-0f970efa94:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_fit_pad_exif landscape_1
+tolerance off-by-one
+~ solar-flock-307dde9107:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_crop_exif landscape_2
+tolerance off-by-one
+~ rapid-sail-25b18e7ba9:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_jpeg_rotation Landscape_1
+tolerance off-by-one
+~ hasty-root-36619b3f62:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_jpeg_rotation_cropped portrait_1
+tolerance off-by-one
+~ dizzy-bud-4ce94bf4e6:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_crop_exif landscape_3
+tolerance off-by-one
+~ shy-colt-da02cb7f3e:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_fit_pad_exif landscape_2
+tolerance off-by-one
+~ lucky-trout-f238d7b6bc:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_jpeg_rotation Landscape_2
+tolerance off-by-one
+~ roomy-fire-fdc4d957be:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_jpeg_rotation_cropped portrait_2
+tolerance off-by-one
+~ edgy-kelp-25ad84356e:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_fit_pad_exif landscape_3
+tolerance off-by-one
+~ front-pond-348cecad33:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_jpeg_rotation_cropped portrait_3
+tolerance off-by-one
+~ last-hound-90c17fe566:sea  x86_64-avx512  @46f1a806  auto-accepted

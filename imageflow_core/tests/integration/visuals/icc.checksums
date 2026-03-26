@@ -88,3 +88,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_icc_display_p3_decode_1 p3_decode
 tolerance zensim:99 (dissim 0.01)
 ~ lost-teal-beefe0c3f4:sea  x86_64-avx512  @3958986f  auto-accepted
+
+## test_icc_adobe_rgb_constrain adobergb_constrain_300
+tolerance zensim:99 (dissim 0.01)
+~ snowy-knoll-4f736ff00a:sea  x86_64-avx512  @46f1a806  auto-accepted
