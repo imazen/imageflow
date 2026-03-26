@@ -74,6 +74,8 @@ pub fn zen_get_image_info(
 pub struct ExecuteResult {
     pub encode_results: Vec<ZenEncodeResult>,
     pub captured_dimensions: CapturedBitmaps,
+    /// Source image info from probe, keyed by decode io_id.
+    pub decode_infos: Vec<(i32, zencodecs::ImageInfo)>,
 }
 
 /// Execute a v2 Framewise pipeline through the zen streaming engine.
@@ -84,16 +86,20 @@ pub fn execute_framewise(
     framewise: &Framewise,
     io_buffers: &HashMap<i32, Vec<u8>>,
 ) -> Result<ExecuteResult, ZenError> {
+    // Collect decode info from probing input buffers.
+    let decode_infos = collect_decode_infos(framewise, io_buffers);
+
     match framewise {
         Framewise::Steps(steps) => {
             let (results, captures) = execute_steps(steps, io_buffers)?;
-            Ok(ExecuteResult { encode_results: results, captured_dimensions: captures })
+            Ok(ExecuteResult { encode_results: results, captured_dimensions: captures, decode_infos })
         }
         Framewise::Graph(graph) => {
             let results = execute_graph(graph, io_buffers)?;
             Ok(ExecuteResult {
                 encode_results: results,
                 captured_dimensions: CapturedBitmaps { captures: HashMap::new() },
+                decode_infos,
             })
         }
     }
@@ -454,6 +460,34 @@ fn stream_encode(
 }
 
 // ─── Helpers ───
+
+/// Collect decode info by probing input buffers for each Decode node.
+fn collect_decode_infos(
+    framewise: &Framewise,
+    io_buffers: &HashMap<i32, Vec<u8>>,
+) -> Vec<(i32, zencodecs::ImageInfo)> {
+    let nodes = match framewise {
+        Framewise::Steps(steps) => steps.as_slice(),
+        Framewise::Graph(g) => return Vec::new(), // TODO: extract from graph
+    };
+
+    let mut infos = Vec::new();
+    for node in nodes {
+        let io_id = match node {
+            Node::Decode { io_id, .. } => Some(*io_id),
+            Node::CommandString { decode: Some(io_id), .. } => Some(*io_id),
+            _ => None,
+        };
+        if let Some(io_id) = io_id {
+            if let Some(data) = io_buffers.get(&io_id) {
+                if let Ok(info) = zencodecs::from_bytes(data) {
+                    infos.push((io_id, info));
+                }
+            }
+        }
+    }
+    infos
+}
 
 /// Create a solid-color image source from CreateCanvas parameters.
 fn create_canvas_source(

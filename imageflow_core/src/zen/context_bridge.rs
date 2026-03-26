@@ -92,10 +92,21 @@ fn build_output(result: execute::ExecuteResult) -> ZenBuildOutput {
         output_buffers.insert(r.io_id, r.bytes);
     }
 
+    // Build decode results from probe info stored in the execute result.
+    let decodes: Vec<s::DecodeResult> = result.decode_infos.iter().map(|(io_id, info)| {
+        s::DecodeResult {
+            io_id: *io_id,
+            w: info.width as i32,
+            h: info.height as i32,
+            preferred_mime_type: info.format.mime_type().to_string(),
+            preferred_extension: info.format.extension().to_string(),
+        }
+    }).collect();
+
     ZenBuildOutput {
         job_result: s::JobResult {
             encodes,
-            decodes: Vec::new(),
+            decodes,
             performance: None,
         },
         output_buffers,
