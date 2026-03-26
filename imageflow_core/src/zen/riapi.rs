@@ -1,6 +1,6 @@
 //! RIAPI querystring expansion — dual implementation.
 //!
-//! Two paths for expanding RIAPI querystrings into zenode instances:
+//! Two paths for expanding RIAPI querystrings into zennode instances:
 //!
 //! - **Legacy path** (`expand_legacy`): Uses `imageflow_riapi::ir4::Ir4Expand` to parse
 //!   the full IR4 querystring and produce v2 `Node` steps, then translates via `translate.rs`.
@@ -37,11 +37,11 @@ pub struct ExpandedRiapi {
     pub warnings: Vec<String>,
 }
 
-/// Expand a RIAPI querystring into zenode instances using the legacy parser.
+/// Expand a RIAPI querystring into zennode instances using the legacy parser.
 ///
 /// Uses `imageflow_riapi::ir4::Ir4Expand` to parse the full IR4 querystring,
 /// produces v2 `Node` steps (with source dimensions for layout), then translates
-/// to zenode instances.
+/// to zennode instances.
 ///
 /// # Arguments
 /// * `querystring` — the raw querystring (without leading `?`)
@@ -91,7 +91,7 @@ pub fn expand_legacy(
         .map(|w| format!("{w:?}"))
         .collect();
 
-    // Translate v2 Node steps → zenode instances.
+    // Translate v2 Node steps → zennode instances.
     let pipeline = translate::translate_nodes(&steps)?;
 
     Ok(ExpandedRiapi {

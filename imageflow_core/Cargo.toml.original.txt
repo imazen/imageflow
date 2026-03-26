@@ -1,0 +1,136 @@
+[package]
+name = "imageflow_core"
+version = "0.1.0"
+authors = ["Lilith River <lilith@imazen.io>"]
+workspace = "../"
+edition = "2021"
+
+[lib]
+name = "imageflow_core"
+doctest = false
+bench = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+twox-hash = "2"
+
+## Crate-specific dependencies
+petgraph = "0.8.1" #Upgrade to
+daggy = "0.9" # Upgrade to
+
+smallvec = "1"
+itertools = "0.14"
+imgref = "1.4.1"
+slotmap = "1"
+base64 = "0.22"
+hex = "0.4"
+gif = "0.14"
+png = "0.18"
+# TODO(rgb-0.8.91): Change back to "0.8.91" when published to crates.io
+rgb = { version = "0.8.50", features = ["bytemuck"] }
+imagequant = "4"
+lodepng = "3"
+flate2 = { version = "1.0", features = ["zlib"], default-features = false }
+zune-bmp = "0.5.0-rc4"
+# zune-png = "0.5.0-rc1"
+
+bytemuck = { version = "1", features = ["derive"] }
+
+dashmap = "6.1.0"
+uuid = { version = "1", features = ["v4"] }
+
+imageflow_types = { path = "../imageflow_types", version = "*" }
+imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
+imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
+imageflow-graph = { path = "../imageflow-graph" }
+imageflow-commands = { path = "../imageflow-commands" }
+multiversion = "0.8"
+archmage = { version = "0.9.1", features = ["macros"] }
+safe_unaligned_simd = "0.2"
+
+evalchroma = "1"
+enough = { version = "0.4", features = ["std"] }
+garb = "0.2.1"
+moxcms = { git = "https://github.com/awxkee/moxcms.git", rev = "c4affa1", features = ["in_place"] }
+
+# --- Zen codec dependencies (pure Rust, default) ---
+# Using path deps until next publish cycle
+zenjpeg = { path = "../../zen/zenjpeg/zenjpeg", features = ["decoder", "parallel", "zencodec"], optional = true }
+zengif = { path = "../../zen/zengif", features = ["color_quant", "zencodec"], optional = true }
+zenwebp = { path = "../../zen/zenwebp", features = ["zencodec"], optional = true }
+zenjxl = { path = "../../zen/zenjxl", features = ["zencodec"], optional = true }
+zenavif = { path = "../../zen/zenavif", features = ["zencodec", "encode"], optional = true }
+heic-decoder = { path = "../../zen/heic-decoder-rs", features = ["zencodec"], optional = true }
+zenpixels = { path = "../../zen/zenpixels/zenpixels", default-features = false, optional = true }
+zc = { path = "../../zen/zencodec", package = "zencodec", optional = true }
+
+# Used for schema generation if feature enabled
+utoipa = { version = "5.3.1", features = [], optional = true }
+
+#ravif = { version = "0.11.12", features = [] }
+#jxl-oxide = { version = "0.11.4", features = ["lcms2"] }
+#jpegxl-rs = { version = "0.11", features = ["vendored"] }
+
+schemars = { version = "1", features = ["derive"], optional = true }
+
+# --- C codec dependencies (optional, gated behind c-codecs feature) ---
+imageflow_c_components = { path = "../c_components", optional = true }
+mozjpeg = { version = "0.10", optional = true }
+mozjpeg-sys = { version = "2", features = ["nasm_simd"], optional = true }
+jpeg-decoder = { version = "0.3.1", optional = true }
+libpng-sys = { version = "1.1.9", features = ["static", "static-libz", "libz-sys"], optional = true }
+libwebp-sys = { version = "0.14.1", optional = true }
+lcms2 = { version = "6", optional = true }
+lcms2-sys = { version = "4", optional = true }
+libz-sys = { version = "1", features = ["static"], optional = true }
+
+[dev-dependencies]
+fs2 = "0.4.3"
+imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
+criterion = "0.8"
+rand = "*"
+include_dir = { version = "0.7.4", features = ["glob"] }
+anyhow = "1.0"
+walkdir = "2"
+csv = "1"
+rayon = "1"
+colorutils-rs = "0.7"
+zensim-regress = { path = "../../zen/zensim/zensim-regress" }
+zensim = { path = "../../zen/zensim/zensim" }
+seahash = "4"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+[features]
+default = ["c-codecs", "zen-codecs"]
+neon = ["libwebp-sys/neon"]
+# All C library codecs: mozjpeg, libpng, libwebp, lcms2, and the C components library.
+c-codecs = [
+    "dep:imageflow_c_components",
+    "dep:mozjpeg", "dep:mozjpeg-sys",
+    "dep:jpeg-decoder",
+    "dep:libpng-sys",
+    "dep:libwebp-sys",
+    "dep:lcms2", "dep:lcms2-sys",
+    "dep:libz-sys",
+]
+# Pure Rust codecs: zenjpeg, zengif, zenwebp (no C dependencies)
+zen-codecs = [
+    "dep:zenjpeg",
+    "dep:zengif",
+    "dep:zenwebp",
+    "dep:zenjxl",
+    "dep:zenavif",
+    "dep:heic-decoder",
+    "dep:zenpixels",
+    "dep:zc",
+]
+# Feature to enable OpenAPI schema generation capabilities
+schema-export = ["dep:utoipa", "imageflow_types/schema-export"]
+# Enable schemars-based JSON Schema generation. Enables the corresponding feature in imageflow_types
+json-schema = ["dep:schemars", "imageflow_types/json-schema"]
+
+[[bench]]
+name="bench_graphics"
+path = "benches/bench_graphics.rs"
+harness = false

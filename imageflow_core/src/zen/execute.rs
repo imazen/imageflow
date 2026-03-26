@@ -85,7 +85,7 @@ fn execute_steps(
     steps: &[Node],
     io_buffers: &HashMap<i32, Vec<u8>>,
 ) -> Result<Vec<ZenEncodeResult>, ZenError> {
-    // 1. Translate v2 nodes → zenode instances + codec config.
+    // 1. Translate v2 nodes → zennode instances + codec config.
     let pipeline = translate::translate_nodes(steps)?;
 
     let decode_io_id = pipeline.decode_io_id.ok_or_else(|| {
@@ -143,7 +143,7 @@ fn execute_graph(
     for (dag_idx, id) in id_order.iter().enumerate() {
         let node = &graph.nodes[id];
 
-        // Translate node → zenode instance.
+        // Translate node → zennode instance.
         let mut partial = translate::translate_nodes(&[node.clone()])?;
 
         if let Some(io_id) = partial.decode_io_id {
@@ -307,7 +307,7 @@ fn stream_encode(
     }])
 }
 
-/// Create a placeholder zenode instance for decode/encode nodes in the DAG.
+/// Create a placeholder zennode instance for decode/encode nodes in the DAG.
 /// These are separated out by the bridge — the placeholder just needs a valid schema.
 fn create_placeholder_node(node: &Node) -> Box<dyn zennode::NodeInstance> {
     // Use zencodecs QualityIntentNode as a benign Encode-role placeholder,

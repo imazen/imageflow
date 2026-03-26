@@ -169,7 +169,7 @@ imageflow_tool/         KEEP — CLI
 
 ## Deleted from v3 Branch
 - `imageflow-graph/` — entire crate (replaced by zenpipe graph + bridge)
-- `imageflow-commands/` — entire crate (replaced by v2/v3 types + zenode)
+- `imageflow-commands/` — entire crate (replaced by v2/v3 types + zennode)
 - `imageflow_core/src/codecs/codec_decisions.rs` — replaced by zencodecs
 - `imageflow_core/src/codecs/zen_decoder.rs`, `zen_encoder.rs` — replaced by zencodecs
 - `imageflow_core/src/flow/` — graph engine (replaced by zenpipe)
@@ -191,7 +191,7 @@ zenlayout = { path = "../../zen/zenlayout", features = ["zennode"] }
 zenfilters = { path = "../../zen/zenfilters", features = ["zennode"], optional = true }
 
 # Zenode core
-zennode = { path = "../../zen/zenode/zenode" }
+zennode = { path = "../../zen/zennode/zennode" }
 
 # Types
 imageflow_types = { path = "../imageflow_types" }
@@ -216,7 +216,7 @@ enough = "0.4"
 ### zencodecs (0 lines)
 - No changes. Quality, format selection, policy all stable.
 
-### zenode (0 lines)
+### zennode (0 lines)
 - No changes. NodeRole 9 variants works for all crates.
 
 ### zenjpeg, zengif (~10 lines each)
@@ -228,7 +228,7 @@ enough = "0.4"
 2. Implement zenpipe changes (optimize_node_order, canonical_sort, param hardening)
 3. Create new branch from main in this repo
 4. Restructure imageflow_types (split into v2.rs + v3.rs + convert.rs)
-5. Write translate.rs (NodeV3 → zenode NodeInstance mapping)
+5. Write translate.rs (NodeV3 → zennode NodeInstance mapping)
 6. Write preset_map.rs (EncoderPresetV3 → CodecIntent)
 7. Write v3/ endpoints
 8. Rewire context.rs internals to use zenpipe

@@ -1,9 +1,9 @@
-//! Translate imageflow v2 [`Node`] variants into zenode [`NodeInstance`] objects.
+//! Translate imageflow v2 [`Node`] variants into zennode [`NodeInstance`] objects.
 //!
-//! Each v2 Node variant maps to one or more zenode node instances via
+//! Each v2 Node variant maps to one or more zennode node instances via
 //! `NodeDef::create_default()` + `set_param()`. The translation is mechanical:
 //! extract fields from the Node variant, set corresponding params on the
-//! zenode instance.
+//! zennode instance.
 //!
 //! Encode/Decode nodes are handled separately — they produce configuration
 //! rather than pixel-processing nodes.
@@ -18,7 +18,7 @@ use zennode::{NodeDef, NodeInstance, NodeRegistry, ParamValue};
 
 use super::preset_map::PresetMapping;
 
-/// Error during v2 Node → zenode translation.
+/// Error during v2 Node → zennode translation.
 #[derive(Debug)]
 pub enum TranslateError {
     /// A node variant that isn't yet supported in the zen pipeline.
@@ -55,7 +55,7 @@ pub struct TranslatedPipeline {
     pub decoder_commands: Option<Vec<s::DecoderCommand>>,
 }
 
-/// Translate a sequence of v2 [`Node`] values into zenode instances.
+/// Translate a sequence of v2 [`Node`] values into zennode instances.
 pub fn translate_nodes(nodes: &[Node]) -> Result<TranslatedPipeline, TranslateError> {
     let mut result = TranslatedPipeline {
         nodes: Vec::new(),
