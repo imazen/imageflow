@@ -12,6 +12,7 @@ tolerance off-by-one
 ## test_rot_90_and_red_dot_command_string landscape_70x70
 tolerance off-by-one
 = close-larch-796effad97:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @f221b48e  auto-accepted within tolerance (within off-by-one) vs close-larch-796effad97:sea (zensim:99.55 (dissim 0.0045))
 
 ## test_branching_crop_whitespace gradient_output_2
 tolerance zensim:99 (dissim 0.01)

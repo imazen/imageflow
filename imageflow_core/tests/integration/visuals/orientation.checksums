@@ -114,6 +114,7 @@ tolerance off-by-one
 tolerance off-by-one
 = great-seed-248b16de1a:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ bulk-rock-6bd11d7a37:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs great-seed-248b16de1a:sea (zensim:99.25 (dissim 0.0075), 5.8% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ lame-song-eee1614c15:sea  x86_64-avx512  @f221b48e  auto-accepted within tolerance (within off-by-one) vs great-seed-248b16de1a:sea (zensim:99.04 (dissim 0.0096))
 
 ## test_fit_pad_exif landscape_1
 tolerance off-by-one
