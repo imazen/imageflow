@@ -1014,8 +1014,12 @@ fn decode_to_source(
     data: &[u8],
     registry: &AllowedFormats,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
+    // Reject truncated/corrupt files (v2 compat) but allow everything else.
+    let mut policy = zencodecs::DecodePolicy::none();
+    policy.allow_truncated = Some(false);
     match zencodecs::DecodeRequest::new(data)
         .with_registry(registry)
+        .with_decode_policy(policy.clone())
         .build_streaming_decoder()
     {
         Ok(streaming) => {
@@ -1025,6 +1029,7 @@ fn decode_to_source(
         Err(_) => {
             let decoded = zencodecs::DecodeRequest::new(data)
                 .with_registry(registry)
+                .with_decode_policy(policy)
                 .decode_full_frame()
                 .map_err(|e| ZenError::Codec(format!("decode: {e}")))?;
 
