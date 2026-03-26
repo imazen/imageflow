@@ -61,6 +61,16 @@ utoipa = { version = "5.3.1", features = [], optional = true }
 
 schemars = { version = "1", features = ["derive"], optional = true }
 
+# --- Zen crate dependencies (optional, gated behind zen-pipeline feature) ---
+zenpipe = { path = "../../zen/zenpipe", features = ["zennode", "std"], optional = true }
+zencodecs = { path = "../../zen/zencodecs", features = ["zennode"], optional = true }
+zencodec = { path = "../../zen/zencodec", optional = true }
+zennode = { path = "../../zen/zennode/zennode", features = ["derive"], optional = true }
+zenresize = { path = "../../zen/zenresize", features = ["zennode"], optional = true }
+zenlayout = { path = "../../zen/zenlayout", features = ["zennode"], optional = true }
+zenfilters = { path = "../../zen/zenfilters", features = ["zennode"], optional = true }
+zenpixels = { version = "0.2.0", optional = true }
+
 # --- C codec dependencies (optional, gated behind c-codecs feature) ---
 imageflow_c_components = { path = "../c_components", optional = true }
 mozjpeg = { version = "0.10", optional = true }
@@ -83,8 +93,8 @@ walkdir = "2"
 csv = "1"
 rayon = "1"
 colorutils-rs = "0.7"
-zensim-regress = { path = "../../zensim/zensim-regress" }
-zensim = { path = "../../zensim/zensim" }
+zensim-regress = { path = "../../zen/zensim/zensim-regress" }
+zensim = { path = "../../zen/zensim/zensim" }
 seahash = "4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
@@ -100,6 +110,11 @@ c-codecs = [
     "dep:libwebp-sys",
     "dep:lcms2", "dep:lcms2-sys",
     "dep:libz-sys",
+]
+# Zen-crate streaming pipeline (replaces flow/ and codecs/ for execution).
+zen-pipeline = [
+    "dep:zenpipe", "dep:zencodecs", "dep:zencodec", "dep:zennode",
+    "dep:zenresize", "dep:zenlayout", "dep:zenfilters", "dep:zenpixels",
 ]
 # Feature to enable OpenAPI schema generation capabilities
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]

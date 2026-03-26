@@ -34,6 +34,9 @@ pub mod ffi;
 pub mod parsing;
 pub mod test_helpers;
 
+#[cfg(feature = "zen-pipeline")]
+pub mod zen;
+
 use petgraph::graph::NodeIndex;
 use std::borrow::Cow;
 use std::fmt;
