@@ -7,39 +7,36 @@ tolerance max-delta:2 zensim:80 (dissim 0.20) pixels-changed:100.0%
 ## test_scale_rings hermite_400x400
 tolerance off-by-one
 = salty-nest-6d4fa00ed3:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ giant-trout-418f5be2ec:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs salty-nest-6d4fa00ed3:sea (zensim:99.31 (dissim 0.0069))
 
 ## test_scale_image waterhouse_robidoux_400x300
 tolerance off-by-one
 = only-tiger-a4839401fa:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ front-shell-786aa19c4b:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs only-tiger-a4839401fa:sea (zensim:99.64 (dissim 0.0036))
+~ front-shell-786aa19c4b:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs only-tiger-a4839401fa:sea (zensim:99.64 (dissim 0.0036))
 
 ## test_jpeg_icc2_color_profile mars_robidoux_400x300
 tolerance off-by-one
 = edgy-bud-3c5ab5c483:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ level-bird-3dae9245da:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs edgy-bud-3c5ab5c483:sea (zensim:99.81 (dissim 0.0019))
+~ level-bird-3dae9245da:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs edgy-bud-3c5ab5c483:sea (zensim:99.81 (dissim 0.0019))
 
 ## test_read_gif_and_scale mountain_robidoux_400x300
 tolerance off-by-one
 = north-rust-f9b8c7992d:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ sunny-yew-e6b27a1f2e:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs north-rust-f9b8c7992d:sea (zensim:99.72 (dissim 0.0028))
+~ sunny-yew-e6b27a1f2e:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs north-rust-f9b8c7992d:sea (zensim:99.72 (dissim 0.0028))
 
 ## test_read_gif_and_vertical_distort mountain_box_800x100
 tolerance off-by-one
 = last-fawn-83133574e4:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ calm-fish-0c49580c34:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs last-fawn-83133574e4:sea (zensim:99.79 (dissim 0.0021))
 
 ## webp_lossless_alpha_decode_and_scale 100x100
 tolerance off-by-one
 = clean-ore-a59f8abf2c:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ funny-grape-f5de6b839a:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs clean-ore-a59f8abf2c:sea (zensim:99.85 (dissim 0.0015))
 
 ## webp_lossy_alpha_decode_and_scale 100x100
 tolerance off-by-one
 = both-path-4b02288edb:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ swift-mare-d65083523f:sea  x86_64-avx512  @f2a0b9a7  auto-accepted within tolerance (within off-by-one) vs both-path-4b02288edb:sea (zensim:99.84 (dissim 0.0016))
+~ swift-mare-d65083523f:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs both-path-4b02288edb:sea (zensim:99.84 (dissim 0.0016))
 
 ## webp_lossy_noalpha_decode_and_scale mountain_100x100
 tolerance off-by-one
 = open-shell-b210964ea9:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ same-moon-a6405fbf4b:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within off-by-one) vs open-shell-b210964ea9:sea (zensim:99.84 (dissim 0.0016))
+~ same-moon-a6405fbf4b:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs open-shell-b210964ea9:sea (zensim:99.84 (dissim 0.0016))
