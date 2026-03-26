@@ -799,8 +799,15 @@ fn expand_command_strings(
                 use imageflow_riapi::ir4::*;
 
                 // Inject Decode node if CommandString specifies a decode io_id.
+                // Parse `frame=N` from querystring for frame selection.
                 if let Some(dec_id) = decode {
-                    result.push(Node::Decode { io_id: *dec_id, commands: None });
+                    let mut commands: Option<Vec<imageflow_types::DecoderCommand>> = None;
+                    if let Ok(parsed) = Ir4Command::QueryString(value.clone()).parse() {
+                        if let Some(frame) = parsed.parsed.frame {
+                            commands = Some(vec![imageflow_types::DecoderCommand::SelectFrame(frame)]);
+                        }
+                    }
+                    result.push(Node::Decode { io_id: *dec_id, commands });
                 }
 
                 let expand = Ir4Expand {
