@@ -145,7 +145,7 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
             ];
             if let Some(hints) = hints {
                 if let Some(ref filter) = hints.down_filter {
-                    params.push(("filter", ParamValue::Str(filter_to_str(filter).into())));
+                    params.push(("down_filter", ParamValue::Str(filter_to_str(filter).into())));
                 }
             }
             push_constrain_node(&mut result.nodes, &params)
@@ -266,7 +266,7 @@ fn translate_constrain(
     }
     if let Some(ref hints) = c.hints {
         if let Some(ref filter) = hints.down_filter {
-            params.push(("filter", ParamValue::Str(filter_to_str(filter).into())));
+            params.push(("down_filter", ParamValue::Str(filter_to_str(filter).into())));
         }
     }
     push_constrain_node(nodes, &params)
