@@ -617,6 +617,49 @@ fn expand_command_strings(
                         }
                     }
                     Err(e) => {
+                        // ContentDependent means trim_whitespace is in the querystring.
+                        // Strip trim keys and retry, adding CropWhitespace node before layout.
+                        let parsed = Ir4Command::QueryString(value.clone()).parse();
+                        if let Ok(ref ir4_result) = parsed {
+                            if ir4_result.parsed.trim_whitespace_threshold.is_some() {
+                                // Retry without trim by building a new querystring
+                                let qs_without_trim = strip_trim_from_qs(value);
+                                let expand2 = Ir4Expand {
+                                    i: Ir4Command::QueryString(qs_without_trim),
+                                    source: Ir4SourceFrameInfo {
+                                        w: source_w,
+                                        h: source_h,
+                                        fmt: imageflow_types::PixelFormat::Bgra32,
+                                        original_mime: source_mime.clone(),
+                                        lossless: source_lossless,
+                                    },
+                                    reference_width: source_w,
+                                    reference_height: source_h,
+                                    encode_id: *encode,
+                                    watermarks: watermarks.clone(),
+                                };
+                                // Add CropWhitespace before any resize.
+                                let threshold = ir4_result.parsed.trim_whitespace_threshold.unwrap_or(80) as u32;
+                                let padding = ir4_result.parsed.trim_whitespace_padding_percent.unwrap_or(0.0);
+                                result.push(Node::CropWhitespace {
+                                    threshold,
+                                    percent_padding: padding,
+                                });
+                                match expand2.expand_steps() {
+                                    Ok(ir4_result) => {
+                                        if let Some(expanded_steps) = ir4_result.steps {
+                                            result.extend(expanded_steps);
+                                        }
+                                    }
+                                    Err(e2) => {
+                                        return Err(ZenError::Translate(TranslateError::InvalidParam(
+                                            format!("RIAPI expansion (post-trim strip): {e2:?}"),
+                                        )));
+                                    }
+                                }
+                                continue;
+                            }
+                        }
                         return Err(ZenError::Translate(TranslateError::InvalidParam(
                             format!("RIAPI expansion: {e:?}"),
                         )));
@@ -628,6 +671,21 @@ fn expand_command_strings(
     }
 
     Ok(result)
+}
+
+/// Strip trim-related keys from a RIAPI querystring so expansion can proceed.
+fn strip_trim_from_qs(qs: &str) -> String {
+    qs.split('&')
+        .filter(|part| {
+            let key = part.split('=').next().unwrap_or("");
+            !key.eq_ignore_ascii_case("s.trimwhitespace")
+                && !key.eq_ignore_ascii_case("s.trim.threshold")
+                && !key.eq_ignore_ascii_case("s.trim.percentpadding")
+                && !key.eq_ignore_ascii_case("trim.threshold")
+                && !key.eq_ignore_ascii_case("trim.percentpadding")
+        })
+        .collect::<Vec<_>>()
+        .join("&")
 }
 
 impl TranslatedPipeline {
