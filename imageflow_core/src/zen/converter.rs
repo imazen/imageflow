@@ -89,24 +89,27 @@ impl NodeConverter for ExpandCanvasConverter {
 
     fn convert(&self, node: &dyn NodeInstance) -> Result<NodeOp, PipeError> {
         use zennode::ParamValue;
-        let left = match node.get_param("left") {
+        let get_u32 = |name| match node.get_param(name) {
             Some(ParamValue::U32(v)) => v,
             _ => 0,
         };
-        let top = match node.get_param("top") {
-            Some(ParamValue::U32(v)) => v,
-            _ => 0,
+        let left = get_u32("left");
+        let top = get_u32("top");
+        let right = get_u32("right");
+        let bottom = get_u32("bottom");
+
+        // Extract background color from params (set by translate.rs).
+        // Only use non-default color when bg_a is explicitly present.
+        let bg_color = if node.get_param("bg_a").is_some() {
+            [
+                get_u32("bg_r") as u8,
+                get_u32("bg_g") as u8,
+                get_u32("bg_b") as u8,
+                get_u32("bg_a") as u8,
+            ]
+        } else {
+            [0u8, 0, 0, 0] // transparent (legacy default)
         };
-        let right = match node.get_param("right") {
-            Some(ParamValue::U32(v)) => v,
-            _ => 0,
-        };
-        let bottom = match node.get_param("bottom") {
-            Some(ParamValue::U32(v)) => v,
-            _ => 0,
-        };
-        // TODO: extract background color from node params when available.
-        let bg_color = [0u8, 0, 0, 0]; // transparent black
 
         Ok(NodeOp::ExpandCanvas {
             left,

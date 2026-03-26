@@ -186,11 +186,16 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         }
 
         Node::ExpandCanvas { left, top, right, bottom, color } => {
+            let bg = color_to_rgba(color);
             push_layout_node(&mut result.nodes, "zenlayout.expand_canvas", &[
                 ("left", ParamValue::U32(*left)),
                 ("top", ParamValue::U32(*top)),
                 ("right", ParamValue::U32(*right)),
                 ("bottom", ParamValue::U32(*bottom)),
+                ("bg_r", ParamValue::U32(bg[0] as u32)),
+                ("bg_g", ParamValue::U32(bg[1] as u32)),
+                ("bg_b", ParamValue::U32(bg[2] as u32)),
+                ("bg_a", ParamValue::U32(bg[3] as u32)),
             ])
         }
 
