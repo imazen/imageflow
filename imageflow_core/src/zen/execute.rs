@@ -413,7 +413,6 @@ fn probe_resolve_decode(
     source = apply_icc_transform(source, &info)?;
 
     // PNG gAMA/cHRM: if no ICC profile, try to synthesize from PNG metadata.
-    // Only apply gAMA-only transforms when HonorGamaOnly is set (v2 compat).
     if info.source_color.icc_profile.is_none() && info.format == zencodecs::ImageFormat::Png {
         let honor_gama_only = decoder_commands
             .as_ref()
@@ -422,7 +421,17 @@ fn probe_resolve_decode(
                 _ => None,
             }))
             .unwrap_or(false);
-        source = apply_png_gamma_transform(source, input_data, honor_gama_only)?;
+        // HonorGamaChrm(false) disables gAMA+cHRM transforms entirely.
+        let honor_gama_chrm = decoder_commands
+            .as_ref()
+            .and_then(|cmds| cmds.iter().find_map(|c| match c {
+                imageflow_types::DecoderCommand::HonorGamaChrm(v) => Some(*v),
+                _ => None,
+            }))
+            .unwrap_or(true); // default: honor gAMA+cHRM
+        if honor_gama_chrm {
+            source = apply_png_gamma_transform(source, input_data, honor_gama_only)?;
+        }
     }
 
     // Format conversion: ensure RGBA8 sRGB pixel format for downstream.
@@ -501,8 +510,9 @@ fn synthesize_icc_from_gama(
     let neutral_high = 0.4773;
 
     let chrm_is_srgb = chromaticities.map_or(true, |c| {
+        // sRGB primaries scaled by 100000. Tolerance: 1% (1000) to handle rounding.
         let srgb = [31270u32, 32900, 64000, 33000, 30000, 60000, 15000, 6000];
-        c.iter().zip(srgb.iter()).all(|(a, b)| (*a as i64 - *b as i64).unsigned_abs() < 500)
+        c.iter().zip(srgb.iter()).all(|(a, b)| (*a as i64 - *b as i64).unsigned_abs() < 1000)
     });
 
     if gamma_f >= neutral_low && gamma_f <= neutral_high && chrm_is_srgb {
@@ -773,18 +783,31 @@ fn apply_png_gamma_transform(
     png_data: &[u8],
     honor_gama_only: bool,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
-    let (gamma, chrm) = parse_png_gama_chrm(png_data);
+    let (gamma, chrm, has_srgb, has_cicp) = parse_png_color_chunks(png_data);
     let gamma = match gamma {
         Some(g) if g > 0 => g,
         _ => return Ok(source),
     };
 
-    if has_png_srgb_chunk(png_data) {
+    // sRGB chunk → already sRGB, no transform.
+    if has_srgb {
         return Ok(source);
     }
 
+    // cICP chunk takes precedence over gAMA+cHRM (PNG 3rd Ed spec).
+    // cICP handling is done via ICC path; don't double-transform.
+    if has_cicp {
+        return Ok(source);
+    }
+
+    // Validate cHRM: reject degenerate chromaticities (y=0 causes division by zero).
+    if let Some(ref c) = chrm {
+        if c.iter().enumerate().any(|(i, v)| i % 2 == 1 && *v == 0) {
+            return Ok(source); // Degenerate cHRM — skip
+        }
+    }
+
     // gAMA-only (no cHRM) is ignored unless HonorGamaOnly is set.
-    // This matches v2 behavior — most PNGs with gAMA-only are sRGB.
     if chrm.is_none() && !honor_gama_only {
         return Ok(source);
     }
@@ -815,59 +838,44 @@ fn apply_png_gamma_transform(
     }
 }
 
-/// Parse PNG gAMA chunk value (scaled by 100000) and optional cHRM from raw bytes.
-fn parse_png_gama_chrm(data: &[u8]) -> (Option<u32>, Option<[u32; 8]>) {
+/// Parse PNG color-related chunks: gAMA, cHRM, sRGB, cICP.
+fn parse_png_color_chunks(data: &[u8]) -> (Option<u32>, Option<[u32; 8]>, bool, bool) {
     let mut gamma = None;
     let mut chrm = None;
+    let mut has_srgb = false;
+    let mut has_cicp = false;
 
-    // PNG signature is 8 bytes, then chunks: [length:4][type:4][data:length][crc:4]
     if data.len() < 8 || &data[0..8] != b"\x89PNG\r\n\x1a\n" {
-        return (None, None);
+        return (None, None, false, false);
     }
     let mut pos = 8;
     while pos + 8 <= data.len() {
         let len = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
         let chunk_type = &data[pos+4..pos+8];
         let chunk_data_start = pos + 8;
-        let chunk_end = chunk_data_start + len + 4; // +4 for CRC
+        let chunk_end = chunk_data_start + len + 4;
         if chunk_end > data.len() { break; }
 
-        if chunk_type == b"gAMA" && len == 4 {
-            gamma = Some(u32::from_be_bytes([
-                data[chunk_data_start], data[chunk_data_start+1],
-                data[chunk_data_start+2], data[chunk_data_start+3],
-            ]));
-        } else if chunk_type == b"cHRM" && len == 32 {
-            let d = &data[chunk_data_start..];
-            let read_u32 = |off: usize| u32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]);
-            chrm = Some([
-                read_u32(0), read_u32(4),   // white x, y
-                read_u32(8), read_u32(12),  // red x, y
-                read_u32(16), read_u32(20), // green x, y
-                read_u32(24), read_u32(28), // blue x, y
-            ]);
-        } else if chunk_type == b"IDAT" || chunk_type == b"IEND" {
-            break; // Stop at pixel data
+        match chunk_type {
+            b"gAMA" if len == 4 => {
+                gamma = Some(u32::from_be_bytes([
+                    data[chunk_data_start], data[chunk_data_start+1],
+                    data[chunk_data_start+2], data[chunk_data_start+3],
+                ]));
+            }
+            b"cHRM" if len == 32 => {
+                let d = &data[chunk_data_start..];
+                let r = |off: usize| u32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]);
+                chrm = Some([r(0), r(4), r(8), r(12), r(16), r(20), r(24), r(28)]);
+            }
+            b"sRGB" => { has_srgb = true; }
+            b"cICP" => { has_cicp = true; }
+            b"IDAT" | b"IEND" => break,
+            _ => {}
         }
         pos = chunk_end;
     }
-    (gamma, chrm)
-}
-
-/// Check if a PNG has an sRGB chunk.
-fn has_png_srgb_chunk(data: &[u8]) -> bool {
-    if data.len() < 8 || &data[0..8] != b"\x89PNG\r\n\x1a\n" {
-        return false;
-    }
-    let mut pos = 8;
-    while pos + 8 <= data.len() {
-        let len = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
-        let chunk_type = &data[pos+4..pos+8];
-        if chunk_type == b"sRGB" { return true; }
-        if chunk_type == b"IDAT" || chunk_type == b"IEND" { break; }
-        pos += 8 + len + 4;
-    }
-    false
+    (gamma, chrm, has_srgb, has_cicp)
 }
 
 /// Wrap a source with a format conversion to RGBA8 sRGB if needed.
