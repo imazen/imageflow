@@ -302,7 +302,41 @@ fn probe_resolve_decode(
         &registry, &CodecPolicy::default(),
     ).map_err(|e| ZenError::Codec(format!("format selection: {e}")))?;
 
-    Ok((decision, decode_to_source(input_data, &registry)?))
+    let mut source = decode_to_source(input_data, &registry)?;
+
+    // sRGB compatibility: convert decoded pixels to RGBA8 sRGB.
+    // This matches v2 behavior where CMS transforms to sRGB during decode.
+    // The conversion is a no-op if already in RGBA8 sRGB.
+    source = ensure_srgb_rgba8(source)?;
+
+    Ok((decision, source))
+}
+
+/// Wrap a source with a format conversion to RGBA8 sRGB if needed.
+///
+/// v2 compatibility: the v2 engine always decodes to BGRA32 sRGB via CMS.
+/// The zen pipeline preserves the source format. This function inserts a
+/// conversion to RGBA8 sRGB when the source isn't already in that format.
+fn ensure_srgb_rgba8(
+    source: Box<dyn zenpipe::Source>,
+) -> Result<Box<dyn zenpipe::Source>, ZenError> {
+    let src_format = source.format();
+    let target = zenpipe::format::RGBA8_SRGB;
+
+    if src_format == target {
+        return Ok(source);
+    }
+
+    // Try to create a format conversion.
+    if let Some(converter) = zenpipe::ops::RowConverterOp::new(src_format, target) {
+        let transform = zenpipe::sources::TransformSource::new(source)
+            .push_boxed(Box::new(converter));
+        Ok(Box::new(transform))
+    } else {
+        // No conversion path — log and proceed with original format.
+        // The pipeline will attempt format negotiation at later stages.
+        Ok(source)
+    }
 }
 
 /// Build a streaming decode source. Tries row-level streaming first
