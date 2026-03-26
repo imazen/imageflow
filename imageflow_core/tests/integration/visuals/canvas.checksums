@@ -42,6 +42,7 @@ tolerance off-by-one
 ## test_round_corners_small 100x100_r5
 tolerance off-by-one
 = sole-wolf-a89e7d6ea8:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ sandy-ridge-dc76621a50:sea  x86_64-avx512  @f2a0b9a7  auto-accepted within tolerance (within off-by-one) vs sole-wolf-a89e7d6ea8:sea (zensim:99.78 (dissim 0.0022))
 
 ## test_round_corners_custom_pixels semitransparent_mixed_radii
 tolerance off-by-one

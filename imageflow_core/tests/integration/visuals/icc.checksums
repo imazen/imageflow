@@ -55,10 +55,12 @@ tolerance zensim:97 (dissim 0.03)
 = ionic-trout-c4ba3eae87:sea  x86_64-avx512  @6e695833  new-baseline
 ~ limp-ford-b5f44b5040:sea  aarch64  @ace43a05  auto-accepted vs ionic-trout-c4ba3eae87:sea  diff d:2 s:98.7 px:0.8%
 ~ rural-reed-ac94b06d6e:sea  aarch64-windows  @ace43a05  auto-accepted vs ionic-trout-c4ba3eae87:sea  diff d:2 s:97.1 px:13.6%
+~ fawn-plum-450bc0d39b:sea  x86_64-avx512  @f2a0b9a7  auto-accepted within tolerance (within zensim:97 (dissim 0.03) vs ionic-trout-c4ba3eae87:sea (zensim:99.60 (dissim 0.0040))
 
 ## test_icc_repro_sharp_icc sharp_icc
 tolerance zensim:99 (dissim 0.01)
 = cold-cod-fbd1704ac1:sea  x86_64-avx512  @6e695833  new-baseline
+~ cross-torch-09ea4c6db5:sea  x86_64-avx512  @f2a0b9a7  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs cold-cod-fbd1704ac1:sea (zensim:99.19 (dissim 0.0081))
 
 ## test_icc_rec2020_decode_1 rec2020_decode
 tolerance zensim:99 (dissim 0.01)
@@ -73,11 +75,12 @@ tolerance zensim:95 (dissim 0.05)
 ## test_icc_prophoto_decode prophoto_decode
 tolerance zensim:99 (dissim 0.01)
 = moist-shore-4dc03e0370:sea  x86_64-avx512  @6e695833  new-baseline
-~ prone-ox-a3d2dd3aac:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs moist-shore-4dc03e0370:sea (zensim:99.56 (dissim 0.0044))
+~ prone-ox-a3d2dd3aac:sea  x86_64-avx512  @ca19c098  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs moist-shore-4dc03e0370:sea (zensim:99.56 (dissim 0.0044))
 
 ## test_icc_rec2020_decode_2 rec2020_decode
 tolerance zensim:99 (dissim 0.01)
 = able-ash-684f3036b9:sea  x86_64-avx512  @6e695833  new-baseline
+~ swift-quay-eb146321aa:sea  x86_64-avx512  @f2a0b9a7  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs able-ash-684f3036b9:sea (zensim:99.66 (dissim 0.0034))
 
 ## test_icc_repro_pillow_icc pillow_icc
 tolerance zensim:95 (dissim 0.05)
@@ -99,6 +102,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_icc_srgb_canon_5d srgb_canon5d
 tolerance zensim:99 (dissim 0.01)
 = short-cub-c9b4371b0c:sea  x86_64-avx512  @6e695833  new-baseline
+~ apt-dew-a4b44ec913:sea  x86_64-avx512  @f2a0b9a7  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs short-cub-c9b4371b0c:sea (zensim:99.31 (dissim 0.0069))
 
 ## test_icc_adobe_rgb_decode_2 adobergb_decode
 tolerance zensim:99 (dissim 0.01)

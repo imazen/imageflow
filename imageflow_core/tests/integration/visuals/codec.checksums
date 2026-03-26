@@ -2,6 +2,7 @@
 tolerance off-by-one
 = short-fern-3a18947ea1:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ hefty-hive-6c9c6425bb:sea  x86_64-avx512  @0a8f6a9b  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
+~ like-glow-fcd087632e:sea  x86_64-avx512  @f2a0b9a7  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
 
 ## test_rot_90_and_red_dot landscape_70x70
 tolerance off-by-one
@@ -53,10 +54,12 @@ tolerance zensim:99 (dissim 0.01)
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 = moot-song-b4af647101:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ next-flock-5c9d9d9c01:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs moot-song-b4af647101:sea (zensim:98.21 (dissim 0.018), 15.9% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ cheap-birch-a5137c14dd:sea  x86_64-avx512  @f2a0b9a7  auto-accepted within tolerance (within max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%) vs moot-song-b4af647101:sea (zensim:99.78 (dissim 0.0022))
 
 ## test_jpeg_crop waterhouse_100x200
 tolerance off-by-one
 = cross-dust-04763ef509:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ oval-viper-10fc36d8cf:sea  x86_64-avx512  @f2a0b9a7  auto-accepted within tolerance (within off-by-one) vs cross-dust-04763ef509:sea (zensim:99.67 (dissim 0.0033))
 
 ## test_transparent_png_to_jpeg shirt
 tolerance zensim:99 (dissim 0.01)
@@ -71,6 +74,7 @@ tolerance off-by-one
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 = loud-stork-e3a76d92e7:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ lazy-disc-329f73dcff:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs loud-stork-e3a76d92e7:sea (zensim:98.34 (dissim 0.017), 13.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ fancy-chip-63ffb8a1e5:sea  x86_64-avx512  @f2a0b9a7  auto-accepted within tolerance (within max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%) vs loud-stork-e3a76d92e7:sea (zensim:99.76 (dissim 0.0024))
 
 ## decode_cmyk_jpeg logo_passthrough
 tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%

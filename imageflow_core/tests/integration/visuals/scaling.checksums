@@ -37,6 +37,7 @@ tolerance off-by-one
 ## webp_lossy_alpha_decode_and_scale 100x100
 tolerance off-by-one
 = both-path-4b02288edb:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ swift-mare-d65083523f:sea  x86_64-avx512  @f2a0b9a7  auto-accepted within tolerance (within off-by-one) vs both-path-4b02288edb:sea (zensim:99.84 (dissim 0.0016))
 
 ## webp_lossy_noalpha_decode_and_scale mountain_100x100
 tolerance off-by-one
