@@ -241,23 +241,45 @@ fn probe_and_decode(
     Ok((decision, source))
 }
 
-/// Decode to full-frame MaterializedSource.
+/// Build a decode source — streaming if possible, full-frame fallback.
+///
+/// Tries `build_streaming_decoder()` first (works for JPEG, PNG, GIF, AVIF, HEIC
+/// via `job_static()` + `Cow::Owned`). Falls back to full-frame decode +
+/// `MaterializedSource` for formats that don't support streaming.
 fn decode_to_source(
     data: &[u8],
     registry: &AllowedFormats,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
-    let decoded = zencodecs::DecodeRequest::new(data)
+    // Try streaming decoder first.
+    match zencodecs::DecodeRequest::new(data)
         .with_registry(registry)
-        .decode_full_frame()
-        .map_err(|e| ZenError::Codec(format!("decode: {e}")))?;
+        .build_streaming_decoder()
+    {
+        Ok(streaming) => {
+            // Use RGBA8 sRGB as the default output format for the streaming decoder.
+            // The decoder produces rows in whatever format was negotiated during
+            // streaming_decoder() — for JPEG this is typically RGBA8 or RGB8.
+            let format = zenpipe::format::RGBA8_SRGB;
+            let source = zenpipe::codec::DecoderSource::new(streaming, format)
+                .map_err(|e| ZenError::Pipeline(e))?;
+            Ok(Box::new(source))
+        }
+        Err(_) => {
+            // Fall back to full-frame decode (WebP, TIFF, etc.).
+            let decoded = zencodecs::DecodeRequest::new(data)
+                .with_registry(registry)
+                .decode_full_frame()
+                .map_err(|e| ZenError::Codec(format!("decode: {e}")))?;
 
-    let w = decoded.width();
-    let h = decoded.height();
-    let format = decoded.descriptor();
-    let buf = decoded.into_buffer();
-    let bytes = buf.copy_to_contiguous_bytes();
-    let source = zenpipe::sources::MaterializedSource::from_data(bytes, w, h, format);
-    Ok(Box::new(source))
+            let w = decoded.width();
+            let h = decoded.height();
+            let format = decoded.descriptor();
+            let buf = decoded.into_buffer();
+            let bytes = buf.copy_to_contiguous_bytes();
+            let source = zenpipe::sources::MaterializedSource::from_data(bytes, w, h, format);
+            Ok(Box::new(source))
+        }
+    }
 }
 
 /// Pull strips from pipeline source, push directly to encoder.
