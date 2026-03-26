@@ -122,6 +122,57 @@ fn execute_steps(
     }).collect();
 
     let pipeline = translate::translate_nodes(&steps)?;
+    let has_encode = pipeline.encode_io_id.is_some();
+
+    // Handle CreateCanvas — create solid-color source instead of decoding.
+    if let Some(ref canvas) = pipeline.create_canvas {
+        let source = create_canvas_source(canvas)?;
+        let source = ensure_srgb_rgba8(source)?;
+
+        let converters: &[&dyn zenpipe::bridge::NodeConverter] = &[];
+        let pipe_result = zenpipe::bridge::build_pipeline(source, &pipeline.nodes, converters)?;
+
+        let out_w = pipe_result.source.width();
+        let out_h = pipe_result.source.height();
+
+        let mut captures = HashMap::new();
+        if has_encode && capture_ids.is_empty() {
+            let encode_io_id = pipeline.encode_io_id.unwrap();
+            let decision = zencodecs::FormatDecision::for_format(zencodecs::ImageFormat::Png);
+            let results = stream_encode(pipe_result.source, &decision, encode_io_id)?;
+            return Ok((results, CapturedBitmaps { captures }));
+        } else {
+            let materialized = pipe_result.materialize()?;
+            let w = materialized.pixels.width();
+            let h = materialized.pixels.height();
+            let fmt = materialized.pixels.format();
+            let data = materialized.pixels.data().to_vec();
+            for id in &capture_ids {
+                captures.insert(*id, CapturedBitmap {
+                    width: w, height: h, pixels: data.clone(), format: fmt,
+                });
+            }
+            if has_encode {
+                let encode_io_id = pipeline.encode_io_id.unwrap();
+                let stride = w as usize * fmt.bytes_per_pixel();
+                let ps = zenpixels::PixelSlice::new(&data, w, h, stride, fmt)
+                    .map_err(|e| ZenError::Codec(format!("pixel slice: {e}")))?;
+                let registry = AllowedFormats::all();
+                let decision = zencodecs::FormatDecision::for_format(zencodecs::ImageFormat::Png);
+                let output = zencodecs::EncodeRequest::new(decision.format)
+                    .with_registry(&registry)
+                    .encode(ps, fmt.has_alpha())
+                    .map_err(|e| ZenError::Codec(format!("encode: {e}")))?;
+                return Ok((vec![ZenEncodeResult {
+                    io_id: encode_io_id, bytes: output.into_vec(),
+                    width: w, height: h,
+                    mime_type: decision.format.mime_type(),
+                    extension: decision.format.extension(),
+                }], CapturedBitmaps { captures }));
+            }
+            return Ok((Vec::new(), CapturedBitmaps { captures }));
+        }
+    }
 
     let decode_io_id = pipeline.decode_io_id.ok_or_else(|| {
         ZenError::Io("no decode node in pipeline".into())
@@ -129,8 +180,6 @@ fn execute_steps(
     let input_data = io_buffers.get(&decode_io_id).ok_or_else(|| {
         ZenError::Io(format!("no input buffer for io_id {decode_io_id}"))
     })?;
-
-    let has_encode = pipeline.encode_io_id.is_some();
 
     let (decision, source) = probe_resolve_decode(input_data, &pipeline)?;
 
@@ -406,6 +455,49 @@ fn stream_encode(
 
 // ─── Helpers ───
 
+/// Create a solid-color image source from CreateCanvas parameters.
+fn create_canvas_source(
+    canvas: &translate::CreateCanvasParams,
+) -> Result<Box<dyn zenpipe::Source>, ZenError> {
+    let w = canvas.w;
+    let h = canvas.h;
+    let bpp = 4usize; // RGBA8
+    let format = zenpipe::format::RGBA8_SRGB;
+
+    // Parse color to RGBA bytes.
+    let (r, g, b, a) = match &canvas.color {
+        imageflow_types::Color::Transparent => (0u8, 0, 0, 0),
+        imageflow_types::Color::Black => (0, 0, 0, 255),
+        imageflow_types::Color::Srgb(imageflow_types::ColorSrgb::Hex(hex)) => {
+            let hex = hex.trim_start_matches('#');
+            let r = u8::from_str_radix(&hex.get(0..2).unwrap_or("00"), 16).unwrap_or(0);
+            let g = u8::from_str_radix(&hex.get(2..4).unwrap_or("00"), 16).unwrap_or(0);
+            let b = u8::from_str_radix(&hex.get(4..6).unwrap_or("00"), 16).unwrap_or(0);
+            let a = if hex.len() >= 8 {
+                u8::from_str_radix(&hex[6..8], 16).unwrap_or(255)
+            } else {
+                255
+            };
+            (r, g, b, a)
+        }
+    };
+
+    // Create pixel buffer filled with the color.
+    let row_bytes = w as usize * bpp;
+    let mut pixels = vec![0u8; h as usize * row_bytes];
+    for y in 0..h as usize {
+        for x in 0..w as usize {
+            let offset = y * row_bytes + x * bpp;
+            pixels[offset] = r;
+            pixels[offset + 1] = g;
+            pixels[offset + 2] = b;
+            pixels[offset + 3] = a;
+        }
+    }
+
+    Ok(Box::new(zenpipe::sources::MaterializedSource::from_data(pixels, w, h, format)))
+}
+
 /// Create a placeholder Encode-role node for DAG slots that are decode/encode.
 /// The bridge separates these by role — the placeholder just needs a valid schema.
 fn create_encode_role_placeholder() -> Box<dyn zennode::NodeInstance> {
@@ -512,6 +604,7 @@ impl TranslatedPipeline {
             decode_io_id: self.decode_io_id,
             encode_io_id: self.encode_io_id,
             decoder_commands: self.decoder_commands.clone(),
+            create_canvas: self.create_canvas.clone(),
         }
     }
 }

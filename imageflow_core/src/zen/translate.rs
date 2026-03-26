@@ -41,9 +41,17 @@ impl fmt::Display for TranslateError {
 
 impl std::error::Error for TranslateError {}
 
+/// Parameters for CreateCanvas (synthetic solid-color source).
+#[derive(Clone, Debug)]
+pub struct CreateCanvasParams {
+    pub w: u32,
+    pub h: u32,
+    pub color: s::Color,
+}
+
 /// Result of translating a v2 framewise pipeline.
 pub struct TranslatedPipeline {
-    /// Zenode instances for pixel-processing operations (in user-declared order).
+    /// Zennode instances for pixel-processing operations (in user-declared order).
     pub nodes: Vec<Box<dyn NodeInstance>>,
     /// Encoder configuration derived from the Encode node.
     pub preset: Option<PresetMapping>,
@@ -53,6 +61,8 @@ pub struct TranslatedPipeline {
     pub encode_io_id: Option<i32>,
     /// Decoder commands from the Decode node.
     pub decoder_commands: Option<Vec<s::DecoderCommand>>,
+    /// If present, create a solid-color canvas instead of decoding.
+    pub create_canvas: Option<CreateCanvasParams>,
 }
 
 /// Translate a sequence of v2 [`Node`] values into zennode instances.
@@ -63,6 +73,7 @@ pub fn translate_nodes(nodes: &[Node]) -> Result<TranslatedPipeline, TranslateEr
         decode_io_id: None,
         encode_io_id: None,
         decoder_commands: None,
+        create_canvas: None,
     };
 
     for node in nodes {
@@ -199,10 +210,20 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         // ─── Canvas operations ───
 
         Node::CreateCanvas { format, w, h, color } => {
-            Err(TranslateError::Unsupported("create_canvas".into()))
+            // CreateCanvas is a decode-replacement: produces a solid-color image.
+            // In the zen pipeline, we handle it as a special source in execute.rs.
+            // Store it as a decode with a synthetic marker.
+            result.decode_io_id = Some(-1); // sentinel: create_canvas, not a real io_id
+            result.create_canvas = Some(CreateCanvasParams {
+                w: *w as u32,
+                h: *h as u32,
+                color: color.clone(),
+            });
+            Ok(())
         }
 
         Node::FillRect { x1, y1, x2, y2, color } => {
+            // FillRect on an existing image — not yet supported in streaming.
             Err(TranslateError::Unsupported("fill_rect".into()))
         }
 
