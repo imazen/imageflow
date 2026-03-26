@@ -153,9 +153,109 @@ impl NodeConverter for CropPercentConverter {
     }
 }
 
+/// Converter for imageflow-specific custom nodes (fill_rect, crop_whitespace, round_corners).
+pub struct ImageflowNodeConverter;
+
+impl NodeConverter for ImageflowNodeConverter {
+    fn can_convert(&self, schema_id: &str) -> bool {
+        matches!(
+            schema_id,
+            "imageflow.fill_rect" | "imageflow.crop_whitespace" | "imageflow.round_corners"
+        )
+    }
+
+    fn convert(&self, node: &dyn NodeInstance) -> Result<NodeOp, PipeError> {
+        use zennode::ParamValue;
+        match node.schema().id {
+            "imageflow.fill_rect" => {
+                let x1 = match node.get_param("x1") { Some(ParamValue::U32(v)) => v, _ => 0 };
+                let y1 = match node.get_param("y1") { Some(ParamValue::U32(v)) => v, _ => 0 };
+                let x2 = match node.get_param("x2") { Some(ParamValue::U32(v)) => v, _ => 0 };
+                let y2 = match node.get_param("y2") { Some(ParamValue::U32(v)) => v, _ => 0 };
+                // Extract color from the concrete type via downcast.
+                let color = node
+                    .as_any()
+                    .downcast_ref::<super::translate::FillRectNode>()
+                    .map(|n| n.color)
+                    .unwrap_or([0, 0, 0, 255]);
+                Ok(NodeOp::FillRect { x1, y1, x2, y2, color })
+            }
+            "imageflow.crop_whitespace" => {
+                let threshold = match node.get_param("threshold") {
+                    Some(ParamValue::U32(v)) => v as u8,
+                    _ => 80,
+                };
+                let percent_padding = match node.get_param("percent_padding") {
+                    Some(ParamValue::F32(v)) => v,
+                    _ => 0.0,
+                };
+                Ok(NodeOp::CropWhitespace { threshold, percent_padding })
+            }
+            "imageflow.round_corners" => {
+                let radius = match node.get_param("radius") {
+                    Some(ParamValue::F32(v)) => v,
+                    _ => 0.0,
+                };
+                let bg = node
+                    .as_any()
+                    .downcast_ref::<super::translate::RoundCornersNode>()
+                    .map(|n| n.bg_color)
+                    .unwrap_or([0, 0, 0, 0]);
+
+                // RoundCorners materializes: apply rounded mask to each pixel.
+                Ok(NodeOp::Materialize(Box::new(move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
+                    let bpp = fmt.bytes_per_pixel();
+                    let stride = *w as usize * bpp;
+                    let r = radius.min(*w as f32 / 2.0).min(*h as f32 / 2.0);
+
+                    for y in 0..*h {
+                        for x in 0..*w {
+                            let dx = if x < r as u32 {
+                                r - x as f32 - 0.5
+                            } else if x >= *w - r as u32 {
+                                x as f32 + 0.5 - (*w as f32 - r)
+                            } else {
+                                0.0
+                            };
+                            let dy = if y < r as u32 {
+                                r - y as f32 - 0.5
+                            } else if y >= *h - r as u32 {
+                                y as f32 + 0.5 - (*h as f32 - r)
+                            } else {
+                                0.0
+                            };
+                            if dx > 0.0 && dy > 0.0 && dx * dx + dy * dy > r * r {
+                                let off = y as usize * stride + x as usize * bpp;
+                                if off + bpp <= data.len() {
+                                    for c in 0..bpp.min(4) {
+                                        data[off + c] = bg[c];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                })))
+            }
+            _ => Err(PipeError::Op(format!(
+                "imageflow converter: unknown node '{}'",
+                node.schema().id
+            ))),
+        }
+    }
+
+    fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
+        if let Some(node) = nodes.first() {
+            self.convert(*node)
+        } else {
+            Err(PipeError::Op("empty imageflow node group".into()))
+        }
+    }
+}
+
 /// Build the standard set of converters for the imageflow zen pipeline.
-pub fn imageflow_converters() -> [&'static dyn NodeConverter; 2] {
+pub fn imageflow_converters() -> [&'static dyn NodeConverter; 3] {
     static FILTERS: ZenFiltersConverter = ZenFiltersConverter;
     static EXPAND: ExpandCanvasConverter = ExpandCanvasConverter;
-    [&FILTERS, &EXPAND]
+    static IMAGEFLOW: ImageflowNodeConverter = ImageflowNodeConverter;
+    [&FILTERS, &EXPAND, &IMAGEFLOW]
 }
