@@ -2,96 +2,96 @@
 
 ## test_simple_filters Contrast(-0.2)
 tolerance off-by-one
-~ mad-loom-cc0c3d4a4b:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= draft-tuna-474aab8287:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_white_balance_image red_night_auto
 tolerance off-by-one
-~ apt-lion-da943ad82f:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= murky-stork-1a0ab17a07:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Brightness(-1.0)
 tolerance off-by-one
-~ nice-coal-5ff12d1777:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= fatal-eagle-bdeff8b442:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Alpha(0.3)
 tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= open-snow-72e04a3a6e:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Saturation(-1.0)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= elfin-sage-8eb7d1552d:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters GrayscaleBt709
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= cold-bloom-d7708bc3b7:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Invert
 tolerance off-by-one
-~ rough-heron-94e6431b55:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= gruff-pearl-30d0d15faf:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Saturation(1.0)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= fixed-bud-debef595dc:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Saturation(-0.2)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= fluid-torch-97456e009b:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Alpha(-1.0)
 tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= loud-river-f6aff1a2b4:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_white_balance_image_threshold_5 t0.5
 tolerance off-by-one
-~ apt-lion-da943ad82f:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= funny-ridge-b6510558f0:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters GrayscaleFlat
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= last-gull-1b3b404349:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Brightness(1.0)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= red-foam-e67b1515b9:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters GrayscaleNtsc
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= muted-hill-eb0e29e7b6:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Saturation(0.3)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= focal-node-9cdda5ae98:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Sepia
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= modal-oak-cf235ac8be:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Alpha(-0.2)
 tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= loud-river-f6aff1a2b4:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters GrayscaleRy
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= fresh-hawk-8a7cf2158a:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Contrast(0.3)
 tolerance off-by-one
-~ equal-lark-f5ec4a6fd3:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= quick-bone-4ecbdac7ac:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Contrast(1.0)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= spare-sloth-6adae801d8:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Alpha(1.0)
 tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= lunar-hull-58c137af98:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Brightness(-0.2)
 tolerance off-by-one
-~ able-pine-47f203148a:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= faded-cloud-1f7cc01bfb:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Contrast(-1.0)
 tolerance off-by-one
-~ rich-slate-ec61f62b6a:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= fiery-wren-71e5629689:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_simple_filters Brightness(0.3)
 tolerance off-by-one
-~ only-core-0ea95be314:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+= jolly-tree-a82ec324e9:sea  x86_64-avx512  @8ca16e2d  human-verified
