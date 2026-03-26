@@ -42,11 +42,49 @@ fn build_pipeline_maybe_traced(
         zenpipe::trace::TraceConfig::metadata_only()
     };
 
-    let (result, trace) =
+    // Build origin annotations from node schema IDs.
+    let origins: Vec<(String, String)> = nodes
+        .iter()
+        .map(|n| {
+            let schema_id = n.schema().id;
+            let origin = match schema_id {
+                "imageflow.resample2d" => "Ir4Expand:Resample2D",
+                "imageflow.crop_whitespace" => "Ir4Expand:CropWhitespace",
+                "imageflow.fill_rect" => "Ir4Expand:FillRect",
+                "imageflow.round_corners" => "Ir4Expand:RoundImageCorners",
+                "imageflow.remove_alpha" => "Ir4Expand:RemoveAlpha",
+                id if id.starts_with("zenlayout.") => "Ir4Expand → translate.rs",
+                id if id.starts_with("zenresize.") => "Ir4Expand → translate.rs",
+                id if id.starts_with("zenfilters.") => "Ir4Expand:ColorFilterSrgb",
+                _ => "translate.rs",
+            };
+            (schema_id.to_string(), origin.to_string())
+        })
+        .collect();
+
+    let (result, mut trace) =
         zenpipe::bridge::build_pipeline_traced(source, nodes, converters, &config)?;
 
-    // Print trace to stderr.
-    eprintln!("{}", trace.graph.to_text());
+    // Annotate graph entries with origin info from the node list.
+    // Match by node name (schema_id maps to NodeOp name).
+    for entry in &mut trace.graph.entries {
+        if entry.origin.is_none() && !entry.implicit {
+            // Find matching origin by name heuristic.
+            let origin = origins.iter().find(|(schema, _)| {
+                schema.ends_with(&format!(".{}", entry.name.to_lowercase()))
+                    || (entry.name == "Resize" && schema == "imageflow.resample2d")
+                    || (entry.name == "Constrain" && schema.contains("constrain"))
+                    || (entry.name == "AutoOrient" && schema.contains("orient"))
+                    || (entry.name == "Crop" && schema.contains("crop"))
+            });
+            if let Some((_, orig)) = origin {
+                entry.origin = Some(orig.clone());
+            }
+        }
+    }
+
+    // Print full trace to stderr.
+    eprintln!("{}", trace.to_text());
 
     // Write SVG if requested.
     if trace_mode == "svg" {
