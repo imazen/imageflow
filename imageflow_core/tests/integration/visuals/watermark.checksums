@@ -2,28 +2,28 @@
 
 ## test_watermark_image_command_string dice_fitcrop_90pct
 tolerance off-by-one
-~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @3958986f  auto-accepted
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_watermark_image dice_fitcrop_90pct
 tolerance off-by-one
-~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @3958986f  auto-accepted
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_watermark_image_on_png shirt_with_webp
 tolerance off-by-one
-~ funny-mole-229c1767b3:sea  x86_64-avx512  @3958986f  auto-accepted
+~ funny-mole-229c1767b3:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_watermark_image_small webp_within_90pct
 tolerance off-by-one
-~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @3958986f  auto-accepted
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_watermark_jpeg_over_pnga gamma_test_30pct
 tolerance off-by-one
-~ funny-mole-229c1767b3:sea  x86_64-avx512  @3958986f  auto-accepted
+~ funny-mole-229c1767b3:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_watermark_image_command_string_with_bgcolor dice_aaeeff
 tolerance off-by-one
-~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @3958986f  auto-accepted
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_watermark_image_pixel_margins webp_700px_offset
 tolerance off-by-one
-~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @3958986f  auto-accepted
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @9c1d88ef  auto-accepted

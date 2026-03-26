@@ -2,96 +2,96 @@
 
 ## test_simple_filters Contrast(-0.2)
 tolerance off-by-one
-~ mad-loom-cc0c3d4a4b:sea  x86_64-avx512  @3958986f  auto-accepted
+~ mad-loom-cc0c3d4a4b:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_white_balance_image red_night_auto
 tolerance off-by-one
-~ apt-lion-da943ad82f:sea  x86_64-avx512  @3958986f  auto-accepted
+~ apt-lion-da943ad82f:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Brightness(-1.0)
 tolerance off-by-one
-~ nice-coal-5ff12d1777:sea  x86_64-avx512  @3958986f  auto-accepted
+~ nice-coal-5ff12d1777:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Alpha(0.3)
 tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @3958986f  auto-accepted
+~ lunar-hull-58c137af98:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Saturation(-1.0)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters GrayscaleBt709
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Invert
 tolerance off-by-one
-~ rough-heron-94e6431b55:sea  x86_64-avx512  @3958986f  auto-accepted
+~ rough-heron-94e6431b55:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Saturation(1.0)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Saturation(-0.2)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Alpha(-1.0)
 tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @3958986f  auto-accepted
+~ lunar-hull-58c137af98:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_white_balance_image_threshold_5 t0.5
 tolerance off-by-one
-~ apt-lion-da943ad82f:sea  x86_64-avx512  @3958986f  auto-accepted
+~ apt-lion-da943ad82f:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters GrayscaleFlat
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Brightness(1.0)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters GrayscaleNtsc
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Saturation(0.3)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Sepia
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Alpha(-0.2)
 tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @3958986f  auto-accepted
+~ lunar-hull-58c137af98:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters GrayscaleRy
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Contrast(0.3)
 tolerance off-by-one
-~ equal-lark-f5ec4a6fd3:sea  x86_64-avx512  @3958986f  auto-accepted
+~ equal-lark-f5ec4a6fd3:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Contrast(1.0)
 tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @3958986f  auto-accepted
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Alpha(1.0)
 tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @3958986f  auto-accepted
+~ lunar-hull-58c137af98:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Brightness(-0.2)
 tolerance off-by-one
-~ able-pine-47f203148a:sea  x86_64-avx512  @3958986f  auto-accepted
+~ able-pine-47f203148a:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Contrast(-1.0)
 tolerance off-by-one
-~ rich-slate-ec61f62b6a:sea  x86_64-avx512  @3958986f  auto-accepted
+~ rich-slate-ec61f62b6a:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_simple_filters Brightness(0.3)
 tolerance off-by-one
-~ only-core-0ea95be314:sea  x86_64-avx512  @3958986f  auto-accepted
+~ only-core-0ea95be314:sea  x86_64-avx512  @9c1d88ef  auto-accepted

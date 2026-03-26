@@ -1,19 +1,19 @@
 ## test_trim_whitespace_with_padding gray_bg
 tolerance zensim:99 (dissim 0.01)
-~ known-quay-b60c8ecec1:sea  x86_64-avx512  @3958986f  auto-accepted
+~ known-quay-b60c8ecec1:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_trim_resize_whitespace_with_padding 450x450_gray
 tolerance zensim:99 (dissim 0.01)
-~ jazzy-bloom-1b139a51eb:sea  x86_64-avx512  @3958986f  auto-accepted
+~ murky-chip-330ce44330:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_trim_resize_whitespace_without_padding 450x450_gray
 tolerance zensim:99 (dissim 0.01)
-~ flat-poppy-0f00e40da8:sea  x86_64-avx512  @3958986f  auto-accepted
+~ prone-den-314d60fe89:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_trim_whitespace transparent_shirt
 tolerance zensim:99 (dissim 0.01)
-~ oval-hedge-8aaa2958bd:sea  x86_64-avx512  @3958986f  auto-accepted
+~ bald-dove-504096ed85:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_trim_whitespace_with_padding_no_resize gray_bg
 tolerance zensim:99 (dissim 0.01)
-~ known-quay-b60c8ecec1:sea  x86_64-avx512  @3958986f  auto-accepted
+~ known-quay-b60c8ecec1:sea  x86_64-avx512  @9c1d88ef  auto-accepted

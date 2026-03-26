@@ -1,76 +1,77 @@
 ## test_negatives_in_command_string red_leaf_negative_height
 tolerance off-by-one
-~ solar-buck-c66217d0de:sea  x86_64-avx512  @3958986f  auto-accepted
+~ like-glow-fcd087632e:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_rot_90_and_red_dot landscape_70x70
 tolerance off-by-one
-~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @3958986f  auto-accepted
+~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_rot_90_and_red_dot_command_string landscape_70x70
 tolerance off-by-one
-~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @3958986f  auto-accepted
+~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_branching_crop_whitespace gradient_output_2
 tolerance zensim:99 (dissim 0.01)
 
 ## test_encode_gradients png32_passthrough
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
-~ fleet-fig-e1eaec376f:sea  x86_64-avx512  @3958986f  auto-accepted
+~ fleet-fig-e1eaec376f:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_webp_to_webp_quality q5_100x100
 tolerance zensim:95 (dissim 0.05)
+~ empty-stone-6d39a78df2:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## decode_rgb_with_cmyk_profile_jpeg wrenches_ignore_icc
 tolerance off-by-one
-~ raw-hound-660874c876:sea  x86_64-avx512  @46f1a806  auto-accepted
+~ raw-hound-660874c876:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_transparent_webp_to_webp lossless_100x100
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
-~ plump-song-3254dd9027:sea  x86_64-avx512  @3958986f  auto-accepted
+~ empty-stone-6d39a78df2:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_matte_transparent_png shirt_300x300_white_matte
 tolerance zensim:99 (dissim 0.01)
-~ first-node-ab5566beef:sea  x86_64-avx512  @3958986f  auto-accepted
+~ first-node-ab5566beef:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg
 tolerance zensim:99 (dissim 0.01)
-~ past-creek-f22f736f64:sea  x86_64-avx512  @3958986f  auto-accepted
+~ past-creek-f22f736f64:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_transparent_png_to_png_rounded_corners shirt_cropped
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
-~ plump-rose-56822eb9f3:sea  x86_64-avx512  @3958986f  auto-accepted
+~ cheap-birch-a5137c14dd:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_jpeg_crop waterhouse_100x200
 tolerance off-by-one
-~ oval-viper-10fc36d8cf:sea  x86_64-avx512  @3958986f  auto-accepted
+~ oval-viper-10fc36d8cf:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_transparent_png_to_jpeg shirt
 tolerance zensim:99 (dissim 0.01)
-~ keen-yew-eeb35bb4ff:sea  x86_64-avx512  @3958986f  auto-accepted
+~ fed-shore-69f8cdc6b0:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_crop_with_preshrink 170x220_crop
 tolerance off-by-one
-~ oily-mare-bcae8f82b4:sea  x86_64-avx512  @3958986f  auto-accepted
+~ oily-mare-bcae8f82b4:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_transparent_png_to_png shirt
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
-~ neat-linen-da11b4c246:sea  x86_64-avx512  @3958986f  auto-accepted
+~ fancy-chip-63ffb8a1e5:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## decode_cmyk_jpeg logo_passthrough
 tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
-~ few-peak-b5b90811ec:sea  x86_64-avx512  @3958986f  auto-accepted
+~ few-peak-b5b90811ec:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_problematic_png_lossy crop_1230x760
 tolerance zensim:95 (dissim 0.05)
-~ swift-stem-4e6ccb1cd3:sea  x86_64-avx512  @3958986f  auto-accepted
+~ swift-stem-4e6ccb1cd3:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_branching_crop_whitespace gradient_output_1
 tolerance zensim:99 (dissim 0.01)
 
 ## test_jpeg_simple landscape_within_70x70
 tolerance off-by-one
-~ hasty-root-36619b3f62:sea  x86_64-avx512  @3958986f  auto-accepted
+~ hasty-root-36619b3f62:sea  x86_64-avx512  @9c1d88ef  auto-accepted
 
 ## test_jpeg_simple_rot_90 landscape_70x70
 tolerance off-by-one
-~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @3958986f  auto-accepted
+~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9c1d88ef  auto-accepted
