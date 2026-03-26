@@ -211,6 +211,27 @@ fn execute_steps(
         ZenError::Io(format!("no input buffer for io_id {decode_io_id}"))
     })?;
 
+    // Check for animation: if input is animated and encode format supports animation,
+    // do a multi-frame passthrough (decode all → encode all).
+    if has_encode && pipeline.nodes.is_empty() {
+        let registry = AllowedFormats::all();
+        let info = zencodecs::from_bytes(input_data)
+            .map_err(|e| ZenError::Codec(format!("probe: {e}")))?;
+        if info.is_animation() {
+            let encode_io_id = pipeline.encode_io_id.unwrap();
+            let codec_intent = pipeline.preset.as_ref()
+                .map(|p| &p.intent).cloned().unwrap_or_default();
+            let decision = select_format_from_intent(
+                &codec_intent, &ImageFacts::from_image_info(&info),
+                &registry, &CodecPolicy::default(),
+            ).map_err(|e| ZenError::Codec(format!("format: {e}")))?;
+
+            if let Ok(result) = encode_animation_passthrough(input_data, &registry, &decision, encode_io_id) {
+                return Ok((result, CapturedBitmaps { captures: HashMap::new() }));
+            }
+        }
+    }
+
     let (decision, source) = probe_resolve_decode(input_data, &pipeline, &pipeline.decoder_commands)?;
 
     let converters = super::converter::imageflow_converters();
@@ -836,6 +857,59 @@ fn apply_png_gamma_transform(
         }
         Err(_) => Ok(source),
     }
+}
+
+/// Stream-encode an animated image via zencodecs: decode frame → push_frame → repeat → finish.
+/// Streaming: only one frame in memory at a time.
+fn encode_animation_passthrough(
+    input_data: &[u8],
+    registry: &AllowedFormats,
+    decision: &zencodecs::FormatDecision,
+    encode_io_id: i32,
+) -> Result<Vec<ZenEncodeResult>, ZenError> {
+    let mut decoder = zencodecs::DecodeRequest::new(input_data)
+        .with_registry(registry)
+        .animation_frame_decoder()
+        .map_err(|e| ZenError::Codec(format!("animation decoder: {e}")))?;
+
+    let info = decoder.info().clone();
+    let w = info.width;
+    let h = info.height;
+
+    // Create animation frame encoder via zencodecs.
+    let mut encoder = zencodecs::EncodeRequest::new(decision.format)
+        .with_quality(decision.quality.quality)
+        .with_lossless(decision.lossless)
+        .with_registry(registry)
+        .animation_frame_encoder(w, h)
+        .map_err(|e| ZenError::Codec(format!("animation encoder: {e}")))?;
+
+    // Stream: decode one frame, push to encoder, release frame memory.
+    while let Some(frame) = decoder.render_next_frame_owned(None)
+        .map_err(|e| ZenError::Codec(format!("decode frame: {e}")))? {
+        let duration = frame.duration_ms();
+        let pixels = frame.pixels();
+        encoder.push_frame(pixels, duration, None)
+            .map_err(|e| ZenError::Codec(format!("push_frame: {e}")))?;
+    }
+
+    let output = encoder.finish(None)
+        .map_err(|e| ZenError::Codec(format!("finish animation: {e}")))?;
+
+    let mut bytes = output.into_vec();
+    // Ensure GIF trailer.
+    if decision.format == zencodecs::ImageFormat::Gif && bytes.last() != Some(&0x3B) {
+        bytes.push(0x3B);
+    }
+
+    Ok(vec![ZenEncodeResult {
+        io_id: encode_io_id,
+        bytes,
+        width: w,
+        height: h,
+        mime_type: decision.format.mime_type(),
+        extension: decision.format.extension(),
+    }])
 }
 
 /// Parse PNG color-related chunks: gAMA, cHRM, sRGB, cICP.
