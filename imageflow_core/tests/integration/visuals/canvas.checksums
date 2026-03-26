@@ -45,3 +45,23 @@ tolerance off-by-one
 ## test_round_image_corners_transparent waterhouse_400x300_r100
 tolerance off-by-one
 ~ safe-crab-ecaa72b540:sea  x86_64-avx512  @9c1d88ef  auto-accepted
+
+## test_crop red_canvas_blue_strip
+tolerance off-by-one
+~ snowy-bear-3784a8f0f2:sea  x86_64-avx512  @2ea9b519  auto-accepted
+
+## test_detect_whitespace blue_on_transparent
+tolerance off-by-one
+~ meek-bear-103bc946d6:sea  x86_64-avx512  @2ea9b519  auto-accepted
+
+## test_round_corners_excessive_radius 200x150_r100
+tolerance off-by-one
+~ front-fish-af784d2f3e:sea  x86_64-avx512  @2ea9b519  auto-accepted
+
+## test_round_corners_small 100x100_r5
+tolerance off-by-one
+~ sandy-ridge-dc76621a50:sea  x86_64-avx512  @2ea9b519  auto-accepted
+
+## test_fill_rect_original blue_on_transparent
+tolerance off-by-one
+~ meek-bear-103bc946d6:sea  x86_64-avx512  @2ea9b519  auto-accepted

@@ -155,7 +155,20 @@ fn execute_steps(
         let mut captures = HashMap::new();
         if has_encode && capture_ids.is_empty() {
             let encode_io_id = pipeline.encode_io_id.unwrap();
-            let decision = zencodecs::FormatDecision::for_format(zencodecs::ImageFormat::Png);
+            // Use the encoder preset's format, falling back to PNG.
+            let codec_intent = pipeline.preset.as_ref()
+                .map(|p| &p.intent)
+                .cloned()
+                .unwrap_or_default();
+            let canvas_facts = zencodecs::ImageFacts {
+                has_alpha: true,
+                pixel_count: out_w as u64 * out_h as u64,
+                ..Default::default()
+            };
+            let decision = zencodecs::select_format_from_intent(
+                &codec_intent, &canvas_facts,
+                &AllowedFormats::all(), &zencodecs::CodecPolicy::default(),
+            ).unwrap_or_else(|_| zencodecs::FormatDecision::for_format(zencodecs::ImageFormat::Png));
             let results = stream_encode(pipe_result.source, &decision, encode_io_id)?;
             return Ok((results, CapturedBitmaps { captures }));
         } else {
@@ -198,7 +211,7 @@ fn execute_steps(
         ZenError::Io(format!("no input buffer for io_id {decode_io_id}"))
     })?;
 
-    let (decision, source) = probe_resolve_decode(input_data, &pipeline)?;
+    let (decision, source) = probe_resolve_decode(input_data, &pipeline, &pipeline.decoder_commands)?;
 
     let converters = super::converter::imageflow_converters();
     let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
@@ -363,6 +376,7 @@ fn execute_graph(
 fn probe_resolve_decode(
     input_data: &[u8],
     pipeline: &TranslatedPipeline,
+    decoder_commands: &Option<Vec<imageflow_types::DecoderCommand>>,
 ) -> Result<(zencodecs::FormatDecision, Box<dyn zenpipe::Source>), ZenError> {
     let registry = AllowedFormats::all();
     let info = zencodecs::from_bytes(input_data)
@@ -378,7 +392,20 @@ fn probe_resolve_decode(
         &registry, &CodecPolicy::default(),
     ).map_err(|e| ZenError::Codec(format!("format selection: {e}")))?;
 
-    let mut source = decode_to_source(input_data, &registry)?;
+    // Check for frame selection command.
+    let frame_index = decoder_commands
+        .as_ref()
+        .and_then(|cmds| cmds.iter().find_map(|c| match c {
+            imageflow_types::DecoderCommand::SelectFrame(i) => Some(*i as usize),
+            _ => None,
+        }));
+
+    let mut source = if let Some(frame_idx) = frame_index {
+        // Frame selection: use full-frame decode and select the requested frame.
+        decode_to_source_frame(input_data, &registry, frame_idx)?
+    } else {
+        decode_to_source(input_data, &registry)?
+    };
 
     // ICC color management: if the source has an embedded ICC profile that
     // isn't sRGB, transform to sRGB using moxcms. This matches v2 behavior
@@ -467,6 +494,35 @@ fn ensure_srgb_rgba8(
     }
 }
 
+/// Decode a specific frame from an animated/multi-frame image.
+fn decode_to_source_frame(
+    data: &[u8],
+    registry: &AllowedFormats,
+    frame_index: usize,
+) -> Result<Box<dyn zenpipe::Source>, ZenError> {
+    let mut decoder = zencodecs::DecodeRequest::new(data)
+        .with_registry(registry)
+        .animation_frame_decoder()
+        .map_err(|e| ZenError::Codec(format!("frame decoder: {e}")))?;
+
+    // Iterate to the requested frame.
+    for i in 0..=frame_index {
+        let frame = decoder.render_next_frame_owned(None)
+            .map_err(|e| ZenError::Codec(format!("decode frame {i}: {e}")))?
+            .ok_or_else(|| ZenError::Codec(format!("frame index {frame_index} out of range (only {i} frames)")))?;
+
+        if i == frame_index {
+            let buf = frame.into_buffer();
+            let w = buf.width();
+            let h = buf.height();
+            let format = buf.descriptor();
+            let bytes = buf.copy_to_contiguous_bytes();
+            return Ok(Box::new(zenpipe::sources::MaterializedSource::from_data(bytes, w, h, format)));
+        }
+    }
+    unreachable!()
+}
+
 /// Build a streaming decode source. Tries row-level streaming first
 /// (JPEG, PNG, GIF, AVIF, HEIC), falls back to full-frame + MaterializedSource.
 fn decode_to_source(
@@ -546,9 +602,15 @@ fn stream_encode(
             .map_err(|e| ZenError::Codec(format!("one-shot encode: {e}")))?
     };
 
+    // Ensure GIF trailer byte is present (workaround for gif crate not writing it).
+    let mut output_bytes = output.into_vec();
+    if matches!(decision.format, zencodecs::ImageFormat::Gif) && output_bytes.last() != Some(&0x3B) {
+        output_bytes.push(0x3B);
+    }
+
     Ok(vec![ZenEncodeResult {
         io_id: encode_io_id,
-        bytes: output.into_vec(),
+        bytes: output_bytes,
         width: out_w,
         height: out_h,
         mime_type: decision.format.mime_type(),
