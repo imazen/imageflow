@@ -3987,8 +3987,6 @@ dependencies = [
 [[package]]
 name = "zenpixels"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0828926cd37f826702d167dc46e15dde519279d20a30d458acabc122043c8325"
 dependencies = [
  "bytemuck",
  "imgref",
@@ -3999,8 +3997,6 @@ dependencies = [
 [[package]]
 name = "zenpixels-convert"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15525e70fac3b3a6c2f7e3826c4e11376dd3ae885eaa7fe0aa252238381c3732"
 dependencies = [
  "archmage 0.9.12",
  "bytemuck",
