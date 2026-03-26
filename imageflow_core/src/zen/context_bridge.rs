@@ -161,5 +161,6 @@ fn zen_to_flow(e: ZenError) -> FlowError {
         ZenError::Codec(msg) => nerror!(ErrorKind::ImageDecodingError, "{}", msg),
         ZenError::Pipeline(p) => nerror!(ErrorKind::InternalError, "{}", p),
         ZenError::Io(msg) => nerror!(ErrorKind::InvalidArgument, "{}", msg),
+        ZenError::SizeLimit(msg) => nerror!(ErrorKind::SizeLimitExceeded, "{}", msg),
     }
 }

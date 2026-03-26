@@ -61,3 +61,7 @@ tolerance off-by-one
 ## test_transparent_canvas 200x200
 tolerance off-by-one
 ~ meek-eagle-8cb229c079:sea  x86_64-avx512  @46f1a806  auto-accepted
+
+## test_round_corners_command_string landscape_mixed_radii_png
+tolerance off-by-one
+~ damp-mesa-f18e239a6f:sea  x86_64-avx512  @64ca8f6b  auto-accepted

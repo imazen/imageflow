@@ -26,6 +26,7 @@ pub enum ZenError {
     Codec(String),
     Pipeline(zenpipe::PipeError),
     Io(String),
+    SizeLimit(String),
 }
 
 impl std::fmt::Display for ZenError {
@@ -35,6 +36,7 @@ impl std::fmt::Display for ZenError {
             Self::Codec(e) => write!(f, "codec: {e}"),
             Self::Pipeline(e) => write!(f, "pipeline: {e}"),
             Self::Io(e) => write!(f, "io: {e}"),
+            Self::SizeLimit(e) => write!(f, "SizeLimitExceeded: {e}"),
         }
     }
 }
@@ -97,7 +99,7 @@ pub fn execute_framewise(
 
     match framewise {
         Framewise::Steps(steps) => {
-            let (results, captures) = execute_steps(steps, io_buffers)?;
+            let (results, captures) = execute_steps(steps, io_buffers, security)?;
             Ok(ExecuteResult { encode_results: results, captured_dimensions: captures, decode_infos })
         }
         Framewise::Graph(graph) => {
@@ -123,6 +125,7 @@ pub(crate) struct CapturedBitmaps {
 fn execute_steps(
     steps: &[Node],
     io_buffers: &HashMap<i32, Vec<u8>>,
+    security: &imageflow_types::ExecutionSecurity,
 ) -> Result<(Vec<ZenEncodeResult>, CapturedBitmaps), ZenError> {
     // Pre-process: expand CommandString nodes using source dimensions from probe.
     let steps = expand_command_strings(steps, io_buffers)?;
@@ -138,6 +141,7 @@ fn execute_steps(
 
     // Handle CreateCanvas — create solid-color source instead of decoding.
     if let Some(ref canvas) = pipeline.create_canvas {
+        check_security_limit(canvas.w, canvas.h, &security.max_frame_size, "max_frame_size")?;
         let source = create_canvas_source(canvas)?;
         let source = ensure_srgb_rgba8(source)?;
 
@@ -199,6 +203,14 @@ fn execute_steps(
     let converters = super::converter::imageflow_converters();
     let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
     let pipe_result = zenpipe::bridge::build_pipeline(source, &pipeline.nodes, converters)?;
+
+    // Check encode dimensions against security limits.
+    if has_encode {
+        let out_w = pipe_result.source.width();
+        let out_h = pipe_result.source.height();
+        check_security_limit(out_w, out_h, &security.max_encode_size, "max_encode_size")?;
+        check_security_limit(out_w, out_h, &security.max_frame_size, "max_frame_size")?;
+    }
 
     let mut captures = HashMap::new();
 
@@ -561,16 +573,22 @@ fn check_security_limit(
     label: &str,
 ) -> Result<(), ZenError> {
     if let Some(ref lim) = limit {
-        if w > lim.w as u32 || h > lim.h as u32 {
-            return Err(ZenError::Io(format!(
-                "{label} dimensions {w}x{h} exceed limit {}x{}",
-                lim.w, lim.h
+        if w > lim.w as u32 {
+            return Err(ZenError::SizeLimit(format!(
+                "Frame width {w} exceeds {label}.w {}",
+                lim.w
+            )));
+        }
+        if h > lim.h as u32 {
+            return Err(ZenError::SizeLimit(format!(
+                "Frame height {h} exceeds {label}.h {}",
+                lim.h
             )));
         }
         let mp = w as f32 * h as f32 / 1_000_000.0;
         if mp > lim.megapixels {
-            return Err(ZenError::Io(format!(
-                "{label} dimensions {w}x{h} ({mp:.1}MP) exceed limit {:.1}MP",
+            return Err(ZenError::SizeLimit(format!(
+                "Frame dimensions {w}x{h} ({mp:.1}MP) exceed {label}.megapixels {:.1}MP",
                 lim.megapixels
             )));
         }
@@ -582,13 +600,13 @@ fn check_security_limit(
 fn check_dimensions(w: u32, h: u32) -> Result<(), ZenError> {
     let pixels = w as u64 * h as u64;
     if pixels > MAX_CANVAS_PIXELS {
-        return Err(ZenError::Io(format!(
+        return Err(ZenError::SizeLimit(format!(
             "canvas dimensions {w}x{h} ({pixels} pixels) exceed limit ({MAX_CANVAS_PIXELS} pixels)"
         )));
     }
     // Check for i32 overflow in pixel product (v2 compat)
     if w as i64 * h as i64 > i32::MAX as i64 {
-        return Err(ZenError::Io(format!(
+        return Err(ZenError::SizeLimit(format!(
             "canvas dimensions {w}x{h} would overflow i32 in pixel product"
         )));
     }
