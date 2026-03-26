@@ -11,18 +11,22 @@ tolerance off-by-one
 ## test_scale_image waterhouse_robidoux_400x300
 tolerance off-by-one
 = only-tiger-a4839401fa:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ front-shell-786aa19c4b:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs only-tiger-a4839401fa:sea (zensim:99.64 (dissim 0.0036))
 
 ## test_jpeg_icc2_color_profile mars_robidoux_400x300
 tolerance off-by-one
 = edgy-bud-3c5ab5c483:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ level-bird-3dae9245da:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs edgy-bud-3c5ab5c483:sea (zensim:99.81 (dissim 0.0019))
 
 ## test_read_gif_and_scale mountain_robidoux_400x300
 tolerance off-by-one
 = north-rust-f9b8c7992d:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ sunny-yew-e6b27a1f2e:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs north-rust-f9b8c7992d:sea (zensim:99.72 (dissim 0.0028))
 
 ## test_read_gif_and_vertical_distort mountain_box_800x100
 tolerance off-by-one
 = last-fawn-83133574e4:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ calm-fish-0c49580c34:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs last-fawn-83133574e4:sea (zensim:99.79 (dissim 0.0021))
 
 ## webp_lossless_alpha_decode_and_scale 100x100
 tolerance off-by-one

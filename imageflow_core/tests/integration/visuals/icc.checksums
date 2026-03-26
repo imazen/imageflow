@@ -3,22 +3,27 @@
 ## test_icc_adobe_rgb_constrain adobergb_constrain_300
 tolerance zensim:99 (dissim 0.01)
 = grown-sage-31ea2ebbe8:sea  x86_64-avx512  @6e695833  new-baseline
+~ snowy-knoll-4f736ff00a:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs grown-sage-31ea2ebbe8:sea (zensim:99.80 (dissim 0.0020))
 
 ## test_icc_p3_crop_and_resize p3_crop_200x200
 tolerance zensim:99 (dissim 0.01)
 = local-stone-201ba0ca26:sea  x86_64-avx512  @6e695833  new-baseline
+~ cheap-gust-e1d3ec66a3:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs local-stone-201ba0ca26:sea (zensim:99.72 (dissim 0.0028))
 
 ## test_icc_display_p3_resize_filter p3_robidoux_300x300
 tolerance zensim:99 (dissim 0.01)
 = fleet-spark-999a1ad460:sea  x86_64-avx512  @6e695833  new-baseline
+~ oily-sage-843635dcc8:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs fleet-spark-999a1ad460:sea (zensim:99.57 (dissim 0.0043))
 
 ## test_icc_adobe_rgb_resize adobergb_resize_400
 tolerance zensim:99 (dissim 0.01)
 = crude-mole-50b6c985ef:sea  x86_64-avx512  @6e695833  new-baseline
+~ foggy-lily-0b2fc2c0d4:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs crude-mole-50b6c985ef:sea (zensim:99.72 (dissim 0.0028))
 
 ## test_icc_prophoto_resize prophoto_resize_400
 tolerance zensim:99 (dissim 0.01)
 = rusty-wren-44d06224e8:sea  x86_64-avx512  @6e695833  new-baseline
+~ pink-linen-57e135c91d:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs rusty-wren-44d06224e8:sea (zensim:99.74 (dissim 0.0026))
 
 ## test_icc_display_p3_resize p3_resize_400
 tolerance zensim:99 (dissim 0.01)
@@ -31,6 +36,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_icc_p3_to_webp p3_to_webp_q80
 tolerance zensim:95 (dissim 0.05)
 = only-moth-16f9a2d875:sea  x86_64-avx512  @6e695833  new-baseline
+~ stout-ash-f32ee14a6c:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:95 (dissim 0.05) vs only-moth-16f9a2d875:sea (zensim:99.44 (dissim 0.0056))
 
 ## test_icc_srgb_sony_a7rv srgb_sony
 tolerance zensim:99 (dissim 0.01)
@@ -39,6 +45,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_icc_gray_gamma22_decode gray_gamma22
 tolerance zensim:99 (dissim 0.01)
 = sunny-lynx-4024410973:sea  x86_64-avx512  @6e695833  new-baseline
+~ grand-hive-83f8ea5f4d:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs sunny-lynx-4024410973:sea (zensim:99.63 (dissim 0.0037))
 
 ## test_icc_repro_libvips_icc libvips_icc
 tolerance zensim:97 (dissim 0.03)
@@ -53,6 +60,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_icc_rec2020_decode_1 rec2020_decode
 tolerance zensim:99 (dissim 0.01)
 = extra-heron-36faf97a2c:sea  x86_64-avx512  @6e695833  new-baseline
+~ cheap-node-e70b5ee65e:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs extra-heron-36faf97a2c:sea (zensim:99.67 (dissim 0.0033))
 
 ## test_icc_p3_to_jpeg_roundtrip p3_to_jpeg_q85
 tolerance zensim:95 (dissim 0.05)
@@ -75,10 +83,12 @@ tolerance zensim:95 (dissim 0.05)
 ## test_icc_display_p3_decode_3 p3_decode
 tolerance zensim:99 (dissim 0.01)
 = known-crane-9ca529bf17:sea  x86_64-avx512  @6e695833  new-baseline
+~ lame-edge-3f6d0efdf8:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs known-crane-9ca529bf17:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_icc_display_p3_decode_2 p3_decode
 tolerance zensim:99 (dissim 0.01)
 = keen-sage-075119cbeb:sea  x86_64-avx512  @6e695833  new-baseline
+~ prone-stone-3631665244:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs keen-sage-075119cbeb:sea (zensim:99.68 (dissim 0.0032))
 
 ## test_icc_srgb_canon_5d srgb_canon5d
 tolerance zensim:99 (dissim 0.01)
@@ -87,10 +97,12 @@ tolerance zensim:99 (dissim 0.01)
 ## test_icc_adobe_rgb_decode_2 adobergb_decode
 tolerance zensim:99 (dissim 0.01)
 = plush-marsh-8328b491ed:sea  x86_64-avx512  @6e695833  new-baseline
+~ ready-yew-f454a633e4:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs plush-marsh-8328b491ed:sea (zensim:99.62 (dissim 0.0038))
 
 ## test_icc_adobe_rgb_decode_1 adobergb_decode
 tolerance zensim:99 (dissim 0.01)
 = stiff-mace-cc9e75a12a:sea  x86_64-avx512  @6e695833  new-baseline
+~ firm-thorn-98b734c8fe:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs stiff-mace-cc9e75a12a:sea (zensim:99.50 (dissim 0.0050))
 
 ## test_icc_display_p3_decode_1 p3_decode
 tolerance zensim:99 (dissim 0.01)

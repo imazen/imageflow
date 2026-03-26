@@ -3,30 +3,37 @@
 ## test_simple_filters Contrast(-0.2)
 tolerance off-by-one
 = draft-tuna-474aab8287:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ mad-loom-cc0c3d4a4b:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs draft-tuna-474aab8287:sea (zensim:99.57 (dissim 0.0043))
 
 ## test_white_balance_image red_night_auto
 tolerance off-by-one
 = murky-stork-1a0ab17a07:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ apt-lion-da943ad82f:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs murky-stork-1a0ab17a07:sea (zensim:99.71 (dissim 0.0029))
 
 ## test_simple_filters Brightness(-1.0)
 tolerance off-by-one
 = fatal-eagle-bdeff8b442:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ nice-coal-5ff12d1777:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs fatal-eagle-bdeff8b442:sea (zensim:99.72 (dissim 0.0028))
 
 ## test_simple_filters Alpha(0.3)
 tolerance off-by-one
 = open-snow-72e04a3a6e:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ lunar-hull-58c137af98:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs open-snow-72e04a3a6e:sea (zensim:99.71 (dissim 0.0029))
 
 ## test_simple_filters Saturation(-1.0)
 tolerance off-by-one
 = elfin-sage-8eb7d1552d:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs elfin-sage-8eb7d1552d:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters GrayscaleBt709
 tolerance off-by-one
 = cold-bloom-d7708bc3b7:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs cold-bloom-d7708bc3b7:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters Invert
 tolerance off-by-one
 = gruff-pearl-30d0d15faf:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ rough-heron-94e6431b55:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs gruff-pearl-30d0d15faf:sea (zensim:99.62 (dissim 0.0038))
 
 ## test_simple_filters Saturation(1.0)
 tolerance off-by-one
@@ -35,10 +42,12 @@ tolerance off-by-one
 ## test_simple_filters Saturation(-0.2)
 tolerance off-by-one
 = fluid-torch-97456e009b:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs fluid-torch-97456e009b:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters Alpha(-1.0)
 tolerance off-by-one
 = loud-river-f6aff1a2b4:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ lunar-hull-58c137af98:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs loud-river-f6aff1a2b4:sea (zensim:99.71 (dissim 0.0029))
 
 ## test_white_balance_image_threshold_5 t0.5
 tolerance off-by-one
@@ -47,6 +56,7 @@ tolerance off-by-one
 ## test_simple_filters GrayscaleFlat
 tolerance off-by-one
 = last-gull-1b3b404349:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs last-gull-1b3b404349:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters Brightness(1.0)
 tolerance off-by-one
@@ -55,30 +65,37 @@ tolerance off-by-one
 ## test_simple_filters GrayscaleNtsc
 tolerance off-by-one
 = muted-hill-eb0e29e7b6:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs muted-hill-eb0e29e7b6:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters Saturation(0.3)
 tolerance off-by-one
 = focal-node-9cdda5ae98:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs focal-node-9cdda5ae98:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters Sepia
 tolerance off-by-one
 = modal-oak-cf235ac8be:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs modal-oak-cf235ac8be:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters Alpha(-0.2)
 tolerance off-by-one
 = loud-river-f6aff1a2b4:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ lunar-hull-58c137af98:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs loud-river-f6aff1a2b4:sea (zensim:99.71 (dissim 0.0029))
 
 ## test_simple_filters GrayscaleRy
 tolerance off-by-one
 = fresh-hawk-8a7cf2158a:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs fresh-hawk-8a7cf2158a:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters Contrast(0.3)
 tolerance off-by-one
 = quick-bone-4ecbdac7ac:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ equal-lark-f5ec4a6fd3:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs quick-bone-4ecbdac7ac:sea (zensim:99.59 (dissim 0.0041))
 
 ## test_simple_filters Contrast(1.0)
 tolerance off-by-one
 = spare-sloth-6adae801d8:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs spare-sloth-6adae801d8:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_simple_filters Alpha(1.0)
 tolerance off-by-one
@@ -87,11 +104,14 @@ tolerance off-by-one
 ## test_simple_filters Brightness(-0.2)
 tolerance off-by-one
 = faded-cloud-1f7cc01bfb:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ able-pine-47f203148a:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs faded-cloud-1f7cc01bfb:sea (zensim:99.61 (dissim 0.0039))
 
 ## test_simple_filters Contrast(-1.0)
 tolerance off-by-one
 = fiery-wren-71e5629689:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ rich-slate-ec61f62b6a:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs fiery-wren-71e5629689:sea (zensim:99.46 (dissim 0.0054))
 
 ## test_simple_filters Brightness(0.3)
 tolerance off-by-one
 = jolly-tree-a82ec324e9:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ only-core-0ea95be314:sea  x86_64-avx512  @8bf036c6  auto-accepted within tolerance (within off-by-one) vs jolly-tree-a82ec324e9:sea (zensim:99.48 (dissim 0.0052))
