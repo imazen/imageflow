@@ -457,6 +457,88 @@ impl Context {
             .insert(capture_id, key);
     }
 
+    /// Convert zen CapturedBitmap → v2 BitmapKey and store in captured_bitmap_keys.
+    ///
+    /// The zen pipeline captures raw RGBA8 pixels. The v2 test infrastructure expects
+    /// BitmapKeys in the BitmapsContainer. This bridges the two by allocating a BGRA
+    /// bitmap and copying pixels with R↔B swap.
+    #[cfg(feature = "zen-pipeline")]
+    fn store_zen_captured_bitmaps(
+        &mut self,
+        captured: std::collections::HashMap<i32, crate::zen::CapturedBitmap>,
+    ) -> Result<()> {
+        use crate::graphics::bitmaps::{BitmapCompositing, ColorSpace};
+        use imageflow_types::PixelLayout;
+
+        for (capture_id, bitmap) in captured {
+            let w = bitmap.width;
+            let h = bitmap.height;
+            let bpp = bitmap.bytes_per_pixel();
+
+            // Determine alpha properties from the zen pixel format.
+            let has_alpha = bitmap.format.has_alpha();
+            let alpha_meaningful = has_alpha;
+
+            // Create a BGRA u8 bitmap in the BitmapsContainer.
+            let key = self.borrow_bitmaps_mut()?.create_bitmap_u8(
+                w,
+                h,
+                PixelLayout::BGRA,
+                false, // alpha_premultiplied — zen pipeline uses straight alpha
+                alpha_meaningful,
+                ColorSpace::StandardRGB,
+                BitmapCompositing::ReplaceSelf,
+            )?;
+
+            // Copy pixel data row by row, swapping R↔B for RGBA→BGRA conversion.
+            {
+                let bitmaps = self.borrow_bitmaps_mut()?;
+                let mut bm = bitmaps.get(key).unwrap().borrow_mut();
+                let mut window = bm.get_window_u8().unwrap();
+                let src_stride = w as usize * bpp;
+
+                for y in 0..h as usize {
+                    let src_row = &bitmap.pixels[y * src_stride..(y * src_stride + src_stride).min(bitmap.pixels.len())];
+                    let dst_row = window.row_mut(y).unwrap();
+                    if bpp == 4 {
+                        // RGBA → BGRA: swap R and B
+                        for x in 0..w as usize {
+                            let si = x * 4;
+                            let di = x * 4;
+                            if si + 3 < src_row.len() && di + 3 < dst_row.len() {
+                                dst_row[di] = src_row[si + 2];     // B ← R
+                                dst_row[di + 1] = src_row[si + 1]; // G ← G
+                                dst_row[di + 2] = src_row[si];     // R ← B
+                                dst_row[di + 3] = src_row[si + 3]; // A ← A
+                            }
+                        }
+                    } else if bpp == 3 {
+                        // RGB → BGRA: swap R and B, set A=255
+                        for x in 0..w as usize {
+                            let si = x * 3;
+                            let di = x * 4;
+                            if si + 2 < src_row.len() && di + 3 < dst_row.len() {
+                                dst_row[di] = src_row[si + 2];     // B ← R
+                                dst_row[di + 1] = src_row[si + 1]; // G ← G
+                                dst_row[di + 2] = src_row[si];     // R ← B
+                                dst_row[di + 3] = 255;             // A = opaque
+                            }
+                        }
+                    } else {
+                        // Unknown layout — copy raw bytes (best effort)
+                        let len = src_row.len().min(dst_row.len());
+                        dst_row[..len].copy_from_slice(&src_row[..len]);
+                    }
+                }
+            }
+
+            self.insert_captured_bitmap_key(capture_id, key);
+            // Also keep in zen_captured_bitmaps for any code that reads it directly.
+            self.zen_captured_bitmaps.insert(capture_id, bitmap);
+        }
+        Ok(())
+    }
+
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
         let io =
             IoProxy::file_with_mode(self, io_id, path, direction).map_err(|e| e.at(here!()))?;
@@ -630,9 +712,7 @@ impl Context {
                 let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
                 codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
             }
-            for (capture_id, bitmap) in output.captured_bitmaps {
-                self.zen_captured_bitmaps.insert(capture_id, bitmap);
-            }
+            self.store_zen_captured_bitmaps(output.captured_bitmaps)?;
             return Ok(output.job_result);
         }
 
@@ -752,10 +832,8 @@ impl Context {
             codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
         }
 
-        // Store captured bitmaps for CaptureBitmapKey compatibility.
-        for (capture_id, bitmap) in output.captured_bitmaps {
-            self.zen_captured_bitmaps.insert(capture_id, bitmap);
-        }
+        // Store captured bitmaps as v2 BitmapKeys for test compatibility.
+        self.store_zen_captured_bitmaps(output.captured_bitmaps)?;
 
         Ok(output.job_result)
     }
