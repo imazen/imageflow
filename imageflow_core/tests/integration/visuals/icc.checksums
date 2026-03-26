@@ -1,97 +1,90 @@
-# icc.checksums — v1
-
-## test_icc_adobe_rgb_constrain adobergb_constrain_300
+## test_icc_rec2020_decode_2 rec2020_decode
 tolerance zensim:99 (dissim 0.01)
-= grown-sage-31ea2ebbe8:sea  x86_64-avx512  @6e695833  new-baseline
+~ swift-quay-eb146321aa:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_p3_crop_and_resize p3_crop_200x200
 tolerance zensim:99 (dissim 0.01)
-= local-stone-201ba0ca26:sea  x86_64-avx512  @6e695833  new-baseline
+~ cheap-gust-e1d3ec66a3:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_display_p3_resize_filter p3_robidoux_300x300
 tolerance zensim:99 (dissim 0.01)
-= fleet-spark-999a1ad460:sea  x86_64-avx512  @6e695833  new-baseline
+~ happy-foam-c31f824a71:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_adobe_rgb_resize adobergb_resize_400
 tolerance zensim:99 (dissim 0.01)
-= crude-mole-50b6c985ef:sea  x86_64-avx512  @6e695833  new-baseline
+~ foggy-lily-0b2fc2c0d4:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_prophoto_resize prophoto_resize_400
 tolerance zensim:99 (dissim 0.01)
-= rusty-wren-44d06224e8:sea  x86_64-avx512  @6e695833  new-baseline
+~ pink-linen-57e135c91d:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_display_p3_resize p3_resize_400
 tolerance zensim:99 (dissim 0.01)
-= salty-oak-e9d3f2c21d:sea  x86_64-avx512  @6e695833  new-baseline
+~ moot-wave-275c93bc14:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_repro_imagemagick_icc imagemagick_icc
 tolerance zensim:99 (dissim 0.01)
-= round-tiger-41e2b79c30:sea  x86_64-avx512  @6e695833  new-baseline
+~ green-tuna-e65a637aed:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_p3_to_webp p3_to_webp_q80
 tolerance zensim:95 (dissim 0.05)
-= only-moth-16f9a2d875:sea  x86_64-avx512  @6e695833  new-baseline
+~ apt-ore-7da3ee1485:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_srgb_sony_a7rv srgb_sony
 tolerance zensim:99 (dissim 0.01)
-= sheer-crab-c0af82e7a9:sea  x86_64-avx512  @6e695833  new-baseline
+~ inner-bird-1375304647:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_gray_gamma22_decode gray_gamma22
 tolerance zensim:99 (dissim 0.01)
-= sunny-lynx-4024410973:sea  x86_64-avx512  @6e695833  new-baseline
+~ grand-hive-83f8ea5f4d:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_repro_libvips_icc libvips_icc
 tolerance zensim:97 (dissim 0.03)
-= ionic-trout-c4ba3eae87:sea  x86_64-avx512  @6e695833  new-baseline
-~ limp-ford-b5f44b5040:sea  aarch64  @ace43a05  auto-accepted vs ionic-trout-c4ba3eae87:sea  diff d:2 s:98.7 px:0.8%
-~ rural-reed-ac94b06d6e:sea  aarch64-windows  @ace43a05  auto-accepted vs ionic-trout-c4ba3eae87:sea  diff d:2 s:97.1 px:13.6%
+~ fawn-plum-450bc0d39b:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_repro_sharp_icc sharp_icc
 tolerance zensim:99 (dissim 0.01)
-= cold-cod-fbd1704ac1:sea  x86_64-avx512  @6e695833  new-baseline
+~ cross-torch-09ea4c6db5:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_rec2020_decode_1 rec2020_decode
 tolerance zensim:99 (dissim 0.01)
-= extra-heron-36faf97a2c:sea  x86_64-avx512  @6e695833  new-baseline
+~ cheap-node-e70b5ee65e:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_p3_to_jpeg_roundtrip p3_to_jpeg_q85
 tolerance zensim:95 (dissim 0.05)
-= fair-peach-0372a89301:sea  x86_64-avx512  @6e695833  new-baseline
+~ mini-jay-8d148f99ab:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_prophoto_decode prophoto_decode
 tolerance zensim:99 (dissim 0.01)
-= moist-shore-4dc03e0370:sea  x86_64-avx512  @6e695833  new-baseline
+~ prone-ox-a3d2dd3aac:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_rec2020_decode_2 rec2020_decode
 tolerance zensim:99 (dissim 0.01)
-= able-ash-684f3036b9:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_repro_pillow_icc pillow_icc
 tolerance zensim:95 (dissim 0.05)
-= civic-orbit-95ecc8ed4c:sea  x86_64-avx512  @6e695833  new-baseline
-~ famed-panda-132b78ab9d:sea  aarch64  @ace43a05  auto-accepted vs civic-orbit-95ecc8ed4c:sea  diff d:2 s:98.7 px:2.0%
-~ naive-elm-52218c261f:sea  aarch64-windows  @ace43a05  auto-accepted vs civic-orbit-95ecc8ed4c:sea  diff d:3 s:95.3 px:50.1%
+~ just-ox-1dcfdc7bf6:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_display_p3_decode_3 p3_decode
 tolerance zensim:99 (dissim 0.01)
-= known-crane-9ca529bf17:sea  x86_64-avx512  @6e695833  new-baseline
+~ lame-edge-3f6d0efdf8:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_display_p3_decode_2 p3_decode
 tolerance zensim:99 (dissim 0.01)
-= keen-sage-075119cbeb:sea  x86_64-avx512  @6e695833  new-baseline
+~ prone-stone-3631665244:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_srgb_canon_5d srgb_canon5d
 tolerance zensim:99 (dissim 0.01)
-= short-cub-c9b4371b0c:sea  x86_64-avx512  @6e695833  new-baseline
+~ apt-dew-a4b44ec913:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_adobe_rgb_decode_2 adobergb_decode
 tolerance zensim:99 (dissim 0.01)
-= plush-marsh-8328b491ed:sea  x86_64-avx512  @6e695833  new-baseline
+~ ready-yew-f454a633e4:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_adobe_rgb_decode_1 adobergb_decode
 tolerance zensim:99 (dissim 0.01)
-= stiff-mace-cc9e75a12a:sea  x86_64-avx512  @6e695833  new-baseline
+~ firm-thorn-98b734c8fe:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_icc_display_p3_decode_1 p3_decode
 tolerance zensim:99 (dissim 0.01)
-= silly-coal-233b8b0277:sea  x86_64-avx512  @6e695833  new-baseline
+~ lost-teal-beefe0c3f4:sea  x86_64-avx512  @3958986f  auto-accepted

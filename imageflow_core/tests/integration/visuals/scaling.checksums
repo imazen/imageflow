@@ -1,42 +1,35 @@
 ## test_jpeg_icc4_color_profile mars_v4_robidoux_400x300
 tolerance max-delta:2 zensim:80 (dissim 0.20) pixels-changed:100.0%
-= old-ant-f705618161:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ plain-forge-2bbaf351fa:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs old-ant-f705618161:sea (zensim:99.85 (dissim 0.0015), 100.0% pixels ±1, max-delta:[0,1,0], category:rounding, biased)
-~ raw-otter-b8c900dccf:sea  aarch64-windows  @ace43a05  auto-accepted vs old-ant-f705618161:sea  diff d:2 s:82.9 px:100.0%
+~ plain-forge-2bbaf351fa:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_scale_rings hermite_400x400
 tolerance off-by-one
-= salty-nest-6d4fa00ed3:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ giant-trout-418f5be2ec:sea  x86_64-avx512  @87e37ba7  auto-accepted within tolerance (within off-by-one) vs salty-nest-6d4fa00ed3:sea (zensim:98.36 (dissim 0.016), 1.1% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ giant-trout-418f5be2ec:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_scale_image waterhouse_robidoux_400x300
 tolerance off-by-one
-= only-tiger-a4839401fa:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ front-shell-786aa19c4b:sea  x86_64-avx512  @87e37ba7  auto-accepted within tolerance (within off-by-one) vs only-tiger-a4839401fa:sea (zensim:98.04 (dissim 0.020), 12.1% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ front-shell-786aa19c4b:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_jpeg_icc2_color_profile mars_robidoux_400x300
 tolerance off-by-one
-= edgy-bud-3c5ab5c483:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ level-bird-3dae9245da:sea  x86_64-avx512  @87e37ba7  auto-accepted within tolerance (within off-by-one) vs edgy-bud-3c5ab5c483:sea (zensim:98.39 (dissim 0.016), 100.0% pixels ±1, max-delta:[1,0,0], category:rounding, biased)
+~ level-bird-3dae9245da:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_read_gif_and_scale mountain_robidoux_400x300
 tolerance off-by-one
-= north-rust-f9b8c7992d:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ sunny-yew-e6b27a1f2e:sea  x86_64-avx512  @87e37ba7  auto-accepted within tolerance (within off-by-one) vs north-rust-f9b8c7992d:sea (zensim:98.19 (dissim 0.018), 11.8% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ sunny-yew-e6b27a1f2e:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## test_read_gif_and_vertical_distort mountain_box_800x100
 tolerance off-by-one
-= last-fawn-83133574e4:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ calm-fish-0c49580c34:sea  x86_64-avx512  @87e37ba7  auto-accepted within tolerance (within off-by-one) vs last-fawn-83133574e4:sea (zensim:98.30 (dissim 0.017), 9.1% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ calm-fish-0c49580c34:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## webp_lossless_alpha_decode_and_scale 100x100
 tolerance off-by-one
-= clean-ore-a59f8abf2c:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ soft-jade-43f471d35f:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## webp_lossy_alpha_decode_and_scale 100x100
 tolerance off-by-one
-= both-path-4b02288edb:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ first-mare-9c4ea6eeca:sea  x86_64-avx512  @3958986f  auto-accepted
 
 ## webp_lossy_noalpha_decode_and_scale mountain_100x100
 tolerance off-by-one
-= open-shell-b210964ea9:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ south-bird-6133cb94ca:sea  x86_64-avx512  @3958986f  auto-accepted
