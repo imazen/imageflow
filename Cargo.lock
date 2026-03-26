@@ -4020,6 +4020,7 @@ dependencies = [
  "archmage 0.9.12",
  "bytemuck",
  "enough",
+ "imagequant",
  "imgref",
  "linear-srgb",
  "rgb",
