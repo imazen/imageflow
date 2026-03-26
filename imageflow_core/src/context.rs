@@ -475,6 +475,7 @@ impl Context {
             let h = bitmap.height;
             let bpp = bitmap.bytes_per_pixel();
 
+
             // Determine alpha properties from the zen pixel format.
             let has_alpha = bitmap.format.has_alpha();
             let alpha_meaningful = has_alpha;

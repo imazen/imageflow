@@ -969,7 +969,6 @@ fn ensure_srgb_rgba8(
     if src_format == target {
         return Ok(source);
     }
-
     // Try to create a format conversion.
     if let Some(converter) = zenpipe::ops::RowConverterOp::new(src_format, target) {
         let transform = zenpipe::sources::TransformSource::new(source)
