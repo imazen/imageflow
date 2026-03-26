@@ -10,7 +10,9 @@ mod translate;
 mod preset_map;
 mod execute;
 mod context_bridge;
+pub mod riapi;
 
 pub use execute::{execute_framewise, zen_get_image_info, ZenError, ZenEncodeResult};
 pub use translate::TranslateError;
 pub use context_bridge::{zen_build, zen_get_image_info as zen_probe, ZenBuildOutput};
+pub use riapi::RiapiEngine;
