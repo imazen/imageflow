@@ -323,16 +323,102 @@ fn create_byte_mapping(low: usize, high: usize) -> [u8; 256] {
     map
 }
 
+/// Converter for `imageflow.color_matrix_srgb` → `NodeOp::Materialize`.
+///
+/// Applies a 5×5 color matrix in sRGB gamma space (u8 values), matching v2 behavior.
+pub struct ColorMatrixSrgbConverter;
+
+impl NodeConverter for ColorMatrixSrgbConverter {
+    fn can_convert(&self, schema_id: &str) -> bool {
+        schema_id == "imageflow.color_matrix_srgb"
+    }
+
+    fn convert(&self, node: &dyn NodeInstance) -> Result<NodeOp, PipeError> {
+        use zennode::ParamValue;
+        let matrix: [f32; 25] = match node.get_param("matrix") {
+            Some(ParamValue::F32Array(v)) if v.len() == 25 => {
+                let mut arr = [0.0f32; 25];
+                arr.copy_from_slice(&v);
+                arr
+            }
+            _ => {
+                return Err(PipeError::Op(
+                    "color_matrix_srgb: missing or invalid matrix param".into(),
+                ))
+            }
+        };
+
+        Ok(NodeOp::Materialize(Box::new(
+            move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
+                let width = *w as usize;
+                let height = *h as usize;
+                let bpp = fmt.bytes_per_pixel();
+
+                if bpp < 4 {
+                    return; // need RGBA
+                }
+
+                // Apply 5×5 matrix: out[c] = sum(m[c*5+i] * in[i], i=0..4) + m[c*5+4] * 255
+                for y in 0..height {
+                    let row_start = y * width * bpp;
+                    for x in 0..width {
+                        let off = row_start + x * bpp;
+                        let r = data[off] as f32;
+                        let g = data[off + 1] as f32;
+                        let b = data[off + 2] as f32;
+                        let a = data[off + 3] as f32;
+
+                        let out_r = matrix[0] * r
+                            + matrix[1] * g
+                            + matrix[2] * b
+                            + matrix[3] * a
+                            + matrix[4] * 255.0;
+                        let out_g = matrix[5] * r
+                            + matrix[6] * g
+                            + matrix[7] * b
+                            + matrix[8] * a
+                            + matrix[9] * 255.0;
+                        let out_b = matrix[10] * r
+                            + matrix[11] * g
+                            + matrix[12] * b
+                            + matrix[13] * a
+                            + matrix[14] * 255.0;
+                        let out_a = matrix[15] * r
+                            + matrix[16] * g
+                            + matrix[17] * b
+                            + matrix[18] * a
+                            + matrix[19] * 255.0;
+
+                        data[off] = out_r.round().min(255.0).max(0.0) as u8;
+                        data[off + 1] = out_g.round().min(255.0).max(0.0) as u8;
+                        data[off + 2] = out_b.round().min(255.0).max(0.0) as u8;
+                        data[off + 3] = out_a.round().min(255.0).max(0.0) as u8;
+                    }
+                }
+            },
+        )))
+    }
+
+    fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
+        if let Some(node) = nodes.first() {
+            self.convert(*node)
+        } else {
+            Err(PipeError::Op("empty color_matrix_srgb group".into()))
+        }
+    }
+}
+
 /// Build the standard set of converters for the imageflow zen pipeline.
 ///
 /// Includes zenfilters, expand_canvas, region, and white_balance converters.
 /// All other operations (fill_rect, crop_whitespace, remove_alpha,
 /// round_corners, resize) are handled by zenpipe's built-in bridge converters.
-pub fn imageflow_converters() -> [&'static dyn NodeConverter; 5] {
+pub fn imageflow_converters() -> [&'static dyn NodeConverter; 6] {
     static FILTERS: ZenFiltersConverter = ZenFiltersConverter;
     static EXPAND: ExpandCanvasConverter = ExpandCanvasConverter;
     static REGION: RegionConverter = RegionConverter;
     static WHITE_BAL: WhiteBalanceConverter = WhiteBalanceConverter;
+    static COLOR_MAT: ColorMatrixSrgbConverter = ColorMatrixSrgbConverter;
     static WATERMARK: super::watermark::WatermarkConverter = super::watermark::WatermarkConverter;
-    [&FILTERS, &EXPAND, &REGION, &WHITE_BAL, &WATERMARK]
+    [&FILTERS, &EXPAND, &REGION, &WHITE_BAL, &COLOR_MAT, &WATERMARK]
 }

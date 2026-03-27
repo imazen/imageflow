@@ -229,13 +229,15 @@ fn translate_one(
         Node::ColorFilterSrgb(filter) => translate_color_filter(filter, &mut result.nodes),
 
         Node::ColorMatrixSrgb { matrix } => {
-            // Flatten [[f32; 5]; 5] → [f32; 25] row-major for zenfilters.color_matrix.
-            let flat: Vec<f32> = matrix.iter().flat_map(|row| row.iter().copied()).collect();
-            push_filter_node(
-                &mut result.nodes,
-                "zenfilters.color_matrix",
-                &[("matrix", ParamValue::F32Array(flat))],
-            )
+            // Flatten [[f32; 5]; 5] → [f32; 25] row-major.
+            // Uses imageflow.color_matrix_srgb (sRGB gamma space, matching v2)
+            // rather than zenfilters.color_matrix (Oklab space).
+            let mut flat = [0.0f32; 25];
+            for (i, row) in matrix.iter().enumerate() {
+                flat[i * 5..i * 5 + 5].copy_from_slice(row);
+            }
+            result.nodes.push(Box::new(super::nodes::ColorMatrixSrgbNode { matrix: flat }));
+            Ok(())
         }
 
         Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold } => {
