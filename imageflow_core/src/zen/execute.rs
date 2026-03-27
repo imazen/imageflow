@@ -564,7 +564,6 @@ fn apply_icc_transform(
         None => return Ok(source), // No ICC — handled below via raw PNG parsing
     };
 
-    // Build the transform first to check if it will work, before consuming source.
     let srgb_icc = srgb_icc_profile();
     let src_format = source.format();
     let pixel_format = src_format.pixel_format();
@@ -598,6 +597,40 @@ fn srgb_icc_profile() -> Vec<u8> {
     SRGB.get_or_init(|| {
         moxcms::ColorProfile::new_srgb().encode().unwrap_or_default()
     }).clone()
+}
+
+/// Check if an ICC profile represents sRGB (or close enough to skip transform).
+///
+/// Parses the profile with moxcms and checks if its primaries and TRC match sRGB.
+/// Camera JPEGs embed vendor-specific sRGB profiles with different bytes but
+/// same color space — byte comparison doesn't work, need semantic comparison.
+/// Check if an ICC profile represents sRGB (or close enough to skip transform).
+///
+/// Uses moxcms to compute the transform matrix from the profile to sRGB.
+/// If it's close to identity, the profile IS sRGB (regardless of vendor metadata).
+fn is_srgb_icc_profile(icc_bytes: &[u8]) -> bool {
+    let Ok(src) = moxcms::ColorProfile::new_from_slice(icc_bytes) else {
+        return false;
+    };
+    let srgb = moxcms::ColorProfile::new_srgb();
+
+    // Compare the colorant-to-XYZ matrices. If they're close, same primaries.
+    let src_mat = src.rgb_to_xyz_matrix();
+    let srgb_mat = srgb.rgb_to_xyz_matrix();
+
+    let mut max_diff = 0.0f64;
+    for i in 0..3 {
+        for j in 0..3 {
+            let diff = (src_mat.v[i][j] - srgb_mat.v[i][j]).abs();
+            if diff > max_diff {
+                max_diff = diff;
+            }
+        }
+    }
+
+    // Threshold: 0.001 in XYZ coordinates covers all sRGB profile variants
+    // (vendor differences in rounding) but rejects P3, AdobeRGB, etc.
+    max_diff < 0.001
 }
 
 /// Synthesize an ICC profile from PNG gAMA (and optional cHRM) metadata.
