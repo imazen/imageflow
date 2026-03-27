@@ -564,10 +564,10 @@ fn apply_icc_transform(
         None => return Ok(source), // No ICC — handled below via raw PNG parsing
     };
 
-    // TODO: Skip sRGB→sRGB transforms to avoid CMS rounding errors.
-    // SourceColor::is_srgb() exists but description-based ICC detection
-    // is too aggressive — some vendor "sRGB" profiles are calibrated
-    // differently. Need moxcms TRC curve comparison for correctness.
+    // Skip sRGB→sRGB transforms — identity CMS roundtrip introduces errors.
+    if is_srgb_icc_profile(&src_icc) {
+        return Ok(source);
+    }
 
     let srgb_icc = srgb_icc_profile();
     let src_format = source.format();
@@ -609,33 +609,79 @@ fn srgb_icc_profile() -> Vec<u8> {
 /// Parses the profile with moxcms and checks if its primaries and TRC match sRGB.
 /// Camera JPEGs embed vendor-specific sRGB profiles with different bytes but
 /// same color space — byte comparison doesn't work, need semantic comparison.
-/// Check if an ICC profile represents sRGB (or close enough to skip transform).
+/// Check if an ICC profile is sRGB-equivalent by comparing primaries AND TRC curves.
 ///
-/// Uses moxcms to compute the transform matrix from the profile to sRGB.
-/// If it's close to identity, the profile IS sRGB (regardless of vendor metadata).
+/// Uses moxcms to parse the profile and compares colorants (with 0.0001 tolerance
+/// via Xyzd::PartialEq) and TRC parametric parameters (with tolerance for vendor
+/// rounding). Catches vendor sRGB variants (Canon, Sony, etc.) that have different
+/// bytes but identical color behavior.
 fn is_srgb_icc_profile(icc_bytes: &[u8]) -> bool {
     let Ok(src) = moxcms::ColorProfile::new_from_slice(icc_bytes) else {
         return false;
     };
     let srgb = moxcms::ColorProfile::new_srgb();
 
-    // Compare the colorant-to-XYZ matrices. If they're close, same primaries.
-    let src_mat = src.rgb_to_xyz_matrix();
-    let srgb_mat = srgb.rgb_to_xyz_matrix();
-
-    let mut max_diff = 0.0f64;
-    for i in 0..3 {
-        for j in 0..3 {
-            let diff = (src_mat.v[i][j] - srgb_mat.v[i][j]).abs();
-            if diff > max_diff {
-                max_diff = diff;
-            }
-        }
+    // 1. Primaries must match (Xyzd::PartialEq has 0.0001 tolerance).
+    if src.red_colorant != srgb.red_colorant
+        || src.green_colorant != srgb.green_colorant
+        || src.blue_colorant != srgb.blue_colorant
+    {
+        return false;
     }
 
-    // Threshold: 0.001 in XYZ coordinates covers all sRGB profile variants
-    // (vendor differences in rounding) but rejects P3, AdobeRGB, etc.
-    max_diff < 0.001
+    // 2. TRC: must be sRGB-equivalent (parametric or LUT).
+    trc_matches_srgb(&src.red_trc)
+        && trc_matches_srgb(&src.green_trc)
+        && trc_matches_srgb(&src.blue_trc)
+}
+
+/// Check if a TRC curve matches the sRGB parametric curve within tolerance.
+///
+/// sRGB TRC is parametric type 4: [2.4, 1/1.055, 0.055/1.055, 1/12.92, 0.04045]
+/// Vendor profiles may round these differently (e.g., 0.947867... vs 0.9479).
+fn trc_matches_srgb(trc: &Option<moxcms::ToneReprCurve>) -> bool {
+    let Some(trc) = trc else { return false };
+
+    match trc {
+        moxcms::ToneReprCurve::Parametric(params) => {
+            // sRGB parametric: [gamma, a, b, c, d]
+            // Expected: [2.4, 1/1.055 ≈ 0.94787, 0.055/1.055 ≈ 0.05213, 1/12.92 ≈ 0.07739, 0.04045]
+            const SRGB_PARAMS: [f32; 5] = [
+                2.4,
+                1.0 / 1.055,     // 0.947867...
+                0.055 / 1.055,   // 0.052132...
+                1.0 / 12.92,     // 0.077399...
+                0.04045,
+            ];
+            const TOL: f32 = 0.001;
+
+            if params.len() < 5 { return false; }
+            params[..5].iter().zip(SRGB_PARAMS.iter()).all(|(a, b)| (a - b).abs() < TOL)
+        }
+        moxcms::ToneReprCurve::Lut(lut) => {
+            // Some profiles encode sRGB as a 1024 or 4096 entry LUT.
+            // Check a few diagnostic points against expected sRGB values.
+            if lut.is_empty() { return false; }
+            let n = lut.len();
+
+            // sRGB curve: output = ((input/1.055 + 0.055/1.055)^2.4) for input > 0.04045
+            // Check at 25%, 50%, 75% input.
+            let check_points = [n / 4, n / 2, 3 * n / 4];
+            for &idx in &check_points {
+                let input = idx as f64 / (n - 1) as f64;
+                let expected = if input <= 0.04045 {
+                    input / 12.92
+                } else {
+                    ((input + 0.055) / 1.055).powf(2.4)
+                };
+                let actual = lut[idx] as f64 / 65535.0;
+                if (actual - expected).abs() > 0.002 {
+                    return false;
+                }
+            }
+            true
+        }
+    }
 }
 
 /// Synthesize an ICC profile from PNG gAMA (and optional cHRM) metadata.
