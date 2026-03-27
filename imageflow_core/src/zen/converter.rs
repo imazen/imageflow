@@ -89,17 +89,12 @@ impl NodeConverter for ExpandCanvasConverter {
         let right = get_u32("right");
         let bottom = get_u32("bottom");
 
-        // Extract background color from params (set by translate.rs).
-        // Only use non-default color when bg_a is explicitly present.
-        let bg_color = if node.get_param("bg_a").is_some() {
-            [
-                get_u32("bg_r") as u8,
-                get_u32("bg_g") as u8,
-                get_u32("bg_b") as u8,
-                get_u32("bg_a") as u8,
-            ]
-        } else {
-            [0u8, 0, 0, 0] // transparent (legacy default)
+        // Extract background color from the node's `color` string param.
+        // The zenlayout.expand_canvas node stores color as a CSS-style string:
+        // "transparent", "white", "black", or "#RRGGBB" / "#RRGGBBAA".
+        let bg_color = match node.get_param("color") {
+            Some(ParamValue::Str(ref s)) => parse_color_string(s),
+            _ => [0u8, 0, 0, 0], // transparent (default)
         };
 
         Ok(NodeOp::ExpandCanvas { left, top, right, bottom, bg_color })
@@ -111,6 +106,30 @@ impl NodeConverter for ExpandCanvasConverter {
         } else {
             Err(PipeError::Op("empty expand_canvas group".into()))
         }
+    }
+}
+
+/// Parse a CSS-style color string to RGBA bytes.
+///
+/// Accepts: "transparent", "white", "black", "#RRGGBB", "#RRGGBBAA".
+fn parse_color_string(s: &str) -> [u8; 4] {
+    match s.to_lowercase().as_str() {
+        "transparent" | "" => [0, 0, 0, 0],
+        "white" => [255, 255, 255, 255],
+        "black" => [0, 0, 0, 255],
+        hex if hex.starts_with('#') => {
+            let hex = &hex[1..];
+            let r = u8::from_str_radix(hex.get(0..2).unwrap_or("00"), 16).unwrap_or(0);
+            let g = u8::from_str_radix(hex.get(2..4).unwrap_or("00"), 16).unwrap_or(0);
+            let b = u8::from_str_radix(hex.get(4..6).unwrap_or("00"), 16).unwrap_or(0);
+            let a = if hex.len() >= 8 {
+                u8::from_str_radix(&hex[6..8], 16).unwrap_or(255)
+            } else {
+                255
+            };
+            [r, g, b, a]
+        }
+        _ => [0, 0, 0, 0], // unknown → transparent
     }
 }
 

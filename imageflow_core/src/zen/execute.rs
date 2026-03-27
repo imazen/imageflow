@@ -1747,14 +1747,6 @@ fn create_canvas_source(
     Ok(Box::new(zenpipe::sources::MaterializedSource::from_data(pixels, w, h, format)))
 }
 
-/// Create a placeholder Encode-role node for DAG slots that are decode/encode.
-/// The bridge separates these by role — the placeholder just needs a valid schema.
-fn create_encode_role_placeholder() -> Box<dyn zennode::NodeInstance> {
-    zencodecs::zennode_defs::QUALITY_INTENT_NODE_NODE
-        .create_default()
-        .expect("placeholder creation")
-}
-
 /// Fix ExpandCanvas nodes that use transparent fill on opaque source images.
 ///
 /// When the source image has no alpha channel (e.g., lossy WebP, JPEG), transparent
@@ -1951,20 +1943,4 @@ fn strip_trim_from_qs(qs: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("&")
-}
-
-impl TranslatedPipeline {
-    pub(crate) fn clone_config(&self) -> TranslatedPipeline {
-        TranslatedPipeline {
-            nodes: Vec::new(),
-            preset: self.preset.as_ref().map(|p| super::preset_map::PresetMapping {
-                intent: p.intent.clone(),
-                explicit_format: p.explicit_format,
-            }),
-            decode_io_id: self.decode_io_id,
-            encode_io_id: self.encode_io_id,
-            decoder_commands: self.decoder_commands.clone(),
-            create_canvas: self.create_canvas.clone(),
-        }
-    }
 }
