@@ -201,17 +201,150 @@ impl NodeConverter for RegionConverter {
     }
 }
 
-// ImageflowNodeConverter removed — all operations now use native zennode
-// definitions with built-in bridge converters in zenpipe::bridge::convert.
+/// Converter for `imageflow.white_balance_srgb` → `NodeOp::Materialize`.
+///
+/// Implements automatic white balance correction via histogram analysis in sRGB
+/// space. Materializes the full frame, builds per-channel histograms, finds
+/// the threshold percentile boundaries, then applies a linear stretch mapping
+/// to normalize each channel independently.
+///
+/// Algorithm matches the v2 `WhiteBalanceHistogramAreaThresholdSrgb` node.
+pub struct WhiteBalanceConverter;
+
+impl NodeConverter for WhiteBalanceConverter {
+    fn can_convert(&self, schema_id: &str) -> bool {
+        schema_id == "imageflow.white_balance_srgb"
+    }
+
+    fn convert(&self, node: &dyn NodeInstance) -> Result<NodeOp, PipeError> {
+        use zennode::ParamValue;
+        let threshold = match node.get_param("threshold") {
+            Some(ParamValue::F32(v)) => v as f64,
+            _ => 0.006,
+        };
+
+        Ok(NodeOp::Materialize(Box::new(
+            move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
+                let width = *w as usize;
+                let height = *h as usize;
+                let bpp = fmt.bytes_per_pixel();
+
+                // This algorithm operates on RGBA8 pixel data.
+                // Channels are at offsets 0=R, 1=G, 2=B, 3=A.
+                if bpp < 3 {
+                    return; // grayscale not supported, skip
+                }
+
+                let total_pixels = (width * height) as u64;
+                if total_pixels == 0 {
+                    return;
+                }
+
+                // Build per-channel histograms (R, G, B).
+                let mut hist_r = [0u64; 256];
+                let mut hist_g = [0u64; 256];
+                let mut hist_b = [0u64; 256];
+
+                for y in 0..height {
+                    let row_start = y * width * bpp;
+                    for x in 0..width {
+                        let off = row_start + x * bpp;
+                        hist_r[data[off] as usize] += 1;
+                        hist_g[data[off + 1] as usize] += 1;
+                        hist_b[data[off + 2] as usize] += 1;
+                    }
+                }
+
+                // Find the low and high thresholds for each channel.
+                let (r_low, r_high) = area_threshold(&hist_r, total_pixels, threshold);
+                let (g_low, g_high) = area_threshold(&hist_g, total_pixels, threshold);
+                let (b_low, b_high) = area_threshold(&hist_b, total_pixels, threshold);
+
+                // Build byte mappings.
+                let map_r = create_byte_mapping(r_low, r_high);
+                let map_g = create_byte_mapping(g_low, g_high);
+                let map_b = create_byte_mapping(b_low, b_high);
+
+                // Apply mappings to all pixels.
+                for y in 0..height {
+                    let row_start = y * width * bpp;
+                    for x in 0..width {
+                        let off = row_start + x * bpp;
+                        data[off] = map_r[data[off] as usize];
+                        data[off + 1] = map_g[data[off + 1] as usize];
+                        data[off + 2] = map_b[data[off + 2] as usize];
+                        // Alpha (data[off + 3]) is preserved unchanged.
+                    }
+                }
+            },
+        )))
+    }
+
+    fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
+        if let Some(node) = nodes.first() {
+            self.convert(*node)
+        } else {
+            Err(PipeError::Op("empty white_balance group".into()))
+        }
+    }
+}
+
+/// Find the low and high boundary indices for a histogram channel.
+///
+/// Scans from both ends of the histogram, accumulating pixel area until
+/// the cumulative fraction exceeds `threshold`. Returns `(low, high)` bin
+/// indices representing the useful range of the channel.
+fn area_threshold(histogram: &[u64; 256], total_pixels: u64, threshold: f64) -> (usize, usize) {
+    let pixel_count = total_pixels as f64;
+
+    // Find low boundary: scan from dark end.
+    let mut low = 0;
+    let mut area = 0u64;
+    for (ix, &value) in histogram.iter().enumerate() {
+        area += value;
+        if area as f64 / pixel_count > threshold {
+            low = ix;
+            break;
+        }
+    }
+
+    // Find high boundary: scan from bright end.
+    let mut high = 255;
+    area = 0;
+    for (ix, &value) in histogram.iter().enumerate().rev() {
+        area += value;
+        if area as f64 / pixel_count > threshold {
+            high = ix;
+            break;
+        }
+    }
+
+    (low, high)
+}
+
+/// Create a 256-entry byte lookup table that linearly maps [low, high] → [0, 255].
+///
+/// Values below `low` map to 0; values above `high` map to 255.
+#[allow(clippy::manual_clamp)]
+fn create_byte_mapping(low: usize, high: usize) -> [u8; 256] {
+    let mut map = [0u8; 256];
+    let range = if high > low { high - low } else { 1 };
+    let scale = 255.0 / range as f64;
+    for v in 0..256usize {
+        map[v] = (v.saturating_sub(low) as f64 * scale).round().min(255.0).max(0.0) as u8;
+    }
+    map
+}
 
 /// Build the standard set of converters for the imageflow zen pipeline.
 ///
-/// Only zenfilters, expand_canvas, and region need external converters.
+/// Includes zenfilters, expand_canvas, region, and white_balance converters.
 /// All other operations (fill_rect, crop_whitespace, remove_alpha,
 /// round_corners, resize) are handled by zenpipe's built-in bridge converters.
-pub fn imageflow_converters() -> [&'static dyn NodeConverter; 3] {
+pub fn imageflow_converters() -> [&'static dyn NodeConverter; 4] {
     static FILTERS: ZenFiltersConverter = ZenFiltersConverter;
     static EXPAND: ExpandCanvasConverter = ExpandCanvasConverter;
     static REGION: RegionConverter = RegionConverter;
-    [&FILTERS, &EXPAND, &REGION]
+    static WHITE_BAL: WhiteBalanceConverter = WhiteBalanceConverter;
+    [&FILTERS, &EXPAND, &REGION, &WHITE_BAL]
 }

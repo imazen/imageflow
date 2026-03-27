@@ -18,6 +18,7 @@ mod color;
 mod context_bridge;
 mod converter;
 mod execute;
+mod nodes;
 mod preset_map;
 pub mod riapi;
 mod translate;

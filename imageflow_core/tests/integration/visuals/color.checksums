@@ -129,7 +129,7 @@ tolerance off-by-one
 
 ## test_white_balance_image red_night_auto_zen
 tolerance off-by-one
-~ apt-lion-da943ad82f:sea  x86_64-avx512  @2d81fc05  auto-accepted
+~ murky-stork-1a0ab17a07:sea  x86_64-avx512  @fa264b4a  auto-accepted
 
 ## test_simple_filters Saturation(1.0)_zen
 tolerance off-by-one
@@ -213,4 +213,4 @@ tolerance off-by-one
 
 ## test_white_balance_image_threshold_5 t0.5_zen
 tolerance off-by-one
-~ apt-lion-da943ad82f:sea  x86_64-avx512  @2d81fc05  auto-accepted
+~ just-sand-b9eb1fbf09:sea  x86_64-avx512  @fa264b4a  auto-accepted
