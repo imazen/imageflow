@@ -560,10 +560,10 @@ fn apply_icc_transform(
         None
     };
 
-    // 2. If no ICC, try to synthesize from gAMA/cHRM (for PNG).
+    // 2. If no ICC, skip CMS.
     let src_icc = match src_icc {
         Some(icc) => icc,
-        None => return Ok(source), // No ICC — handled below via raw PNG parsing
+        None => return Ok(source),
     };
 
     // In compat mode, skip transforms for sRGB-like profiles (loose match).
