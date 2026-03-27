@@ -215,23 +215,11 @@ fn execute_steps(
     // Pre-process: expand CommandString nodes using source dimensions from probe.
     let mut steps = expand_command_strings(steps, io_buffers)?;
 
-    // DEBUG: print expanded steps
-    for (i, s) in steps.iter().enumerate() {
-        eprintln!("[execute_steps] expanded[{i}]: {s:?}");
-    }
-
     // Fix transparent ExpandCanvas on opaque sources: when the source image has
     // no alpha channel, transparent padding [0,0,0,0] produces invisible borders
     // that appear black after alpha flattening. Replace with opaque white to match
     // the V2 pipeline's behavior for opaque content.
     fix_expand_canvas_for_opaque_source(&mut steps, io_buffers);
-
-    // DEBUG: print steps after fix
-    for (i, s) in steps.iter().enumerate() {
-        if let Node::ExpandCanvas { .. } = s {
-            eprintln!("[execute_steps] after_fix[{i}]: {s:?}");
-        }
-    }
 
     // Collect capture IDs before translation (CaptureBitmapKey is a no-op in translate).
     let capture_ids: Vec<i32> = steps
