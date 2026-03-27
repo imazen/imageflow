@@ -1,111 +1,121 @@
 # Imageflow3 Context Handoff
 
-## Current State (2026-03-26)
+## State: 141/188 tests passing (47 failures, 4 skipped)
 
-**Branch**: `imageflow3`, **139/188 passing** (49 divergences between v2 and zen backends).
+Branch `imageflow3`. Both v2 and zen backends run against shared checksums.
 
-## Test Architecture
-
-Tests run **both backends** (v2 + zen) against **one shared checksum set**.
-V2 runs first and sets the baseline. Zen must match within the test's tolerance.
-Divergences are bugs to fix, not baselines to fork.
+## Test commands
 
 ```bash
-# Run all tests (both backends)
-just test
-
-# With auto-accept for new baselines
-just test-update
-
-# justfile passes --features "zen-default,c-codecs"
+just test                        # both backends, shared checksums
+just test-filter NAME            # filter by test name
+ZENPIPE_TRACE=1 just test-filter NAME  # with pipeline trace
 ```
 
-`Context.force_backend` controls which engine runs. `Backend::V2` or `Backend::Zen`.
-`backends_to_test()` in test infrastructure returns both when `zen-pipeline` feature is on.
+justfile passes `--features "zen-default,c-codecs"`.
 
-## Tracing
+## Proven facts (with tests)
 
-```bash
-ZENPIPE_TRACE=1 just test-filter test_name    # text trace to stderr
-ZENPIPE_TRACE=svg just test-filter test_name  # also write /tmp/zenpipe_trace.svg
-```
+### JPEG decoder parity (test: `jpeg_decoder_parity.rs`)
+- sRGB JPEG (Canon 5D): **delta=0** between mozjpeg and zenjpeg. Pixel-identical.
+- Rec.2020 PQ JPEG: **delta=122**, 100% pixels differ. Not IDCT — color matrix.
+- Cause unverified. Needs investigation in zenjpeg's YCbCr→RGB path for wide-gamut.
 
-## 49 Remaining Divergences (by category)
+### CMS transform parity (test: `moxcms/tests/rgb_vs_rgba_layout.rs`)
+- Layout::Rgb vs Layout::Rgba: **identical** output from moxcms.
+- Direct `new_srgb()` vs ICC-roundtripped sRGB destination: **identical**.
+- CICP vs no-CICP on destination: **identical**.
+- Same ICC bytes (hash verified) go to both v2 and zen CMS paths.
 
-### ICC color management (18 tests)
-All `format=png` no-resize tests. Zen skips the identity resize (correct behavior)
-but v2 runs it, causing sRGB→linear→sRGB roundtrip that slightly alters pixels.
-The zen output is MORE correct. These need the v2 baselines updated to match zen,
-or the tolerance adjusted to accept the roundtrip difference.
+### ICC profile extraction (zenjpeg `tests/icc_extraction.rs`)
+- `extract_icc_profile()` works correctly on all test images.
+- `or_else` fallback fix (commit `0355bf1d`) resolved extras/parser priority.
 
-Tests: test_icc_srgb_canon_5d, test_icc_srgb_sony_a7rv, test_icc_display_p3_decode_{1,2,3},
-test_icc_adobe_rgb_decode_{1,2}, test_icc_rec2020_decode_{1,2}, test_icc_prophoto_decode,
-test_icc_gray_gamma22_decode, test_icc_repro_{imagemagick,libvips,pillow,sharp}_icc,
-test_icc_display_p3_resize_filter, test_icc_p3_crop_and_resize, test_icc_p3_to_jpeg_roundtrip,
-test_icc_p3_to_webp
+### Linear matte compositing (zenpixels-convert)
+- `matte_composite()` now blends in linear light using LUT-based sRGB↔linear.
+- All 3 matte compositing tests pass (hardcoded pixel checks match v2).
+
+## 47 failures by category
+
+### Wide-gamut JPEG decoder difference (15 tests)
+Rec.2020, P3, AdobeRGB, ProPhoto JPEGs. Delta=122 before CMS.
+sRGB JPEGs have delta=0 — decoders agree on sRGB, disagree on wide-gamut.
+
+Tests: `icc_rec2020_decode_{1,2}`, `icc_display_p3_decode_{1,2,3}`,
+`icc_adobe_rgb_decode_{1,2}`, `icc_prophoto_decode`, `icc_gray_gamma22_decode`,
+`icc_repro_{imagemagick,libvips,pillow,sharp}_icc`, `jpeg_icc2_color_profile`
+
+### sRGB JPEG + CMS path difference (4 tests)
+sRGB JPEG decoder output is identical (delta=0), but something in the
+CMS skip/apply path differs. Delta=49-56 in final output.
+
+Tests: `icc_srgb_canon_5d`, `icc_srgb_sony_a7rv`,
+`icc_display_p3_resize_filter`, `icc_p3_crop_and_resize`
 
 ### Round corners (9 tests)
-Anti-aliasing model differs: v2 uses volumetric_offset=0.56419 with quadrant-based
-rendering including circle mode centering. Zen implementation matches the v2 algorithm
-for standard corners (similarity 85+) but circle mode on non-square canvases needs
-the v2's quadrant offset logic.
+V2 uses volumetric_offset=0.56419 + quadrant-based rendering.
+Zen matches standard corners (sim 85+) but circle mode on non-square
+canvases needs v2's quadrant offset logic. Per-corner radii unsupported.
 
-Tests: test_round_corners_{small,large,custom_pixels,custom_percent,excessive_radius,
-circle_wide_canvas,circle_tall_canvas,command_string}, test_round_image_corners_transparent
+Tests: `round_corners_{small,large,custom_pixels,custom_percent,
+excessive_radius,circle_wide_canvas,circle_tall_canvas,command_string}`,
+`round_image_corners_transparent`
 
-### Transparent PNG/WebP format handling (7 tests)
-Alpha channel handling differences between zen and v2 codec paths.
+### PNG/WebP encode defaults (6 tests)
+`with_generic_quality()` overrides `with_lossless()` in zenpng.
+WebP lossless hint propagation fixed (preset_map order).
+JPEG matte compositing added to `stream_encode`.
 
-Tests: test_transparent_png_to_{png,jpeg,png_rounded_corners,jpeg_constrain},
-test_transparent_webp_to_webp, test_webp_to_webp_quality, test_problematic_png_lossy
+Tests: `transparent_png_to_png_rounded_corners`, `transparent_png_to_jpeg`,
+`transparent_png_to_jpeg_constrain`, `transparent_webp_to_webp` (sim 98.9),
+`matte_transparent_png`, `webp_to_webp_quality`
 
-### WebP scaling with alpha (3 tests)
-Alpha channel initialization differs for WebP decode → resize path.
+### WebP alpha / ExpandCanvas (3 tests)
+ExpandCanvas fills with transparent [0,0,0,0] on opaque source.
 
-Tests: webp_{lossless,lossy}_alpha_decode_and_scale, webp_lossy_noalpha_decode_and_scale
+Tests: `webp_{lossless,lossy}_alpha_decode_and_scale`,
+`webp_lossy_noalpha_decode_and_scale`
 
-### CMYK JPEG decode (2 tests)
-Different CMYK→RGB conversion path.
+### Other (10 tests)
+- `decode_cmyk_jpeg`, `decode_rgb_with_cmyk_profile_jpeg` — CMYK path
+- `jpeg_crop`, `crop_with_preshrink` — JPEG crop/IDCT
+- `problematic_png_lossy` — pngquant palette
+- `pngquant_command`, `pngquant_fallback_command` — pngquant hints
+- `png_cicp_bt709_transfer` — CICP assertion
+- `branching_crop_whitespace` — DAG mode
+- `smoke_test_corrupt_jpeg` — zen decoder more tolerant
+- `icc_p3_to_{jpeg_roundtrip,webp}` — re-encode quality
+- `trim_whitespace` — border detection
+- `rot_90_*`, `jpeg_simple_rot_90` — rotation
 
-Tests: decode_cmyk_jpeg, decode_rgb_with_cmyk_profile_jpeg
+## Architecture
 
-### Matte compositing (2 tests)
-Hardcoded pixel value checks — zen alpha compositing math differs from v2.
+### CmsMode (on ExecutionSecurity)
+- `Imageflow2Compat` (default): skip sRGB-like ICC on decode (desc heuristic)
+- `SceneReferred`: strict sRGB detection, preserve wide gamut
 
-Tests: test_matte_compositing_{no_double_division,mixed_alpha}
+### Backend (on Context)
+- `Context.force_backend = Some(Backend::V2 | Backend::Zen)` for runtime selection
+- Tests iterate both backends via `backends_to_test()`
 
-### Pngquant (2 tests)
-Zen encoder doesn't support pngquant-style quantized PNG yet.
+### Zen bridge (imageflow_core/src/zen/)
+- `translate.rs` (580 lines) — v2 Node → zennode via registry (no custom wrappers)
+- `converter.rs` (216 lines) — ZenFilters, ExpandCanvas, Region converters
+- `execute.rs` (~1500 lines) — orchestration, CMS, encode
+- `preset_map.rs` (~340 lines) — v2 presets → CodecIntent
 
-Tests: test_encode_pngquant_{command,fallback_command}
+### Zen node ownership
+- zenresize: resize, constrain
+- zenpipe: crop_whitespace, fill_rect, remove_alpha, round_corners
+- zenblend: RoundedRectMask (used by round_corners)
+- zenlayout: crop, orient, flip, rotate, expand_canvas, region
 
-### Other (6 tests)
-- test_jpeg_crop: JPEG IDCT difference
-- test_branching_crop_whitespace: DAG mode crop
-- test_png_cicp_bt709_transfer_causes_transform: CICP color
-- smoke_test_corrupt_jpeg: zen decoder more tolerant
-- test_trim_whitespace: whitespace detection threshold
+### Patches (Cargo.toml [patch.crates-io])
+- zenpixels, zenpixels-convert (local)
+- zencodec (local — has SourceColor::is_srgb, icc_profile_is_srgb)
+- zenjpeg (local — has ICC extraction fallback fix)
+- moxcms (local — has PR #152 #153 fixes)
 
-## Architecture (zen bridge)
-
-### What lives where
-| Crate | Owns |
-|-------|------|
-| zenresize | resize (forced w×h), constrain (layout-aware) |
-| zenlayout | crop, orient, flip, rotate, expand_canvas, constrain, region, smart_crop |
-| zenfilters | color filters (saturation, contrast, brightness, etc.) |
-| zenblend | RoundedRectMask, blend modes, mask primitives |
-| zenpipe | crop_whitespace, fill_rect, remove_alpha, round_corners, pipeline tracing |
-| zencodecs | format selection, encode/decode dispatch, mozjpeg preset config |
-| zennode | NodeInstance/NodeDef traits, KvPairs, registry |
-
-### Imageflow zen bridge files
-| File | Lines | Purpose |
-|------|-------|---------|
-| execute.rs | ~1500 | Pipeline orchestration, decode, encode, RIAPI expansion |
-| translate.rs | ~580 | v2 Node → zennode NodeInstance (uses zen registry, no custom wrappers) |
-| converter.rs | ~216 | NodeConverter for zenfilters, expand_canvas, region |
-| preset_map.rs | ~332 | v2 EncoderPreset → zencodecs CodecIntent |
-| riapi.rs | ~162 | Dual RIAPI parser (legacy Ir4Expand + zen-native) |
-| context_bridge.rs | ~166 | v2 JSON API bridge |
-| captured.rs | ~24 | Bitmap capture data |
+### Pipeline tracing
+`ZENPIPE_TRACE=1|full|svg` — 4-layer trace (RIAPI, Bridge, Graph, Execution).
+Tracer facade: zero-alloc when inactive.
