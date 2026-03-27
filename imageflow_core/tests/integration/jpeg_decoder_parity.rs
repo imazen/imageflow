@@ -143,6 +143,34 @@ fn jpeg_decoder_raw_pixel_comparison() {
     eprintln!("Avg delta:  R={:.2} G={:.2} B={:.2}", avg_r, avg_g, avg_b);
     eprintln!("Pixels > 1: {}/{} ({:.1}%)", diff_count, total, diff_count as f64 / total as f64 * 100.0);
 
+    // Also test a normal sRGB JPEG for comparison.
+    let srgb_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent().unwrap()
+        .join(".image-cache/sources/imageflow-resources/test_inputs/wide-gamut/srgb-reference/canon_eos_5d_mark_iv/wmc_81b268fc64ea796c.jpg");
+    if srgb_path.exists() {
+        let srgb_bytes = std::fs::read(&srgb_path).unwrap();
+        let (moz_px, _, _) = decode_mozjpeg(&srgb_bytes);
+        let (zen_px, zw2, zh2) = decode_zenjpeg(&srgb_bytes);
+        let w2 = zw2 as usize;
+        let h2 = zh2 as usize;
+        let zen_bpp2 = zen_px.len() / (w2 * h2);
+        let mut max_d2 = [0u8; 3];
+        for y in 0..h2 {
+            for x in 0..w2 {
+                let moff = (y * w2 + x) * 4;
+                let zoff = (y * w2 + x) * zen_bpp2;
+                let dr = moz_px[moff+2].abs_diff(zen_px[zoff]);
+                let dg = moz_px[moff+1].abs_diff(zen_px[zoff+1]);
+                let db = moz_px[moff+0].abs_diff(zen_px[zoff+2]);
+                if dr > max_d2[0] { max_d2[0] = dr; }
+                if dg > max_d2[1] { max_d2[1] = dg; }
+                if db > max_d2[2] { max_d2[2] = db; }
+            }
+        }
+        eprintln!("=== sRGB JPEG (Canon 5D) ===");
+        eprintln!("Max delta: R={} G={} B={}", max_d2[0], max_d2[1], max_d2[2]);
+    }
+
     // This test DOCUMENTS the decoder difference — it's expected to show
     // some delta. The key question is whether the delta explains the
     // post-CMS ICC test failures (delta ~186 for Rec.2020).
