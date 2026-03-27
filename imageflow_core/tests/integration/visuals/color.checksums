@@ -122,6 +122,7 @@ tolerance off-by-one
 ## test_white_balance_image red_night_auto_zen
 tolerance off-by-one
 ~ apt-lion-da943ad82f:sea  x86_64-avx512  @2d81fc05  auto-accepted
+~ murky-stork-1a0ab17a07:sea  x86_64-avx512  @ddcdc42a  auto-accepted within tolerance (within off-by-one) vs apt-lion-da943ad82f:sea (zensim:99.74 (dissim 0.0026))
 
 ## test_white_balance_image_threshold_5 t0.5_zen
 tolerance off-by-one

@@ -228,10 +228,14 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
             )
         }
 
-        Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold: _threshold } => {
-            Err(TranslateError::Unsupported(
-                "white_balance_histogram (requires full-frame materialization)".into(),
-            ))
+        Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold } => {
+            // Default threshold is 0.006 (0.6%) matching v2 behavior.
+            let t = threshold.unwrap_or(0.006);
+            push_layout_node(
+                &mut result.nodes,
+                "imageflow.white_balance_srgb",
+                &[("threshold", ParamValue::F32(t))],
+            )
         }
 
         // ─── Canvas operations ───
@@ -456,6 +460,7 @@ fn zen_registry() -> &'static NodeRegistry {
         zenresize::zennode_defs::register(&mut registry);
         zenfilters::zennode_defs::register(&mut registry);
         zenpipe::zennode_defs::register(&mut registry);
+        super::nodes::register(&mut registry);
         registry
     })
 }
