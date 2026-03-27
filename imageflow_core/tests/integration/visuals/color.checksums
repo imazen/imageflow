@@ -119,98 +119,98 @@ tolerance off-by-one
 = jolly-tree-a82ec324e9:sea  x86_64-avx512  @8ca16e2d  human-verified
 ~ only-core-0ea95be314:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs jolly-tree-a82ec324e9:sea (zensim:99.48 (dissim 0.0052))
 
-## test_simple_filters Contrast(1.0)_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Brightness(1.0)_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
 ## test_white_balance_image red_night_auto_zen
 tolerance off-by-one
 ~ apt-lion-da943ad82f:sea  x86_64-avx512  @2d81fc05  auto-accepted
 
-## test_simple_filters Saturation(1.0)_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Alpha(1.0)_zen
-tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Contrast(0.3)_zen
-tolerance off-by-one
-~ equal-lark-f5ec4a6fd3:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Brightness(0.3)_zen
-tolerance off-by-one
-~ only-core-0ea95be314:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Saturation(0.3)_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Alpha(0.3)_zen
-tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Contrast(-1.0)_zen
-tolerance off-by-one
-~ rich-slate-ec61f62b6a:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Brightness(-1.0)_zen
-tolerance off-by-one
-~ nice-coal-5ff12d1777:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Saturation(-1.0)_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Alpha(-1.0)_zen
-tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Contrast(-0.2)_zen
-tolerance off-by-one
-~ mad-loom-cc0c3d4a4b:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Brightness(-0.2)_zen
-tolerance off-by-one
-~ able-pine-47f203148a:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Saturation(-0.2)_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Alpha(-0.2)_zen
-tolerance off-by-one
-~ lunar-hull-58c137af98:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Sepia_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters GrayscaleNtsc_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters GrayscaleRy_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters GrayscaleFlat_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters GrayscaleBt709_zen
-tolerance off-by-one
-~ dense-ore-a18bd9a400:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
-## test_simple_filters Invert_zen
-tolerance off-by-one
-~ rough-heron-94e6431b55:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
 ## test_white_balance_image_threshold_5 t0.5_zen
 tolerance off-by-one
 ~ apt-lion-da943ad82f:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_simple_filters Contrast(1.0)_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Brightness(1.0)_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Saturation(1.0)_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Alpha(1.0)_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Contrast(0.3)_zen
+tolerance off-by-one
+~ equal-lark-f5ec4a6fd3:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Brightness(0.3)_zen
+tolerance off-by-one
+~ only-core-0ea95be314:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Saturation(0.3)_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Alpha(0.3)_zen
+tolerance off-by-one
+~ meek-wolf-a3d1e3f755:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Contrast(-1.0)_zen
+tolerance off-by-one
+~ rich-slate-ec61f62b6a:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Brightness(-1.0)_zen
+tolerance off-by-one
+~ nice-coal-5ff12d1777:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Saturation(-1.0)_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Alpha(-1.0)_zen
+tolerance off-by-one
+~ holy-pearl-d25a06b488:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Contrast(-0.2)_zen
+tolerance off-by-one
+~ mad-loom-cc0c3d4a4b:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Brightness(-0.2)_zen
+tolerance off-by-one
+~ able-pine-47f203148a:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Saturation(-0.2)_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Alpha(-0.2)_zen
+tolerance off-by-one
+~ prime-sole-f23038a794:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Sepia_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters GrayscaleNtsc_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters GrayscaleRy_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters GrayscaleFlat_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters GrayscaleBt709_zen
+tolerance off-by-one
+~ dense-ore-a18bd9a400:sea  x86_64-avx512  @fa264b4a  auto-accepted
+
+## test_simple_filters Invert_zen
+tolerance off-by-one
+~ rough-heron-94e6431b55:sea  x86_64-avx512  @fa264b4a  auto-accepted

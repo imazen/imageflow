@@ -218,8 +218,14 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         // ─── Filters: zenfilters nodes ───
         Node::ColorFilterSrgb(filter) => translate_color_filter(filter, &mut result.nodes),
 
-        Node::ColorMatrixSrgb { matrix: _matrix } => {
-            Err(TranslateError::Unsupported("color_matrix_srgb (not yet in zenfilters)".into()))
+        Node::ColorMatrixSrgb { matrix } => {
+            // Flatten [[f32; 5]; 5] → [f32; 25] row-major for zenfilters.color_matrix.
+            let flat: Vec<f32> = matrix.iter().flat_map(|row| row.iter().copied()).collect();
+            push_filter_node(
+                &mut result.nodes,
+                "zenfilters.color_matrix",
+                &[("matrix", ParamValue::F32Array(flat))],
+            )
         }
 
         Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold: _threshold } => {
@@ -401,9 +407,9 @@ fn translate_color_filter(
             push_filter_node(nodes, "zenfilters.temperature", &[("amount", ParamValue::F32(0.3))])
         }
         ColorFilterSrgb::Invert => push_filter_node(nodes, "zenfilters.invert", &[]),
-        ColorFilterSrgb::Alpha(_a) => Err(TranslateError::Unsupported(
-            "color_filter_srgb::Alpha (not yet in zenfilters)".into(),
-        )),
+        ColorFilterSrgb::Alpha(a) => {
+            push_filter_node(nodes, "zenfilters.alpha", &[("factor", ParamValue::F32(*a))])
+        }
         ColorFilterSrgb::Contrast(c) => {
             // v2 contrast is centered at 1.0 (no change), range ~0..2.
             // zenfilters contrast is centered at 0.0, range -1..1.
