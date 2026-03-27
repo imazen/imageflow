@@ -35,3 +35,11 @@ tolerance zensim:99 (dissim 0.01)
 ## test_trim_whitespace_with_padding_no_resize gray_bg_zen
 tolerance zensim:99 (dissim 0.01)
 ~ aged-fern-2f03b6f295:sea  x86_64-avx512  @ae976933  auto-accepted
+
+## test_trim_resize_whitespace_without_padding 450x450_gray_zen
+tolerance zensim:99 (dissim 0.01)
+~ lone-gust-29ffb7713b:sea  x86_64-avx512  @8a02fd84  auto-accepted
+
+## test_trim_resize_whitespace_with_padding 450x450_gray_zen
+tolerance zensim:99 (dissim 0.01)
+~ sandy-wheat-391b1239dc:sea  x86_64-avx512  @8a02fd84  auto-accepted

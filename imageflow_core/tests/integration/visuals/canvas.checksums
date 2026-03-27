@@ -106,7 +106,7 @@ tolerance off-by-one
 
 ## test_round_corners_command_string landscape_mixed_radii_png_zen
 tolerance off-by-one
-~ lucky-shore-805a21bc5b:sea  x86_64-avx512  @2d81fc05  auto-accepted
+~ plush-viper-d9a26c9223:sea  x86_64-avx512  @8a02fd84  auto-accepted
 
 ## test_pixels_region pixel_coords_zen
 tolerance off-by-one
@@ -138,7 +138,7 @@ tolerance off-by-one
 
 ## test_expand_rect fill_expand_hermite_linear_zen
 tolerance off-by-one
-~ hasty-bear-fd9dc3accf:sea  x86_64-avx512  @2d81fc05  auto-accepted
+~ raw-nest-dd2079bbc7:sea  x86_64-avx512  @8a02fd84  auto-accepted
 
 ## test_round_corners_large 400x400_r200_zen
 tolerance off-by-one
