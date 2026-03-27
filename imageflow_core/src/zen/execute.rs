@@ -610,12 +610,16 @@ fn apply_icc_transform(
     }
 }
 
-/// Get the sRGB ICC profile bytes.
+/// Get the sRGB ICC profile bytes (without CICP to avoid interference).
 fn srgb_icc_profile() -> Vec<u8> {
     use std::sync::OnceLock;
     static SRGB: OnceLock<Vec<u8>> = OnceLock::new();
     SRGB.get_or_init(|| {
-        moxcms::ColorProfile::new_srgb().encode().unwrap_or_default()
+        // Build sRGB profile without CICP metadata to avoid
+        // CICP-based TRC override when re-parsed by moxcms.
+        let mut profile = moxcms::ColorProfile::new_srgb();
+        profile.cicp = None;
+        profile.encode().unwrap_or_default()
     }).clone()
 }
 
