@@ -14,6 +14,7 @@
 //! Gated behind the `zen-pipeline` feature.
 
 mod captured;
+mod cms;
 mod color;
 mod context_bridge;
 mod converter;
