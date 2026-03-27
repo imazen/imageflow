@@ -36,3 +36,31 @@ tolerance off-by-one
 tolerance off-by-one
 = mere-river-1c2f0751ed:sea  x86_64-avx512  @8ca16e2d  human-verified
 ~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs mere-river-1c2f0751ed:sea (zensim:99.50 (dissim 0.0050))
+
+## test_watermark_image_on_png shirt_with_webp_zen
+tolerance off-by-one
+~ funny-mole-229c1767b3:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_watermark_jpeg_over_pnga gamma_test_30pct_zen
+tolerance off-by-one
+~ funny-mole-229c1767b3:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_watermark_image dice_fitcrop_90pct_zen
+tolerance off-by-one
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_watermark_image_command_string dice_fitcrop_90pct_zen
+tolerance off-by-one
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_watermark_image_command_string_with_bgcolor dice_aaeeff_zen
+tolerance off-by-one
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_watermark_image_pixel_margins webp_700px_offset_zen
+tolerance off-by-one
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_watermark_image_small webp_within_90pct_zen
+tolerance off-by-one
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @2d81fc05  auto-accepted

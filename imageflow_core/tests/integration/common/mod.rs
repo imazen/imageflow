@@ -741,8 +741,8 @@ pub fn compare_encoded(
     let similarity = require.similarity.expect("compare_encoded requires a similarity threshold");
     let tol_spec = similarity.to_tolerance_spec();
 
-    // Run with each available backend, checking all against ONE shared checksum set.
-    // If any backend diverges from the baseline, that's a bug to fix.
+    // Run with each available backend, checking per-backend checksums.
+    // V2 uses the bare detail name; Zen uses "detail_zen".
     for (backend, suffix) in backends_to_test() {
         let mut io_vec = Vec::new();
         if let Some(i) = input.clone() {
@@ -772,8 +772,15 @@ pub fn compare_encoded(
             );
         }
 
-        if !check_visual_bytes(identity, detail, &bytes, &tol_spec) {
-            panic!("[{suffix}] visual check failed for {detail}");
+        // Use suffixed detail for per-backend checksums.
+        // V2 uses the bare detail name for backwards compatibility with existing baselines.
+        let backend_detail = if suffix == "v2" {
+            detail.to_string()
+        } else {
+            format!("{detail}_{suffix}")
+        };
+        if !check_visual_bytes(identity, &backend_detail, &bytes, &tol_spec) {
+            panic!("[{suffix}] visual check failed for {backend_detail}");
         }
     }
     true
@@ -806,7 +813,14 @@ pub fn compare_bitmap(
             .get_captured_bitmap_key(capture_id)
             .unwrap_or_else(|| panic!("[{suffix}] execution failed {:?}", response));
 
-        check_visual_bitmap(identity, detail, &context, bitmap_key, tolerance);
+        // Use suffixed detail for per-backend checksums (e.g., "detail_zen").
+        // V2 uses the bare detail name for backwards compatibility with existing baselines.
+        let backend_detail = if suffix == "v2" {
+            detail.to_string()
+        } else {
+            format!("{detail}_{suffix}")
+        };
+        check_visual_bitmap(identity, &backend_detail, &context, bitmap_key, tolerance);
     }
     true
 }

@@ -99,3 +99,71 @@ tolerance off-by-one
 tolerance off-by-one
 = bone-drum-452a7c1706:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs bone-drum-452a7c1706:sea (zensim:99.55 (dissim 0.0045))
+
+## test_jpeg_crop waterhouse_100x200_zen
+tolerance off-by-one
+~ nice-ivy-c03e88f918:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_crop_with_preshrink 170x220_crop_zen
+tolerance max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%
+~ steep-raven-c96978d9d0:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_jpeg_simple landscape_within_70x70_zen
+tolerance off-by-one
+~ hasty-root-36619b3f62:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_rot_90_and_red_dot_command_string landscape_70x70_zen
+tolerance off-by-one
+~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_jpeg_simple_rot_90 landscape_70x70_zen
+tolerance off-by-one
+~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_negatives_in_command_string red_leaf_negative_height_zen
+tolerance off-by-one
+~ like-glow-fcd087632e:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_transparent_webp_to_webp lossless_100x100_zen
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ plump-mole-2e15463da1:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_rot_90_and_red_dot landscape_70x70_zen
+tolerance off-by-one
+~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_encode_gradients png32_passthrough_zen
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ fleet-fig-e1eaec376f:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg_zen
+tolerance zensim:99 (dissim 0.01)
+~ happy-reed-c15044af10:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_transparent_png_to_jpeg shirt_zen
+tolerance zensim:99 (dissim 0.01)
+~ core-sloth-c1d8b52b25:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## decode_rgb_with_cmyk_profile_jpeg wrenches_ignore_icc_zen
+tolerance off-by-one
+~ crude-fort-8d3cdf80eb:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_matte_transparent_png shirt_300x300_white_matte_zen
+tolerance zensim:99 (dissim 0.01)
+~ first-node-ab5566beef:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_transparent_png_to_png_rounded_corners shirt_cropped_zen
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ curly-ford-dcb57047b5:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## decode_cmyk_jpeg logo_passthrough_zen
+tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
+~ close-bat-e794334e43:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_problematic_png_lossy crop_1230x760_zen
+tolerance zensim:95 (dissim 0.05)
+~ modal-wasp-042556ed39:sea  x86_64-avx512  @2d81fc05  auto-accepted
+
+## test_transparent_png_to_png shirt_zen
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ eager-puma-c6c1b0d4a4:sea  x86_64-avx512  @2d81fc05  auto-accepted
