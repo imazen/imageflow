@@ -70,6 +70,18 @@ pub fn map_preset(preset: &EncoderPreset) -> Result<PresetMapping, TranslateErro
             intent.quality_dpr = *quality_profile_dpr;
             intent.lossless = lossless.map(map_bool_keep);
 
+            // Formats that are inherently lossless (PNG, GIF) should default
+            // to lossless when not explicitly specified. Without this, the
+            // zen encoder applies lossy quantization to PNG output.
+            if intent.lossless.is_none() {
+                match zen_format {
+                    zencodecs::ImageFormat::Png | zencodecs::ImageFormat::Gif => {
+                        intent.lossless = Some(zencodecs::BoolKeep::True);
+                    }
+                    _ => {}
+                }
+            }
+
             if let Some(allow) = allow {
                 intent.allowed = map_allowed_formats(allow);
             }
