@@ -1120,6 +1120,33 @@ pub struct FrameSizeLimit {
     pub megapixels: f32,
 }
 
+/// Color management mode for the pipeline.
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub enum CmsMode {
+    /// Imageflow v2 compatibility: convert to sRGB on decode.
+    ///
+    /// Vendor "sRGB-like" profiles (e.g., Canon, Sony calibrated sRGB)
+    /// are treated as sRGB and skipped (no CMS transform). All pixel
+    /// processing happens in sRGB 8-bit. Matches v2 behavior bug-for-bug.
+    Imageflow2Compat,
+
+    /// Scene-referred: preserve source color space through the pipeline.
+    ///
+    /// ICC profiles are applied accurately. Wide-gamut content (P3,
+    /// Rec.2020, ProPhoto) is preserved. Transform to output gamut
+    /// happens at encode time. Correct for modern color workflows.
+    SceneReferred,
+}
+
+impl Default for CmsMode {
+    fn default() -> Self {
+        // Default to v2 compat for back-compatibility.
+        Self::Imageflow2Compat
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -1127,20 +1154,24 @@ pub struct ExecutionSecurity {
     pub max_decode_size: Option<FrameSizeLimit>,
     pub max_frame_size: Option<FrameSizeLimit>,
     pub max_encode_size: Option<FrameSizeLimit>,
+    /// Color management mode. Defaults to Imageflow2Compat.
+    pub cms_mode: CmsMode,
 }
 
 impl ExecutionSecurity {
     pub fn sane_defaults() -> Self {
         ExecutionSecurity {
-            // Set max_decode_size to reject oversized images early during decode
-            // Matches typical web image limits
             max_decode_size: Some(FrameSizeLimit { w: 12000, h: 12000, megapixels: 100f32 }),
             max_frame_size: Some(FrameSizeLimit { w: 10000, h: 10000, megapixels: 100f32 }),
             max_encode_size: None,
+            cms_mode: CmsMode::default(),
         }
     }
     pub fn unspecified() -> Self {
-        ExecutionSecurity { max_decode_size: None, max_frame_size: None, max_encode_size: None }
+        ExecutionSecurity {
+            max_decode_size: None, max_frame_size: None, max_encode_size: None,
+            cms_mode: CmsMode::default(),
+        }
     }
 }
 

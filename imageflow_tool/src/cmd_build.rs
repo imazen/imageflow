@@ -280,7 +280,7 @@ impl CmdBuild {
         let unlimited_frame_size =
             s::FrameSizeLimit { w: i32::MAX as u32, h: i32::MAX as u32, megapixels: f32::MAX };
         if lowercase_args.contains(&"disabled".to_string()) {
-            security = Some(s::ExecutionSecurity {
+            security = Some(s::ExecutionSecurity { cms_mode: Default::default(),
                 max_decode_size: Some(unlimited_frame_size),
                 max_frame_size: Some(unlimited_frame_size),
                 max_encode_size: Some(unlimited_frame_size),
@@ -341,7 +341,7 @@ impl CmdBuild {
                     args_string
                 )));
             }
-            security = Some(s::ExecutionSecurity {
+            security = Some(s::ExecutionSecurity { cms_mode: Default::default(),
                 max_frame_size: Some(max_frame_size),
                 ..s::ExecutionSecurity::sane_defaults()
             });

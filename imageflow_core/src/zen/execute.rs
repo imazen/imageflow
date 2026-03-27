@@ -314,7 +314,7 @@ fn execute_steps(
         }
     }
 
-    let (decision, source) = probe_resolve_decode(input_data, &pipeline, &pipeline.decoder_commands)?;
+    let (decision, source) = probe_resolve_decode(input_data, &pipeline, &pipeline.decoder_commands, security.cms_mode)?;
 
     let converters = super::converter::imageflow_converters();
     let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
@@ -480,6 +480,7 @@ fn probe_resolve_decode(
     input_data: &[u8],
     pipeline: &TranslatedPipeline,
     decoder_commands: &Option<Vec<imageflow_types::DecoderCommand>>,
+    cms_mode: imageflow_types::CmsMode,
 ) -> Result<(zencodecs::FormatDecision, Box<dyn zenpipe::Source>), ZenError> {
     let registry = AllowedFormats::all();
     let info = zencodecs::from_bytes(input_data)
@@ -513,7 +514,7 @@ fn probe_resolve_decode(
     // ICC color management: if the source has an embedded ICC profile that
     // isn't sRGB, transform to sRGB using moxcms. This matches v2 behavior
     // where CMS transforms to sRGB during decode.
-    source = apply_icc_transform(source, &info)?;
+    source = apply_icc_transform(source, &info, cms_mode)?;
 
     // PNG gAMA/cHRM: if no ICC profile, try to synthesize from PNG metadata.
     if info.source_color.icc_profile.is_none() && info.format == zencodecs::ImageFormat::Png {
@@ -550,6 +551,7 @@ fn probe_resolve_decode(
 fn apply_icc_transform(
     source: Box<dyn zenpipe::Source>,
     info: &zencodecs::ImageInfo,
+    cms_mode: imageflow_types::CmsMode,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
     // 1. Try embedded ICC profile first.
     let src_icc = if let Some(icc) = &info.source_color.icc_profile {
@@ -564,9 +566,22 @@ fn apply_icc_transform(
         None => return Ok(source), // No ICC — handled below via raw PNG parsing
     };
 
-    // Skip sRGB→sRGB transforms — identity CMS roundtrip introduces errors.
-    if is_srgb_icc_profile(&src_icc) {
-        return Ok(source);
+    // In compat mode, skip transforms for sRGB-like profiles (loose match).
+    // In scene-referred mode, only skip for exact sRGB (strict match).
+    match cms_mode {
+        imageflow_types::CmsMode::Imageflow2Compat => {
+            // V2 behavior: skip any profile that looks like sRGB.
+            // Uses description-tag heuristic — catches vendor variants.
+            if info.source_color.is_srgb() || is_srgb_icc_profile_loose(&src_icc) {
+                return Ok(source);
+            }
+        }
+        imageflow_types::CmsMode::SceneReferred => {
+            // Strict: only skip for exact sRGB (primaries + TRC match).
+            if is_srgb_icc_profile(&src_icc) {
+                return Ok(source);
+            }
+        }
     }
 
     let srgb_icc = srgb_icc_profile();
@@ -609,6 +624,16 @@ fn srgb_icc_profile() -> Vec<u8> {
 /// Parses the profile with moxcms and checks if its primaries and TRC match sRGB.
 /// Camera JPEGs embed vendor-specific sRGB profiles with different bytes but
 /// same color space — byte comparison doesn't work, need semantic comparison.
+/// Loose sRGB check matching v2 behavior: skip if profile description says "sRGB".
+///
+/// This is intentionally loose — vendor-calibrated profiles (Canon, Sony) have
+/// "sRGB" in their description but slightly different primaries/TRC. V2 skips
+/// transforms for these, so we do too in compat mode.
+fn is_srgb_icc_profile_loose(icc_bytes: &[u8]) -> bool {
+    // Check if the ICC profile description contains "sRGB".
+    zencodec::icc_profile_is_srgb(icc_bytes)
+}
+
 /// Check if an ICC profile is sRGB-equivalent by comparing primaries AND TRC curves.
 ///
 /// Uses moxcms to parse the profile and compares colorants (with 0.0001 tolerance

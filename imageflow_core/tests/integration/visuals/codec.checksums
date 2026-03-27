@@ -1,101 +1,56 @@
 ## test_negatives_in_command_string red_leaf_negative_height
 tolerance off-by-one
-= short-fern-3a18947ea1:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ hefty-hive-6c9c6425bb:sea  x86_64-avx512  @0a8f6a9b  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
-~ like-glow-fcd087632e:sea  x86_64-avx512  @9ba39526  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
-
-## test_rot_90_and_red_dot landscape_70x70
-tolerance off-by-one
-= prone-owl-3a3d75df9b:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs prone-owl-3a3d75df9b:sea (zensim:99.55 (dissim 0.0045))
-
-## test_rot_90_and_red_dot_command_string landscape_70x70
-tolerance off-by-one
-= close-larch-796effad97:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs close-larch-796effad97:sea (zensim:99.55 (dissim 0.0045))
-
-## test_branching_crop_whitespace gradient_output_2
-tolerance zensim:99 (dissim 0.01)
-= level-palm-6ad84afa17:sea  x86_64-avx512  @8ca16e2d  new-baseline
-
-## test_encode_gradients png32_passthrough
-tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
-= husky-song-433de0fc17:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ odd-ore-da1ac7d3f2:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs husky-song-433de0fc17:sea (zensim:99.87 (dissim 0.0013), 0.37% pixels ±1, max-delta:[1,0,0], category:rounding, biased)
-~ fleet-fig-e1eaec376f:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%) vs husky-song-433de0fc17:sea (zensim:99.76 (dissim 0.0024))
-
-## test_webp_to_webp_quality q5_100x100
-tolerance zensim:95 (dissim 0.05)
-= false-reed-eb43f7fd24:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ empty-stone-6d39a78df2:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:95 (dissim 0.05) vs false-reed-eb43f7fd24:sea (zensim:99.88 (dissim 0.0012))
+~ like-glow-fcd087632e:sea  x86_64-avx512  @ebfd02c7  auto-accepted
 
 ## decode_rgb_with_cmyk_profile_jpeg wrenches_ignore_icc
 tolerance off-by-one
-= great-snail-b22fce67f5:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ crude-fort-8d3cdf80eb:sea  x86_64-avx512  @ebfd02c7  auto-accepted
 
-## test_transparent_webp_to_webp lossless_100x100
-tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
-= fleet-trout-40c532f291:sea  x86_64-avx512  @8ca16e2d  new-baseline
-
-## test_matte_transparent_png shirt_300x300_white_matte
-tolerance zensim:99 (dissim 0.01)
-= rapid-olive-5907234423:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ moved-tuna-df63ab2c17:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs rapid-olive-5907234423:sea (zensim:97.94 (dissim 0.021), 11.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
-~ first-node-ab5566beef:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs rapid-olive-5907234423:sea (zensim:99.81 (dissim 0.0019))
+## test_rot_90_and_red_dot_command_string landscape_70x70
+tolerance off-by-one
+~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @ebfd02c7  auto-accepted
 
 ## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg
 tolerance zensim:99 (dissim 0.01)
-= north-axe-3d46871ac4:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ curly-lava-84ffbde2f9:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs north-axe-3d46871ac4:sea (zensim:96.19 (dissim 0.038), 28.4% pixels ±5, max-delta:[5,4,5], category:unclassified)
-~ past-creek-f22f736f64:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs north-axe-3d46871ac4:sea (zensim:99.80 (dissim 0.0020))
-
-## test_transparent_png_to_png_rounded_corners shirt_cropped
-tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
-= moot-song-b4af647101:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ next-flock-5c9d9d9c01:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs moot-song-b4af647101:sea (zensim:98.21 (dissim 0.018), 15.9% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ curly-lava-84ffbde2f9:sea  x86_64-avx512  @ebfd02c7  auto-accepted
 
 ## test_jpeg_crop waterhouse_100x200
 tolerance off-by-one
-= cross-dust-04763ef509:sea  x86_64-avx512  @8ca16e2d  new-baseline
-
-## test_transparent_png_to_jpeg shirt
-tolerance zensim:99 (dissim 0.01)
-= final-otter-e6b0565eaf:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ fawn-hazel-200d580465:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs final-otter-e6b0565eaf:sea (zensim:94.74 (dissim 0.053), 27.7% pixels ±8, max-delta:[6,6,8], category:unclassified)
+~ cross-dust-04763ef509:sea  x86_64-avx512  @ebfd02c7  auto-accepted
 
 ## test_crop_with_preshrink 170x220_crop
 tolerance max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%
-= mild-pond-a88cf0d96f:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ steep-raven-c96978d9d0:sea  x86_64-avx512  @286d6028  auto-accepted within tolerance (within max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%) vs mild-pond-a88cf0d96f:sea (zensim:98.35 (dissim 0.017), 9.4% pixels ±2, max-delta:[2,1,1], category:rounding, biased)
+~ mild-pond-a88cf0d96f:sea  x86_64-avx512  @ebfd02c7  auto-accepted
 
-## test_transparent_png_to_png shirt
+## test_transparent_png_to_jpeg shirt
+tolerance zensim:99 (dissim 0.01)
+~ fawn-hazel-200d580465:sea  x86_64-avx512  @ebfd02c7  auto-accepted
+
+## test_transparent_webp_to_webp lossless_100x100
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
-= loud-stork-e3a76d92e7:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ lazy-disc-329f73dcff:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs loud-stork-e3a76d92e7:sea (zensim:98.34 (dissim 0.017), 13.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
-~ fancy-chip-63ffb8a1e5:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%) vs loud-stork-e3a76d92e7:sea (zensim:99.76 (dissim 0.0024))
+~ fleet-trout-40c532f291:sea  x86_64-avx512  @ebfd02c7  auto-accepted
+
+## test_webp_to_webp_quality q5_100x100
+tolerance zensim:95 (dissim 0.05)
+~ false-reed-eb43f7fd24:sea  x86_64-avx512  @ebfd02c7  auto-accepted
+
+## test_transparent_png_to_png_rounded_corners shirt_cropped
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ next-flock-5c9d9d9c01:sea  x86_64-avx512  @ebfd02c7  auto-accepted
 
 ## decode_cmyk_jpeg logo_passthrough
 tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
-= bulk-mare-1741a4171a:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ ill-slate-0bfaf9f16b:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs bulk-mare-1741a4171a:sea (zensim:98.41 (dissim 0.016), 32.4% pixels ±3, max-delta:[2,2,3], category:unclassified)
-~ red-box-ccae6b6de4:sea  aarch64  @ace43a05  auto-accepted vs bulk-mare-1741a4171a:sea  diff d:3 s:98.4 px:32.4%
-~ brave-wheat-a1d8dbb9f1:sea  aarch64-windows  @ace43a05  auto-accepted vs bulk-mare-1741a4171a:sea  diff d:2 s:98.4 px:31.9%
-~ few-peak-b5b90811ec:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%) vs bulk-mare-1741a4171a:sea (zensim:98.88 (dissim 0.011))
+~ ill-slate-0bfaf9f16b:sea  x86_64-avx512  @ebfd02c7  auto-accepted
+
+## test_transparent_png_to_png shirt
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ lazy-disc-329f73dcff:sea  x86_64-avx512  @ebfd02c7  auto-accepted
+~ eager-puma-c6c1b0d4a4:sea  x86_64-avx512  @ebfd02c7  auto-accepted within tolerance (within max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%) vs lazy-disc-329f73dcff:sea (zensim:99.73 (dissim 0.0027))
+
+## test_matte_transparent_png shirt_300x300_white_matte
+tolerance zensim:99 (dissim 0.01)
+~ first-node-ab5566beef:sea  x86_64-avx512  @ebfd02c7  auto-accepted
 
 ## test_problematic_png_lossy crop_1230x760
 tolerance zensim:95 (dissim 0.05)
-= mad-kite-f0fa059c45:sea  x86_64-avx512  @8ca16e2d  new-baseline
-
-## test_branching_crop_whitespace gradient_output_1
-tolerance zensim:99 (dissim 0.01)
-= cold-sand-b519344065:sea  x86_64-avx512  @8ca16e2d  new-baseline
-
-## test_jpeg_simple landscape_within_70x70
-tolerance off-by-one
-= major-finch-a36f62a66e:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ hasty-root-36619b3f62:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs major-finch-a36f62a66e:sea (zensim:99.43 (dissim 0.0057))
-
-## test_jpeg_simple_rot_90 landscape_70x70
-tolerance off-by-one
-= bone-drum-452a7c1706:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs bone-drum-452a7c1706:sea (zensim:99.55 (dissim 0.0045))
+~ mad-kite-f0fa059c45:sea  x86_64-avx512  @ebfd02c7  auto-accepted
