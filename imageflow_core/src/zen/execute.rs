@@ -564,6 +564,11 @@ fn apply_icc_transform(
         None => return Ok(source), // No ICC — handled below via raw PNG parsing
     };
 
+    // TODO: Skip sRGB→sRGB transforms to avoid CMS rounding errors.
+    // SourceColor::is_srgb() exists but description-based ICC detection
+    // is too aggressive — some vendor "sRGB" profiles are calibrated
+    // differently. Need moxcms TRC curve comparison for correctness.
+
     let srgb_icc = srgb_icc_profile();
     let src_format = source.format();
     let pixel_format = src_format.pixel_format();
