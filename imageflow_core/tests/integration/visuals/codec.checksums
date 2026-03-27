@@ -152,10 +152,6 @@ tolerance off-by-one
 tolerance zensim:99 (dissim 0.01)
 ~ first-node-ab5566beef:sea  x86_64-avx512  @2d81fc05  auto-accepted
 
-## test_transparent_png_to_png_rounded_corners shirt_cropped_zen
-tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
-~ curly-ford-dcb57047b5:sea  x86_64-avx512  @2d81fc05  auto-accepted
-
 ## decode_cmyk_jpeg logo_passthrough_zen
 tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
 ~ close-bat-e794334e43:sea  x86_64-avx512  @2d81fc05  auto-accepted
@@ -179,3 +175,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_branching_crop_whitespace gradient_output_2_zen
 tolerance zensim:99 (dissim 0.01)
 ~ fawn-grain-bd8b1d00ce:sea  x86_64-avx512  @567ef9ca  auto-accepted
+
+## test_transparent_png_to_png_rounded_corners shirt_cropped_zen
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ known-vale-4346ac101f:sea  x86_64-avx512  @4faabf31  auto-accepted

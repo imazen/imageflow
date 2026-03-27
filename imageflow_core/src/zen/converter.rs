@@ -93,7 +93,7 @@ impl NodeConverter for ExpandCanvasConverter {
         // The zenlayout.expand_canvas node stores color as a CSS-style string:
         // "transparent", "white", "black", or "#RRGGBB" / "#RRGGBBAA".
         let bg_color = match node.get_param("color") {
-            Some(ParamValue::Str(ref s)) => parse_color_string(s),
+            Some(ParamValue::Str(ref s)) => parse_css_color(s),
             _ => [0u8, 0, 0, 0], // transparent (default)
         };
 
@@ -109,29 +109,8 @@ impl NodeConverter for ExpandCanvasConverter {
     }
 }
 
-/// Parse a CSS-style color string to RGBA bytes.
-///
-/// Accepts: "transparent", "white", "black", "#RRGGBB", "#RRGGBBAA".
-fn parse_color_string(s: &str) -> [u8; 4] {
-    match s.to_lowercase().as_str() {
-        "transparent" | "" => [0, 0, 0, 0],
-        "white" => [255, 255, 255, 255],
-        "black" => [0, 0, 0, 255],
-        hex if hex.starts_with('#') => {
-            let hex = &hex[1..];
-            let r = u8::from_str_radix(hex.get(0..2).unwrap_or("00"), 16).unwrap_or(0);
-            let g = u8::from_str_radix(hex.get(2..4).unwrap_or("00"), 16).unwrap_or(0);
-            let b = u8::from_str_radix(hex.get(4..6).unwrap_or("00"), 16).unwrap_or(0);
-            let a = if hex.len() >= 8 {
-                u8::from_str_radix(&hex[6..8], 16).unwrap_or(255)
-            } else {
-                255
-            };
-            [r, g, b, a]
-        }
-        _ => [0, 0, 0, 0], // unknown → transparent
-    }
-}
+// Color parsing delegated to super::color module.
+use super::color::parse_css_color;
 
 /// Converter for `zenlayout.region` — viewport with crop + expand.
 ///

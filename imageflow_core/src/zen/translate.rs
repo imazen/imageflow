@@ -219,16 +219,13 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         Node::ColorFilterSrgb(filter) => translate_color_filter(filter, &mut result.nodes),
 
         Node::ColorMatrixSrgb { matrix: _matrix } => {
-            // TODO: Map to zenfilters color_matrix when available.
-            // Skip for now — not commonly used in tests.
-            Ok(())
+            Err(TranslateError::Unsupported("color_matrix_srgb (not yet in zenfilters)".into()))
         }
 
         Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold: _threshold } => {
-            // Requires full-frame materialization for histogram analysis.
-            // TODO: Implement via NodeOp::Analyze when zenfilters has white balance.
-            // Skip for now — tests will fail on visual comparison, not Unsupported.
-            Ok(())
+            Err(TranslateError::Unsupported(
+                "white_balance_histogram (requires full-frame materialization)".into(),
+            ))
         }
 
         // ─── Canvas operations ───
@@ -266,10 +263,7 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         }
 
         Node::Watermark(_wm) => {
-            // TODO: Implement watermark overlay using NodeOp::Overlay.
-            // For now, skip watermarks to unblock other tests.
-            // Watermark tests will fail on visual comparison, not on Unsupported error.
-            Ok(())
+            Err(TranslateError::Unsupported("watermark (NodeOp::Overlay not yet wired)".into()))
         }
 
         Node::CopyRectToCanvas { from_x, from_y, w, h, x, y } => {
@@ -287,11 +281,11 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         ),
 
         Node::RoundImageCorners { radius, background_color } => {
-            let r = match radius {
-                RoundCornersMode::Percentage(p) => *p,
-                RoundCornersMode::Pixels(px) => *px,
-                RoundCornersMode::Circle => 50.0,
-                _ => 10.0,
+            let (r, mode) = match radius {
+                RoundCornersMode::Percentage(p) => (*p, "percentage"),
+                RoundCornersMode::Pixels(px) => (*px, "pixels"),
+                RoundCornersMode::Circle => (50.0, "circle"),
+                _ => (10.0, "percentage"),
             };
             let bg = color_to_rgba(background_color);
             push_layout_node(
@@ -299,6 +293,7 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
                 "zenpipe.round_corners",
                 &[
                     ("radius", ParamValue::F32(r)),
+                    ("mode", ParamValue::Str(mode.to_string())),
                     ("bg_r", ParamValue::U32(bg[0] as u32)),
                     ("bg_g", ParamValue::U32(bg[1] as u32)),
                     ("bg_b", ParamValue::U32(bg[2] as u32)),
@@ -315,10 +310,9 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
             ))
         }
 
-        Node::WatermarkRedDot => {
-            // Debug feature — draw a small red dot. Implement as no-op to not block tests.
-            Ok(())
-        }
+        Node::WatermarkRedDot => Err(TranslateError::Unsupported(
+            "watermark_red_dot (debug overlay not yet wired)".into(),
+        )),
 
         // Internal test node — no-op in zen pipeline.
         Node::CaptureBitmapKey { .. } => Ok(()),
@@ -407,11 +401,9 @@ fn translate_color_filter(
             push_filter_node(nodes, "zenfilters.temperature", &[("amount", ParamValue::F32(0.3))])
         }
         ColorFilterSrgb::Invert => push_filter_node(nodes, "zenfilters.invert", &[]),
-        ColorFilterSrgb::Alpha(_a) => {
-            // v2 Alpha filter sets global opacity.
-            // Not commonly used in test suite; skip for now.
-            Ok(())
-        }
+        ColorFilterSrgb::Alpha(_a) => Err(TranslateError::Unsupported(
+            "color_filter_srgb::Alpha (not yet in zenfilters)".into(),
+        )),
         ColorFilterSrgb::Contrast(c) => {
             // v2 contrast is centered at 1.0 (no change), range ~0..2.
             // zenfilters contrast is centered at 0.0, range -1..1.
@@ -445,14 +437,21 @@ fn translate_color_filter(
 
 // ─── Node construction helpers ───
 
-/// Build a shared node registry containing all zenlayout, zenresize, and zenfilters nodes.
-fn zen_registry() -> NodeRegistry {
-    let mut registry = NodeRegistry::new();
-    zenlayout::zennode_defs::register(&mut registry);
-    zenresize::zennode_defs::register(&mut registry);
-    zenfilters::zennode_defs::register(&mut registry);
-    zenpipe::zennode_defs::register(&mut registry);
-    registry
+/// Shared node registry containing all zenlayout, zenresize, zenfilters, and zenpipe nodes.
+///
+/// Initialized once on first use; avoids re-registering all node definitions on every
+/// `push_layout_node` / `push_filter_node` call.
+fn zen_registry() -> &'static NodeRegistry {
+    use std::sync::OnceLock;
+    static REGISTRY: OnceLock<NodeRegistry> = OnceLock::new();
+    REGISTRY.get_or_init(|| {
+        let mut registry = NodeRegistry::new();
+        zenlayout::zennode_defs::register(&mut registry);
+        zenresize::zennode_defs::register(&mut registry);
+        zenfilters::zennode_defs::register(&mut registry);
+        zenpipe::zennode_defs::register(&mut registry);
+        registry
+    })
 }
 
 /// Create a zenlayout node by schema ID and set params.
@@ -558,36 +557,8 @@ fn filter_to_str(filter: &s::Filter) -> &'static str {
     }
 }
 
-/// Convert a v2 Color to a CSS-style string for zenlayout node params.
-fn color_to_css_string(color: &Color) -> String {
-    match color {
-        Color::Transparent => "transparent".to_string(),
-        Color::Black => "#000000FF".to_string(),
-        Color::Srgb(s::ColorSrgb::Hex(hex)) => {
-            let hex = hex.trim_start_matches('#');
-            format!("#{hex}")
-        }
-    }
-}
-
-fn color_to_rgba(color: &Color) -> [u8; 4] {
-    match color {
-        Color::Transparent => [0, 0, 0, 0],
-        Color::Black => [0, 0, 0, 255],
-        Color::Srgb(s::ColorSrgb::Hex(hex)) => {
-            let hex = hex.trim_start_matches('#');
-            let r = u8::from_str_radix(hex.get(0..2).unwrap_or("00"), 16).unwrap_or(0);
-            let g = u8::from_str_radix(hex.get(2..4).unwrap_or("00"), 16).unwrap_or(0);
-            let b = u8::from_str_radix(hex.get(4..6).unwrap_or("00"), 16).unwrap_or(0);
-            let a = if hex.len() >= 8 {
-                u8::from_str_radix(&hex[6..8], 16).unwrap_or(255)
-            } else {
-                255
-            };
-            [r, g, b, a]
-        }
-    }
-}
+// Color parsing delegated to super::color module.
+use super::color::{color_to_css_string, color_to_rgba};
 
 // Custom NodeInstance wrappers removed — all operations now use native
 // zennode definitions in zenpipe::zennode_defs and zenresize::zennode_defs.

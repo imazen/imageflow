@@ -215,11 +215,16 @@ fn execute_steps(
     // Pre-process: expand CommandString nodes using source dimensions from probe.
     let mut steps = expand_command_strings(steps, io_buffers)?;
 
+    // Probe source once for alpha detection (shared with ExpandCanvas fix below).
+    let source_has_alpha = source_has_alpha(&steps, io_buffers);
+
     // Fix transparent ExpandCanvas on opaque sources: when the source image has
     // no alpha channel, transparent padding [0,0,0,0] produces invisible borders
     // that appear black after alpha flattening. Replace with opaque white to match
     // the V2 pipeline's behavior for opaque content.
-    fix_expand_canvas_for_opaque_source(&mut steps, io_buffers);
+    if !source_has_alpha {
+        fix_expand_canvas_for_opaque_source(&mut steps);
+    }
 
     // Collect capture IDs before translation (CaptureBitmapKey is a no-op in translate).
     let capture_ids: Vec<i32> = steps
@@ -478,9 +483,15 @@ fn execute_graph(
 
                 // Walk to predecessor.
                 match predecessors.get(&current) {
-                    Some(preds) if !preds.is_empty() => {
-                        // Take the first (primary) input edge.
+                    Some(preds) if preds.len() == 1 => {
                         current = preds[0];
+                    }
+                    Some(preds) if preds.len() > 1 => {
+                        return Err(ZenError::Pipeline(zenpipe::PipeError::Op(format!(
+                            "node {current} has {} input edges; zen DAG decomposition \
+                             only supports linear pipelines (no multi-input compositing)",
+                            preds.len()
+                        ))));
                     }
                     _ => break, // No predecessors — reached a source node.
                 }
@@ -814,247 +825,6 @@ fn synthesize_icc_from_gama(
     profile.cicp = None;
 
     profile.encode().ok()
-}
-
-/// Build a minimal ICC v2 RGB profile with gamma TRC and optional custom primaries.
-/// Fallback when moxcms profile creation fails.
-fn build_minimal_icc_v2(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> {
-    // ICC v2 profile structure:
-    // Header (128 bytes) + Tag table (4 + N*12) + Tag data
-
-    // Primaries: convert chromaticity xy → XYZ (D50 adapted).
-    // Use sRGB primaries as default.
-    let (wx, wy) =
-        chrm.map_or((0.3127f64, 0.3290), |c| (c[0] as f64 / 100000.0, c[1] as f64 / 100000.0));
-    let (rx, ry) = chrm.map_or((0.64, 0.33), |c| (c[2] as f64 / 100000.0, c[3] as f64 / 100000.0));
-    let (gx, gy) = chrm.map_or((0.30, 0.60), |c| (c[4] as f64 / 100000.0, c[5] as f64 / 100000.0));
-    let (bx, by) = chrm.map_or((0.15, 0.06), |c| (c[6] as f64 / 100000.0, c[7] as f64 / 100000.0));
-
-    // Convert xyY → XYZ with Y=1 for white point
-    let w_xyz = xy_to_xyz(wx, wy);
-    let r_xyz = xy_to_xyz(rx, ry);
-    let g_xyz = xy_to_xyz(gx, gy);
-    let b_xyz = xy_to_xyz(bx, by);
-
-    // Compute RGB→XYZ matrix (before chromatic adaptation)
-    let (m_r, m_g, m_b) = compute_rgb_to_xyz_matrix(r_xyz, g_xyz, b_xyz, w_xyz)?;
-
-    // Chromatic adapt to D50 (ICC PCS) using Bradford
-    let d50 = [0.9642, 1.0000, 0.8249];
-    let chad = bradford_matrix(w_xyz, d50);
-    let mr = mat3_mul_vec3(&chad, &m_r);
-    let mg = mat3_mul_vec3(&chad, &m_g);
-    let mb = mat3_mul_vec3(&chad, &m_b);
-
-    // Build the profile
-    let gamma_fixed = s15fixed16(gamma as f64);
-
-    // 9 tags: rXYZ, gXYZ, bXYZ, rTRC, gTRC, bTRC, wtpt, cprt, desc
-    let n_tags = 9u32;
-    let tag_table_size = 4 + n_tags * 12;
-    let header_size = 128u32;
-
-    // Tag data: each curv tag = 12 bytes (type + reserved + count + gamma)
-    // Each XYZ tag = 20 bytes (type + reserved + 3 × s15Fixed16)
-    // wtpt = 20 bytes, cprt = 12+4 bytes, desc = 12+12 bytes
-
-    let curv_size = 12u32;
-    let xyz_size = 20u32;
-    let cprt_data = b"CC0 ";
-    let cprt_size = (12 + cprt_data.len() as u32 + 3) & !3; // pad to 4
-    let desc_text = b"Synthetic";
-    let desc_size = (12 + 4 + desc_text.len() as u32 + 1 + 12 + 67 + 3) & !3;
-
-    let data_start = header_size + tag_table_size;
-    let mut offset = data_start;
-
-    let mut buf = Vec::with_capacity(512);
-
-    // Placeholder header (128 bytes)
-    buf.resize(128, 0u8);
-
-    // Header fields
-    let total_size_pos = 0; // will be patched
-    buf[4..8].copy_from_slice(b"acsp"); // signature
-    buf[12..16].copy_from_slice(b"mntr"); // device class: monitor
-    buf[16..20].copy_from_slice(b"RGB "); // color space
-    buf[20..24].copy_from_slice(b"XYZ "); // PCS
-                                          // Date/time: 2024-01-01
-    buf[24..26].copy_from_slice(&2024u16.to_be_bytes());
-    buf[26..28].copy_from_slice(&1u16.to_be_bytes());
-    buf[28..30].copy_from_slice(&1u16.to_be_bytes());
-    buf[36..40].copy_from_slice(b"acsp"); // file signature
-    buf[64..68].copy_from_slice(&s15fixed16(1.0).to_be_bytes()); // illuminant X
-    buf[68..72].copy_from_slice(&s15fixed16(1.0).to_be_bytes()); // Y
-    buf[72..76].copy_from_slice(&s15fixed16(1.0).to_be_bytes()); // Z
-    buf[40..44].copy_from_slice(b"APPL"); // preferred CMM
-    buf[8..12].copy_from_slice(&0x02100000u32.to_be_bytes()); // version 2.1
-
-    // Tag count
-    buf.extend_from_slice(&n_tags.to_be_bytes());
-
-    // Tag table entries: [sig:4][offset:4][size:4]
-    let tags: Vec<(&[u8; 4], u32)> = vec![
-        (b"rXYZ", xyz_size),
-        (b"gXYZ", xyz_size),
-        (b"bXYZ", xyz_size),
-        (b"rTRC", curv_size),
-        (b"gTRC", curv_size),
-        (b"bTRC", curv_size),
-        (b"wtpt", xyz_size),
-        (b"cprt", cprt_size),
-        (b"desc", desc_size),
-    ];
-    for (sig, size) in &tags {
-        buf.extend_from_slice(sig.as_slice());
-        buf.extend_from_slice(&offset.to_be_bytes());
-        buf.extend_from_slice(&size.to_be_bytes());
-        offset += size;
-    }
-
-    // Tag data
-    fn write_xyz(buf: &mut Vec<u8>, xyz: &[f64; 3]) {
-        buf.extend_from_slice(b"XYZ "); // type
-        buf.extend_from_slice(&[0u8; 4]); // reserved
-        for v in xyz {
-            buf.extend_from_slice(&s15fixed16(*v).to_be_bytes());
-        }
-    }
-    fn write_curv_gamma(buf: &mut Vec<u8>, gamma_val: f32) {
-        buf.extend_from_slice(b"curv"); // type
-        buf.extend_from_slice(&[0u8; 4]); // reserved
-        buf.extend_from_slice(&1u32.to_be_bytes()); // count = 1 (gamma)
-        let uf8 = (gamma_val as f64 * 256.0) as u16;
-        buf.extend_from_slice(&uf8.to_be_bytes());
-        buf.extend_from_slice(&[0u8; 2]); // padding
-    }
-
-    write_xyz(&mut buf, &mr);
-    write_xyz(&mut buf, &mg);
-    write_xyz(&mut buf, &mb);
-    write_curv_gamma(&mut buf, gamma);
-    write_curv_gamma(&mut buf, gamma);
-    write_curv_gamma(&mut buf, gamma);
-    // wtpt (D50)
-    write_xyz(&mut buf, &d50);
-    // cprt
-    buf.extend_from_slice(b"text");
-    buf.extend_from_slice(&[0u8; 4]);
-    buf.extend_from_slice(cprt_data);
-    while buf.len() % 4 != 0 {
-        buf.push(0);
-    }
-    // desc (minimal)
-    let desc_start = buf.len();
-    buf.extend_from_slice(b"desc");
-    buf.extend_from_slice(&[0u8; 4]);
-    buf.extend_from_slice(&(desc_text.len() as u32 + 1).to_be_bytes());
-    buf.extend_from_slice(desc_text);
-    buf.push(0);
-    // Unicode and ScriptCode records (empty)
-    buf.extend_from_slice(&[0u8; 4]); // Unicode language code
-    buf.extend_from_slice(&0u32.to_be_bytes()); // Unicode count
-    buf.extend_from_slice(&[0u8; 2]); // ScriptCode code
-    buf.push(0); // ScriptCode count
-    buf.extend_from_slice(&[0u8; 67]); // ScriptCode data
-    while buf.len() % 4 != 0 {
-        buf.push(0);
-    }
-
-    // Patch total size
-    let total = buf.len() as u32;
-    buf[0..4].copy_from_slice(&total.to_be_bytes());
-
-    Some(buf)
-}
-
-fn s15fixed16(v: f64) -> i32 {
-    (v * 65536.0) as i32
-}
-
-fn xy_to_xyz(x: f64, y: f64) -> [f64; 3] {
-    if y.abs() < 1e-10 {
-        return [0.0, 0.0, 0.0];
-    }
-    [x / y, 1.0, (1.0 - x - y) / y]
-}
-
-fn compute_rgb_to_xyz_matrix(
-    r: [f64; 3],
-    g: [f64; 3],
-    b: [f64; 3],
-    w: [f64; 3],
-) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
-    // Solve: [R G B] * S = W, where S = [Sr, Sg, Sb]
-    let m = [[r[0], g[0], b[0]], [r[1], g[1], b[1]], [r[2], g[2], b[2]]];
-    let inv = mat3_inv(&m)?;
-    let s = mat3_mul_vec3(&inv, &w);
-
-    Some((
-        [r[0] * s[0], r[1] * s[0], r[2] * s[0]],
-        [g[0] * s[1], g[1] * s[1], g[2] * s[1]],
-        [b[0] * s[2], b[1] * s[2], b[2] * s[2]],
-    ))
-}
-
-fn bradford_matrix(src_w: [f64; 3], dst_w: [f64; 3]) -> [[f64; 3]; 3] {
-    // Bradford chromatic adaptation matrix
-    let brad = [[0.8951, 0.2664, -0.1614], [-0.7502, 1.7135, 0.0367], [0.0389, -0.0685, 1.0296]];
-    let brad_inv = [[0.9870, -0.1471, 0.1600], [0.4323, 0.5184, 0.0493], [-0.0085, 0.0400, 0.9685]];
-    let src_lms = mat3_mul_vec3(&brad, &src_w);
-    let dst_lms = mat3_mul_vec3(&brad, &dst_w);
-    let scale = [
-        [dst_lms[0] / src_lms[0], 0.0, 0.0],
-        [0.0, dst_lms[1] / src_lms[1], 0.0],
-        [0.0, 0.0, dst_lms[2] / src_lms[2]],
-    ];
-    let tmp = mat3_mul(&scale, &brad);
-    mat3_mul(&brad_inv, &tmp)
-}
-
-fn mat3_mul_vec3(m: &[[f64; 3]; 3], v: &[f64; 3]) -> [f64; 3] {
-    [
-        m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
-        m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
-        m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2],
-    ]
-}
-
-fn mat3_mul(a: &[[f64; 3]; 3], b: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
-    let mut r = [[0.0f64; 3]; 3];
-    for i in 0..3 {
-        for j in 0..3 {
-            r[i][j] = a[i][0] * b[0][j] + a[i][1] * b[1][j] + a[i][2] * b[2][j];
-        }
-    }
-    r
-}
-
-fn mat3_inv(m: &[[f64; 3]; 3]) -> Option<[[f64; 3]; 3]> {
-    let det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
-        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
-        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
-    if det.abs() < 1e-10 {
-        return None;
-    }
-    let inv_det = 1.0 / det;
-    Some([
-        [
-            (m[1][1] * m[2][2] - m[1][2] * m[2][1]) * inv_det,
-            (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * inv_det,
-            (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * inv_det,
-        ],
-        [
-            (m[1][2] * m[2][0] - m[1][0] * m[2][2]) * inv_det,
-            (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * inv_det,
-            (m[0][2] * m[1][0] - m[0][0] * m[1][2]) * inv_det,
-        ],
-        [
-            (m[1][0] * m[2][1] - m[1][1] * m[2][0]) * inv_det,
-            (m[0][1] * m[2][0] - m[0][0] * m[2][1]) * inv_det,
-            (m[0][0] * m[1][1] - m[0][1] * m[1][0]) * inv_det,
-        ],
-    ])
 }
 
 /// Parse gAMA/cHRM/cICP from raw PNG bytes, synthesize ICC, and apply transform.
@@ -1629,9 +1399,9 @@ fn collect_decode_infos(
     framewise: &Framewise,
     io_buffers: &HashMap<i32, Vec<u8>>,
 ) -> Vec<(i32, zencodecs::ImageInfo)> {
-    let nodes = match framewise {
-        Framewise::Steps(steps) => steps.as_slice(),
-        Framewise::Graph(g) => return Vec::new(), // TODO: extract from graph
+    let nodes: Vec<&Node> = match framewise {
+        Framewise::Steps(steps) => steps.iter().collect(),
+        Framewise::Graph(g) => g.nodes.values().collect(),
     };
 
     let mut infos = Vec::new();
@@ -1714,22 +1484,7 @@ fn create_canvas_source(
     let format = zenpipe::format::RGBA8_SRGB;
 
     // Parse color to RGBA bytes.
-    let (r, g, b, a) = match &canvas.color {
-        imageflow_types::Color::Transparent => (0u8, 0, 0, 0),
-        imageflow_types::Color::Black => (0, 0, 0, 255),
-        imageflow_types::Color::Srgb(imageflow_types::ColorSrgb::Hex(hex)) => {
-            let hex = hex.trim_start_matches('#');
-            let r = u8::from_str_radix(&hex.get(0..2).unwrap_or("00"), 16).unwrap_or(0);
-            let g = u8::from_str_radix(&hex.get(2..4).unwrap_or("00"), 16).unwrap_or(0);
-            let b = u8::from_str_radix(&hex.get(4..6).unwrap_or("00"), 16).unwrap_or(0);
-            let a = if hex.len() >= 8 {
-                u8::from_str_radix(&hex[6..8], 16).unwrap_or(255)
-            } else {
-                255
-            };
-            (r, g, b, a)
-        }
-    };
+    let [r, g, b, a] = super::color::color_to_rgba(&canvas.color);
 
     // Create pixel buffer filled with the color.
     let row_bytes = w as usize * bpp;
@@ -1747,6 +1502,19 @@ fn create_canvas_source(
     Ok(Box::new(zenpipe::sources::MaterializedSource::from_data(pixels, w, h, format)))
 }
 
+/// Probe whether the source image has an alpha channel.
+fn source_has_alpha(steps: &[Node], io_buffers: &HashMap<i32, Vec<u8>>) -> bool {
+    let decode_io_id = steps.iter().find_map(|n| match n {
+        Node::Decode { io_id, .. } => Some(*io_id),
+        _ => None,
+    });
+    decode_io_id
+        .and_then(|id| io_buffers.get(&id))
+        .and_then(|data| zencodecs::from_bytes(data).ok())
+        .map(|info| info.has_alpha)
+        .unwrap_or(true) // default: assume alpha present (don't modify)
+}
+
 /// Fix ExpandCanvas nodes that use transparent fill on opaque source images.
 ///
 /// When the source image has no alpha channel (e.g., lossy WebP, JPEG), transparent
@@ -1756,23 +1524,7 @@ fn create_canvas_source(
 ///
 /// Only modifies ExpandCanvas nodes where the color is exactly `Color::Transparent`.
 /// Explicitly set colors (even transparent ones via hex) are left unchanged.
-fn fix_expand_canvas_for_opaque_source(steps: &mut [Node], io_buffers: &HashMap<i32, Vec<u8>>) {
-    // Find the decode io_id to probe the source.
-    let decode_io_id = steps.iter().find_map(|n| match n {
-        Node::Decode { io_id, .. } => Some(*io_id),
-        _ => None,
-    });
-
-    let source_has_alpha = decode_io_id
-        .and_then(|id| io_buffers.get(&id))
-        .and_then(|data| zencodecs::from_bytes(data).ok())
-        .map(|info| info.has_alpha)
-        .unwrap_or(true); // default: assume alpha present (don't modify)
-
-    if source_has_alpha {
-        return; // Source has alpha — transparent padding is valid
-    }
-
+fn fix_expand_canvas_for_opaque_source(steps: &mut [Node]) {
     // Source is opaque: replace transparent ExpandCanvas fill with opaque white.
     for step in steps.iter_mut() {
         if let Node::ExpandCanvas { color, .. } = step {
@@ -1931,6 +1683,11 @@ fn expand_command_strings(
 }
 
 /// Strip trim-related keys from a RIAPI querystring so expansion can proceed.
+///
+/// The RIAPI parser returns `ContentDependent` when trim params are present
+/// because v2 needs content-aware detection during expansion. The zen pipeline
+/// handles trim via a dedicated `CropWhitespace` node instead, so we strip
+/// the trim params and inject the node before the remaining layout steps.
 fn strip_trim_from_qs(qs: &str) -> String {
     qs.split('&')
         .filter(|part| {
