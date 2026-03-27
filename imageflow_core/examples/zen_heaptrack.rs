@@ -2,13 +2,14 @@
 //!
 //! Usage: heaptrack cargo run --example zen_heaptrack --features zen-pipeline --no-default-features --release -- [path.jpg]
 
-use std::collections::HashMap;
 use imageflow_types::*;
+use std::collections::HashMap;
 
 fn main() {
     let path = std::env::args().nth(1).unwrap_or_else(|| {
         // Default test image.
-        "/home/lilith/work/filter-research/repos/rawpedia/static/images/Preview_6_focus_2.jpg".to_string()
+        "/home/lilith/work/filter-research/repos/rawpedia/static/images/Preview_6_focus_2.jpg"
+            .to_string()
     });
 
     let jpeg_bytes = std::fs::read(&path).expect("read input file");
@@ -46,7 +47,11 @@ fn main() {
             for r in &results.encode_results {
                 eprintln!(
                     "Output: io_id={}, {}x{}, {} bytes, {}",
-                    r.io_id, r.width, r.height, r.bytes.len(), r.mime_type
+                    r.io_id,
+                    r.width,
+                    r.height,
+                    r.bytes.len(),
+                    r.mime_type
                 );
             }
         }

@@ -69,6 +69,7 @@ tolerance off-by-one
 
 ## webp_lossy_noalpha_decode_and_scale mountain_100x100_zen
 tolerance off-by-one
+~ hardy-dew-441dd4a557:sea  x86_64-avx512  @2d81fc05  auto-accepted
 
 ## test_scale_rings hermite_400x400_zen
 tolerance off-by-one

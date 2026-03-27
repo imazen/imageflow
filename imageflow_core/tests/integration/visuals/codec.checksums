@@ -162,7 +162,7 @@ tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
 
 ## test_problematic_png_lossy crop_1230x760_zen
 tolerance zensim:95 (dissim 0.05)
-~ modal-wasp-042556ed39:sea  x86_64-avx512  @2d81fc05  auto-accepted
+~ open-spire-b4944d7312:sea  x86_64-avx512  @567ef9ca  auto-accepted
 
 ## test_transparent_png_to_png shirt_zen
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
@@ -171,3 +171,11 @@ tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 ## test_webp_to_webp_quality q5_100x100_zen
 tolerance zensim:95 (dissim 0.05)
 ~ draft-curl-48c90c0dcf:sea  x86_64-avx512  @e33b73f9  auto-accepted
+
+## test_branching_crop_whitespace gradient_output_1_zen
+tolerance zensim:99 (dissim 0.01)
+~ lucky-oak-ff7e5efa15:sea  x86_64-avx512  @567ef9ca  auto-accepted
+
+## test_branching_crop_whitespace gradient_output_2_zen
+tolerance zensim:99 (dissim 0.01)
+~ fawn-grain-bd8b1d00ce:sea  x86_64-avx512  @567ef9ca  auto-accepted

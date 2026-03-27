@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 
 use imageflow_types::{self as s, Framewise, Node};
-use zencodecs::{AllowedFormats, CodecPolicy, ImageFacts, select_format_from_intent};
+use zencodecs::{select_format_from_intent, AllowedFormats, CodecPolicy, ImageFacts};
 use zennode::NodeDef as _;
 use zenpipe::Source as _;
 
@@ -123,11 +123,15 @@ impl std::fmt::Display for ZenError {
 impl std::error::Error for ZenError {}
 
 impl From<TranslateError> for ZenError {
-    fn from(e: TranslateError) -> Self { Self::Translate(e) }
+    fn from(e: TranslateError) -> Self {
+        Self::Translate(e)
+    }
 }
 
 impl From<zenpipe::PipeError> for ZenError {
-    fn from(e: zenpipe::PipeError) -> Self { Self::Pipeline(e) }
+    fn from(e: zenpipe::PipeError) -> Self {
+        Self::Pipeline(e)
+    }
 }
 
 // ─── Result type ───
@@ -145,9 +149,7 @@ pub struct ZenEncodeResult {
 // ─── Public API ───
 
 /// Probe an image and return metadata without decoding pixels.
-pub fn zen_get_image_info(
-    data: &[u8],
-) -> Result<zencodecs::ImageInfo, ZenError> {
+pub fn zen_get_image_info(data: &[u8]) -> Result<zencodecs::ImageInfo, ZenError> {
     zencodecs::from_bytes(data).map_err(|e| ZenError::Codec(format!("{e}")))
 }
 
@@ -179,7 +181,11 @@ pub fn execute_framewise(
     match framewise {
         Framewise::Steps(steps) => {
             let (results, captures) = execute_steps(steps, io_buffers, security)?;
-            Ok(ExecuteResult { encode_results: results, captured_dimensions: captures, decode_infos })
+            Ok(ExecuteResult {
+                encode_results: results,
+                captured_dimensions: captures,
+                decode_infos,
+            })
         }
         Framewise::Graph(graph) => {
             let results = execute_graph(graph, io_buffers)?;
@@ -207,13 +213,34 @@ fn execute_steps(
     security: &imageflow_types::ExecutionSecurity,
 ) -> Result<(Vec<ZenEncodeResult>, CapturedBitmaps), ZenError> {
     // Pre-process: expand CommandString nodes using source dimensions from probe.
-    let steps = expand_command_strings(steps, io_buffers)?;
+    let mut steps = expand_command_strings(steps, io_buffers)?;
+
+    // DEBUG: print expanded steps
+    for (i, s) in steps.iter().enumerate() {
+        eprintln!("[execute_steps] expanded[{i}]: {s:?}");
+    }
+
+    // Fix transparent ExpandCanvas on opaque sources: when the source image has
+    // no alpha channel, transparent padding [0,0,0,0] produces invisible borders
+    // that appear black after alpha flattening. Replace with opaque white to match
+    // the V2 pipeline's behavior for opaque content.
+    fix_expand_canvas_for_opaque_source(&mut steps, io_buffers);
+
+    // DEBUG: print steps after fix
+    for (i, s) in steps.iter().enumerate() {
+        if let Node::ExpandCanvas { .. } = s {
+            eprintln!("[execute_steps] after_fix[{i}]: {s:?}");
+        }
+    }
 
     // Collect capture IDs before translation (CaptureBitmapKey is a no-op in translate).
-    let capture_ids: Vec<i32> = steps.iter().filter_map(|n| match n {
-        Node::CaptureBitmapKey { capture_id } => Some(*capture_id),
-        _ => None,
-    }).collect();
+    let capture_ids: Vec<i32> = steps
+        .iter()
+        .filter_map(|n| match n {
+            Node::CaptureBitmapKey { capture_id } => Some(*capture_id),
+            _ => None,
+        })
+        .collect();
 
     let pipeline = translate::translate_nodes(&steps)?;
     let has_encode = pipeline.encode_io_id.is_some();
@@ -235,19 +262,20 @@ fn execute_steps(
         if has_encode && capture_ids.is_empty() {
             let encode_io_id = pipeline.encode_io_id.unwrap();
             // Use the encoder preset's format, falling back to PNG.
-            let codec_intent = pipeline.preset.as_ref()
-                .map(|p| &p.intent)
-                .cloned()
-                .unwrap_or_default();
+            let codec_intent =
+                pipeline.preset.as_ref().map(|p| &p.intent).cloned().unwrap_or_default();
             let canvas_facts = zencodecs::ImageFacts {
                 has_alpha: true,
                 pixel_count: out_w as u64 * out_h as u64,
                 ..Default::default()
             };
             let decision = zencodecs::select_format_from_intent(
-                &codec_intent, &canvas_facts,
-                &AllowedFormats::all(), &zencodecs::CodecPolicy::default(),
-            ).unwrap_or_else(|_| zencodecs::FormatDecision::for_format(zencodecs::ImageFormat::Png));
+                &codec_intent,
+                &canvas_facts,
+                &AllowedFormats::all(),
+                &zencodecs::CodecPolicy::default(),
+            )
+            .unwrap_or_else(|_| zencodecs::FormatDecision::for_format(zencodecs::ImageFormat::Png));
             let results = stream_encode(pipe_result.source, &decision, encode_io_id)?;
             return Ok((results, CapturedBitmaps { captures }));
         } else {
@@ -257,9 +285,10 @@ fn execute_steps(
             let fmt = materialized.pixels.format();
             let data = materialized.pixels.data().to_vec();
             for id in &capture_ids {
-                captures.insert(*id, CapturedBitmap {
-                    width: w, height: h, pixels: data.clone(), format: fmt,
-                });
+                captures.insert(
+                    *id,
+                    CapturedBitmap { width: w, height: h, pixels: data.clone(), format: fmt },
+                );
             }
             if has_encode {
                 let encode_io_id = pipeline.encode_io_id.unwrap();
@@ -272,49 +301,60 @@ fn execute_steps(
                     .with_registry(&registry)
                     .encode(ps, fmt.has_alpha())
                     .map_err(|e| ZenError::Codec(format!("encode: {e}")))?;
-                return Ok((vec![ZenEncodeResult {
-                    io_id: encode_io_id, bytes: output.into_vec(),
-                    width: w, height: h,
-                    mime_type: decision.format.mime_type(),
-                    extension: decision.format.extension(),
-                }], CapturedBitmaps { captures }));
+                return Ok((
+                    vec![ZenEncodeResult {
+                        io_id: encode_io_id,
+                        bytes: output.into_vec(),
+                        width: w,
+                        height: h,
+                        mime_type: decision.format.mime_type(),
+                        extension: decision.format.extension(),
+                    }],
+                    CapturedBitmaps { captures },
+                ));
             }
             return Ok((Vec::new(), CapturedBitmaps { captures }));
         }
     }
 
-    let decode_io_id = pipeline.decode_io_id.ok_or_else(|| {
-        ZenError::Io("no decode node in pipeline".into())
-    })?;
-    let input_data = io_buffers.get(&decode_io_id).ok_or_else(|| {
-        ZenError::Io(format!("no input buffer for io_id {decode_io_id}"))
-    })?;
+    let decode_io_id =
+        pipeline.decode_io_id.ok_or_else(|| ZenError::Io("no decode node in pipeline".into()))?;
+    let input_data = io_buffers
+        .get(&decode_io_id)
+        .ok_or_else(|| ZenError::Io(format!("no input buffer for io_id {decode_io_id}")))?;
 
     // Check for animation: if input is animated and encode format supports animation,
     // do a multi-frame passthrough (decode all → encode all).
     // Skip when SelectFrame is set — that means single-frame extraction, not animation.
-    let has_select_frame = pipeline.decoder_commands.as_ref()
-        .is_some_and(|cmds| cmds.iter().any(|c| matches!(c, imageflow_types::DecoderCommand::SelectFrame(_))));
+    let has_select_frame = pipeline.decoder_commands.as_ref().is_some_and(|cmds| {
+        cmds.iter().any(|c| matches!(c, imageflow_types::DecoderCommand::SelectFrame(_)))
+    });
     if has_encode && pipeline.nodes.is_empty() && !has_select_frame {
         let registry = AllowedFormats::all();
         let info = zencodecs::from_bytes(input_data)
             .map_err(|e| ZenError::Codec(format!("probe: {e}")))?;
         if info.is_animation() {
             let encode_io_id = pipeline.encode_io_id.unwrap();
-            let codec_intent = pipeline.preset.as_ref()
-                .map(|p| &p.intent).cloned().unwrap_or_default();
+            let codec_intent =
+                pipeline.preset.as_ref().map(|p| &p.intent).cloned().unwrap_or_default();
             let decision = select_format_from_intent(
-                &codec_intent, &ImageFacts::from_image_info(&info),
-                &registry, &CodecPolicy::default(),
-            ).map_err(|e| ZenError::Codec(format!("format: {e}")))?;
+                &codec_intent,
+                &ImageFacts::from_image_info(&info),
+                &registry,
+                &CodecPolicy::default(),
+            )
+            .map_err(|e| ZenError::Codec(format!("format: {e}")))?;
 
-            if let Ok(result) = encode_animation_passthrough(input_data, &registry, &decision, encode_io_id) {
+            if let Ok(result) =
+                encode_animation_passthrough(input_data, &registry, &decision, encode_io_id)
+            {
                 return Ok((result, CapturedBitmaps { captures: HashMap::new() }));
             }
         }
     }
 
-    let (decision, source) = probe_resolve_decode(input_data, &pipeline, &pipeline.decoder_commands, security.cms_mode)?;
+    let (decision, source) =
+        probe_resolve_decode(input_data, &pipeline, &pipeline.decoder_commands, security.cms_mode)?;
 
     let converters = super::converter::imageflow_converters();
     let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
@@ -343,9 +383,10 @@ fn execute_steps(
         let data = materialized.pixels.data().to_vec();
 
         for id in &capture_ids {
-            captures.insert(*id, CapturedBitmap {
-                width: w, height: h, pixels: data.clone(), format: fmt,
-            });
+            captures.insert(
+                *id,
+                CapturedBitmap { width: w, height: h, pixels: data.clone(), format: fmt },
+            );
         }
 
         // One-shot encode from materialized data.
@@ -355,9 +396,10 @@ fn execute_steps(
 
         let encode_io_id = pipeline.encode_io_id.unwrap();
         let registry = AllowedFormats::all();
+        let (eff_quality, eff_lossless) = resolve_png_quantization(&decision);
         let output = zencodecs::EncodeRequest::new(decision.format)
-            .with_quality(decision.quality.quality)
-            .with_lossless(decision.lossless)
+            .with_quality(eff_quality)
+            .with_lossless(eff_lossless)
             .with_registry(&registry)
             .encode(pixel_slice, fmt.has_alpha())
             .map_err(|e| ZenError::Codec(format!("encode: {e}")))?;
@@ -365,7 +407,8 @@ fn execute_steps(
         vec![ZenEncodeResult {
             io_id: encode_io_id,
             bytes: output.into_vec(),
-            width: w, height: h,
+            width: w,
+            height: h,
             mime_type: decision.format.mime_type(),
             extension: decision.format.extension(),
         }]
@@ -378,9 +421,10 @@ fn execute_steps(
         let data = materialized.pixels.data().to_vec();
 
         for id in &capture_ids {
-            captures.insert(*id, CapturedBitmap {
-                width: w, height: h, pixels: data.clone(), format: fmt,
-            });
+            captures.insert(
+                *id,
+                CapturedBitmap { width: w, height: h, pixels: data.clone(), format: fmt },
+            );
         }
         Vec::new()
     };
@@ -394,83 +438,86 @@ fn execute_graph(
     graph: &s::Graph,
     io_buffers: &HashMap<i32, Vec<u8>>,
 ) -> Result<Vec<ZenEncodeResult>, ZenError> {
-    // Topological sort: v2 Graph has string keys + Edge{from, to, kind}.
-    let mut id_order: Vec<String> = graph.nodes.keys().cloned().collect();
-    id_order.sort_by(|a, b| {
-        a.parse::<i32>().unwrap_or(i32::MAX).cmp(&b.parse::<i32>().unwrap_or(i32::MAX))
-    });
+    // Decompose the DAG into per-output linear pipelines.
+    //
+    // For each encode node, trace backwards through edges to find the
+    // processing path from source (decode) to that encode. Execute each
+    // path as a separate linear pipeline. Shared decode sources are
+    // re-decoded for each branch (cheap for streaming codecs).
+    //
+    // This handles the common fan-out case (one source → multiple encode
+    // outputs with different processing) without requiring multi-output
+    // DAG support in zenpipe.
 
-    let i32_to_idx: HashMap<i32, usize> = id_order.iter().enumerate()
-        .filter_map(|(i, id)| id.parse::<i32>().ok().map(|n| (n, i)))
-        .collect();
-
-    let mut dag_nodes: Vec<zenpipe::DagNode> = Vec::new();
-    let mut decode_io_ids: Vec<(usize, i32)> = Vec::new();
-    let mut encode_io_ids: Vec<(usize, i32)> = Vec::new();
-    let mut encode_pipeline: Option<TranslatedPipeline> = None;
-
-    for (dag_idx, id) in id_order.iter().enumerate() {
-        let node = &graph.nodes[id];
-        let mut partial = translate::translate_nodes(&[node.clone()])?;
-
-        if let Some(io_id) = partial.decode_io_id {
-            decode_io_ids.push((dag_idx, io_id));
+    // Build adjacency: for each node key, find its input edges.
+    let predecessors: HashMap<i32, Vec<i32>> = {
+        let mut preds: HashMap<i32, Vec<i32>> = HashMap::new();
+        for edge in &graph.edges {
+            preds.entry(edge.to).or_default().push(edge.from);
         }
-        if let Some(io_id) = partial.encode_io_id {
-            encode_io_ids.push((dag_idx, io_id));
-            encode_pipeline = Some(partial.clone_config());
+        preds
+    };
+
+    // Find all encode nodes and their io_ids.
+    let mut encode_branches: Vec<(i32, Vec<s::Node>)> = Vec::new(); // (encode_io_id, node_path)
+
+    for (key, node) in &graph.nodes {
+        if let s::Node::Encode { io_id, .. } = node {
+            // Trace backwards from this encode node to the source.
+            let key_i32: i32 = key.parse().map_err(|_| {
+                ZenError::Translate(translate::TranslateError::InvalidParam(format!(
+                    "non-integer graph key: {key}"
+                )))
+            })?;
+
+            let mut path = Vec::new();
+            let mut current = key_i32;
+            let mut visited = std::collections::HashSet::new();
+
+            loop {
+                if !visited.insert(current) {
+                    return Err(ZenError::Pipeline(zenpipe::PipeError::Op(format!(
+                        "cycle detected in graph at node {current}"
+                    ))));
+                }
+                let key_str = current.to_string();
+                let node = graph.nodes.get(&key_str).ok_or_else(|| {
+                    ZenError::Pipeline(zenpipe::PipeError::Op(format!(
+                        "graph references missing node {current}"
+                    )))
+                })?;
+                path.push(node.clone());
+
+                // Walk to predecessor.
+                match predecessors.get(&current) {
+                    Some(preds) if !preds.is_empty() => {
+                        // Take the first (primary) input edge.
+                        current = preds[0];
+                    }
+                    _ => break, // No predecessors — reached a source node.
+                }
+            }
+
+            // Reverse so it goes source → ... → encode.
+            path.reverse();
+            encode_branches.push((*io_id, path));
         }
-
-        let inputs: Vec<usize> = graph.edges.iter()
-            .filter(|e| i32_to_idx.get(&e.to).copied() == Some(dag_idx))
-            .filter_map(|e| i32_to_idx.get(&e.from).copied())
-            .collect();
-
-        let instance = if !partial.nodes.is_empty() {
-            partial.nodes.remove(0)
-        } else {
-            create_encode_role_placeholder()
-        };
-
-        dag_nodes.push(zenpipe::DagNode { instance, inputs });
     }
 
-    // Decode all input sources.
-    let registry = AllowedFormats::all();
-    let mut sources: Vec<(usize, Box<dyn zenpipe::Source>)> = Vec::new();
-    for (dag_idx, io_id) in &decode_io_ids {
-        let input_data = io_buffers.get(io_id).ok_or_else(|| {
-            ZenError::Io(format!("no input buffer for io_id {io_id}"))
-        })?;
-        sources.push((*dag_idx, decode_to_source(input_data, &registry)?));
+    if encode_branches.is_empty() {
+        return Err(ZenError::Pipeline(zenpipe::PipeError::Op("graph has no encode nodes".into())));
     }
 
-    // Build DAG pipeline.
-    let converters = super::converter::imageflow_converters();
-    let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
-    let pipe_result = zenpipe::bridge::build_pipeline_dag(sources, &dag_nodes, converters)?;
+    // Execute each branch as a linear steps pipeline.
+    let security = imageflow_types::ExecutionSecurity::sane_defaults();
+    let mut all_results = Vec::new();
 
-    // Resolve format + quality from the first input.
-    let first_input = io_buffers.get(&decode_io_ids[0].1).ok_or_else(|| {
-        ZenError::Io("no input for format probe".into())
-    })?;
-    let info = zencodecs::from_bytes(first_input)
-        .map_err(|e| ZenError::Codec(format!("probe: {e}")))?;
+    for (encode_io_id, path) in &encode_branches {
+        let (results, _captures) = execute_steps(path, io_buffers, &security)?;
+        all_results.extend(results);
+    }
 
-    let codec_intent = encode_pipeline
-        .as_ref()
-        .and_then(|p| p.preset.as_ref())
-        .map(|p| &p.intent)
-        .cloned()
-        .unwrap_or_default();
-
-    let decision = select_format_from_intent(
-        &codec_intent, &ImageFacts::from_image_info(&info),
-        &registry, &CodecPolicy::default(),
-    ).map_err(|e| ZenError::Codec(format!("format selection: {e}")))?;
-
-    let encode_io_id = encode_io_ids.first().map(|(_, id)| *id).unwrap_or(1);
-    stream_encode(pipe_result.source, &decision, encode_io_id)
+    Ok(all_results)
 }
 
 // ─── Decode ───
@@ -483,26 +530,26 @@ fn probe_resolve_decode(
     cms_mode: imageflow_types::CmsMode,
 ) -> Result<(zencodecs::FormatDecision, Box<dyn zenpipe::Source>), ZenError> {
     let registry = AllowedFormats::all();
-    let info = zencodecs::from_bytes(input_data)
-        .map_err(|e| ZenError::Codec(format!("probe: {e}")))?;
+    let info =
+        zencodecs::from_bytes(input_data).map_err(|e| ZenError::Codec(format!("probe: {e}")))?;
 
-    let codec_intent = pipeline.preset.as_ref()
-        .map(|p| &p.intent)
-        .cloned()
-        .unwrap_or_default();
+    let codec_intent = pipeline.preset.as_ref().map(|p| &p.intent).cloned().unwrap_or_default();
 
     let decision = select_format_from_intent(
-        &codec_intent, &ImageFacts::from_image_info(&info),
-        &registry, &CodecPolicy::default(),
-    ).map_err(|e| ZenError::Codec(format!("format selection: {e}")))?;
+        &codec_intent,
+        &ImageFacts::from_image_info(&info),
+        &registry,
+        &CodecPolicy::default(),
+    )
+    .map_err(|e| ZenError::Codec(format!("format selection: {e}")))?;
 
     // Check for frame selection command.
-    let frame_index = decoder_commands
-        .as_ref()
-        .and_then(|cmds| cmds.iter().find_map(|c| match c {
+    let frame_index = decoder_commands.as_ref().and_then(|cmds| {
+        cmds.iter().find_map(|c| match c {
             imageflow_types::DecoderCommand::SelectFrame(i) => Some(*i as usize),
             _ => None,
-        }));
+        })
+    });
 
     let mut source = if let Some(frame_idx) = frame_index {
         // Frame selection: use full-frame decode and select the requested frame.
@@ -520,18 +567,22 @@ fn probe_resolve_decode(
     if info.source_color.icc_profile.is_none() && info.format == zencodecs::ImageFormat::Png {
         let honor_gama_only = decoder_commands
             .as_ref()
-            .and_then(|cmds| cmds.iter().find_map(|c| match c {
-                imageflow_types::DecoderCommand::HonorGamaOnly(v) => Some(*v),
-                _ => None,
-            }))
+            .and_then(|cmds| {
+                cmds.iter().find_map(|c| match c {
+                    imageflow_types::DecoderCommand::HonorGamaOnly(v) => Some(*v),
+                    _ => None,
+                })
+            })
             .unwrap_or(false);
         // HonorGamaChrm(false) disables gAMA+cHRM transforms entirely.
         let honor_gama_chrm = decoder_commands
             .as_ref()
-            .and_then(|cmds| cmds.iter().find_map(|c| match c {
-                imageflow_types::DecoderCommand::HonorGamaChrm(v) => Some(*v),
-                _ => None,
-            }))
+            .and_then(|cmds| {
+                cmds.iter().find_map(|c| match c {
+                    imageflow_types::DecoderCommand::HonorGamaChrm(v) => Some(*v),
+                    _ => None,
+                })
+            })
             .unwrap_or(true); // default: honor gAMA+cHRM
         if honor_gama_chrm {
             source = apply_png_gamma_transform(source, input_data, honor_gama_only)?;
@@ -555,7 +606,11 @@ fn apply_icc_transform(
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
     // 1. Try embedded ICC profile first.
     let src_icc = if let Some(icc) = &info.source_color.icc_profile {
-        if !icc.is_empty() { Some(icc.clone()) } else { None }
+        if !icc.is_empty() {
+            Some(icc.clone())
+        } else {
+            None
+        }
     } else {
         None
     };
@@ -588,15 +643,16 @@ fn apply_icc_transform(
 
     // Pre-check: try to build the CMS transform without consuming the source.
     use zenpipe::ColorManagement as _;
-    let transform = zenpipe::MoxCms.build_transform_for_format(
-        &src_icc, &srgb_icc, pixel_format, pixel_format,
-    );
+    let transform =
+        zenpipe::MoxCms.build_transform_for_format(&src_icc, &srgb_icc, pixel_format, pixel_format);
 
     match transform {
         Ok(row_transform) => {
             let dst_icc: std::sync::Arc<[u8]> = std::sync::Arc::from(srgb_icc.as_slice());
             let transformed = zenpipe::sources::IccTransformSource::from_transform(
-                source, row_transform, dst_icc,
+                source,
+                row_transform,
+                dst_icc,
             );
             Ok(Box::new(transformed))
         }
@@ -618,7 +674,8 @@ fn srgb_icc_profile() -> Vec<u8> {
         let mut profile = moxcms::ColorProfile::new_srgb();
         profile.cicp = None;
         profile.encode().unwrap_or_default()
-    }).clone()
+    })
+    .clone()
 }
 
 /// Check if an ICC profile represents sRGB (or close enough to skip transform).
@@ -675,20 +732,24 @@ fn trc_matches_srgb(trc: &Option<moxcms::ToneReprCurve>) -> bool {
             // Expected: [2.4, 1/1.055 ≈ 0.94787, 0.055/1.055 ≈ 0.05213, 1/12.92 ≈ 0.07739, 0.04045]
             const SRGB_PARAMS: [f32; 5] = [
                 2.4,
-                1.0 / 1.055,     // 0.947867...
-                0.055 / 1.055,   // 0.052132...
-                1.0 / 12.92,     // 0.077399...
+                1.0 / 1.055,   // 0.947867...
+                0.055 / 1.055, // 0.052132...
+                1.0 / 12.92,   // 0.077399...
                 0.04045,
             ];
             const TOL: f32 = 0.001;
 
-            if params.len() < 5 { return false; }
+            if params.len() < 5 {
+                return false;
+            }
             params[..5].iter().zip(SRGB_PARAMS.iter()).all(|(a, b)| (a - b).abs() < TOL)
         }
         moxcms::ToneReprCurve::Lut(lut) => {
             // Some profiles encode sRGB as a 1024 or 4096 entry LUT.
             // Check a few diagnostic points against expected sRGB values.
-            if lut.is_empty() { return false; }
+            if lut.is_empty() {
+                return false;
+            }
             let n = lut.len();
 
             // sRGB curve: output = ((input/1.055 + 0.055/1.055)^2.4) for input > 0.04045
@@ -742,14 +803,13 @@ fn synthesize_icc_from_gama(
     // Update primaries if cHRM is present and non-sRGB.
     if let Some(c) = chromaticities {
         if !chrm_is_srgb {
-            let white = moxcms::XyY::new(
-                c[0] as f64 / 100000.0,
-                c[1] as f64 / 100000.0,
-                1.0,
-            );
+            let white = moxcms::XyY::new(c[0] as f64 / 100000.0, c[1] as f64 / 100000.0, 1.0);
             let primaries = moxcms::ColorPrimaries {
                 red: moxcms::Chromaticity { x: c[2] as f32 / 100000.0, y: c[3] as f32 / 100000.0 },
-                green: moxcms::Chromaticity { x: c[4] as f32 / 100000.0, y: c[5] as f32 / 100000.0 },
+                green: moxcms::Chromaticity {
+                    x: c[4] as f32 / 100000.0,
+                    y: c[5] as f32 / 100000.0,
+                },
                 blue: moxcms::Chromaticity { x: c[6] as f32 / 100000.0, y: c[7] as f32 / 100000.0 },
             };
             profile.update_rgb_colorimetry(white, primaries);
@@ -776,7 +836,8 @@ fn build_minimal_icc_v2(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> 
 
     // Primaries: convert chromaticity xy → XYZ (D50 adapted).
     // Use sRGB primaries as default.
-    let (wx, wy) = chrm.map_or((0.3127f64, 0.3290), |c| (c[0] as f64 / 100000.0, c[1] as f64 / 100000.0));
+    let (wx, wy) =
+        chrm.map_or((0.3127f64, 0.3290), |c| (c[0] as f64 / 100000.0, c[1] as f64 / 100000.0));
     let (rx, ry) = chrm.map_or((0.64, 0.33), |c| (c[2] as f64 / 100000.0, c[3] as f64 / 100000.0));
     let (gx, gy) = chrm.map_or((0.30, 0.60), |c| (c[4] as f64 / 100000.0, c[5] as f64 / 100000.0));
     let (bx, by) = chrm.map_or((0.15, 0.06), |c| (c[6] as f64 / 100000.0, c[7] as f64 / 100000.0));
@@ -788,9 +849,7 @@ fn build_minimal_icc_v2(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> 
     let b_xyz = xy_to_xyz(bx, by);
 
     // Compute RGB→XYZ matrix (before chromatic adaptation)
-    let (m_r, m_g, m_b) = compute_rgb_to_xyz_matrix(
-        r_xyz, g_xyz, b_xyz, w_xyz,
-    )?;
+    let (m_r, m_g, m_b) = compute_rgb_to_xyz_matrix(r_xyz, g_xyz, b_xyz, w_xyz)?;
 
     // Chromatic adapt to D50 (ICC PCS) using Bradford
     let d50 = [0.9642, 1.0000, 0.8249];
@@ -832,7 +891,7 @@ fn build_minimal_icc_v2(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> 
     buf[12..16].copy_from_slice(b"mntr"); // device class: monitor
     buf[16..20].copy_from_slice(b"RGB "); // color space
     buf[20..24].copy_from_slice(b"XYZ "); // PCS
-    // Date/time: 2024-01-01
+                                          // Date/time: 2024-01-01
     buf[24..26].copy_from_slice(&2024u16.to_be_bytes());
     buf[26..28].copy_from_slice(&1u16.to_be_bytes());
     buf[28..30].copy_from_slice(&1u16.to_be_bytes());
@@ -848,9 +907,15 @@ fn build_minimal_icc_v2(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> 
 
     // Tag table entries: [sig:4][offset:4][size:4]
     let tags: Vec<(&[u8; 4], u32)> = vec![
-        (b"rXYZ", xyz_size), (b"gXYZ", xyz_size), (b"bXYZ", xyz_size),
-        (b"rTRC", curv_size), (b"gTRC", curv_size), (b"bTRC", curv_size),
-        (b"wtpt", xyz_size), (b"cprt", cprt_size), (b"desc", desc_size),
+        (b"rXYZ", xyz_size),
+        (b"gXYZ", xyz_size),
+        (b"bXYZ", xyz_size),
+        (b"rTRC", curv_size),
+        (b"gTRC", curv_size),
+        (b"bTRC", curv_size),
+        (b"wtpt", xyz_size),
+        (b"cprt", cprt_size),
+        (b"desc", desc_size),
     ];
     for (sig, size) in &tags {
         buf.extend_from_slice(sig.as_slice());
@@ -888,7 +953,9 @@ fn build_minimal_icc_v2(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> 
     buf.extend_from_slice(b"text");
     buf.extend_from_slice(&[0u8; 4]);
     buf.extend_from_slice(cprt_data);
-    while buf.len() % 4 != 0 { buf.push(0); }
+    while buf.len() % 4 != 0 {
+        buf.push(0);
+    }
     // desc (minimal)
     let desc_start = buf.len();
     buf.extend_from_slice(b"desc");
@@ -902,7 +969,9 @@ fn build_minimal_icc_v2(gamma: f32, chrm: &Option<[u32; 8]>) -> Option<Vec<u8>> 
     buf.extend_from_slice(&[0u8; 2]); // ScriptCode code
     buf.push(0); // ScriptCode count
     buf.extend_from_slice(&[0u8; 67]); // ScriptCode data
-    while buf.len() % 4 != 0 { buf.push(0); }
+    while buf.len() % 4 != 0 {
+        buf.push(0);
+    }
 
     // Patch total size
     let total = buf.len() as u32;
@@ -916,45 +985,40 @@ fn s15fixed16(v: f64) -> i32 {
 }
 
 fn xy_to_xyz(x: f64, y: f64) -> [f64; 3] {
-    if y.abs() < 1e-10 { return [0.0, 0.0, 0.0]; }
+    if y.abs() < 1e-10 {
+        return [0.0, 0.0, 0.0];
+    }
     [x / y, 1.0, (1.0 - x - y) / y]
 }
 
 fn compute_rgb_to_xyz_matrix(
-    r: [f64; 3], g: [f64; 3], b: [f64; 3], w: [f64; 3],
+    r: [f64; 3],
+    g: [f64; 3],
+    b: [f64; 3],
+    w: [f64; 3],
 ) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
     // Solve: [R G B] * S = W, where S = [Sr, Sg, Sb]
-    let m = [
-        [r[0], g[0], b[0]],
-        [r[1], g[1], b[1]],
-        [r[2], g[2], b[2]],
-    ];
+    let m = [[r[0], g[0], b[0]], [r[1], g[1], b[1]], [r[2], g[2], b[2]]];
     let inv = mat3_inv(&m)?;
     let s = mat3_mul_vec3(&inv, &w);
 
-    Some(([r[0]*s[0], r[1]*s[0], r[2]*s[0]],
-          [g[0]*s[1], g[1]*s[1], g[2]*s[1]],
-          [b[0]*s[2], b[1]*s[2], b[2]*s[2]]))
+    Some((
+        [r[0] * s[0], r[1] * s[0], r[2] * s[0]],
+        [g[0] * s[1], g[1] * s[1], g[2] * s[1]],
+        [b[0] * s[2], b[1] * s[2], b[2] * s[2]],
+    ))
 }
 
 fn bradford_matrix(src_w: [f64; 3], dst_w: [f64; 3]) -> [[f64; 3]; 3] {
     // Bradford chromatic adaptation matrix
-    let brad = [
-        [ 0.8951,  0.2664, -0.1614],
-        [-0.7502,  1.7135,  0.0367],
-        [ 0.0389, -0.0685,  1.0296],
-    ];
-    let brad_inv = [
-        [ 0.9870, -0.1471, 0.1600],
-        [ 0.4323,  0.5184, 0.0493],
-        [-0.0085,  0.0400, 0.9685],
-    ];
+    let brad = [[0.8951, 0.2664, -0.1614], [-0.7502, 1.7135, 0.0367], [0.0389, -0.0685, 1.0296]];
+    let brad_inv = [[0.9870, -0.1471, 0.1600], [0.4323, 0.5184, 0.0493], [-0.0085, 0.0400, 0.9685]];
     let src_lms = mat3_mul_vec3(&brad, &src_w);
     let dst_lms = mat3_mul_vec3(&brad, &dst_w);
     let scale = [
-        [dst_lms[0]/src_lms[0], 0.0, 0.0],
-        [0.0, dst_lms[1]/src_lms[1], 0.0],
-        [0.0, 0.0, dst_lms[2]/src_lms[2]],
+        [dst_lms[0] / src_lms[0], 0.0, 0.0],
+        [0.0, dst_lms[1] / src_lms[1], 0.0],
+        [0.0, 0.0, dst_lms[2] / src_lms[2]],
     ];
     let tmp = mat3_mul(&scale, &brad);
     mat3_mul(&brad_inv, &tmp)
@@ -962,9 +1026,9 @@ fn bradford_matrix(src_w: [f64; 3], dst_w: [f64; 3]) -> [[f64; 3]; 3] {
 
 fn mat3_mul_vec3(m: &[[f64; 3]; 3], v: &[f64; 3]) -> [f64; 3] {
     [
-        m[0][0]*v[0] + m[0][1]*v[1] + m[0][2]*v[2],
-        m[1][0]*v[0] + m[1][1]*v[1] + m[1][2]*v[2],
-        m[2][0]*v[0] + m[2][1]*v[1] + m[2][2]*v[2],
+        m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
+        m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
+        m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2],
     ]
 }
 
@@ -972,22 +1036,36 @@ fn mat3_mul(a: &[[f64; 3]; 3], b: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
     let mut r = [[0.0f64; 3]; 3];
     for i in 0..3 {
         for j in 0..3 {
-            r[i][j] = a[i][0]*b[0][j] + a[i][1]*b[1][j] + a[i][2]*b[2][j];
+            r[i][j] = a[i][0] * b[0][j] + a[i][1] * b[1][j] + a[i][2] * b[2][j];
         }
     }
     r
 }
 
 fn mat3_inv(m: &[[f64; 3]; 3]) -> Option<[[f64; 3]; 3]> {
-    let det = m[0][0]*(m[1][1]*m[2][2] - m[1][2]*m[2][1])
-            - m[0][1]*(m[1][0]*m[2][2] - m[1][2]*m[2][0])
-            + m[0][2]*(m[1][0]*m[2][1] - m[1][1]*m[2][0]);
-    if det.abs() < 1e-10 { return None; }
+    let det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+    if det.abs() < 1e-10 {
+        return None;
+    }
     let inv_det = 1.0 / det;
     Some([
-        [(m[1][1]*m[2][2]-m[1][2]*m[2][1])*inv_det, (m[0][2]*m[2][1]-m[0][1]*m[2][2])*inv_det, (m[0][1]*m[1][2]-m[0][2]*m[1][1])*inv_det],
-        [(m[1][2]*m[2][0]-m[1][0]*m[2][2])*inv_det, (m[0][0]*m[2][2]-m[0][2]*m[2][0])*inv_det, (m[0][2]*m[1][0]-m[0][0]*m[1][2])*inv_det],
-        [(m[1][0]*m[2][1]-m[1][1]*m[2][0])*inv_det, (m[0][1]*m[2][0]-m[0][0]*m[2][1])*inv_det, (m[0][0]*m[1][1]-m[0][1]*m[1][0])*inv_det],
+        [
+            (m[1][1] * m[2][2] - m[1][2] * m[2][1]) * inv_det,
+            (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * inv_det,
+            (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * inv_det,
+        ],
+        [
+            (m[1][2] * m[2][0] - m[1][0] * m[2][2]) * inv_det,
+            (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * inv_det,
+            (m[0][2] * m[1][0] - m[0][0] * m[1][2]) * inv_det,
+        ],
+        [
+            (m[1][0] * m[2][1] - m[1][1] * m[2][0]) * inv_det,
+            (m[0][1] * m[2][0] - m[0][0] * m[2][1]) * inv_det,
+            (m[0][0] * m[1][1] - m[0][1] * m[1][0]) * inv_det,
+        ],
     ])
 }
 
@@ -1107,11 +1185,11 @@ fn synthesize_icc_from_cicp(cicp: &CicpValues) -> Option<Vec<u8>> {
             // V = c * L             for L < d
             // BT.709 OETF: a=1.099, b=-0.099, gamma=0.45, c=4.5, d=0.018
             let trc = moxcms::ToneReprCurve::Parametric(vec![
-                0.45_f32,   // gamma
-                1.099,      // a
-                -0.099,     // b (offset)
-                4.5,        // c (linear slope)
-                0.018,      // d (linear cutoff)
+                0.45_f32, // gamma
+                1.099,    // a
+                -0.099,   // b (offset)
+                4.5,      // c (linear slope)
+                0.018,    // d (linear cutoff)
             ]);
             profile.red_trc = Some(trc.clone());
             profile.green_trc = Some(trc.clone());
@@ -1145,15 +1223,16 @@ fn apply_icc_to_source(
     let pixel_format = src_format.pixel_format();
 
     use zenpipe::ColorManagement as _;
-    let transform = zenpipe::MoxCms.build_transform_for_format(
-        src_icc, &srgb_icc, pixel_format, pixel_format,
-    );
+    let transform =
+        zenpipe::MoxCms.build_transform_for_format(src_icc, &srgb_icc, pixel_format, pixel_format);
 
     match transform {
         Ok(row_transform) => {
             let dst_icc: std::sync::Arc<[u8]> = std::sync::Arc::from(srgb_icc.as_slice());
             let transformed = zenpipe::sources::IccTransformSource::from_transform(
-                source, row_transform, dst_icc,
+                source,
+                row_transform,
+                dst_icc,
             );
             Ok(Box::new(transformed))
         }
@@ -1187,16 +1266,19 @@ fn encode_animation_passthrough(
         .map_err(|e| ZenError::Codec(format!("animation encoder: {e}")))?;
 
     // Stream: decode one frame, push to encoder, release frame memory.
-    while let Some(frame) = decoder.render_next_frame_owned(None)
-        .map_err(|e| ZenError::Codec(format!("decode frame: {e}")))? {
+    while let Some(frame) = decoder
+        .render_next_frame_owned(None)
+        .map_err(|e| ZenError::Codec(format!("decode frame: {e}")))?
+    {
         let duration = frame.duration_ms();
         let pixels = frame.pixels();
-        encoder.push_frame(pixels, duration, None)
+        encoder
+            .push_frame(pixels, duration, None)
             .map_err(|e| ZenError::Codec(format!("push_frame: {e}")))?;
     }
 
-    let output = encoder.finish(None)
-        .map_err(|e| ZenError::Codec(format!("finish animation: {e}")))?;
+    let output =
+        encoder.finish(None).map_err(|e| ZenError::Codec(format!("finish animation: {e}")))?;
 
     let mut bytes = output.into_vec();
     // Ensure GIF trailer.
@@ -1230,7 +1312,9 @@ struct CicpValues {
 }
 
 /// Parse PNG color-related chunks: gAMA, cHRM, sRGB, cICP.
-fn parse_png_color_chunks(data: &[u8]) -> (Option<u32>, Option<[u32; 8]>, bool, Option<CicpValues>) {
+fn parse_png_color_chunks(
+    data: &[u8],
+) -> (Option<u32>, Option<[u32; 8]>, bool, Option<CicpValues>) {
     let mut gamma = None;
     let mut chrm = None;
     let mut has_srgb = false;
@@ -1241,25 +1325,33 @@ fn parse_png_color_chunks(data: &[u8]) -> (Option<u32>, Option<[u32; 8]>, bool, 
     }
     let mut pos = 8;
     while pos + 8 <= data.len() {
-        let len = u32::from_be_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
-        let chunk_type = &data[pos+4..pos+8];
+        let len =
+            u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
+        let chunk_type = &data[pos + 4..pos + 8];
         let chunk_data_start = pos + 8;
         let chunk_end = chunk_data_start + len + 4;
-        if chunk_end > data.len() { break; }
+        if chunk_end > data.len() {
+            break;
+        }
 
         match chunk_type {
             b"gAMA" if len == 4 => {
                 gamma = Some(u32::from_be_bytes([
-                    data[chunk_data_start], data[chunk_data_start+1],
-                    data[chunk_data_start+2], data[chunk_data_start+3],
+                    data[chunk_data_start],
+                    data[chunk_data_start + 1],
+                    data[chunk_data_start + 2],
+                    data[chunk_data_start + 3],
                 ]));
             }
             b"cHRM" if len == 32 => {
                 let d = &data[chunk_data_start..];
-                let r = |off: usize| u32::from_be_bytes([d[off], d[off+1], d[off+2], d[off+3]]);
+                let r =
+                    |off: usize| u32::from_be_bytes([d[off], d[off + 1], d[off + 2], d[off + 3]]);
                 chrm = Some([r(0), r(4), r(8), r(12), r(16), r(20), r(24), r(28)]);
             }
-            b"sRGB" => { has_srgb = true; }
+            b"sRGB" => {
+                has_srgb = true;
+            }
             b"cICP" if len == 4 => {
                 cicp = Some(CicpValues {
                     colour_primaries: data[chunk_data_start],
@@ -1292,8 +1384,8 @@ fn ensure_srgb_rgba8(
     }
     // Try to create a format conversion.
     if let Some(converter) = zenpipe::ops::RowConverterOp::new(src_format, target) {
-        let transform = zenpipe::sources::TransformSource::new(source)
-            .push_boxed(Box::new(converter));
+        let transform =
+            zenpipe::sources::TransformSource::new(source).push_boxed(Box::new(converter));
         Ok(Box::new(transform))
     } else {
         // No conversion path — log and proceed with original format.
@@ -1315,9 +1407,12 @@ fn decode_to_source_frame(
 
     // Iterate to the requested frame.
     for i in 0..=frame_index {
-        let frame = decoder.render_next_frame_owned(None)
+        let frame = decoder
+            .render_next_frame_owned(None)
             .map_err(|e| ZenError::Codec(format!("decode frame {i}: {e}")))?
-            .ok_or_else(|| ZenError::Codec(format!("frame index {frame_index} out of range (only {i} frames)")))?;
+            .ok_or_else(|| {
+                ZenError::Codec(format!("frame index {frame_index} out of range (only {i} frames)"))
+            })?;
 
         if i == frame_index {
             let buf = frame.into_buffer();
@@ -1325,7 +1420,9 @@ fn decode_to_source_frame(
             let h = buf.height();
             let format = buf.descriptor();
             let bytes = buf.copy_to_contiguous_bytes();
-            return Ok(Box::new(zenpipe::sources::MaterializedSource::from_data(bytes, w, h, format)));
+            return Ok(Box::new(zenpipe::sources::MaterializedSource::from_data(
+                bytes, w, h, format,
+            )));
         }
     }
     unreachable!()
@@ -1384,14 +1481,22 @@ fn build_codec_config_from_hints(
 ///
 /// When PNG hints contain `quality` and/or `min_quality`, this indicates
 /// the user wants palette quantization (lossy PNG), mirroring v2's pngquant
-/// behavior. The mapping is:
+/// behavior.
 ///
-/// - `min_quality` (default 0) → zenpng quality (controls the MPE quality gate)
-///   Lower min_quality = more permissive = more likely to quantize.
-///   Higher min_quality = stricter = more likely to fall back to lossless.
-/// - `quality` → the quantizer's target max quality (v2 pngquant semantic)
-///   In zenpng, the quantizer runs at fixed settings, so this mainly signals
-///   "quantization requested." We use min_quality for the gate threshold.
+/// V2 pngquant semantics:
+///   - `quality` = max quality target for the quantizer (0-100)
+///   - `min_quality` = minimum acceptable quality; if quantization can't meet
+///     this threshold, fall back to lossless PNG
+///
+/// Zenpng semantics:
+///   - quality < 100 + lossless=false → triggers quantization
+///   - quality maps to an MPE threshold: lower quality = more permissive gate
+///   - If MPE exceeds the threshold, falls back to lossless
+///
+/// Mapping:
+///   - When `min_quality` is set, use it as zenpng quality (controls the gate)
+///   - When only `quality` is set, use it directly as zenpng quality
+///   - Ensure quality < 100 so zenpng enters the quantization path
 ///
 /// For non-PNG formats or PNG without quantization hints, returns the
 /// decision's original quality and lossless values unchanged.
@@ -1412,23 +1517,23 @@ fn resolve_png_quantization(decision: &zencodecs::FormatDecision) -> (f32, bool)
     let lossless = false;
 
     // Derive the effective quality for zenpng's MPE gate.
-    // Use min_quality as the quality value — this controls how strict the
-    // quality gate is. If min_quality is absent, default to 0 (very permissive,
-    // always quantizes). If only quality is set, use quality - 0.01 to ensure
-    // we enter the < 100 quantization path.
-    let quality = if let Some(mq) = decision.hints.get("min_quality")
-        .and_then(|v| v.parse::<f32>().ok())
-    {
-        // min_quality sets the MPE gate threshold.
-        // Ensure it's < 100 so zenpng enters the quantization path.
+    let quality = if has_min_quality_hint {
+        // min_quality explicitly sets the gate threshold. Lower min_quality =
+        // more permissive (always quantizes). Higher = stricter (may fall back).
+        let mq =
+            decision.hints.get("min_quality").and_then(|v| v.parse::<f32>().ok()).unwrap_or(0.0);
+        // Ensure < 100 so zenpng enters the quantization path.
         mq.clamp(0.0, 99.99)
-    } else if has_quality_hint {
-        // quality hint present but no min_quality → very permissive gate.
-        // Use 0.0 as the quality, giving the highest MPE threshold (most
-        // permissive). This mirrors v2's default min_quality of 0.
-        0.0_f32
     } else {
-        decision.quality.quality
+        // Only quality hint, no min_quality → use quality as the gate.
+        // This means quality=75 → MPE gate at 0.026 (moderate).
+        let q = decision
+            .hints
+            .get("quality")
+            .and_then(|v| v.parse::<f32>().ok())
+            .unwrap_or(decision.quality.quality);
+        // Ensure < 100 so zenpng enters the quantization path.
+        q.min(99.99)
     };
 
     (quality, lossless)
@@ -1444,12 +1549,9 @@ fn stream_encode(
     // does this internally; zen needs it explicitly.
     if !decision.format.supports_alpha() && source.format().has_alpha() {
         let matte = decision.matte.unwrap_or([255, 255, 255]);
-        let options = zenpixels::ConvertOptions::permissive()
-            .with_alpha_policy(zenpixels::AlphaPolicy::CompositeOnto {
-                r: matte[0],
-                g: matte[1],
-                b: matte[2],
-            });
+        let options = zenpixels::ConvertOptions::permissive().with_alpha_policy(
+            zenpixels::AlphaPolicy::CompositeOnto { r: matte[0], g: matte[1], b: matte[2] },
+        );
         let from = source.format();
         let to = zenpipe::format::RGB8_SRGB;
         if let Some(op) = zenpipe::ops::RowConverterOp::new_explicit(from, to, &options) {
@@ -1492,9 +1594,7 @@ fn stream_encode(
 
         let mut sink = zenpipe::codec::EncoderSink::new(streaming_enc.encoder, out_format);
         zenpipe::execute(source.as_mut(), &mut sink)?;
-        sink.take_output().ok_or_else(|| {
-            ZenError::Codec("encoder produced no output".into())
-        })?
+        sink.take_output().ok_or_else(|| ZenError::Codec("encoder produced no output".into()))?
     } else {
         // One-shot encode: materialize and encode in one pass.
         let mat = zenpipe::sources::MaterializedSource::from_source(source)?;
@@ -1519,7 +1619,8 @@ fn stream_encode(
 
     // Ensure GIF trailer byte is present (workaround for gif crate not writing it).
     let mut output_bytes = output.into_vec();
-    if matches!(decision.format, zencodecs::ImageFormat::Gif) && output_bytes.last() != Some(&0x3B) {
+    if matches!(decision.format, zencodecs::ImageFormat::Gif) && output_bytes.last() != Some(&0x3B)
+    {
         output_bytes.push(0x3B);
     }
 
@@ -1666,6 +1767,44 @@ fn create_encode_role_placeholder() -> Box<dyn zennode::NodeInstance> {
         .expect("placeholder creation")
 }
 
+/// Fix ExpandCanvas nodes that use transparent fill on opaque source images.
+///
+/// When the source image has no alpha channel (e.g., lossy WebP, JPEG), transparent
+/// padding [0,0,0,0] is wrong — the alpha=0 pixels appear as invisible black borders
+/// after compositing or alpha flattening. This replaces `Color::Transparent` with
+/// opaque white for opaque sources, matching the visual intent.
+///
+/// Only modifies ExpandCanvas nodes where the color is exactly `Color::Transparent`.
+/// Explicitly set colors (even transparent ones via hex) are left unchanged.
+fn fix_expand_canvas_for_opaque_source(steps: &mut [Node], io_buffers: &HashMap<i32, Vec<u8>>) {
+    // Find the decode io_id to probe the source.
+    let decode_io_id = steps.iter().find_map(|n| match n {
+        Node::Decode { io_id, .. } => Some(*io_id),
+        _ => None,
+    });
+
+    let source_has_alpha = decode_io_id
+        .and_then(|id| io_buffers.get(&id))
+        .and_then(|data| zencodecs::from_bytes(data).ok())
+        .map(|info| info.has_alpha)
+        .unwrap_or(true); // default: assume alpha present (don't modify)
+
+    if source_has_alpha {
+        return; // Source has alpha — transparent padding is valid
+    }
+
+    // Source is opaque: replace transparent ExpandCanvas fill with opaque white.
+    for step in steps.iter_mut() {
+        if let Node::ExpandCanvas { color, .. } = step {
+            if matches!(color, imageflow_types::Color::Transparent) {
+                *color = imageflow_types::Color::Srgb(imageflow_types::ColorSrgb::Hex(
+                    "FFFFFFFF".to_owned(),
+                ));
+            }
+        }
+    }
+}
+
 /// Expand CommandString nodes into concrete steps using RIAPI parsing.
 ///
 /// CommandString needs source dimensions for layout computation. We probe
@@ -1719,7 +1858,8 @@ fn expand_command_strings(
                     let mut commands: Option<Vec<imageflow_types::DecoderCommand>> = None;
                     if let Ok(parsed) = Ir4Command::QueryString(value.clone()).parse() {
                         if let Some(frame) = parsed.parsed.frame {
-                            commands = Some(vec![imageflow_types::DecoderCommand::SelectFrame(frame)]);
+                            commands =
+                                Some(vec![imageflow_types::DecoderCommand::SelectFrame(frame)]);
                         }
                     }
                     result.push(Node::Decode { io_id: *dec_id, commands });
@@ -1769,8 +1909,13 @@ fn expand_command_strings(
                                     watermarks: watermarks.clone(),
                                 };
                                 // Add CropWhitespace before any resize.
-                                let threshold = ir4_result.parsed.trim_whitespace_threshold.unwrap_or(80) as u32;
-                                let padding = ir4_result.parsed.trim_whitespace_padding_percent.unwrap_or(0.0);
+                                let threshold =
+                                    ir4_result.parsed.trim_whitespace_threshold.unwrap_or(80)
+                                        as u32;
+                                let padding = ir4_result
+                                    .parsed
+                                    .trim_whitespace_padding_percent
+                                    .unwrap_or(0.0);
                                 result.push(Node::CropWhitespace {
                                     threshold,
                                     percent_padding: padding,
@@ -1782,17 +1927,19 @@ fn expand_command_strings(
                                         }
                                     }
                                     Err(e2) => {
-                                        return Err(ZenError::Translate(TranslateError::InvalidParam(
-                                            format!("RIAPI expansion (post-trim strip): {e2:?}"),
-                                        )));
+                                        return Err(ZenError::Translate(
+                                            TranslateError::InvalidParam(format!(
+                                                "RIAPI expansion (post-trim strip): {e2:?}"
+                                            )),
+                                        ));
                                     }
                                 }
                                 continue;
                             }
                         }
-                        return Err(ZenError::Translate(TranslateError::InvalidParam(
-                            format!("RIAPI expansion: {e:?}"),
-                        )));
+                        return Err(ZenError::Translate(TranslateError::InvalidParam(format!(
+                            "RIAPI expansion: {e:?}"
+                        ))));
                     }
                 }
             }
