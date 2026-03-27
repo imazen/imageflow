@@ -1127,6 +1127,16 @@ fn decode_to_source(
 
 /// Stream pipeline output into an encoder via EncoderSink.
 /// Falls back to one-shot materialized encode if streaming isn't supported (e.g., GIF).
+/// Build a `CodecConfig` from `FormatDecision.hints` when format-specific
+/// encoder configuration is needed (e.g., mozjpeg preset for JPEG).
+fn build_codec_config_from_hints(
+    decision: &zencodecs::FormatDecision,
+) -> Option<zencodecs::config::CodecConfig> {
+    let preset_hint = decision.hints.get("preset")?;
+    let quality = decision.quality.quality;
+    zencodecs::jpeg_codec_config_for_preset(preset_hint, quality)
+}
+
 fn stream_encode(
     mut source: Box<dyn zenpipe::Source>,
     decision: &zencodecs::FormatDecision,
@@ -1140,12 +1150,19 @@ fn stream_encode(
     // GIF doesn't support streaming row-level encode — always use one-shot.
     let use_oneshot = matches!(decision.format, zencodecs::ImageFormat::Gif);
 
+    // Build codec config from hints (e.g., mozjpeg preset for JPEG).
+    let codec_config = build_codec_config_from_hints(decision);
+
     let output = if !use_oneshot {
         // Try streaming encode first.
-        let streaming_enc = zencodecs::EncodeRequest::new(decision.format)
+        let mut req = zencodecs::EncodeRequest::new(decision.format)
             .with_quality(decision.quality.quality)
             .with_lossless(decision.lossless)
-            .with_registry(&registry)
+            .with_registry(&registry);
+        if let Some(ref cfg) = codec_config {
+            req = req.with_codec_config(cfg);
+        }
+        let streaming_enc = req
             .build_streaming_encoder(out_w, out_h)
             .map_err(|e| ZenError::Codec(format!("encoder: {e}")))?;
 
@@ -1165,11 +1182,14 @@ fn stream_encode(
         let pixel_slice = zenpixels::PixelSlice::new(data, w, h, stride, fmt)
             .map_err(|e| ZenError::Codec(format!("pixel slice: {e}")))?;
 
-        zencodecs::EncodeRequest::new(decision.format)
+        let mut req = zencodecs::EncodeRequest::new(decision.format)
             .with_quality(decision.quality.quality)
             .with_lossless(decision.lossless)
-            .with_registry(&registry)
-            .encode(pixel_slice, fmt.has_alpha())
+            .with_registry(&registry);
+        if let Some(ref cfg) = codec_config {
+            req = req.with_codec_config(cfg);
+        }
+        req.encode(pixel_slice, fmt.has_alpha())
             .map_err(|e| ZenError::Codec(format!("one-shot encode: {e}")))?
     };
 

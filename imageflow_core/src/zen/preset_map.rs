@@ -97,12 +97,14 @@ pub fn map_preset(preset: &EncoderPreset) -> Result<PresetMapping, TranslateErro
                 intent.quality_fallback = Some(*q as f32);
             }
             let mut jpeg_hints = BTreeMap::new();
-            if let Some(p) = progressive {
-                jpeg_hints.insert("progressive".into(), p.to_string());
-            }
-            if !jpeg_hints.is_empty() {
-                intent.hints.jpeg = jpeg_hints;
-            }
+            // Tell zencodecs/zenjpeg to use mozjpeg-compatible encoder profile.
+            let preset = match progressive {
+                Some(true) => "mozjpeg_progressive",
+                Some(false) => "mozjpeg_baseline",
+                None => "mozjpeg_progressive", // mozjpeg default is progressive
+            };
+            jpeg_hints.insert("preset".into(), preset.into());
+            intent.hints.jpeg = jpeg_hints;
             if let Some(matte) = matte {
                 intent.matte = color_to_rgb(matte);
             }
