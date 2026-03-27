@@ -40,9 +40,10 @@ fn main() {
 
     let framewise = Framewise::Steps(steps);
 
-    match imageflow_core::zen::execute_framewise(&framewise, &io_buffers) {
+    let security = imageflow_types::ExecutionSecurity::sane_defaults();
+    match imageflow_core::zen::execute_framewise(&framewise, &io_buffers, &security) {
         Ok(results) => {
-            for r in &results {
+            for r in &results.encode_results {
                 eprintln!(
                     "Output: io_id={}, {}x{}, {} bytes, {}",
                     r.io_id, r.width, r.height, r.bytes.len(), r.mime_type
