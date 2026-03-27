@@ -150,7 +150,7 @@ fn smoke_test_corrupt_jpeg() {
         watermarks: None,
     }];
 
-    smoke_test(
+    let result = smoke_test(
         Some(IoTestEnum::Url(
             "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/corrupt.jpg"
                 .to_owned(),
@@ -159,8 +159,14 @@ fn smoke_test_corrupt_jpeg() {
         None,
         DEBUG_GRAPH,
         steps,
-    )
-    .expect_err("Should fail without crashing process");
+    );
+    // V2 (libjpeg-turbo) rejects this corrupt JPEG; zen (zenjpeg) is more
+    // tolerant and may successfully decode it. Both outcomes are acceptable —
+    // the key invariant is that neither crashes the process.
+    match result {
+        Err(_) => { /* V2 path: expected error */ }
+        Ok(_) => { /* Zen path: more tolerant decoder succeeded */ }
+    }
 }
 
 #[test]
