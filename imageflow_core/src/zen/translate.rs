@@ -150,16 +150,28 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         Node::Resample2D { w, h, hints } => {
             let filter = hints.as_ref()
                 .and_then(|h| h.down_filter.as_ref())
-                .map(|f| filter_to_str(f).to_string());
-            push_resample2d_node(&mut result.nodes, *w, *h, filter)?;
+                .map(|f| filter_to_str(f).to_string())
+                .unwrap_or_default();
+            let sharpen = hints.as_ref()
+                .and_then(|h| h.sharpen_percent)
+                .unwrap_or(0.0);
+            push_layout_node(&mut result.nodes, "zenresize.resize", &[
+                ("w", ParamValue::U32(*w)),
+                ("h", ParamValue::U32(*h)),
+                ("filter", ParamValue::Str(filter)),
+                ("sharpen", ParamValue::F32(sharpen)),
+            ])?;
             // If an opaque background_color (matte) is specified, add RemoveAlpha after resize.
-            // Transparent means "preserve transparency" — no alpha removal.
             if let Some(hints) = hints {
                 if let Some(ref bg) = hints.background_color {
                     if !matches!(bg, Color::Transparent) {
                         let rgba = color_to_rgba(bg);
                         if rgba[3] > 0 {
-                            push_remove_alpha_node(&mut result.nodes, [rgba[0], rgba[1], rgba[2]])?;
+                            push_layout_node(&mut result.nodes, "zenpipe.remove_alpha", &[
+                                ("matte_r", ParamValue::U32(rgba[0] as u32)),
+                                ("matte_g", ParamValue::U32(rgba[1] as u32)),
+                                ("matte_b", ParamValue::U32(rgba[2] as u32)),
+                            ])?;
                         }
                     }
                 }
@@ -232,9 +244,17 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         }
 
         Node::FillRect { x1, y1, x2, y2, color } => {
-            // Parse color to RGBA bytes.
             let rgba = color_to_rgba(color);
-            push_fill_rect_node(&mut result.nodes, *x1, *y1, *x2, *y2, rgba)
+            push_layout_node(&mut result.nodes, "zenpipe.fill_rect", &[
+                ("x1", ParamValue::U32(*x1)),
+                ("y1", ParamValue::U32(*y1)),
+                ("x2", ParamValue::U32(*x2)),
+                ("y2", ParamValue::U32(*y2)),
+                ("color_r", ParamValue::U32(rgba[0] as u32)),
+                ("color_g", ParamValue::U32(rgba[1] as u32)),
+                ("color_b", ParamValue::U32(rgba[2] as u32)),
+                ("color_a", ParamValue::U32(rgba[3] as u32)),
+            ])
         }
 
         // ─── Composition ───
@@ -257,7 +277,10 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         // ─── Misc ───
 
         Node::CropWhitespace { threshold, percent_padding } => {
-            push_crop_whitespace_node(&mut result.nodes, *threshold, *percent_padding)
+            push_layout_node(&mut result.nodes, "zenpipe.crop_whitespace", &[
+                ("threshold", ParamValue::U32(*threshold as u32)),
+                ("percent_padding", ParamValue::F32(*percent_padding)),
+            ])
         }
 
         Node::RoundImageCorners { radius, background_color } => {
@@ -265,9 +288,16 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
                 RoundCornersMode::Percentage(p) => *p,
                 RoundCornersMode::Pixels(px) => *px,
                 RoundCornersMode::Circle => 50.0,
-                _ => 10.0, // fallback for custom modes
+                _ => 10.0,
             };
-            push_round_corners_node(&mut result.nodes, r, &Some(background_color.clone()))
+            let bg = color_to_rgba(background_color);
+            push_layout_node(&mut result.nodes, "zenpipe.round_corners", &[
+                ("radius", ParamValue::F32(r)),
+                ("bg_r", ParamValue::U32(bg[0] as u32)),
+                ("bg_g", ParamValue::U32(bg[1] as u32)),
+                ("bg_b", ParamValue::U32(bg[2] as u32)),
+                ("bg_a", ParamValue::U32(bg[3] as u32)),
+            ])
         }
 
         Node::CommandString { kind, value, decode, encode, watermarks } => {
@@ -319,7 +349,11 @@ fn translate_constrain(
             if !matches!(bg, Color::Transparent) {
                 let rgba = color_to_rgba(bg);
                 if rgba[3] > 0 {
-                    push_remove_alpha_node(nodes, [rgba[0], rgba[1], rgba[2]])?;
+                    push_layout_node(nodes, "zenpipe.remove_alpha", &[
+                        ("matte_r", ParamValue::U32(rgba[0] as u32)),
+                        ("matte_g", ParamValue::U32(rgba[1] as u32)),
+                        ("matte_b", ParamValue::U32(rgba[2] as u32)),
+                    ])?;
                 }
             }
         }
@@ -327,10 +361,12 @@ fn translate_constrain(
     // Also check canvas_color as matte for pad modes.
     if let Some(ref canvas) = c.canvas_color {
         let rgba = color_to_rgba(canvas);
-        if rgba[3] < 255 {
-            // Transparent canvas — no matte needed.
-        } else {
-            push_remove_alpha_node(nodes, [rgba[0], rgba[1], rgba[2]])?;
+        if rgba[3] >= 255 {
+            push_layout_node(nodes, "zenpipe.remove_alpha", &[
+                ("matte_r", ParamValue::U32(rgba[0] as u32)),
+                ("matte_g", ParamValue::U32(rgba[1] as u32)),
+                ("matte_b", ParamValue::U32(rgba[2] as u32)),
+            ])?;
         }
     }
     Ok(())
@@ -410,6 +446,7 @@ fn zen_registry() -> NodeRegistry {
     zenlayout::zennode_defs::register(&mut registry);
     zenresize::zennode_defs::register(&mut registry);
     zenfilters::zennode_defs::register(&mut registry);
+    zenpipe::zennode_defs::register(&mut registry);
     registry
 }
 
@@ -537,294 +574,7 @@ fn color_to_rgba(color: &Color) -> [u8; 4] {
     }
 }
 
-// ─── Custom NodeInstance wrappers for imageflow-specific ops ───
-
-/// A NodeInstance that carries FillRect parameters for the converter.
-pub(super) struct FillRectNode {
-    x1: u32,
-    y1: u32,
-    x2: u32,
-    y2: u32,
-    pub(super) color: [u8; 4],
-}
-
-static FILL_RECT_SCHEMA: zennode::NodeSchema = zennode::NodeSchema {
-    id: "imageflow.fill_rect",
-    label: "Fill Rectangle",
-    description: "Fill a rectangle with a solid color",
-    group: zennode::NodeGroup::Canvas,
-    role: zennode::NodeRole::Geometry,
-    params: &[],
-    tags: &[],
-    coalesce: None,
-    format: zennode::FormatHint {
-        preferred: zennode::PixelFormatPreference::Any,
-        alpha: zennode::AlphaHandling::Process,
-        changes_dimensions: false,
-        is_neighborhood: false,
-    },
-    version: 1,
-    compat_version: 1,
-    json_key: "fill_rect",
-    deny_unknown_fields: false,
-};
-
-impl zennode::NodeInstance for FillRectNode {
-    fn schema(&self) -> &'static zennode::NodeSchema { &FILL_RECT_SCHEMA }
-    fn to_params(&self) -> zennode::ParamMap {
-        let mut m = zennode::ParamMap::new();
-        m.insert("x1".into(), ParamValue::U32(self.x1));
-        m.insert("y1".into(), ParamValue::U32(self.y1));
-        m.insert("x2".into(), ParamValue::U32(self.x2));
-        m.insert("y2".into(), ParamValue::U32(self.y2));
-        m
-    }
-    fn get_param(&self, name: &str) -> Option<ParamValue> {
-        match name {
-            "x1" => Some(ParamValue::U32(self.x1)),
-            "y1" => Some(ParamValue::U32(self.y1)),
-            "x2" => Some(ParamValue::U32(self.x2)),
-            "y2" => Some(ParamValue::U32(self.y2)),
-            _ => None,
-        }
-    }
-    fn set_param(&mut self, _name: &str, _value: ParamValue) -> bool { false }
-    fn as_any(&self) -> &dyn std::any::Any { self }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
-    fn clone_boxed(&self) -> Box<dyn zennode::NodeInstance> {
-        Box::new(FillRectNode { x1: self.x1, y1: self.y1, x2: self.x2, y2: self.y2, color: self.color })
-    }
-    fn is_identity(&self) -> bool { false }
-}
-
-fn push_fill_rect_node(
-    nodes: &mut Vec<Box<dyn NodeInstance>>,
-    x1: u32, y1: u32, x2: u32, y2: u32, color: [u8; 4],
-) -> Result<(), TranslateError> {
-    nodes.push(Box::new(FillRectNode { x1, y1, x2, y2, color }));
-    Ok(())
-}
-
-/// A NodeInstance for CropWhitespace.
-struct CropWhitespaceNode {
-    threshold: u32,
-    percent_padding: f32,
-}
-
-static CROP_WHITESPACE_SCHEMA: zennode::NodeSchema = zennode::NodeSchema {
-    id: "imageflow.crop_whitespace",
-    label: "Crop Whitespace",
-    description: "Detect and crop uniform borders",
-    group: zennode::NodeGroup::Analysis,
-    role: zennode::NodeRole::Geometry,
-    params: &[],
-    tags: &[],
-    coalesce: None,
-    format: zennode::FormatHint {
-        preferred: zennode::PixelFormatPreference::Any,
-        alpha: zennode::AlphaHandling::Process,
-        changes_dimensions: false,
-        is_neighborhood: false,
-    },
-    version: 1,
-    compat_version: 1,
-    json_key: "crop_whitespace",
-    deny_unknown_fields: false,
-};
-
-impl zennode::NodeInstance for CropWhitespaceNode {
-    fn schema(&self) -> &'static zennode::NodeSchema { &CROP_WHITESPACE_SCHEMA }
-    fn to_params(&self) -> zennode::ParamMap {
-        let mut m = zennode::ParamMap::new();
-        m.insert("threshold".into(), ParamValue::U32(self.threshold));
-        m.insert("percent_padding".into(), ParamValue::F32(self.percent_padding));
-        m
-    }
-    fn get_param(&self, name: &str) -> Option<ParamValue> {
-        match name {
-            "threshold" => Some(ParamValue::U32(self.threshold)),
-            "percent_padding" => Some(ParamValue::F32(self.percent_padding)),
-            _ => None,
-        }
-    }
-    fn set_param(&mut self, _name: &str, _value: ParamValue) -> bool { false }
-    fn as_any(&self) -> &dyn std::any::Any { self }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
-    fn clone_boxed(&self) -> Box<dyn zennode::NodeInstance> {
-        Box::new(CropWhitespaceNode { threshold: self.threshold, percent_padding: self.percent_padding })
-    }
-    fn is_identity(&self) -> bool { false }
-}
-
-fn push_crop_whitespace_node(
-    nodes: &mut Vec<Box<dyn NodeInstance>>,
-    threshold: u32, percent_padding: f32,
-) -> Result<(), TranslateError> {
-    nodes.push(Box::new(CropWhitespaceNode { threshold, percent_padding }));
-    Ok(())
-}
-
-/// A NodeInstance for RoundImageCorners (materializing).
-pub(super) struct RoundCornersNode {
-    radius: f32,
-    pub(super) bg_color: [u8; 4],
-}
-
-static ROUND_CORNERS_SCHEMA: zennode::NodeSchema = zennode::NodeSchema {
-    id: "imageflow.round_corners",
-    label: "Round Corners",
-    description: "Apply rounded corners with background fill",
-    group: zennode::NodeGroup::Canvas,
-    role: zennode::NodeRole::Geometry,
-    params: &[],
-    tags: &[],
-    coalesce: None,
-    format: zennode::FormatHint {
-        preferred: zennode::PixelFormatPreference::Any,
-        alpha: zennode::AlphaHandling::Process,
-        changes_dimensions: false,
-        is_neighborhood: false,
-    },
-    version: 1,
-    compat_version: 1,
-    json_key: "round_corners",
-    deny_unknown_fields: false,
-};
-
-impl zennode::NodeInstance for RoundCornersNode {
-    fn schema(&self) -> &'static zennode::NodeSchema { &ROUND_CORNERS_SCHEMA }
-    fn to_params(&self) -> zennode::ParamMap {
-        let mut m = zennode::ParamMap::new();
-        m.insert("radius".into(), ParamValue::F32(self.radius));
-        m
-    }
-    fn get_param(&self, name: &str) -> Option<ParamValue> {
-        match name {
-            "radius" => Some(ParamValue::F32(self.radius)),
-            _ => None,
-        }
-    }
-    fn set_param(&mut self, _name: &str, _value: ParamValue) -> bool { false }
-    fn as_any(&self) -> &dyn std::any::Any { self }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
-    fn clone_boxed(&self) -> Box<dyn zennode::NodeInstance> {
-        Box::new(RoundCornersNode { radius: self.radius, bg_color: self.bg_color })
-    }
-    fn is_identity(&self) -> bool { false }
-}
-
-fn push_round_corners_node(
-    nodes: &mut Vec<Box<dyn NodeInstance>>,
-    radius: f32, background_color: &Option<Color>,
-) -> Result<(), TranslateError> {
-    let bg = background_color.as_ref().map(color_to_rgba).unwrap_or([0, 0, 0, 0]);
-    nodes.push(Box::new(RoundCornersNode { radius, bg_color: bg }));
-    Ok(())
-}
-
-/// A NodeInstance for RemoveAlpha (matte compositing).
-pub(super) struct RemoveAlphaNode {
-    pub(super) matte: [u8; 3],
-}
-
-static REMOVE_ALPHA_SCHEMA: zennode::NodeSchema = zennode::NodeSchema {
-    id: "imageflow.remove_alpha",
-    label: "Remove Alpha",
-    description: "Composite onto matte color and remove alpha channel",
-    group: zennode::NodeGroup::Canvas,
-    role: zennode::NodeRole::Geometry,
-    params: &[],
-    tags: &[],
-    coalesce: None,
-    format: zennode::FormatHint {
-        preferred: zennode::PixelFormatPreference::Any,
-        alpha: zennode::AlphaHandling::Process,
-        changes_dimensions: false,
-        is_neighborhood: false,
-    },
-    version: 1,
-    compat_version: 1,
-    json_key: "remove_alpha",
-    deny_unknown_fields: false,
-};
-
-impl zennode::NodeInstance for RemoveAlphaNode {
-    fn schema(&self) -> &'static zennode::NodeSchema { &REMOVE_ALPHA_SCHEMA }
-    fn to_params(&self) -> zennode::ParamMap { zennode::ParamMap::new() }
-    fn get_param(&self, _name: &str) -> Option<ParamValue> { None }
-    fn set_param(&mut self, _name: &str, _value: ParamValue) -> bool { false }
-    fn as_any(&self) -> &dyn std::any::Any { self }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
-    fn clone_boxed(&self) -> Box<dyn zennode::NodeInstance> {
-        Box::new(RemoveAlphaNode { matte: self.matte })
-    }
-    fn is_identity(&self) -> bool { false }
-}
-
-/// A NodeInstance for Resample2D — forced resize that must NOT coalesce.
-pub(super) struct Resample2DNode {
-    pub(super) w: u32,
-    pub(super) h: u32,
-    pub(super) filter: Option<String>,
-}
-
-static RESAMPLE2D_SCHEMA: zennode::NodeSchema = zennode::NodeSchema {
-    id: "imageflow.resample2d",
-    label: "Resample 2D",
-    description: "Forced resize to exact dimensions (no coalescing)",
-    group: zennode::NodeGroup::Geometry,
-    role: zennode::NodeRole::Resize,
-    params: &[],
-    tags: &[],
-    coalesce: None, // No coalescing — each resize is independent.
-    format: zennode::FormatHint {
-        preferred: zennode::PixelFormatPreference::Any,
-        alpha: zennode::AlphaHandling::Process,
-        changes_dimensions: true,
-        is_neighborhood: false,
-    },
-    version: 1,
-    compat_version: 1,
-    json_key: "resample2d",
-    deny_unknown_fields: false,
-};
-
-impl zennode::NodeInstance for Resample2DNode {
-    fn schema(&self) -> &'static zennode::NodeSchema { &RESAMPLE2D_SCHEMA }
-    fn to_params(&self) -> zennode::ParamMap {
-        let mut m = zennode::ParamMap::new();
-        m.insert("w".into(), ParamValue::U32(self.w));
-        m.insert("h".into(), ParamValue::U32(self.h));
-        m
-    }
-    fn get_param(&self, name: &str) -> Option<ParamValue> {
-        match name {
-            "w" => Some(ParamValue::U32(self.w)),
-            "h" => Some(ParamValue::U32(self.h)),
-            _ => None,
-        }
-    }
-    fn set_param(&mut self, _name: &str, _value: ParamValue) -> bool { false }
-    fn as_any(&self) -> &dyn std::any::Any { self }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
-    fn clone_boxed(&self) -> Box<dyn zennode::NodeInstance> {
-        Box::new(Resample2DNode { w: self.w, h: self.h, filter: self.filter.clone() })
-    }
-    fn is_identity(&self) -> bool { false }
-}
-
-fn push_resample2d_node(
-    nodes: &mut Vec<Box<dyn NodeInstance>>,
-    w: u32, h: u32, filter: Option<String>,
-) -> Result<(), TranslateError> {
-    nodes.push(Box::new(Resample2DNode { w, h, filter }));
-    Ok(())
-}
-
-fn push_remove_alpha_node(
-    nodes: &mut Vec<Box<dyn NodeInstance>>,
-    matte: [u8; 3],
-) -> Result<(), TranslateError> {
-    nodes.push(Box::new(RemoveAlphaNode { matte }));
-    Ok(())
-}
+// Custom NodeInstance wrappers removed — all operations now use native
+// zennode definitions in zenpipe::zennode_defs and zenresize::zennode_defs.
+// See zenpipe.crop_whitespace, zenpipe.fill_rect, zenpipe.remove_alpha,
+// zenpipe.round_corners, zenresize.resize.
