@@ -110,7 +110,17 @@ pub fn map_preset(preset: &EncoderPreset) -> Result<PresetMapping, TranslateErro
             // and honor per-codec lossless hints.
             if intent.lossless.is_none() {
                 match zen_format {
-                    zencodecs::ImageFormat::Png | zencodecs::ImageFormat::Gif => {
+                    zencodecs::ImageFormat::Png => {
+                        // If PNG quality hint is present, the user wants quantized
+                        // (lossy) PNG — don't default to lossless. This mirrors v2
+                        // behavior where `png.quality=N` triggers pngquant.
+                        let has_png_quality = intent.hints.png.contains_key("quality")
+                            || intent.hints.png.contains_key("min_quality");
+                        if !has_png_quality {
+                            intent.lossless = Some(zencodecs::BoolKeep::True);
+                        }
+                    }
+                    zencodecs::ImageFormat::Gif => {
                         intent.lossless = Some(zencodecs::BoolKeep::True);
                     }
                     zencodecs::ImageFormat::WebP => {

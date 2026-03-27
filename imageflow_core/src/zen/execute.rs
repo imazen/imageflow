@@ -991,28 +991,32 @@ fn mat3_inv(m: &[[f64; 3]; 3]) -> Option<[[f64; 3]; 3]> {
     ])
 }
 
-/// Parse gAMA and optional cHRM from raw PNG bytes, synthesize ICC, and apply transform.
+/// Parse gAMA/cHRM/cICP from raw PNG bytes, synthesize ICC, and apply transform.
+///
+/// PNG 3rd Ed precedence: cICP > iCCP > sRGB > gAMA+cHRM.
+/// iCCP is handled by the ICC path in `apply_icc_transform`. This function
+/// handles cICP and gAMA+cHRM.
 fn apply_png_gamma_transform(
     source: Box<dyn zenpipe::Source>,
     png_data: &[u8],
     honor_gama_only: bool,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
-    let (gamma, chrm, has_srgb, has_cicp) = parse_png_color_chunks(png_data);
-    let gamma = match gamma {
-        Some(g) if g > 0 => g,
-        _ => return Ok(source),
-    };
+    let (gamma, chrm, has_srgb, cicp) = parse_png_color_chunks(png_data);
+
+    // cICP chunk takes highest precedence (PNG 3rd Ed spec).
+    if let Some(cicp) = cicp {
+        return apply_cicp_transform(source, &cicp);
+    }
 
     // sRGB chunk → already sRGB, no transform.
     if has_srgb {
         return Ok(source);
     }
 
-    // cICP chunk takes precedence over gAMA+cHRM (PNG 3rd Ed spec).
-    // cICP handling is done via ICC path; don't double-transform.
-    if has_cicp {
-        return Ok(source);
-    }
+    let gamma = match gamma {
+        Some(g) if g > 0 => g,
+        _ => return Ok(source),
+    };
 
     // Validate cHRM: reject degenerate chromaticities (y=0 causes division by zero).
     if let Some(ref c) = chrm {
@@ -1031,13 +1035,118 @@ fn apply_png_gamma_transform(
         None => return Ok(source), // Gamma is neutral sRGB — no transform
     };
 
+    apply_icc_to_source(source, &icc)
+}
+
+/// Apply a cICP color profile to a source, transforming to sRGB.
+///
+/// Handles common CICP transfer characteristics:
+/// - tc=13 (sRGB): no-op
+/// - tc=1 (BT.709): parametric TRC with BT.709 OETF
+/// - Other tc values: synthesize ICC from CICP primaries + gamma approximation
+fn apply_cicp_transform(
+    source: Box<dyn zenpipe::Source>,
+    cicp: &CicpValues,
+) -> Result<Box<dyn zenpipe::Source>, ZenError> {
+    // sRGB transfer (tc=13) with sRGB primaries (cp=1) → already sRGB, no-op.
+    if cicp.transfer_characteristics == 13 && cicp.colour_primaries == 1 {
+        return Ok(source);
+    }
+
+    // Build an ICC profile from CICP values.
+    let icc = match synthesize_icc_from_cicp(cicp) {
+        Some(icc) => icc,
+        None => return Ok(source), // Unrecognized CICP — skip rather than corrupt
+    };
+
+    apply_icc_to_source(source, &icc)
+}
+
+/// Synthesize an ICC profile from cICP values.
+///
+/// Returns None for unrecognized primaries/transfer combinations.
+fn synthesize_icc_from_cicp(cicp: &CicpValues) -> Option<Vec<u8>> {
+    let mut profile = moxcms::ColorProfile::new_srgb();
+
+    // Set primaries based on colour_primaries code.
+    match cicp.colour_primaries {
+        1 => {
+            // BT.709 / sRGB primaries — already default from new_srgb()
+        }
+        9 => {
+            // BT.2020
+            let white = moxcms::XyY::new(0.3127, 0.3290, 1.0);
+            let primaries = moxcms::ColorPrimaries {
+                red: moxcms::Chromaticity { x: 0.708, y: 0.292 },
+                green: moxcms::Chromaticity { x: 0.170, y: 0.797 },
+                blue: moxcms::Chromaticity { x: 0.131, y: 0.046 },
+            };
+            profile.update_rgb_colorimetry(white, primaries);
+        }
+        12 => {
+            // Display P3
+            let white = moxcms::XyY::new(0.3127, 0.3290, 1.0);
+            let primaries = moxcms::ColorPrimaries {
+                red: moxcms::Chromaticity { x: 0.680, y: 0.320 },
+                green: moxcms::Chromaticity { x: 0.265, y: 0.690 },
+                blue: moxcms::Chromaticity { x: 0.150, y: 0.060 },
+            };
+            profile.update_rgb_colorimetry(white, primaries);
+        }
+        _ => {
+            // Unrecognized primaries — cannot synthesize accurately.
+            return None;
+        }
+    }
+
+    // Set transfer characteristics.
+    match cicp.transfer_characteristics {
+        1 | 6 => {
+            // BT.709 / BT.601 transfer: parametric type 4 (IEC 61966-2-1)
+            // V = a * L^gamma + b  for L >= d
+            // V = c * L             for L < d
+            // BT.709 OETF: a=1.099, b=-0.099, gamma=0.45, c=4.5, d=0.018
+            let trc = moxcms::ToneReprCurve::Parametric(vec![
+                0.45_f32,   // gamma
+                1.099,      // a
+                -0.099,     // b (offset)
+                4.5,        // c (linear slope)
+                0.018,      // d (linear cutoff)
+            ]);
+            profile.red_trc = Some(trc.clone());
+            profile.green_trc = Some(trc.clone());
+            profile.blue_trc = Some(trc);
+        }
+        13 => {
+            // sRGB transfer — leave the TRC from new_srgb() as-is.
+        }
+        _ => {
+            // Unrecognized transfer — cannot synthesize accurately.
+            // PQ (16), HLG (18) etc. are HDR transfers that need scene-referred
+            // handling, not simple ICC profile synthesis.
+            return None;
+        }
+    }
+
+    // Clear CICP to prevent it from overriding our TRC (issue #154).
+    profile.cicp = None;
+
+    profile.encode().ok()
+}
+
+/// Apply a source ICC profile to a pixel source, transforming to sRGB.
+/// Shared by both gAMA and cICP paths.
+fn apply_icc_to_source(
+    source: Box<dyn zenpipe::Source>,
+    src_icc: &[u8],
+) -> Result<Box<dyn zenpipe::Source>, ZenError> {
     let srgb_icc = srgb_icc_profile();
     let src_format = source.format();
     let pixel_format = src_format.pixel_format();
 
     use zenpipe::ColorManagement as _;
     let transform = zenpipe::MoxCms.build_transform_for_format(
-        &icc, &srgb_icc, pixel_format, pixel_format,
+        src_icc, &srgb_icc, pixel_format, pixel_format,
     );
 
     match transform {
@@ -1105,15 +1214,30 @@ fn encode_animation_passthrough(
     }])
 }
 
+/// Parsed cICP chunk values.
+#[derive(Clone, Copy, Debug)]
+struct CicpValues {
+    /// Colour primaries (cp): 1=BT.709/sRGB, 9=BT.2020, 12=Display P3, etc.
+    colour_primaries: u8,
+    /// Transfer characteristics (tc): 1=BT.709, 13=sRGB, 16=PQ, 18=HLG, etc.
+    transfer_characteristics: u8,
+    /// Matrix coefficients (mc): 0=identity for RGB.
+    #[allow(dead_code)]
+    matrix_coefficients: u8,
+    /// Full range flag: 1=full range, 0=video range.
+    #[allow(dead_code)]
+    full_range: u8,
+}
+
 /// Parse PNG color-related chunks: gAMA, cHRM, sRGB, cICP.
-fn parse_png_color_chunks(data: &[u8]) -> (Option<u32>, Option<[u32; 8]>, bool, bool) {
+fn parse_png_color_chunks(data: &[u8]) -> (Option<u32>, Option<[u32; 8]>, bool, Option<CicpValues>) {
     let mut gamma = None;
     let mut chrm = None;
     let mut has_srgb = false;
-    let mut has_cicp = false;
+    let mut cicp = None;
 
     if data.len() < 8 || &data[0..8] != b"\x89PNG\r\n\x1a\n" {
-        return (None, None, false, false);
+        return (None, None, false, None);
     }
     let mut pos = 8;
     while pos + 8 <= data.len() {
@@ -1136,13 +1260,20 @@ fn parse_png_color_chunks(data: &[u8]) -> (Option<u32>, Option<[u32; 8]>, bool, 
                 chrm = Some([r(0), r(4), r(8), r(12), r(16), r(20), r(24), r(28)]);
             }
             b"sRGB" => { has_srgb = true; }
-            b"cICP" => { has_cicp = true; }
+            b"cICP" if len == 4 => {
+                cicp = Some(CicpValues {
+                    colour_primaries: data[chunk_data_start],
+                    transfer_characteristics: data[chunk_data_start + 1],
+                    matrix_coefficients: data[chunk_data_start + 2],
+                    full_range: data[chunk_data_start + 3],
+                });
+            }
             b"IDAT" | b"IEND" => break,
             _ => {}
         }
         pos = chunk_end;
     }
-    (gamma, chrm, has_srgb, has_cicp)
+    (gamma, chrm, has_srgb, cicp)
 }
 
 /// Wrap a source with a format conversion to RGBA8 sRGB if needed.
@@ -1248,6 +1379,61 @@ fn build_codec_config_from_hints(
     zencodecs::jpeg_codec_config_for_preset(preset_hint, quality)
 }
 
+/// Derive the effective quality and lossless flag for PNG encoding,
+/// handling pngquant-style quantization hints.
+///
+/// When PNG hints contain `quality` and/or `min_quality`, this indicates
+/// the user wants palette quantization (lossy PNG), mirroring v2's pngquant
+/// behavior. The mapping is:
+///
+/// - `min_quality` (default 0) → zenpng quality (controls the MPE quality gate)
+///   Lower min_quality = more permissive = more likely to quantize.
+///   Higher min_quality = stricter = more likely to fall back to lossless.
+/// - `quality` → the quantizer's target max quality (v2 pngquant semantic)
+///   In zenpng, the quantizer runs at fixed settings, so this mainly signals
+///   "quantization requested." We use min_quality for the gate threshold.
+///
+/// For non-PNG formats or PNG without quantization hints, returns the
+/// decision's original quality and lossless values unchanged.
+fn resolve_png_quantization(decision: &zencodecs::FormatDecision) -> (f32, bool) {
+    if decision.format != zencodecs::ImageFormat::Png {
+        return (decision.quality.quality, decision.lossless);
+    }
+
+    let has_quality_hint = decision.hints.contains_key("quality");
+    let has_min_quality_hint = decision.hints.contains_key("min_quality");
+
+    if !has_quality_hint && !has_min_quality_hint {
+        // No pngquant hints — use the decision as-is.
+        return (decision.quality.quality, decision.lossless);
+    }
+
+    // PNG with quantization hints: force lossy mode.
+    let lossless = false;
+
+    // Derive the effective quality for zenpng's MPE gate.
+    // Use min_quality as the quality value — this controls how strict the
+    // quality gate is. If min_quality is absent, default to 0 (very permissive,
+    // always quantizes). If only quality is set, use quality - 0.01 to ensure
+    // we enter the < 100 quantization path.
+    let quality = if let Some(mq) = decision.hints.get("min_quality")
+        .and_then(|v| v.parse::<f32>().ok())
+    {
+        // min_quality sets the MPE gate threshold.
+        // Ensure it's < 100 so zenpng enters the quantization path.
+        mq.clamp(0.0, 99.99)
+    } else if has_quality_hint {
+        // quality hint present but no min_quality → very permissive gate.
+        // Use 0.0 as the quality, giving the highest MPE threshold (most
+        // permissive). This mirrors v2's default min_quality of 0.
+        0.0_f32
+    } else {
+        decision.quality.quality
+    };
+
+    (quality, lossless)
+}
+
 fn stream_encode(
     mut source: Box<dyn zenpipe::Source>,
     decision: &zencodecs::FormatDecision,
@@ -1282,11 +1468,20 @@ fn stream_encode(
     // Build codec config from hints (e.g., mozjpeg preset for JPEG).
     let codec_config = build_codec_config_from_hints(decision);
 
+    // Derive effective quality and lossless for the encoder.
+    // For PNG with quantization hints (quality/min_quality from pngquant-style
+    // commands), we need to translate to zenpng semantics:
+    //  - zenpng requires quality < 100 AND lossless=false to enter quantization
+    //  - The quality value maps to an MPE threshold: lower quality = more permissive
+    //  - v2's min_quality maps to zenpng's quality (it controls the quality gate)
+    //  - v2's quality is the quantizer's target max; zenpng doesn't have a separate setting
+    let (effective_quality, effective_lossless) = resolve_png_quantization(decision);
+
     let output = if !use_oneshot {
         // Try streaming encode first.
         let mut req = zencodecs::EncodeRequest::new(decision.format)
-            .with_quality(decision.quality.quality)
-            .with_lossless(decision.lossless)
+            .with_quality(effective_quality)
+            .with_lossless(effective_lossless)
             .with_registry(&registry);
         if let Some(ref cfg) = codec_config {
             req = req.with_codec_config(cfg);
@@ -1312,8 +1507,8 @@ fn stream_encode(
             .map_err(|e| ZenError::Codec(format!("pixel slice: {e}")))?;
 
         let mut req = zencodecs::EncodeRequest::new(decision.format)
-            .with_quality(decision.quality.quality)
-            .with_lossless(decision.lossless)
+            .with_quality(effective_quality)
+            .with_lossless(effective_lossless)
             .with_registry(&registry);
         if let Some(ref cfg) = codec_config {
             req = req.with_codec_config(cfg);
