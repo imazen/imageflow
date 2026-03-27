@@ -495,7 +495,6 @@ impl Context {
             let h = bitmap.height;
             let bpp = bitmap.bytes_per_pixel();
 
-
             // Determine alpha properties from the zen pixel format.
             let has_alpha = bitmap.format.has_alpha();
             let alpha_meaningful = has_alpha;
@@ -519,7 +518,8 @@ impl Context {
                 let src_stride = w as usize * bpp;
 
                 for y in 0..h as usize {
-                    let src_row = &bitmap.pixels[y * src_stride..(y * src_stride + src_stride).min(bitmap.pixels.len())];
+                    let src_row = &bitmap.pixels
+                        [y * src_stride..(y * src_stride + src_stride).min(bitmap.pixels.len())];
                     let dst_row = window.row_mut(y).unwrap();
                     if bpp == 4 {
                         // RGBA → BGRA: swap R and B
@@ -527,9 +527,9 @@ impl Context {
                             let si = x * 4;
                             let di = x * 4;
                             if si + 3 < src_row.len() && di + 3 < dst_row.len() {
-                                dst_row[di] = src_row[si + 2];     // B ← R
+                                dst_row[di] = src_row[si + 2]; // B ← R
                                 dst_row[di + 1] = src_row[si + 1]; // G ← G
-                                dst_row[di + 2] = src_row[si];     // R ← B
+                                dst_row[di + 2] = src_row[si]; // R ← B
                                 dst_row[di + 3] = src_row[si + 3]; // A ← A
                             }
                         }
@@ -539,10 +539,10 @@ impl Context {
                             let si = x * 3;
                             let di = x * 4;
                             if si + 2 < src_row.len() && di + 3 < dst_row.len() {
-                                dst_row[di] = src_row[si + 2];     // B ← R
+                                dst_row[di] = src_row[si + 2]; // B ← R
                                 dst_row[di + 1] = src_row[si + 1]; // G ← G
-                                dst_row[di + 2] = src_row[si];     // R ← B
-                                dst_row[di + 3] = 255;             // A = opaque
+                                dst_row[di + 2] = src_row[si]; // R ← B
+                                dst_row[di + 3] = 255; // A = opaque
                             }
                         }
                     } else {
@@ -727,7 +727,8 @@ impl Context {
         // When zen-default feature is enabled, route through zen pipeline.
         #[cfg(feature = "zen-default")]
         {
-            let output = crate::zen::zen_build(&parsed, &self.security).map_err(|e| e.at(here!()))?;
+            let output =
+                crate::zen::zen_build(&parsed, &self.security).map_err(|e| e.at(here!()))?;
             for (io_id, bytes) in &output.output_buffers {
                 let _ = self.add_output_buffer(*io_id);
                 let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
@@ -850,8 +851,9 @@ impl Context {
             self.configure_security(s);
         }
 
-        let output = crate::zen::zen_execute(&what.framewise, &self.zen_input_bytes, &self.security)
-            .map_err(|e| e.at(here!()))?;
+        let output =
+            crate::zen::zen_execute(&what.framewise, &self.zen_input_bytes, &self.security)
+                .map_err(|e| e.at(here!()))?;
 
         // Store encoded outputs in Context's output buffer system.
         for (io_id, bytes) in &output.output_buffers {

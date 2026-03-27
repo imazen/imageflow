@@ -6,8 +6,8 @@
 
 use zennode::NodeInstance;
 use zenpipe::bridge::NodeConverter;
-use zenpipe::PipeError;
 use zenpipe::graph::NodeOp;
+use zenpipe::PipeError;
 
 /// Converter for `zenfilters.*` nodes → `NodeOp::Filter(pipeline)`.
 ///
@@ -22,25 +22,18 @@ impl NodeConverter for ZenFiltersConverter {
 
     fn convert(&self, node: &dyn NodeInstance) -> Result<NodeOp, PipeError> {
         let filter = zenfilters::zennode_defs::node_to_filter(node).ok_or_else(|| {
-            PipeError::Op(format!(
-                "zenfilters converter: unrecognized node '{}'",
-                node.schema().id
-            ))
+            PipeError::Op(format!("zenfilters converter: unrecognized node '{}'", node.schema().id))
         })?;
 
-        let mut pipeline =
-            zenfilters::Pipeline::new(zenfilters::PipelineConfig::default()).map_err(|e| {
-                PipeError::Op(format!("zenfilters pipeline creation failed: {e:?}"))
-            })?;
+        let mut pipeline = zenfilters::Pipeline::new(zenfilters::PipelineConfig::default())
+            .map_err(|e| PipeError::Op(format!("zenfilters pipeline creation failed: {e:?}")))?;
         pipeline.push(filter);
         Ok(NodeOp::Filter(pipeline))
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
-        let mut pipeline =
-            zenfilters::Pipeline::new(zenfilters::PipelineConfig::default()).map_err(|e| {
-                PipeError::Op(format!("zenfilters pipeline creation failed: {e:?}"))
-            })?;
+        let mut pipeline = zenfilters::Pipeline::new(zenfilters::PipelineConfig::default())
+            .map_err(|e| PipeError::Op(format!("zenfilters pipeline creation failed: {e:?}")))?;
 
         for node in nodes {
             let filter = zenfilters::zennode_defs::node_to_filter(*node).ok_or_else(|| {
@@ -62,10 +55,8 @@ impl NodeConverter for ZenFiltersConverter {
             return Ok(None);
         }
 
-        let mut pipeline =
-            zenfilters::Pipeline::new(zenfilters::PipelineConfig::default()).map_err(|e| {
-                PipeError::Op(format!("zenfilters pipeline creation failed: {e:?}"))
-            })?;
+        let mut pipeline = zenfilters::Pipeline::new(zenfilters::PipelineConfig::default())
+            .map_err(|e| PipeError::Op(format!("zenfilters pipeline creation failed: {e:?}")))?;
 
         for node in nodes {
             if let Some(filter) = zenfilters::zennode_defs::node_to_filter(*node) {
@@ -111,13 +102,7 @@ impl NodeConverter for ExpandCanvasConverter {
             [0u8, 0, 0, 0] // transparent (legacy default)
         };
 
-        Ok(NodeOp::ExpandCanvas {
-            left,
-            top,
-            right,
-            bottom,
-            bg_color,
-        })
+        Ok(NodeOp::ExpandCanvas { left, top, right, bottom, bg_color })
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
@@ -144,10 +129,22 @@ impl NodeConverter for RegionConverter {
 
     fn convert(&self, node: &dyn NodeInstance) -> Result<NodeOp, PipeError> {
         use zennode::ParamValue;
-        let x1 = match node.get_param("x1") { Some(ParamValue::I32(v)) => v, _ => 0 };
-        let y1 = match node.get_param("y1") { Some(ParamValue::I32(v)) => v, _ => 0 };
-        let x2 = match node.get_param("x2") { Some(ParamValue::I32(v)) => v, _ => 0 };
-        let y2 = match node.get_param("y2") { Some(ParamValue::I32(v)) => v, _ => 0 };
+        let x1 = match node.get_param("x1") {
+            Some(ParamValue::I32(v)) => v,
+            _ => 0,
+        };
+        let y1 = match node.get_param("y1") {
+            Some(ParamValue::I32(v)) => v,
+            _ => 0,
+        };
+        let x2 = match node.get_param("x2") {
+            Some(ParamValue::I32(v)) => v,
+            _ => 0,
+        };
+        let y2 = match node.get_param("y2") {
+            Some(ParamValue::I32(v)) => v,
+            _ => 0,
+        };
 
         // Region(x1,y1,x2,y2) defines a viewport. The output canvas is
         // (x2-x1) × (y2-y1) pixels. The source image is placed at (-x1,-y1)
@@ -160,34 +157,41 @@ impl NodeConverter for RegionConverter {
         // Use Materialize to apply the region viewport via ExpandCanvasSource.
         // ExpandCanvasSource handles negative placement (crop) and positive
         // placement (padding) transparently.
-        Ok(NodeOp::Materialize(Box::new(move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
-            let src_w = *w;
-            let src_h = *h;
-            let bpp = fmt.bytes_per_pixel();
-            let src_stride = src_w as usize * bpp;
+        Ok(NodeOp::Materialize(Box::new(
+            move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
+                let src_w = *w;
+                let src_h = *h;
+                let bpp = fmt.bytes_per_pixel();
+                let src_stride = src_w as usize * bpp;
 
-            // Build the output canvas
-            let out_stride = canvas_w as usize * bpp;
-            let mut out = vec![0u8; canvas_h as usize * out_stride];
+                // Build the output canvas
+                let out_stride = canvas_w as usize * bpp;
+                let mut out = vec![0u8; canvas_h as usize * out_stride];
 
-            for out_y in 0..canvas_h as i32 {
-                let src_y = out_y - place_y;
-                if src_y < 0 || src_y >= src_h as i32 { continue; }
-                for out_x in 0..canvas_w as i32 {
-                    let src_x = out_x - place_x;
-                    if src_x < 0 || src_x >= src_w as i32 { continue; }
-                    let src_off = src_y as usize * src_stride + src_x as usize * bpp;
-                    let dst_off = out_y as usize * out_stride + out_x as usize * bpp;
-                    if src_off + bpp <= data.len() && dst_off + bpp <= out.len() {
-                        out[dst_off..dst_off + bpp].copy_from_slice(&data[src_off..src_off + bpp]);
+                for out_y in 0..canvas_h as i32 {
+                    let src_y = out_y - place_y;
+                    if src_y < 0 || src_y >= src_h as i32 {
+                        continue;
+                    }
+                    for out_x in 0..canvas_w as i32 {
+                        let src_x = out_x - place_x;
+                        if src_x < 0 || src_x >= src_w as i32 {
+                            continue;
+                        }
+                        let src_off = src_y as usize * src_stride + src_x as usize * bpp;
+                        let dst_off = out_y as usize * out_stride + out_x as usize * bpp;
+                        if src_off + bpp <= data.len() && dst_off + bpp <= out.len() {
+                            out[dst_off..dst_off + bpp]
+                                .copy_from_slice(&data[src_off..src_off + bpp]);
+                        }
                     }
                 }
-            }
 
-            *data = out;
-            *w = canvas_w;
-            *h = canvas_h;
-        })))
+                *data = out;
+                *w = canvas_w;
+                *h = canvas_h;
+            },
+        )))
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
@@ -213,4 +217,3 @@ pub fn imageflow_converters() -> [&'static dyn NodeConverter; 3] {
     static REGION: RegionConverter = RegionConverter;
     [&FILTERS, &EXPAND, &REGION]
 }
-

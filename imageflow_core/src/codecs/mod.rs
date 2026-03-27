@@ -438,8 +438,7 @@ impl CodecInstanceContainer {
         match &mut self.output_state {
             OutputBufferState::Ready(ref mut io) => {
                 use std::io::Write;
-                io.write_all(bytes)
-                    .map_err(|e| nerror!(ErrorKind::EncodingIoError, "{}", e))?;
+                io.write_all(bytes).map_err(|e| nerror!(ErrorKind::EncodingIoError, "{}", e))?;
                 Ok(())
             }
             _ => Err(nerror!(
@@ -449,5 +448,4 @@ impl CodecInstanceContainer {
             )),
         }
     }
-
 }

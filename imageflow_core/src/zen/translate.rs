@@ -86,7 +86,6 @@ pub fn translate_nodes(nodes: &[Node]) -> Result<TranslatedPipeline, TranslateEr
 fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), TranslateError> {
     match node {
         // ─── I/O: handled as config, not pixel nodes ───
-
         Node::Decode { io_id, commands } => {
             result.decode_io_id = Some(*io_id);
             result.decoder_commands = commands.clone();
@@ -100,26 +99,15 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         }
 
         // ─── Geometry: zenlayout nodes ───
+        Node::FlipV => push_layout_node(&mut result.nodes, "zenlayout.flip_v", &[]),
 
-        Node::FlipV => {
-            push_layout_node(&mut result.nodes, "zenlayout.flip_v", &[])
-        }
+        Node::FlipH => push_layout_node(&mut result.nodes, "zenlayout.flip_h", &[]),
 
-        Node::FlipH => {
-            push_layout_node(&mut result.nodes, "zenlayout.flip_h", &[])
-        }
+        Node::Rotate90 => push_layout_node(&mut result.nodes, "zenlayout.rotate_90", &[]),
 
-        Node::Rotate90 => {
-            push_layout_node(&mut result.nodes, "zenlayout.rotate_90", &[])
-        }
+        Node::Rotate180 => push_layout_node(&mut result.nodes, "zenlayout.rotate_180", &[]),
 
-        Node::Rotate180 => {
-            push_layout_node(&mut result.nodes, "zenlayout.rotate_180", &[])
-        }
-
-        Node::Rotate270 => {
-            push_layout_node(&mut result.nodes, "zenlayout.rotate_270", &[])
-        }
+        Node::Rotate270 => push_layout_node(&mut result.nodes, "zenlayout.rotate_270", &[]),
 
         Node::Transpose => {
             // Transpose = rotate90 + flip_h (equivalent)
@@ -127,51 +115,62 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
             push_layout_node(&mut result.nodes, "zenlayout.flip_h", &[])
         }
 
-        Node::ApplyOrientation { flag } => {
-            push_layout_node(&mut result.nodes, "zenlayout.orient", &[
-                ("orientation", ParamValue::I32(*flag)),
-            ])
-        }
+        Node::ApplyOrientation { flag } => push_layout_node(
+            &mut result.nodes,
+            "zenlayout.orient",
+            &[("orientation", ParamValue::I32(*flag))],
+        ),
 
         Node::Crop { x1, y1, x2, y2 } => {
             // v2 Crop uses x1,y1,x2,y2 (corners). zenlayout uses x,y,w,h.
             let w = x2.saturating_sub(*x1);
             let h = y2.saturating_sub(*y1);
-            push_layout_node(&mut result.nodes, "zenlayout.crop", &[
-                ("x", ParamValue::U32(*x1)),
-                ("y", ParamValue::U32(*y1)),
-                ("w", ParamValue::U32(w)),
-                ("h", ParamValue::U32(h)),
-            ])
+            push_layout_node(
+                &mut result.nodes,
+                "zenlayout.crop",
+                &[
+                    ("x", ParamValue::U32(*x1)),
+                    ("y", ParamValue::U32(*y1)),
+                    ("w", ParamValue::U32(w)),
+                    ("h", ParamValue::U32(h)),
+                ],
+            )
         }
 
         Node::Constrain(c) => translate_constrain(c, &mut result.nodes),
 
         Node::Resample2D { w, h, hints } => {
-            let filter = hints.as_ref()
+            let filter = hints
+                .as_ref()
                 .and_then(|h| h.down_filter.as_ref())
                 .map(|f| filter_to_str(f).to_string())
                 .unwrap_or_default();
-            let sharpen = hints.as_ref()
-                .and_then(|h| h.sharpen_percent)
-                .unwrap_or(0.0);
-            push_layout_node(&mut result.nodes, "zenresize.resize", &[
-                ("w", ParamValue::U32(*w)),
-                ("h", ParamValue::U32(*h)),
-                ("filter", ParamValue::Str(filter)),
-                ("sharpen", ParamValue::F32(sharpen)),
-            ])?;
+            let sharpen = hints.as_ref().and_then(|h| h.sharpen_percent).unwrap_or(0.0);
+            push_layout_node(
+                &mut result.nodes,
+                "zenresize.resize",
+                &[
+                    ("w", ParamValue::U32(*w)),
+                    ("h", ParamValue::U32(*h)),
+                    ("filter", ParamValue::Str(filter)),
+                    ("sharpen", ParamValue::F32(sharpen)),
+                ],
+            )?;
             // If an opaque background_color (matte) is specified, add RemoveAlpha after resize.
             if let Some(hints) = hints {
                 if let Some(ref bg) = hints.background_color {
                     if !matches!(bg, Color::Transparent) {
                         let rgba = color_to_rgba(bg);
                         if rgba[3] > 0 {
-                            push_layout_node(&mut result.nodes, "zenpipe.remove_alpha", &[
-                                ("matte_r", ParamValue::U32(rgba[0] as u32)),
-                                ("matte_g", ParamValue::U32(rgba[1] as u32)),
-                                ("matte_b", ParamValue::U32(rgba[2] as u32)),
-                            ])?;
+                            push_layout_node(
+                                &mut result.nodes,
+                                "zenpipe.remove_alpha",
+                                &[
+                                    ("matte_r", ParamValue::U32(rgba[0] as u32)),
+                                    ("matte_g", ParamValue::U32(rgba[1] as u32)),
+                                    ("matte_b", ParamValue::U32(rgba[2] as u32)),
+                                ],
+                            )?;
                         }
                     }
                 }
@@ -179,40 +178,47 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
             Ok(())
         }
 
-        Node::Region { x1, y1, x2, y2, background_color } => {
-            push_layout_node(&mut result.nodes, "zenlayout.region", &[
+        Node::Region { x1, y1, x2, y2, background_color } => push_layout_node(
+            &mut result.nodes,
+            "zenlayout.region",
+            &[
                 ("x1", ParamValue::I32(*x1)),
                 ("y1", ParamValue::I32(*y1)),
                 ("x2", ParamValue::I32(*x2)),
                 ("y2", ParamValue::I32(*y2)),
-            ])
-        }
+            ],
+        ),
 
-        Node::RegionPercent { x1, y1, x2, y2, background_color } => {
-            push_layout_node(&mut result.nodes, "zenlayout.crop_percent", &[
+        Node::RegionPercent { x1, y1, x2, y2, background_color } => push_layout_node(
+            &mut result.nodes,
+            "zenlayout.crop_percent",
+            &[
                 ("x1", ParamValue::F32(*x1)),
                 ("y1", ParamValue::F32(*y1)),
                 ("x2", ParamValue::F32(*x2)),
                 ("y2", ParamValue::F32(*y2)),
-            ])
-        }
+            ],
+        ),
 
         Node::ExpandCanvas { left, top, right, bottom, color } => {
             let bg = color_to_rgba(color);
-            push_layout_node(&mut result.nodes, "zenlayout.expand_canvas", &[
-                ("left", ParamValue::U32(*left)),
-                ("top", ParamValue::U32(*top)),
-                ("right", ParamValue::U32(*right)),
-                ("bottom", ParamValue::U32(*bottom)),
-                ("bg_r", ParamValue::U32(bg[0] as u32)),
-                ("bg_g", ParamValue::U32(bg[1] as u32)),
-                ("bg_b", ParamValue::U32(bg[2] as u32)),
-                ("bg_a", ParamValue::U32(bg[3] as u32)),
-            ])
+            push_layout_node(
+                &mut result.nodes,
+                "zenlayout.expand_canvas",
+                &[
+                    ("left", ParamValue::U32(*left)),
+                    ("top", ParamValue::U32(*top)),
+                    ("right", ParamValue::U32(*right)),
+                    ("bottom", ParamValue::U32(*bottom)),
+                    ("bg_r", ParamValue::U32(bg[0] as u32)),
+                    ("bg_g", ParamValue::U32(bg[1] as u32)),
+                    ("bg_b", ParamValue::U32(bg[2] as u32)),
+                    ("bg_a", ParamValue::U32(bg[3] as u32)),
+                ],
+            )
         }
 
         // ─── Filters: zenfilters nodes ───
-
         Node::ColorFilterSrgb(filter) => translate_color_filter(filter, &mut result.nodes),
 
         Node::ColorMatrixSrgb { matrix: _matrix } => {
@@ -229,36 +235,35 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         }
 
         // ─── Canvas operations ───
-
         Node::CreateCanvas { format, w, h, color } => {
             // CreateCanvas is a decode-replacement: produces a solid-color image.
             // In the zen pipeline, we handle it as a special source in execute.rs.
             // Store it as a decode with a synthetic marker.
             result.decode_io_id = Some(-1); // sentinel: create_canvas, not a real io_id
-            result.create_canvas = Some(CreateCanvasParams {
-                w: *w as u32,
-                h: *h as u32,
-                color: color.clone(),
-            });
+            result.create_canvas =
+                Some(CreateCanvasParams { w: *w as u32, h: *h as u32, color: color.clone() });
             Ok(())
         }
 
         Node::FillRect { x1, y1, x2, y2, color } => {
             let rgba = color_to_rgba(color);
-            push_layout_node(&mut result.nodes, "zenpipe.fill_rect", &[
-                ("x1", ParamValue::U32(*x1)),
-                ("y1", ParamValue::U32(*y1)),
-                ("x2", ParamValue::U32(*x2)),
-                ("y2", ParamValue::U32(*y2)),
-                ("color_r", ParamValue::U32(rgba[0] as u32)),
-                ("color_g", ParamValue::U32(rgba[1] as u32)),
-                ("color_b", ParamValue::U32(rgba[2] as u32)),
-                ("color_a", ParamValue::U32(rgba[3] as u32)),
-            ])
+            push_layout_node(
+                &mut result.nodes,
+                "zenpipe.fill_rect",
+                &[
+                    ("x1", ParamValue::U32(*x1)),
+                    ("y1", ParamValue::U32(*y1)),
+                    ("x2", ParamValue::U32(*x2)),
+                    ("y2", ParamValue::U32(*y2)),
+                    ("color_r", ParamValue::U32(rgba[0] as u32)),
+                    ("color_g", ParamValue::U32(rgba[1] as u32)),
+                    ("color_b", ParamValue::U32(rgba[2] as u32)),
+                    ("color_a", ParamValue::U32(rgba[3] as u32)),
+                ],
+            )
         }
 
         // ─── Composition ───
-
         Node::DrawImageExact { x, y, w, h, blend, hints } => {
             Err(TranslateError::Unsupported("draw_image_exact".into()))
         }
@@ -275,13 +280,14 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         }
 
         // ─── Misc ───
-
-        Node::CropWhitespace { threshold, percent_padding } => {
-            push_layout_node(&mut result.nodes, "zenpipe.crop_whitespace", &[
+        Node::CropWhitespace { threshold, percent_padding } => push_layout_node(
+            &mut result.nodes,
+            "zenpipe.crop_whitespace",
+            &[
                 ("threshold", ParamValue::U32(*threshold as u32)),
                 ("percent_padding", ParamValue::F32(*percent_padding)),
-            ])
-        }
+            ],
+        ),
 
         Node::RoundImageCorners { radius, background_color } => {
             let r = match radius {
@@ -291,13 +297,17 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
                 _ => 10.0,
             };
             let bg = color_to_rgba(background_color);
-            push_layout_node(&mut result.nodes, "zenpipe.round_corners", &[
-                ("radius", ParamValue::F32(r)),
-                ("bg_r", ParamValue::U32(bg[0] as u32)),
-                ("bg_g", ParamValue::U32(bg[1] as u32)),
-                ("bg_b", ParamValue::U32(bg[2] as u32)),
-                ("bg_a", ParamValue::U32(bg[3] as u32)),
-            ])
+            push_layout_node(
+                &mut result.nodes,
+                "zenpipe.round_corners",
+                &[
+                    ("radius", ParamValue::F32(r)),
+                    ("bg_r", ParamValue::U32(bg[0] as u32)),
+                    ("bg_g", ParamValue::U32(bg[1] as u32)),
+                    ("bg_b", ParamValue::U32(bg[2] as u32)),
+                    ("bg_a", ParamValue::U32(bg[3] as u32)),
+                ],
+            )
         }
 
         Node::CommandString { kind, value, decode, encode, watermarks } => {
@@ -328,9 +338,7 @@ fn translate_constrain(
     nodes: &mut Vec<Box<dyn NodeInstance>>,
 ) -> Result<(), TranslateError> {
     let mode_str = constraint_mode_to_str(&c.mode);
-    let mut params: Vec<(&str, ParamValue)> = vec![
-        ("mode", ParamValue::Str(mode_str.into())),
-    ];
+    let mut params: Vec<(&str, ParamValue)> = vec![("mode", ParamValue::Str(mode_str.into()))];
     if let Some(w) = c.w {
         params.push(("w", ParamValue::U32(w)));
     }
@@ -349,11 +357,15 @@ fn translate_constrain(
             if !matches!(bg, Color::Transparent) {
                 let rgba = color_to_rgba(bg);
                 if rgba[3] > 0 {
-                    push_layout_node(nodes, "zenpipe.remove_alpha", &[
-                        ("matte_r", ParamValue::U32(rgba[0] as u32)),
-                        ("matte_g", ParamValue::U32(rgba[1] as u32)),
-                        ("matte_b", ParamValue::U32(rgba[2] as u32)),
-                    ])?;
+                    push_layout_node(
+                        nodes,
+                        "zenpipe.remove_alpha",
+                        &[
+                            ("matte_r", ParamValue::U32(rgba[0] as u32)),
+                            ("matte_g", ParamValue::U32(rgba[1] as u32)),
+                            ("matte_b", ParamValue::U32(rgba[2] as u32)),
+                        ],
+                    )?;
                 }
             }
         }
@@ -362,11 +374,15 @@ fn translate_constrain(
     if let Some(ref canvas) = c.canvas_color {
         let rgba = color_to_rgba(canvas);
         if rgba[3] >= 255 {
-            push_layout_node(nodes, "zenpipe.remove_alpha", &[
-                ("matte_r", ParamValue::U32(rgba[0] as u32)),
-                ("matte_g", ParamValue::U32(rgba[1] as u32)),
-                ("matte_b", ParamValue::U32(rgba[2] as u32)),
-            ])?;
+            push_layout_node(
+                nodes,
+                "zenpipe.remove_alpha",
+                &[
+                    ("matte_r", ParamValue::U32(rgba[0] as u32)),
+                    ("matte_g", ParamValue::U32(rgba[1] as u32)),
+                    ("matte_b", ParamValue::U32(rgba[2] as u32)),
+                ],
+            )?;
         }
     }
     Ok(())
@@ -386,22 +402,14 @@ fn translate_color_filter(
             // Set saturation to -1.0 (full desaturation).
             // Different grayscale modes use different luma weights,
             // but zenfilters saturation=-1 uses the standard model.
-            push_filter_node(nodes, "zenfilters.saturation", &[
-                ("amount", ParamValue::F32(-1.0)),
-            ])
+            push_filter_node(nodes, "zenfilters.saturation", &[("amount", ParamValue::F32(-1.0))])
         }
         ColorFilterSrgb::Sepia => {
             // Desaturate then warm tint. Simplified version.
-            push_filter_node(nodes, "zenfilters.saturation", &[
-                ("amount", ParamValue::F32(-1.0)),
-            ])?;
-            push_filter_node(nodes, "zenfilters.temperature", &[
-                ("amount", ParamValue::F32(0.3)),
-            ])
+            push_filter_node(nodes, "zenfilters.saturation", &[("amount", ParamValue::F32(-1.0))])?;
+            push_filter_node(nodes, "zenfilters.temperature", &[("amount", ParamValue::F32(0.3))])
         }
-        ColorFilterSrgb::Invert => {
-            push_filter_node(nodes, "zenfilters.invert", &[])
-        }
+        ColorFilterSrgb::Invert => push_filter_node(nodes, "zenfilters.invert", &[]),
         ColorFilterSrgb::Alpha(_a) => {
             // v2 Alpha filter sets global opacity.
             // Not commonly used in test suite; skip for now.
@@ -411,30 +419,30 @@ fn translate_color_filter(
             // v2 contrast is centered at 1.0 (no change), range ~0..2.
             // zenfilters contrast is centered at 0.0, range -1..1.
             let normalized = c - 1.0;
-            push_filter_node(nodes, "zenfilters.contrast", &[
-                ("amount", ParamValue::F32(normalized)),
-            ])
+            push_filter_node(
+                nodes,
+                "zenfilters.contrast",
+                &[("amount", ParamValue::F32(normalized))],
+            )
         }
         ColorFilterSrgb::Brightness(b) => {
             // v2 brightness is centered at 1.0, range ~0..2.
             // Map to zenfilters exposure in stops.
             let stops = (*b - 1.0) * 2.0; // rough mapping
-            push_filter_node(nodes, "zenfilters.exposure", &[
-                ("stops", ParamValue::F32(stops)),
-            ])
+            push_filter_node(nodes, "zenfilters.exposure", &[("stops", ParamValue::F32(stops))])
         }
         ColorFilterSrgb::Saturation(sat) => {
             // v2 saturation is centered at 1.0, range ~0..2.
             // zenfilters saturation is centered at 0.0, range -1..1.
             let normalized = sat - 1.0;
-            push_filter_node(nodes, "zenfilters.saturation", &[
-                ("amount", ParamValue::F32(normalized)),
-            ])
+            push_filter_node(
+                nodes,
+                "zenfilters.saturation",
+                &[("amount", ParamValue::F32(normalized))],
+            )
         }
         #[allow(unreachable_patterns)]
-        _ => Err(TranslateError::Unsupported(format!(
-            "color_filter_srgb::{filter:?}"
-        ))),
+        _ => Err(TranslateError::Unsupported(format!("color_filter_srgb::{filter:?}"))),
     }
 }
 
@@ -460,9 +468,9 @@ fn push_layout_node(
     let def = registry.get(schema_id).ok_or_else(|| {
         TranslateError::NodeCreation(format!("zenlayout node '{schema_id}' not found in registry"))
     })?;
-    let mut node = def.create_default().map_err(|e| {
-        TranslateError::NodeCreation(format!("{schema_id}: {e}"))
-    })?;
+    let mut node = def
+        .create_default()
+        .map_err(|e| TranslateError::NodeCreation(format!("{schema_id}: {e}")))?;
     for (name, value) in params {
         node.set_param(name, value.clone());
     }
@@ -476,9 +484,9 @@ fn push_constrain_node(
     params: &[(&str, ParamValue)],
 ) -> Result<(), TranslateError> {
     let def: &dyn NodeDef = &zenresize::zennode_defs::CONSTRAIN_NODE;
-    let mut node = def.create_default().map_err(|e| {
-        TranslateError::NodeCreation(format!("zenresize.constrain: {e}"))
-    })?;
+    let mut node = def
+        .create_default()
+        .map_err(|e| TranslateError::NodeCreation(format!("zenresize.constrain: {e}")))?;
     for (name, value) in params {
         if !node.set_param(name, value.clone()) {
             eprintln!("warning: set_param({name}, {value:?}) failed on zenresize.constrain");
@@ -496,13 +504,11 @@ fn push_filter_node(
 ) -> Result<(), TranslateError> {
     let registry = zen_registry();
     let def = registry.get(schema_id).ok_or_else(|| {
-        TranslateError::NodeCreation(format!(
-            "zenfilters node '{schema_id}' not found in registry"
-        ))
+        TranslateError::NodeCreation(format!("zenfilters node '{schema_id}' not found in registry"))
     })?;
-    let mut node = def.create_default().map_err(|e| {
-        TranslateError::NodeCreation(format!("{schema_id}: {e}"))
-    })?;
+    let mut node = def
+        .create_default()
+        .map_err(|e| TranslateError::NodeCreation(format!("{schema_id}: {e}")))?;
     for (name, value) in params {
         node.set_param(name, value.clone());
     }

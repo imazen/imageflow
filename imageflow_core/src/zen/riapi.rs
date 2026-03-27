@@ -80,25 +80,18 @@ pub fn expand_legacy(
         watermarks: None,
     };
 
-    let result = expand.expand_steps().map_err(|e| {
-        TranslateError::InvalidParam(format!("RIAPI expansion error: {e:?}"))
-    })?;
+    let result = expand
+        .expand_steps()
+        .map_err(|e| TranslateError::InvalidParam(format!("RIAPI expansion error: {e:?}")))?;
 
     let steps = result.steps.unwrap_or_default();
-    let mut warnings: Vec<String> = result
-        .parse_warnings
-        .iter()
-        .map(|w| format!("{w:?}"))
-        .collect();
+    let mut warnings: Vec<String> =
+        result.parse_warnings.iter().map(|w| format!("{w:?}")).collect();
 
     // Translate v2 Node steps → zennode instances.
     let pipeline = translate::translate_nodes(&steps)?;
 
-    Ok(ExpandedRiapi {
-        nodes: pipeline.nodes,
-        preset: pipeline.preset,
-        warnings,
-    })
+    Ok(ExpandedRiapi { nodes: pipeline.nodes, preset: pipeline.preset, warnings })
 }
 
 /// Expand a RIAPI querystring using the zen-native parser.
@@ -139,7 +132,9 @@ pub fn expand_zen(
         let schema_id = inst.schema().id;
         if schema_id == "zencodecs.quality_intent" {
             // Extract codec intent from QualityIntentNode.
-            if let Some(qin) = inst.as_any().downcast_ref::<zencodecs::zennode_defs::QualityIntentNode>() {
+            if let Some(qin) =
+                inst.as_any().downcast_ref::<zencodecs::zennode_defs::QualityIntentNode>()
+            {
                 let intent = qin.to_codec_intent();
                 preset = Some(PresetMapping {
                     intent: intent.clone(),
@@ -154,9 +149,5 @@ pub fn expand_zen(
         }
     }
 
-    Ok(ExpandedRiapi {
-        nodes,
-        preset,
-        warnings,
-    })
+    Ok(ExpandedRiapi { nodes, preset, warnings })
 }

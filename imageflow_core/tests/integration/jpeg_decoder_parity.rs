@@ -19,15 +19,17 @@ fn decode_mozjpeg(jpeg_bytes: &[u8]) -> (Vec<u8>, u32, u32) {
         imageflow_types::Node::CaptureBitmapKey { capture_id: 0 },
     ];
 
-    let _ = ctx.build_1(imageflow_types::Build001 {
-        builder_config: None,
-        io: vec![imageflow_types::IoObject {
-            io_id: 0,
-            direction: imageflow_types::IoDirection::In,
-            io: imageflow_types::IoEnum::ByteArray(jpeg_bytes.to_vec()),
-        }],
-        framewise: imageflow_types::Framewise::Steps(steps),
-    }).unwrap();
+    let _ = ctx
+        .build_1(imageflow_types::Build001 {
+            builder_config: None,
+            io: vec![imageflow_types::IoObject {
+                io_id: 0,
+                direction: imageflow_types::IoDirection::In,
+                io: imageflow_types::IoEnum::ByteArray(jpeg_bytes.to_vec()),
+            }],
+            framewise: imageflow_types::Framewise::Steps(steps),
+        })
+        .unwrap();
 
     let bitmap_key = ctx.get_captured_bitmap_key(0).unwrap();
     let bitmaps = ctx.borrow_bitmaps().unwrap();
@@ -52,10 +54,8 @@ fn decode_mozjpeg(jpeg_bytes: &[u8]) -> (Vec<u8>, u32, u32) {
 #[cfg(feature = "zen-pipeline")]
 fn decode_zenjpeg(jpeg_bytes: &[u8]) -> (Vec<u8>, u32, u32) {
     let registry = zencodecs::AllowedFormats::all();
-    let output = zencodecs::DecodeRequest::new(jpeg_bytes)
-        .with_registry(&registry)
-        .decode()
-        .unwrap();
+    let output =
+        zencodecs::DecodeRequest::new(jpeg_bytes).with_registry(&registry).decode().unwrap();
 
     let w = output.width();
     let h = output.height();
@@ -93,8 +93,15 @@ fn jpeg_decoder_raw_pixel_comparison() {
     // Compare R,G,B channels only
     let moz_bpp = 4;
     let zen_bpp = zenjpeg_pixels.len() / (w * h);
-    eprintln!("mozjpeg: {} bytes ({}bpp), zenjpeg: {} bytes ({}bpp), {}x{}",
-        mozjpeg_pixels.len(), moz_bpp, zenjpeg_pixels.len(), zen_bpp, w, h);
+    eprintln!(
+        "mozjpeg: {} bytes ({}bpp), zenjpeg: {} bytes ({}bpp), {}x{}",
+        mozjpeg_pixels.len(),
+        moz_bpp,
+        zenjpeg_pixels.len(),
+        zen_bpp,
+        w,
+        h
+    );
 
     let mut max_delta = [0u8; 3];
     let mut sum_delta = [0u64; 3];
@@ -120,9 +127,15 @@ fn jpeg_decoder_raw_pixel_comparison() {
             let dg = mg.abs_diff(zg);
             let db = mb.abs_diff(zb);
 
-            if dr > max_delta[0] { max_delta[0] = dr; }
-            if dg > max_delta[1] { max_delta[1] = dg; }
-            if db > max_delta[2] { max_delta[2] = db; }
+            if dr > max_delta[0] {
+                max_delta[0] = dr;
+            }
+            if dg > max_delta[1] {
+                max_delta[1] = dg;
+            }
+            if db > max_delta[2] {
+                max_delta[2] = db;
+            }
 
             sum_delta[0] += dr as u64;
             sum_delta[1] += dg as u64;
@@ -141,7 +154,12 @@ fn jpeg_decoder_raw_pixel_comparison() {
     eprintln!("=== JPEG DECODER COMPARISON (before CMS) ===");
     eprintln!("Max delta:  R={} G={} B={}", max_delta[0], max_delta[1], max_delta[2]);
     eprintln!("Avg delta:  R={:.2} G={:.2} B={:.2}", avg_r, avg_g, avg_b);
-    eprintln!("Pixels > 1: {}/{} ({:.1}%)", diff_count, total, diff_count as f64 / total as f64 * 100.0);
+    eprintln!(
+        "Pixels > 1: {}/{} ({:.1}%)",
+        diff_count,
+        total,
+        diff_count as f64 / total as f64 * 100.0
+    );
 
     // Also test a normal sRGB JPEG for comparison.
     let srgb_path = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -159,12 +177,18 @@ fn jpeg_decoder_raw_pixel_comparison() {
             for x in 0..w2 {
                 let moff = (y * w2 + x) * 4;
                 let zoff = (y * w2 + x) * zen_bpp2;
-                let dr = moz_px[moff+2].abs_diff(zen_px[zoff]);
-                let dg = moz_px[moff+1].abs_diff(zen_px[zoff+1]);
-                let db = moz_px[moff+0].abs_diff(zen_px[zoff+2]);
-                if dr > max_d2[0] { max_d2[0] = dr; }
-                if dg > max_d2[1] { max_d2[1] = dg; }
-                if db > max_d2[2] { max_d2[2] = db; }
+                let dr = moz_px[moff + 2].abs_diff(zen_px[zoff]);
+                let dg = moz_px[moff + 1].abs_diff(zen_px[zoff + 1]);
+                let db = moz_px[moff + 0].abs_diff(zen_px[zoff + 2]);
+                if dr > max_d2[0] {
+                    max_d2[0] = dr;
+                }
+                if dg > max_d2[1] {
+                    max_d2[1] = dg;
+                }
+                if db > max_d2[2] {
+                    max_d2[2] = db;
+                }
             }
         }
         eprintln!("=== sRGB JPEG (Canon 5D) ===");

@@ -47,7 +47,7 @@ fn test_encode_pngquant_command() {
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
         Constraints {
-            max_file_size: Some(299_000), // 290KB + 3% headroom
+            max_file_size: Some(299_000),                 // 290KB + 3% headroom
             similarity: Some(Similarity::MaxZdsim(0.30)), // measured zdsim: 0.189
         },
         steps,
@@ -170,7 +170,7 @@ fn test_encode_webp_lossy() {
         IoTestEnum::Url(FRYMIRE_URL.to_owned()),
         DEBUG_GRAPH,
         Constraints {
-            max_file_size: Some(445_000), // 432KB + 3% headroom
+            max_file_size: Some(445_000),                 // 432KB + 3% headroom
             similarity: Some(Similarity::MaxZdsim(0.40)), // measured zdsim: 0.267
         },
         steps,

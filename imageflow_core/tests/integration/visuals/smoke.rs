@@ -267,7 +267,8 @@ fn test_max_encode_dimensions() {
     let e = smoke_test(
         Some(IoTestEnum::ByteArray(tinypng)),
         Some(IoTestEnum::OutputBuffer),
-        Some(imageflow_types::ExecutionSecurity { cms_mode: Default::default(),
+        Some(imageflow_types::ExecutionSecurity {
+            cms_mode: Default::default(),
             max_decode_size: None,
             max_frame_size: None,
             max_encode_size: Some(imageflow_types::FrameSizeLimit {
@@ -296,7 +297,8 @@ fn test_max_decode_dimensions() {
                 .to_owned(),
         )),
         None,
-        Some(imageflow_types::ExecutionSecurity { cms_mode: Default::default(),
+        Some(imageflow_types::ExecutionSecurity {
+            cms_mode: Default::default(),
             max_decode_size: Some(imageflow_types::FrameSizeLimit {
                 w: 10,
                 h: 100000,
@@ -324,7 +326,8 @@ fn test_max_frame_dimensions() {
     let e = smoke_test(
         None,
         None,
-        Some(imageflow_types::ExecutionSecurity { cms_mode: Default::default(),
+        Some(imageflow_types::ExecutionSecurity {
+            cms_mode: Default::default(),
             max_frame_size: Some(imageflow_types::FrameSizeLimit {
                 w: 10000,
                 h: 10000,

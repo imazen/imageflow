@@ -774,11 +774,8 @@ pub fn compare_encoded(
 
         // Use suffixed detail for per-backend checksums.
         // V2 uses the bare detail name for backwards compatibility with existing baselines.
-        let backend_detail = if suffix == "v2" {
-            detail.to_string()
-        } else {
-            format!("{detail}_{suffix}")
-        };
+        let backend_detail =
+            if suffix == "v2" { detail.to_string() } else { format!("{detail}_{suffix}") };
         if !check_visual_bytes(identity, &backend_detail, &bytes, &tol_spec) {
             panic!("[{suffix}] visual check failed for {backend_detail}");
         }
@@ -805,9 +802,8 @@ pub fn compare_bitmap(
         let mut backend_steps = steps.clone();
         backend_steps.push(s::Node::CaptureBitmapKey { capture_id });
 
-        let response =
-            build_steps(&mut context, &backend_steps, inputs.clone(), None, false)
-                .unwrap_or_else(|e| panic!("[{suffix}] pipeline failed: {e}"));
+        let response = build_steps(&mut context, &backend_steps, inputs.clone(), None, false)
+            .unwrap_or_else(|e| panic!("[{suffix}] pipeline failed: {e}"));
 
         let bitmap_key = context
             .get_captured_bitmap_key(capture_id)
@@ -815,11 +811,8 @@ pub fn compare_bitmap(
 
         // Use suffixed detail for per-backend checksums (e.g., "detail_zen").
         // V2 uses the bare detail name for backwards compatibility with existing baselines.
-        let backend_detail = if suffix == "v2" {
-            detail.to_string()
-        } else {
-            format!("{detail}_{suffix}")
-        };
+        let backend_detail =
+            if suffix == "v2" { detail.to_string() } else { format!("{detail}_{suffix}") };
         check_visual_bitmap(identity, &backend_detail, &context, bitmap_key, tolerance);
     }
     true

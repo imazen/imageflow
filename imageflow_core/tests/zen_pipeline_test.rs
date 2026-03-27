@@ -150,29 +150,31 @@ fn zen_execute_1_resize() {
     ctx.add_copied_input_buffer(0, &jpeg_bytes).unwrap();
     // Don't add output buffer — zen_execute_inner creates it.
 
-    let result = ctx.zen_execute_1(s::Execute001 {
-        framewise: s::Framewise::Steps(vec![
-            s::Node::Decode { io_id: 0, commands: None },
-            s::Node::Constrain(s::Constraint {
-                mode: s::ConstraintMode::Within,
-                w: Some(200),
-                h: Some(150),
-                hints: None,
-                gravity: None,
-                canvas_color: None,
-            }),
-            s::Node::Encode {
-                io_id: 1,
-                preset: s::EncoderPreset::Mozjpeg {
-                    quality: Some(80),
-                    progressive: Some(true),
-                    matte: None,
+    let result = ctx
+        .zen_execute_1(s::Execute001 {
+            framewise: s::Framewise::Steps(vec![
+                s::Node::Decode { io_id: 0, commands: None },
+                s::Node::Constrain(s::Constraint {
+                    mode: s::ConstraintMode::Within,
+                    w: Some(200),
+                    h: Some(150),
+                    hints: None,
+                    gravity: None,
+                    canvas_color: None,
+                }),
+                s::Node::Encode {
+                    io_id: 1,
+                    preset: s::EncoderPreset::Mozjpeg {
+                        quality: Some(80),
+                        progressive: Some(true),
+                        matte: None,
+                    },
                 },
-            },
-        ]),
-        graph_recording: None,
-        security: None,
-    }).unwrap();
+            ]),
+            graph_recording: None,
+            security: None,
+        })
+        .unwrap();
 
     // Verify we got a JobResult.
     match result {
@@ -198,23 +200,25 @@ fn zen_execute_1_flip_rotate() {
     ctx.add_copied_input_buffer(0, &jpeg_bytes).unwrap();
     // Don't add output buffer — zen_execute_inner creates it.
 
-    let result = ctx.zen_execute_1(s::Execute001 {
-        framewise: s::Framewise::Steps(vec![
-            s::Node::Decode { io_id: 0, commands: None },
-            s::Node::FlipH,
-            s::Node::Rotate90,
-            s::Node::Encode {
-                io_id: 1,
-                preset: s::EncoderPreset::Mozjpeg {
-                    quality: Some(85),
-                    progressive: None,
-                    matte: None,
+    let result = ctx
+        .zen_execute_1(s::Execute001 {
+            framewise: s::Framewise::Steps(vec![
+                s::Node::Decode { io_id: 0, commands: None },
+                s::Node::FlipH,
+                s::Node::Rotate90,
+                s::Node::Encode {
+                    io_id: 1,
+                    preset: s::EncoderPreset::Mozjpeg {
+                        quality: Some(85),
+                        progressive: None,
+                        matte: None,
+                    },
                 },
-            },
-        ]),
-        graph_recording: None,
-        security: None,
-    }).unwrap();
+            ]),
+            graph_recording: None,
+            security: None,
+        })
+        .unwrap();
 
     match result {
         s::ResponsePayload::JobResult(jr) => {

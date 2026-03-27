@@ -1169,7 +1169,9 @@ impl ExecutionSecurity {
     }
     pub fn unspecified() -> Self {
         ExecutionSecurity {
-            max_decode_size: None, max_frame_size: None, max_encode_size: None,
+            max_decode_size: None,
+            max_frame_size: None,
+            max_encode_size: None,
             cms_mode: CmsMode::default(),
         }
     }

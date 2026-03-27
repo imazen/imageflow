@@ -17,7 +17,7 @@ use imageflow_types as s;
 
 use crate::errors::*;
 
-use super::execute::{self, ZenError, ZenEncodeResult};
+use super::execute::{self, ZenEncodeResult, ZenError};
 
 /// Result of a zen pipeline build.
 pub struct ZenBuildOutput {
@@ -31,11 +31,14 @@ pub struct ZenBuildOutput {
 }
 
 /// Execute a `v1/build` request through the zen pipeline.
-pub fn zen_build(parsed: &s::Build001, security: &s::ExecutionSecurity) -> std::result::Result<ZenBuildOutput, FlowError> {
+pub fn zen_build(
+    parsed: &s::Build001,
+    security: &s::ExecutionSecurity,
+) -> std::result::Result<ZenBuildOutput, FlowError> {
     let io_bytes = extract_input_bytes(&parsed.io)?;
 
-    let result = execute::execute_framewise(&parsed.framewise, &io_bytes, security)
-        .map_err(zen_to_flow)?;
+    let result =
+        execute::execute_framewise(&parsed.framewise, &io_bytes, security).map_err(zen_to_flow)?;
 
     Ok(build_output(result))
 }
@@ -49,8 +52,7 @@ pub fn zen_execute(
     io_bytes: &HashMap<i32, Vec<u8>>,
     security: &s::ExecutionSecurity,
 ) -> std::result::Result<ZenBuildOutput, FlowError> {
-    let result = execute::execute_framewise(framewise, io_bytes, security)
-        .map_err(zen_to_flow)?;
+    let result = execute::execute_framewise(framewise, io_bytes, security).map_err(zen_to_flow)?;
 
     Ok(build_output(result))
 }
@@ -60,9 +62,7 @@ pub fn zen_get_image_info(data: &[u8]) -> std::result::Result<s::ImageInfo, Flow
     let info = execute::zen_get_image_info(data).map_err(zen_to_flow)?;
 
     // Query source encoding details for lossless detection.
-    let lossless = info.source_encoding
-        .as_ref()
-        .map_or(false, |se| se.is_lossless());
+    let lossless = info.source_encoding.as_ref().map_or(false, |se| se.is_lossless());
 
     Ok(s::ImageInfo {
         image_width: info.width as i32,
@@ -94,22 +94,20 @@ fn build_output(result: execute::ExecuteResult) -> ZenBuildOutput {
     }
 
     // Build decode results from probe info stored in the execute result.
-    let decodes: Vec<s::DecodeResult> = result.decode_infos.iter().map(|(io_id, info)| {
-        s::DecodeResult {
+    let decodes: Vec<s::DecodeResult> = result
+        .decode_infos
+        .iter()
+        .map(|(io_id, info)| s::DecodeResult {
             io_id: *io_id,
             w: info.width as i32,
             h: info.height as i32,
             preferred_mime_type: info.format.mime_type().to_string(),
             preferred_extension: info.format.extension().to_string(),
-        }
-    }).collect();
+        })
+        .collect();
 
     ZenBuildOutput {
-        job_result: s::JobResult {
-            encodes,
-            decodes,
-            performance: None,
-        },
+        job_result: s::JobResult { encodes, decodes, performance: None },
         output_buffers,
         captured_bitmaps: result.captured_dimensions.captures,
     }
@@ -118,7 +116,9 @@ fn build_output(result: execute::ExecuteResult) -> ZenBuildOutput {
 /// Extract input bytes from Build001 IoObject list.
 ///
 /// Only processes `In`-direction objects. Output placeholders are skipped.
-fn extract_input_bytes(io_objects: &[s::IoObject]) -> std::result::Result<HashMap<i32, Vec<u8>>, FlowError> {
+fn extract_input_bytes(
+    io_objects: &[s::IoObject],
+) -> std::result::Result<HashMap<i32, Vec<u8>>, FlowError> {
     let mut map = HashMap::new();
     for obj in io_objects {
         if obj.direction == s::IoDirection::In {
@@ -139,13 +139,10 @@ fn io_to_bytes(io: &s::IoEnum) -> std::result::Result<Vec<u8>, FlowError> {
                 .map_err(|e| nerror!(ErrorKind::InvalidArgument, "invalid base64: {}", e))
         }
         s::IoEnum::BytesHex(hex) => {
-            hex::decode(hex)
-                .map_err(|e| nerror!(ErrorKind::InvalidArgument, "invalid hex: {}", e))
+            hex::decode(hex).map_err(|e| nerror!(ErrorKind::InvalidArgument, "invalid hex: {}", e))
         }
-        s::IoEnum::Filename(path) => {
-            std::fs::read(path)
-                .map_err(|e| nerror!(ErrorKind::DecodingIoError, "read {}: {}", path, e))
-        }
+        s::IoEnum::Filename(path) => std::fs::read(path)
+            .map_err(|e| nerror!(ErrorKind::DecodingIoError, "read {}: {}", path, e)),
         s::IoEnum::OutputBuffer | s::IoEnum::OutputBase64 => {
             Err(nerror!(ErrorKind::InvalidArgument, "output IO has no input bytes"))
         }

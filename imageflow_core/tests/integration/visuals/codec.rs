@@ -112,34 +112,49 @@ fn test_matte_transparent_png() {
     }
 }
 
-// This test uses a branching pipeline producing 2 outputs — not macro-convertible
+// This test uses a branching pipeline producing 2 outputs — not macro-convertible.
+// Runs with each available backend (V2 + Zen) using per-backend checksum suffixes.
 #[test]
 fn test_branching_crop_whitespace() {
     let identity = test_identity!();
     let preset = EncoderPreset::Lodepng { maximum_deflate: None };
     let source_url = "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/little_gradient_whitespace.jpg";
 
+    // Build the branching framewise once — it's just data, no execution.
     let s = imageflow_core::clients::fluent::fluently().decode(0);
     let v1 = s.branch();
     let v2 = v1.branch().crop_whitespace(200, 0f32);
     let framewise =
         v1.encode(1, preset.clone()).builder().with(v2.encode(2, preset.clone())).to_framewise();
 
-    let io_vec = vec![
-        IoTestEnum::Url(source_url.to_owned()),
-        IoTestEnum::OutputBuffer,
-        IoTestEnum::OutputBuffer,
-    ];
-
-    let mut context = imageflow_core::Context::create().unwrap();
-    let _ = build_framewise(&mut context, framewise, io_vec, None, false).unwrap();
-
     let tol_spec = Similarity::MaxZdsim(0.01).to_tolerance_spec();
 
-    for output_io_id in [1, 2] {
-        let detail = format!("gradient_output_{output_io_id}");
-        let bytes = context.take_output_buffer(output_io_id).unwrap();
-        check_visual_bytes(&identity, &detail, &bytes, &tol_spec);
+    let mut backends: Vec<(imageflow_core::Backend, &str)> =
+        vec![(imageflow_core::Backend::V2, "v2")];
+    #[cfg(feature = "zen-pipeline")]
+    backends.push((imageflow_core::Backend::Zen, "zen"));
+
+    for (backend, suffix) in &backends {
+        let io_vec = vec![
+            IoTestEnum::Url(source_url.to_owned()),
+            IoTestEnum::OutputBuffer,
+            IoTestEnum::OutputBuffer,
+        ];
+
+        let mut context = imageflow_core::Context::create().unwrap();
+        context.force_backend = Some(*backend);
+        let _ = build_framewise(&mut context, framewise.clone(), io_vec, None, false)
+            .unwrap_or_else(|e| panic!("[{suffix}] pipeline failed: {e}"));
+
+        for output_io_id in [1, 2] {
+            let detail = if *suffix == "v2" {
+                format!("gradient_output_{output_io_id}")
+            } else {
+                format!("gradient_output_{output_io_id}_{suffix}")
+            };
+            let bytes = context.take_output_buffer(output_io_id).unwrap();
+            check_visual_bytes(&identity, &detail, &bytes, &tol_spec);
+        }
     }
 }
 
@@ -386,4 +401,3 @@ fn test_jpeg_alpha_is_opaque() {
         }
     }
 }
-

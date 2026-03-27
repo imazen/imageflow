@@ -13,13 +13,13 @@
 //!
 //! Gated behind the `zen-pipeline` feature.
 
-mod translate;
-mod preset_map;
-mod execute;
-mod context_bridge;
 mod captured;
+mod context_bridge;
 mod converter;
+mod execute;
+mod preset_map;
 pub mod riapi;
+mod translate;
 
 pub use captured::CapturedBitmap;
 
@@ -27,7 +27,7 @@ pub use captured::CapturedBitmap;
 pub use context_bridge::{zen_build, zen_execute, zen_get_image_info, ZenBuildOutput};
 
 // Lower-level API (raw bytes in, ZenEncodeResult out).
-pub use execute::{execute_framewise, ZenError, ZenEncodeResult};
+pub use execute::{execute_framewise, ZenEncodeResult, ZenError};
 
 // RIAPI expansion.
 pub use riapi::RiapiEngine;
