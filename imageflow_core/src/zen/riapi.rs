@@ -89,7 +89,8 @@ pub fn expand_legacy(
         result.parse_warnings.iter().map(|w| format!("{w:?}")).collect();
 
     // Translate v2 Node steps → zennode instances.
-    let pipeline = translate::translate_nodes(&steps)?;
+    // RIAPI path never produces Watermark nodes, so pass empty io_buffers.
+    let pipeline = translate::translate_nodes(&steps, &std::collections::HashMap::new())?;
 
     Ok(ExpandedRiapi { nodes: pipeline.nodes, preset: pipeline.preset, warnings })
 }

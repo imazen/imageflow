@@ -328,10 +328,11 @@ fn create_byte_mapping(low: usize, high: usize) -> [u8; 256] {
 /// Includes zenfilters, expand_canvas, region, and white_balance converters.
 /// All other operations (fill_rect, crop_whitespace, remove_alpha,
 /// round_corners, resize) are handled by zenpipe's built-in bridge converters.
-pub fn imageflow_converters() -> [&'static dyn NodeConverter; 4] {
+pub fn imageflow_converters() -> [&'static dyn NodeConverter; 5] {
     static FILTERS: ZenFiltersConverter = ZenFiltersConverter;
     static EXPAND: ExpandCanvasConverter = ExpandCanvasConverter;
     static REGION: RegionConverter = RegionConverter;
     static WHITE_BAL: WhiteBalanceConverter = WhiteBalanceConverter;
-    [&FILTERS, &EXPAND, &REGION, &WHITE_BAL]
+    static WATERMARK: super::watermark::WatermarkConverter = super::watermark::WatermarkConverter;
+    [&FILTERS, &EXPAND, &REGION, &WHITE_BAL, &WATERMARK]
 }

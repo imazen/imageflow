@@ -23,6 +23,7 @@ mod nodes;
 mod preset_map;
 pub mod riapi;
 mod translate;
+mod watermark;
 
 pub use captured::CapturedBitmap;
 

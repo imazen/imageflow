@@ -236,7 +236,7 @@ fn execute_steps(
         })
         .collect();
 
-    let pipeline = translate::translate_nodes(&steps)?;
+    let pipeline = translate::translate_nodes(&steps, io_buffers)?;
     let has_encode = pipeline.encode_io_id.is_some();
 
     // Handle CreateCanvas — create solid-color source instead of decoding.

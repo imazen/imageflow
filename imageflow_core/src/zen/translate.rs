@@ -8,6 +8,7 @@
 //! Encode/Decode nodes are handled separately — they produce configuration
 //! rather than pixel-processing nodes.
 
+use std::collections::HashMap;
 use std::fmt;
 
 use imageflow_types::{
@@ -66,7 +67,12 @@ pub struct TranslatedPipeline {
 }
 
 /// Translate a sequence of v2 [`Node`] values into zennode instances.
-pub fn translate_nodes(nodes: &[Node]) -> Result<TranslatedPipeline, TranslateError> {
+///
+/// `io_buffers` is needed for Watermark nodes which must decode a secondary image.
+pub fn translate_nodes(
+    nodes: &[Node],
+    io_buffers: &HashMap<i32, Vec<u8>>,
+) -> Result<TranslatedPipeline, TranslateError> {
     let mut result = TranslatedPipeline {
         nodes: Vec::new(),
         preset: None,
@@ -77,13 +83,17 @@ pub fn translate_nodes(nodes: &[Node]) -> Result<TranslatedPipeline, TranslateEr
     };
 
     for node in nodes {
-        translate_one(node, &mut result)?;
+        translate_one(node, &mut result, io_buffers)?;
     }
 
     Ok(result)
 }
 
-fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), TranslateError> {
+fn translate_one(
+    node: &Node,
+    result: &mut TranslatedPipeline,
+    io_buffers: &HashMap<i32, Vec<u8>>,
+) -> Result<(), TranslateError> {
     match node {
         // ─── I/O: handled as config, not pixel nodes ───
         Node::Decode { io_id, commands } => {
@@ -272,8 +282,12 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
             Err(TranslateError::Unsupported("draw_image_exact".into()))
         }
 
-        Node::Watermark(_wm) => {
-            Err(TranslateError::Unsupported("watermark (NodeOp::Overlay not yet wired)".into()))
+        Node::Watermark(wm) => {
+            // Decode the watermark image and create an overlay node.
+            let overlay_node = super::watermark::decode_watermark(wm, io_buffers)
+                .map_err(|e| TranslateError::NodeCreation(format!("watermark decode: {e}")))?;
+            result.nodes.push(Box::new(overlay_node));
+            Ok(())
         }
 
         Node::CopyRectToCanvas { from_x, from_y, w, h, x, y } => {
@@ -320,9 +334,10 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
             ))
         }
 
-        Node::WatermarkRedDot => Err(TranslateError::Unsupported(
-            "watermark_red_dot (debug overlay not yet wired)".into(),
-        )),
+        Node::WatermarkRedDot => {
+            result.nodes.push(Box::new(super::watermark::RedDotNode));
+            Ok(())
+        }
 
         // Internal test node — no-op in zen pipeline.
         Node::CaptureBitmapKey { .. } => Ok(()),
