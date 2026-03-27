@@ -741,7 +741,8 @@ pub fn compare_encoded(
     let similarity = require.similarity.expect("compare_encoded requires a similarity threshold");
     let tol_spec = similarity.to_tolerance_spec();
 
-    // Run with each available backend, checking against backend-specific checksums.
+    // Run with each available backend, checking all against ONE shared checksum set.
+    // If any backend diverges from the baseline, that's a bug to fix.
     for (backend, suffix) in backends_to_test() {
         let mut io_vec = Vec::new();
         if let Some(i) = input.clone() {
@@ -759,7 +760,7 @@ pub fn compare_encoded(
             None,
             false,
         )
-        .unwrap();
+        .unwrap_or_else(|e| panic!("[{suffix}] pipeline failed: {e}"));
 
         let bytes = context.take_output_buffer(output_io_id).unwrap();
 
@@ -771,12 +772,9 @@ pub fn compare_encoded(
             );
         }
 
-        let full_detail = if detail.is_empty() {
-            suffix.to_string()
-        } else {
-            format!("{detail}_{suffix}")
-        };
-        check_visual_bytes(identity, &full_detail, &bytes, &tol_spec);
+        if !check_visual_bytes(identity, detail, &bytes, &tol_spec) {
+            panic!("[{suffix}] visual check failed for {detail}");
+        }
     }
     true
 }
@@ -801,18 +799,14 @@ pub fn compare_bitmap(
         backend_steps.push(s::Node::CaptureBitmapKey { capture_id });
 
         let response =
-            build_steps(&mut context, &backend_steps, inputs.clone(), None, false).unwrap();
+            build_steps(&mut context, &backend_steps, inputs.clone(), None, false)
+                .unwrap_or_else(|e| panic!("[{suffix}] pipeline failed: {e}"));
 
         let bitmap_key = context
             .get_captured_bitmap_key(capture_id)
             .unwrap_or_else(|| panic!("[{suffix}] execution failed {:?}", response));
 
-        let full_detail = if detail.is_empty() {
-            suffix.to_string()
-        } else {
-            format!("{detail}_{suffix}")
-        };
-        check_visual_bitmap(identity, &full_detail, &context, bitmap_key, tolerance);
+        check_visual_bitmap(identity, detail, &context, bitmap_key, tolerance);
     }
     true
 }
