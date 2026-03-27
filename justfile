@@ -2,19 +2,19 @@
 
 # Run all integration tests with nextest
 test:
-    cargo nextest run -p imageflow_core --test integration
+    cargo nextest run -p imageflow_core --features "zen-default,c-codecs" --test integration
 
 # Run a specific test by name filter
 test-filter filter:
-    cargo nextest run -p imageflow_core --test integration -E 'test({{filter}})'
+    cargo nextest run -p imageflow_core --features "zen-default,c-codecs" --test integration -E 'test({{filter}})'
 
 # Run tests with checksum auto-update (accepts within tolerance)
 test-update:
-    UPDATE_CHECKSUMS=1 cargo nextest run -p imageflow_core --test integration
+    UPDATE_CHECKSUMS=1 cargo nextest run -p imageflow_core --features "zen-default,c-codecs" --test integration
 
 # Alias for test-update (there is no separate "replace" mode)
 test-replace:
-    UPDATE_CHECKSUMS=1 cargo nextest run -p imageflow_core --test integration
+    UPDATE_CHECKSUMS=1 cargo nextest run -p imageflow_core --features "zen-default,c-codecs" --test integration
 
 # Build tests without running (compile check)
 test-build:
