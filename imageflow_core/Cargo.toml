@@ -65,7 +65,7 @@ schemars = { version = "1", features = ["derive"], optional = true }
 zenpipe = { path = "../../zen/zenpipe", features = ["zennode", "std"], optional = true }
 zencodecs = { path = "../../zen/zencodecs", features = ["zennode", "png-imagequant"], optional = true }
 zencodec = { path = "../../zen/zencodec", optional = true }
-zennode = { path = "../../zen/zennode/zennode", features = ["derive"], optional = true }
+zennode = { path = "../../zen/zennode/zennode", features = ["derive", "serde"], optional = true }
 zenresize = { path = "../../zen/zenresize", features = ["zennode"], optional = true }
 zenlayout = { path = "../../zen/zenlayout", features = ["zennode"], optional = true }
 zenfilters = { path = "../../zen/zenfilters", features = ["zennode"], optional = true }

@@ -3953,6 +3953,8 @@ checksum = "1e136195598f6c1dc769200888ad1f9071f99d54ac3a91b80be6ba0b164e6b5b"
 name = "zennode"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "zennode-derive",
 ]
 

@@ -1547,8 +1547,13 @@ fn expand_command_strings(
 
                 match expand.expand_steps() {
                     Ok(ir4_result) => {
-                        if let Some(expanded_steps) = ir4_result.steps {
-                            result.extend(expanded_steps);
+                        if let Some(ref expanded_steps) = ir4_result.steps {
+                            eprintln!("[zen expand_command_strings] source={}x{}, ref={}x{}, qs={:?}",
+                                source_w, source_h, source_w, source_h, value);
+                            for (i, step) in expanded_steps.iter().enumerate() {
+                                eprintln!("[zen expand_command_strings]   step[{i}]: {step:?}");
+                            }
+                            result.extend(expanded_steps.clone());
                         }
                     }
                     Err(e) => {
