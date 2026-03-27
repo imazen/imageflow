@@ -1251,6 +1251,24 @@ fn stream_encode(
     decision: &zencodecs::FormatDecision,
     encode_io_id: i32,
 ) -> Result<Vec<ZenEncodeResult>, ZenError> {
+    // If encoding to a format that doesn't support alpha (JPEG) and the
+    // source has alpha, apply matte compositing first. V2's mozjpeg encoder
+    // does this internally; zen needs it explicitly.
+    if !decision.format.supports_alpha() && source.format().has_alpha() {
+        let matte = decision.matte.unwrap_or([255, 255, 255]);
+        let options = zenpixels::ConvertOptions::permissive()
+            .with_alpha_policy(zenpixels::AlphaPolicy::CompositeOnto {
+                r: matte[0],
+                g: matte[1],
+                b: matte[2],
+            });
+        let from = source.format();
+        let to = zenpipe::format::RGB8_SRGB;
+        if let Some(op) = zenpipe::ops::RowConverterOp::new_explicit(from, to, &options) {
+            source = Box::new(zenpipe::sources::TransformSource::new(source).push(op));
+        }
+    }
+
     let out_w = source.width();
     let out_h = source.height();
     let out_format = source.format();

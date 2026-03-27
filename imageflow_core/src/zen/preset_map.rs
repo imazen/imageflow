@@ -70,28 +70,34 @@ pub fn map_preset(preset: &EncoderPreset) -> Result<PresetMapping, TranslateErro
             intent.quality_dpr = *quality_profile_dpr;
             intent.lossless = lossless.map(map_bool_keep);
 
-            // Formats that are inherently lossless (PNG, GIF) should default
-            // to lossless when not explicitly specified. Without this, the
-            // zen encoder applies lossy quantization to PNG output.
-            if intent.lossless.is_none() {
-                match zen_format {
-                    zencodecs::ImageFormat::Png | zencodecs::ImageFormat::Gif => {
-                        intent.lossless = Some(zencodecs::BoolKeep::True);
-                    }
-                    _ => {}
-                }
+            if let Some(matte) = matte {
+                intent.matte = color_to_rgb(matte);
+            }
+
+            // Map encoder hints BEFORE lossless defaults so per-codec
+            // lossless hints (webp.lossless=true) are available.
+            if let Some(hints) = encoder_hints {
+                intent.hints = map_encoder_hints(hints);
             }
 
             if let Some(allow) = allow {
                 intent.allowed = map_allowed_formats(allow);
             }
 
-            if let Some(matte) = matte {
-                intent.matte = color_to_rgb(matte);
-            }
-
-            if let Some(hints) = encoder_hints {
-                intent.hints = map_encoder_hints(hints);
+            // Defaults: lossless for inherently-lossless formats,
+            // and honor per-codec lossless hints.
+            if intent.lossless.is_none() {
+                match zen_format {
+                    zencodecs::ImageFormat::Png | zencodecs::ImageFormat::Gif => {
+                        intent.lossless = Some(zencodecs::BoolKeep::True);
+                    }
+                    zencodecs::ImageFormat::WebP => {
+                        if intent.hints.webp.get("lossless").is_some_and(|v| v == "true") {
+                            intent.lossless = Some(zencodecs::BoolKeep::True);
+                        }
+                    }
+                    _ => {}
+                }
             }
 
             Ok(PresetMapping {
