@@ -7,7 +7,7 @@ tolerance max-delta:2 zensim:80 (dissim 0.20) pixels-changed:100.0%
 ## test_scale_rings hermite_400x400
 tolerance off-by-one
 = salty-nest-6d4fa00ed3:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ giant-trout-418f5be2ec:sea  x86_64-avx512  @286d6028  auto-accepted within tolerance (within off-by-one) vs salty-nest-6d4fa00ed3:sea (zensim:99.31 (dissim 0.0069))
+~ giant-trout-418f5be2ec:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs salty-nest-6d4fa00ed3:sea (zensim:99.31 (dissim 0.0069))
 
 ## test_scale_image waterhouse_robidoux_400x300
 tolerance off-by-one
@@ -27,7 +27,7 @@ tolerance off-by-one
 ## test_read_gif_and_vertical_distort mountain_box_800x100
 tolerance off-by-one
 = last-fawn-83133574e4:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ calm-fish-0c49580c34:sea  x86_64-avx512  @286d6028  auto-accepted within tolerance (within off-by-one) vs last-fawn-83133574e4:sea (zensim:99.79 (dissim 0.0021))
+~ calm-fish-0c49580c34:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs last-fawn-83133574e4:sea (zensim:99.79 (dissim 0.0021))
 
 ## webp_lossless_alpha_decode_and_scale 100x100
 tolerance off-by-one

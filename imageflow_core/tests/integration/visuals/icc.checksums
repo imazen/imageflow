@@ -21,7 +21,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_icc_prophoto_resize prophoto_resize_400
 tolerance zensim:99 (dissim 0.01)
 = rusty-wren-44d06224e8:sea  x86_64-avx512  @6e695833  new-baseline
-~ pink-linen-57e135c91d:sea  x86_64-avx512  @286d6028  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs rusty-wren-44d06224e8:sea (zensim:99.74 (dissim 0.0026))
+~ pink-linen-57e135c91d:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs rusty-wren-44d06224e8:sea (zensim:99.74 (dissim 0.0026))
 
 ## test_icc_display_p3_resize p3_resize_400
 tolerance zensim:99 (dissim 0.01)
