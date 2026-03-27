@@ -78,6 +78,28 @@ pub fn map_preset(preset: &EncoderPreset) -> Result<PresetMapping, TranslateErro
             // lossless hints (webp.lossless=true) are available.
             if let Some(hints) = encoder_hints {
                 intent.hints = map_encoder_hints(hints);
+
+                // When no quality profile is set, extract per-codec quality
+                // from encoder hints as the fallback. This handles the common
+                // case of `format=webp&quality=5` where the generic `quality=`
+                // param flows through per-codec hints but not through `qp=`.
+                if intent.quality_profile.is_none() {
+                    let codec_quality = match zen_format {
+                        zencodecs::ImageFormat::WebP => {
+                            hints.webp.as_ref().and_then(|w| w.quality)
+                        }
+                        zencodecs::ImageFormat::Jpeg => {
+                            hints.jpeg.as_ref().and_then(|j| j.quality)
+                        }
+                        zencodecs::ImageFormat::Png => {
+                            hints.png.as_ref().and_then(|p| p.quality)
+                        }
+                        _ => None,
+                    };
+                    if let Some(q) = codec_quality {
+                        intent.quality_fallback = Some(q);
+                    }
+                }
             }
 
             if let Some(allow) = allow {
@@ -309,6 +331,9 @@ fn map_encoder_hints(hints: &imageflow_types::EncoderHints) -> PerCodecHints {
 
     if let Some(ref webp) = hints.webp {
         let mut m = BTreeMap::new();
+        if let Some(q) = webp.quality {
+            m.insert("quality".into(), q.to_string());
+        }
         if let Some(ref lossless) = webp.lossless {
             m.insert("lossless".into(), format!("{lossless}"));
         }
