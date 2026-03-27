@@ -19,7 +19,7 @@ tolerance off-by-one
 ## test_watermark_image_small webp_within_90pct
 tolerance off-by-one
 = oral-cliff-ee411f978a:sea  x86_64-avx512  @8ca16e2d  human-verified
-~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @d2f2f0b7  auto-accepted within tolerance (within off-by-one) vs oral-cliff-ee411f978a:sea (zensim:99.50 (dissim 0.0050))
+~ fancy-sail-ce667d72e8:sea  x86_64-avx512  @0acc2d4c  auto-accepted within tolerance (within off-by-one) vs oral-cliff-ee411f978a:sea (zensim:99.50 (dissim 0.0050))
 
 ## test_watermark_jpeg_over_pnga gamma_test_30pct
 tolerance off-by-one

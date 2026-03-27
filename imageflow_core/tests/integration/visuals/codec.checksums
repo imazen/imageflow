@@ -1,8 +1,8 @@
 ## test_negatives_in_command_string red_leaf_negative_height
 tolerance off-by-one
 = short-fern-3a18947ea1:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ hefty-hive-6c9c6425bb:sea  x86_64-avx512  @0a8f6a9b  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
 ~ like-glow-fcd087632e:sea  x86_64-avx512  @9ba39526  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
-~ red-den-be43032de3:sea  x86_64-avx512  @fdd8f2a4  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
 
 ## test_rot_90_and_red_dot landscape_70x70
 tolerance off-by-one
@@ -32,7 +32,6 @@ tolerance zensim:95 (dissim 0.05)
 ## decode_rgb_with_cmyk_profile_jpeg wrenches_ignore_icc
 tolerance off-by-one
 = great-snail-b22fce67f5:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ raw-hound-660874c876:sea  x86_64-avx512  @d2f2f0b7  auto-accepted within tolerance (within off-by-one) vs great-snail-b22fce67f5:sea (zensim:99.27 (dissim 0.0073))
 
 ## test_transparent_webp_to_webp lossless_100x100
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
@@ -67,7 +66,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_crop_with_preshrink 170x220_crop
 tolerance max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%
 = mild-pond-a88cf0d96f:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ steep-raven-c96978d9d0:sea  x86_64-avx512  @c4319ddb  auto-accepted within tolerance (within max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%) vs mild-pond-a88cf0d96f:sea (zensim:98.35 (dissim 0.017), 9.4% pixels ±2, max-delta:[2,1,1], category:rounding, biased)
+~ steep-raven-c96978d9d0:sea  x86_64-avx512  @0acc2d4c  auto-accepted within tolerance (within max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%) vs mild-pond-a88cf0d96f:sea (zensim:98.35 (dissim 0.017), 9.4% pixels ±2, max-delta:[2,1,1], category:rounding, biased)
 
 ## test_transparent_png_to_png shirt
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
