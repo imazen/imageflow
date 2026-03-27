@@ -738,33 +738,47 @@ pub fn compare_encoded(
     require: Constraints,
     steps: Vec<s::Node>,
 ) -> bool {
-    let mut io_vec = Vec::new();
-    if let Some(i) = input {
-        io_vec.push(i);
-    }
-    io_vec.push(IoTestEnum::OutputBuffer);
-    let output_io_id = (io_vec.len() - 1) as i32;
-
-    let mut context = Context::create().unwrap();
-    let _ = build_framewise(
-        &mut context,
-        imageflow_types::Framewise::Steps(steps),
-        io_vec,
-        None,
-        false,
-    )
-    .unwrap();
-
-    let bytes = context.take_output_buffer(output_io_id).unwrap();
-
-    // Check file size
-    if let Some(max) = require.max_file_size {
-        assert!(bytes.len() <= max, "Encoded size ({}) exceeds limit ({max})", bytes.len());
-    }
-
     let similarity = require.similarity.expect("compare_encoded requires a similarity threshold");
     let tol_spec = similarity.to_tolerance_spec();
-    check_visual_bytes(identity, detail, &bytes, &tol_spec)
+
+    // Run with each available backend, checking against backend-specific checksums.
+    for (backend, suffix) in backends_to_test() {
+        let mut io_vec = Vec::new();
+        if let Some(i) = input.clone() {
+            io_vec.push(i);
+        }
+        io_vec.push(IoTestEnum::OutputBuffer);
+        let output_io_id = (io_vec.len() - 1) as i32;
+
+        let mut context = Context::create().unwrap();
+        context.force_backend = Some(backend);
+        let _ = build_framewise(
+            &mut context,
+            imageflow_types::Framewise::Steps(steps.clone()),
+            io_vec,
+            None,
+            false,
+        )
+        .unwrap();
+
+        let bytes = context.take_output_buffer(output_io_id).unwrap();
+
+        if let Some(max) = require.max_file_size {
+            assert!(
+                bytes.len() <= max,
+                "[{suffix}] Encoded size ({}) exceeds limit ({max})",
+                bytes.len()
+            );
+        }
+
+        let full_detail = if detail.is_empty() {
+            suffix.to_string()
+        } else {
+            format!("{detail}_{suffix}")
+        };
+        check_visual_bytes(identity, &full_detail, &bytes, &tol_spec);
+    }
+    true
 }
 
 /// Run a bitmap comparison test with structured identity.
@@ -776,20 +790,42 @@ pub fn compare_bitmap(
     identity: &TestIdentity,
     detail: &str,
     _source_url: Option<&str>,
-    mut steps: Vec<s::Node>,
+    steps: Vec<s::Node>,
     tolerance: &Tolerance,
 ) -> bool {
-    let capture_id = 0;
-    let mut context = Context::create().unwrap();
-    steps.push(s::Node::CaptureBitmapKey { capture_id });
+    for (backend, suffix) in backends_to_test() {
+        let capture_id = 0;
+        let mut context = Context::create().unwrap();
+        context.force_backend = Some(backend);
+        let mut backend_steps = steps.clone();
+        backend_steps.push(s::Node::CaptureBitmapKey { capture_id });
 
-    let response = build_steps(&mut context, &steps, inputs, None, false).unwrap();
+        let response =
+            build_steps(&mut context, &backend_steps, inputs.clone(), None, false).unwrap();
 
-    let bitmap_key = context
-        .get_captured_bitmap_key(capture_id)
-        .unwrap_or_else(|| panic!("execution failed {:?}", response));
+        let bitmap_key = context
+            .get_captured_bitmap_key(capture_id)
+            .unwrap_or_else(|| panic!("[{suffix}] execution failed {:?}", response));
 
-    check_visual_bitmap(identity, detail, &context, bitmap_key, tolerance)
+        let full_detail = if detail.is_empty() {
+            suffix.to_string()
+        } else {
+            format!("{detail}_{suffix}")
+        };
+        check_visual_bitmap(identity, &full_detail, &context, bitmap_key, tolerance);
+    }
+    true
+}
+
+/// Return the list of backends to test, with detail suffixes.
+///
+/// When `zen-pipeline` is available, both V2 and Zen are tested.
+/// Each gets its own checksum entry (e.g., `"detail_v2"`, `"detail_zen"`).
+fn backends_to_test() -> Vec<(imageflow_core::Backend, &'static str)> {
+    let mut backends = vec![(imageflow_core::Backend::V2, "v2")];
+    #[cfg(feature = "zen-pipeline")]
+    backends.push((imageflow_core::Backend::Zen, "zen"));
+    backends
 }
 
 pub fn default_graph_recording(debug: bool) -> Option<imageflow_types::Build001GraphRecording> {

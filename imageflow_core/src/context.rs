@@ -1,3 +1,13 @@
+/// Which execution backend to use for image processing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Backend {
+    /// V2 graph engine (legacy, C-based codecs).
+    V2,
+    /// Zen streaming pipeline (pure Rust).
+    #[cfg(feature = "zen-pipeline")]
+    Zen,
+}
+
 use crate::errors::OutwardErrorBuffer;
 use crate::flow::definitions::Graph;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
@@ -52,6 +62,10 @@ pub struct Context {
     /// The zen pipeline reads from here instead of the codec containers.
     #[cfg(feature = "zen-pipeline")]
     zen_input_bytes: std::collections::HashMap<i32, Vec<u8>>,
+
+    /// Force a specific backend for testing. None = use default (zen when zen-default on).
+    #[cfg(feature = "zen-pipeline")]
+    pub force_backend: Option<Backend>,
 
     /// Pixel data captured by CaptureBitmapKey in the zen pipeline.
     /// Maps capture_id → (width, height, pixel_bytes, bytes_per_pixel).
@@ -315,6 +329,8 @@ impl Context {
             zen_input_bytes: std::collections::HashMap::new(),
             #[cfg(feature = "zen-pipeline")]
             zen_captured_bitmaps: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            force_backend: None,
         }))
     }
     fn default_codecs_capacity() -> usize {
@@ -341,6 +357,8 @@ impl Context {
             zen_input_bytes: std::collections::HashMap::new(),
             #[cfg(feature = "zen-pipeline")]
             zen_captured_bitmaps: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            force_backend: None,
         })
     }
     fn create_with_cancellation_token_and_can_panic(
@@ -366,6 +384,8 @@ impl Context {
             zen_input_bytes: std::collections::HashMap::new(),
             #[cfg(feature = "zen-pipeline")]
             zen_captured_bitmaps: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            force_backend: None,
         }))
     }
 
@@ -783,10 +803,18 @@ impl Context {
         Ok(s::ResponsePayload::JobResult(job_result))
     }
     pub(crate) fn execute_inner(&mut self, what: s::Execute001) -> Result<s::JobResult> {
-        // When zen-default feature is enabled, route through zen pipeline.
-        #[cfg(feature = "zen-default")]
+        // Check runtime backend override, then compile-time default.
+        #[cfg(feature = "zen-pipeline")]
         {
-            return self.zen_execute_inner(what).map_err(|e| e.at(here!()));
+            let use_zen = match self.force_backend {
+                Some(Backend::V2) => false,
+                #[cfg(feature = "zen-pipeline")]
+                Some(Backend::Zen) => true,
+                None => cfg!(feature = "zen-default"),
+            };
+            if use_zen {
+                return self.zen_execute_inner(what).map_err(|e| e.at(here!()));
+            }
         }
 
         let g = crate::parsing::GraphTranslator::new()
