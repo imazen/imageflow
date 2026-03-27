@@ -201,7 +201,7 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
         ),
 
         Node::ExpandCanvas { left, top, right, bottom, color } => {
-            let bg = color_to_rgba(color);
+            let color_str = color_to_css_string(color);
             push_layout_node(
                 &mut result.nodes,
                 "zenlayout.expand_canvas",
@@ -210,10 +210,7 @@ fn translate_one(node: &Node, result: &mut TranslatedPipeline) -> Result<(), Tra
                     ("top", ParamValue::U32(*top)),
                     ("right", ParamValue::U32(*right)),
                     ("bottom", ParamValue::U32(*bottom)),
-                    ("bg_r", ParamValue::U32(bg[0] as u32)),
-                    ("bg_g", ParamValue::U32(bg[1] as u32)),
-                    ("bg_b", ParamValue::U32(bg[2] as u32)),
-                    ("bg_a", ParamValue::U32(bg[3] as u32)),
+                    ("color", ParamValue::Str(color_str)),
                 ],
             )
         }
@@ -558,6 +555,18 @@ fn filter_to_str(filter: &s::Filter) -> &'static str {
         s::Filter::NCubicSharp => "cubic_sharp",
         #[allow(unreachable_patterns)]
         _ => "robidoux", // safe default
+    }
+}
+
+/// Convert a v2 Color to a CSS-style string for zenlayout node params.
+fn color_to_css_string(color: &Color) -> String {
+    match color {
+        Color::Transparent => "transparent".to_string(),
+        Color::Black => "#000000FF".to_string(),
+        Color::Srgb(s::ColorSrgb::Hex(hex)) => {
+            let hex = hex.trim_start_matches('#');
+            format!("#{hex}")
+        }
     }
 }
 
