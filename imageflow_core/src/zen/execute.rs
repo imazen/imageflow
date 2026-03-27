@@ -570,8 +570,6 @@ fn apply_icc_transform(
     // In scene-referred mode, only skip for exact sRGB (strict match).
     match cms_mode {
         imageflow_types::CmsMode::Imageflow2Compat => {
-            // V2 behavior: skip any profile that looks like sRGB.
-            // Uses description-tag heuristic — catches vendor variants.
             if info.source_color.is_srgb() || is_srgb_icc_profile_loose(&src_icc) {
                 return Ok(source);
             }
