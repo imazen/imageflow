@@ -12,3 +12,4 @@ mod variation;
 mod visuals;
 mod weights;
 mod weights_params;
+mod jpeg_decoder_parity;
