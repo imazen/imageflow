@@ -406,10 +406,10 @@ fn translate_constrain(
 
 /// Translate a v2 ColorFilterSrgb to a sRGB-space color matrix node.
 ///
-/// All ColorFilterSrgb variants (except Alpha, which uses zenfilters) are
-/// implemented as 5x5 color matrices applied in sRGB gamma space on u8 values.
-/// This matches v2 behavior exactly — v2 expanded every ColorFilterSrgb into
-/// a ColorMatrixSrgb node with the same matrix functions.
+/// All ColorFilterSrgb variants are implemented as 5x5 color matrices applied
+/// in sRGB gamma space on u8 values. This matches v2 behavior exactly — v2
+/// expanded every ColorFilterSrgb into a ColorMatrixSrgb node with the same
+/// matrix functions.
 fn translate_color_filter(
     filter: &ColorFilterSrgb,
     nodes: &mut Vec<Box<dyn NodeInstance>>,
@@ -569,7 +569,7 @@ mod srgb_matrix {
 /// Shared node registry containing all zenlayout, zenresize, zenfilters, and zenpipe nodes.
 ///
 /// Initialized once on first use; avoids re-registering all node definitions on every
-/// `push_layout_node` / `push_filter_node` call.
+/// `push_layout_node` call.
 fn zen_registry() -> &'static NodeRegistry {
     use std::sync::OnceLock;
     static REGISTRY: OnceLock<NodeRegistry> = OnceLock::new();
@@ -617,26 +617,6 @@ fn push_constrain_node(
         if !node.set_param(name, value.clone()) {
             eprintln!("warning: set_param({name}, {value:?}) failed on zenresize.constrain");
         }
-    }
-    nodes.push(node);
-    Ok(())
-}
-
-/// Create a zenfilters node by schema ID and set params.
-fn push_filter_node(
-    nodes: &mut Vec<Box<dyn NodeInstance>>,
-    schema_id: &str,
-    params: &[(&str, ParamValue)],
-) -> Result<(), TranslateError> {
-    let registry = zen_registry();
-    let def = registry.get(schema_id).ok_or_else(|| {
-        TranslateError::NodeCreation(format!("zenfilters node '{schema_id}' not found in registry"))
-    })?;
-    let mut node = def
-        .create_default()
-        .map_err(|e| TranslateError::NodeCreation(format!("{schema_id}: {e}")))?;
-    for (name, value) in params {
-        node.set_param(name, value.clone());
     }
     nodes.push(node);
     Ok(())
