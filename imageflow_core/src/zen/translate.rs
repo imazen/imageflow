@@ -303,25 +303,52 @@ fn translate_one(
         ),
 
         Node::RoundImageCorners { radius, background_color } => {
-            let (r, mode) = match radius {
-                RoundCornersMode::Percentage(p) => (*p, "percentage"),
-                RoundCornersMode::Pixels(px) => (*px, "pixels"),
-                RoundCornersMode::Circle => (50.0, "circle"),
-                _ => (10.0, "percentage"),
-            };
             let bg = color_to_rgba(background_color);
-            push_layout_node(
-                &mut result.nodes,
-                "zenpipe.round_corners",
-                &[
-                    ("radius", ParamValue::F32(r)),
-                    ("mode", ParamValue::Str(mode.to_string())),
-                    ("bg_r", ParamValue::U32(bg[0] as u32)),
-                    ("bg_g", ParamValue::U32(bg[1] as u32)),
-                    ("bg_b", ParamValue::U32(bg[2] as u32)),
-                    ("bg_a", ParamValue::U32(bg[3] as u32)),
-                ],
-            )
+            let mut params: Vec<(&str, ParamValue)> = Vec::new();
+            match radius {
+                RoundCornersMode::Percentage(p) => {
+                    params.push(("radius", ParamValue::F32(*p)));
+                    params.push(("mode", ParamValue::Str("percentage".to_string())));
+                }
+                RoundCornersMode::Pixels(px) => {
+                    params.push(("radius", ParamValue::F32(*px)));
+                    params.push(("mode", ParamValue::Str("pixels".to_string())));
+                }
+                RoundCornersMode::Circle => {
+                    params.push(("radius", ParamValue::F32(50.0)));
+                    params.push(("mode", ParamValue::Str("circle".to_string())));
+                }
+                RoundCornersMode::PercentageCustom {
+                    top_left,
+                    top_right,
+                    bottom_right,
+                    bottom_left,
+                } => {
+                    params.push(("mode", ParamValue::Str("percentage_custom".to_string())));
+                    params.push(("radius_tl", ParamValue::F32(*top_left)));
+                    params.push(("radius_tr", ParamValue::F32(*top_right)));
+                    params.push(("radius_bl", ParamValue::F32(*bottom_left)));
+                    params.push(("radius_br", ParamValue::F32(*bottom_right)));
+                }
+                RoundCornersMode::PixelsCustom {
+                    top_left,
+                    top_right,
+                    bottom_right,
+                    bottom_left,
+                } => {
+                    params.push(("mode", ParamValue::Str("pixels_custom".to_string())));
+                    params.push(("radius_tl", ParamValue::F32(*top_left)));
+                    params.push(("radius_tr", ParamValue::F32(*top_right)));
+                    params.push(("radius_bl", ParamValue::F32(*bottom_left)));
+                    params.push(("radius_br", ParamValue::F32(*bottom_right)));
+                }
+            }
+            params.push(("bg_r", ParamValue::U32(bg[0] as u32)));
+            params.push(("bg_g", ParamValue::U32(bg[1] as u32)));
+            params.push(("bg_b", ParamValue::U32(bg[2] as u32)));
+            params.push(("bg_a", ParamValue::U32(bg[3] as u32)));
+            let param_refs: Vec<(&str, ParamValue)> = params.into_iter().collect();
+            push_layout_node(&mut result.nodes, "zenpipe.round_corners", &param_refs)
         }
 
         Node::CommandString { kind, value, decode, encode, watermarks } => {

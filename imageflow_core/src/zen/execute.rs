@@ -223,7 +223,10 @@ fn execute_steps(
     // no alpha channel, transparent padding [0,0,0,0] produces invisible borders
     // that appear black after alpha flattening. Replace with opaque white to match
     // the V2 pipeline's behavior for opaque content.
-    if !source_has_alpha {
+    //
+    // However, skip this fix if the pipeline creates alpha (e.g., RoundImageCorners).
+    // In those cases, transparent padding is intentional and correct.
+    if !source_has_alpha && !pipeline_creates_alpha(&steps) {
         fix_expand_canvas_for_opaque_source(&mut steps);
     }
 
@@ -1012,6 +1015,15 @@ fn source_has_alpha(steps: &[Node], io_buffers: &HashMap<i32, Vec<u8>>) -> bool 
         .and_then(|data| zencodecs::from_bytes(data).ok())
         .map(|info| info.has_alpha)
         .unwrap_or(true) // default: assume alpha present (don't modify)
+}
+
+/// Check whether the pipeline contains nodes that create alpha channel content
+/// from an opaque source (e.g., RoundImageCorners adds transparent corners).
+///
+/// When such nodes are present, transparent ExpandCanvas fill is intentional
+/// and should NOT be replaced with white.
+fn pipeline_creates_alpha(steps: &[Node]) -> bool {
+    steps.iter().any(|n| matches!(n, Node::RoundImageCorners { .. }))
 }
 
 /// Fix ExpandCanvas nodes that use transparent fill on opaque source images.
