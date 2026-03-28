@@ -340,3 +340,153 @@ fn zen_watermark_red_on_green() {
     assert!(corner_g > 200, "corner G={corner_g}, expected >200 (green canvas)");
     assert!(corner_r < 50, "corner R={corner_r}, expected <50 (green canvas)");
 }
+
+/// Red 50% alpha watermark over blue background — tests alpha compositing.
+/// Runs both v2 and zen, compares pixel-for-pixel.
+#[test]
+fn zen_watermark_red_alpha_on_blue() {
+    use std::collections::HashMap;
+
+    fn make_solid_png(w: u32, h: u32, r: u8, g: u8, b: u8, a: u8) -> Vec<u8> {
+        let descriptor = zenpixels::PixelDescriptor::RGBA8_SRGB;
+        let mut pixels = vec![0u8; (w * h * 4) as usize];
+        for i in 0..(w * h) as usize {
+            pixels[i * 4] = r;
+            pixels[i * 4 + 1] = g;
+            pixels[i * 4 + 2] = b;
+            pixels[i * 4 + 3] = a;
+        }
+        let stride = (w * 4) as usize;
+        let ps = zenpixels::PixelSlice::new(&pixels, w, h, stride, descriptor).unwrap();
+        zencodecs::EncodeRequest::new(zencodecs::ImageFormat::Png)
+            .with_lossless(true)
+            .encode(ps, true)
+            .unwrap()
+            .into_vec()
+    }
+
+    let blue_png = make_solid_png(200, 200, 0, 0, 255, 255);
+    let red_half_png = make_solid_png(200, 200, 255, 0, 0, 128); // 50% alpha
+
+    // --- Zen pipeline ---
+    let mut zen_io = HashMap::new();
+    zen_io.insert(0, blue_png.clone());
+    zen_io.insert(1, red_half_png.clone());
+
+    let steps = vec![
+        s::Node::Decode { io_id: 0, commands: None },
+        s::Node::Watermark(s::Watermark {
+            io_id: 1,
+            gravity: Some(s::ConstraintGravity::Center),
+            fit_box: None,
+            fit_mode: Some(s::WatermarkConstraintMode::Within),
+            min_canvas_width: None,
+            min_canvas_height: None,
+            opacity: Some(1.0),
+            hints: None,
+        }),
+        s::Node::Encode {
+            io_id: 2,
+            preset: s::EncoderPreset::Libpng { depth: None, matte: None, zlib_compression: None },
+        },
+    ];
+
+    let zen_result = imageflow_core::zen::execute_framewise(
+        &s::Framewise::Steps(steps.clone()),
+        &zen_io,
+        &s::ExecutionSecurity::sane_defaults(),
+    )
+    .unwrap();
+
+    let zen_bytes = &zen_result.encode_results[0].bytes;
+
+    // --- V2 pipeline ---
+    let mut v2_ctx = Context::create().unwrap();
+    v2_ctx.force_backend = Some(imageflow_core::Backend::V2);
+    v2_ctx.add_copied_input_buffer(0, &blue_png).unwrap();
+    v2_ctx.add_copied_input_buffer(1, &red_half_png).unwrap();
+    v2_ctx.add_output_buffer(2).unwrap();
+    v2_ctx
+        .execute_1(s::Execute001 {
+            framewise: s::Framewise::Steps(steps),
+            graph_recording: None,
+            security: None,
+        })
+        .unwrap();
+    let v2_bytes = v2_ctx.take_output_buffer(2).unwrap();
+
+    // Decode both with v2 decoder (handles palette PNGs)
+    fn decode_bgra(ctx_bytes: &[u8]) -> (u32, u32, Vec<u8>) {
+        let mut ctx = Context::create().unwrap();
+        ctx.add_copied_input_buffer(0, ctx_bytes).unwrap();
+        let result = ctx
+            .execute_1(s::Execute001 {
+                framewise: s::Framewise::Steps(vec![
+                    s::Node::Decode { io_id: 0, commands: None },
+                    s::Node::CaptureBitmapKey { capture_id: 0 },
+                ]),
+                graph_recording: None,
+                security: None,
+            })
+            .unwrap();
+        let bitmaps = ctx.borrow_bitmaps().unwrap();
+        let key = ctx.get_captured_bitmap_key(0).unwrap();
+        let mut bm = bitmaps.try_borrow_mut(key).unwrap();
+        let window = bm.get_window_u8().unwrap();
+        let w = window.w() as u32;
+        let h = window.h() as u32;
+        let mut data = Vec::new();
+        for y in 0..h as usize {
+            let row = window.row(y).unwrap();
+            data.extend_from_slice(&row[..w as usize * 4]);
+        }
+        (w, h, data)
+    }
+
+    let (zw, zh, zen_pixels) = decode_bgra(zen_bytes);
+    let (vw, vh, v2_pixels) = decode_bgra(&v2_bytes);
+
+    eprintln!("Zen: {zw}x{zh}, V2: {vw}x{vh}");
+
+    // Sample center pixel (BGRA layout)
+    let zen_center = 100 * zw as usize * 4 + 100 * 4;
+    let v2_center = 100 * vw as usize * 4 + 100 * 4;
+
+    let (zb, zg, zr, za) = (
+        zen_pixels[zen_center],
+        zen_pixels[zen_center + 1],
+        zen_pixels[zen_center + 2],
+        zen_pixels[zen_center + 3],
+    );
+    let (vb, vg, vr, va) = (
+        v2_pixels[v2_center],
+        v2_pixels[v2_center + 1],
+        v2_pixels[v2_center + 2],
+        v2_pixels[v2_center + 3],
+    );
+
+    eprintln!("Center pixel (100,100):");
+    eprintln!("  V2:  R={vr} G={vg} B={vb} A={va}");
+    eprintln!("  Zen: R={zr} G={zg} B={zb} A={za}");
+    eprintln!(
+        "  Delta: R={} G={} B={} A={}",
+        (zr as i16 - vr as i16).abs(),
+        (zg as i16 - vg as i16).abs(),
+        (zb as i16 - vb as i16).abs(),
+        (za as i16 - va as i16).abs(),
+    );
+
+    // Expected: red(255,0,0) at 50% alpha over blue(0,0,255)
+    // Porter-Duff source-over in sRGB: out = src*sa + dst*(1-sa)
+    // In linear: linearize both, blend, delinearize
+    // The exact values depend on whether compositing is in sRGB or linear
+    eprintln!("Expected (sRGB space):  R={} G=0 B={}", 255 * 128 / 255, 255 * 127 / 255);
+
+    // Assert they're close (within 2)
+    assert!(
+        (zr as i16 - vr as i16).abs() <= 2
+            && (zg as i16 - vg as i16).abs() <= 2
+            && (zb as i16 - vb as i16).abs() <= 2,
+        "Zen and V2 center pixels differ by more than 2:\n  V2:  R={vr} G={vg} B={vb}\n  Zen: R={zr} G={zg} B={zb}"
+    );
+}

@@ -1036,7 +1036,21 @@ fn source_has_alpha(steps: &[Node], io_buffers: &HashMap<i32, Vec<u8>>) -> bool 
 /// When such nodes are present, transparent ExpandCanvas fill is intentional
 /// and should NOT be replaced with white.
 fn pipeline_creates_alpha(steps: &[Node]) -> bool {
-    steps.iter().any(|n| matches!(n, Node::RoundImageCorners { .. }))
+    steps.iter().any(|n| match n {
+        Node::RoundImageCorners { .. } => true,
+        Node::ExpandCanvas { color, .. } => matches!(color, imageflow_types::Color::Transparent),
+        Node::Constrain(c) => {
+            matches!(
+                c.mode,
+                imageflow_types::ConstraintMode::FitPad
+                    | imageflow_types::ConstraintMode::WithinPad
+            ) && c
+                .canvas_color
+                .as_ref()
+                .map_or(true, |c| matches!(c, imageflow_types::Color::Transparent))
+        }
+        _ => false,
+    })
 }
 
 /// Expand CommandString nodes into concrete steps using RIAPI parsing.
