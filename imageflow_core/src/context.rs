@@ -495,9 +495,11 @@ impl Context {
             let h = bitmap.height;
             let bpp = bitmap.bytes_per_pixel();
 
-            // Determine alpha properties from the zen pixel format.
-            let has_alpha = bitmap.format.has_alpha();
-            let alpha_meaningful = has_alpha;
+            // Use the alpha_meaningful flag from the zen pipeline.
+            // This tracks whether the source had alpha or the pipeline created alpha
+            // (e.g., RoundImageCorners). When false, normalize_unused_alpha() will
+            // set alpha to 255, matching v2's behavior for opaque sources.
+            let alpha_meaningful = bitmap.alpha_meaningful;
 
             // Create a BGRA u8 bitmap in the BitmapsContainer.
             let key = self.borrow_bitmaps_mut()?.create_bitmap_u8(

@@ -11,6 +11,11 @@ pub struct CapturedBitmap {
     pub pixels: Vec<u8>,
     /// Pixel format descriptor (from zenpixels).
     pub format: zenpipe::PixelFormat,
+    /// Whether the alpha channel carries meaningful data.
+    ///
+    /// When `false`, the test infrastructure normalizes alpha to 255
+    /// (matching v2's behavior for opaque sources like JPEG).
+    pub alpha_meaningful: bool,
 }
 
 impl CapturedBitmap {

@@ -216,19 +216,14 @@ fn execute_steps(
     // Pre-process: expand CommandString nodes using source dimensions from probe.
     let mut steps = expand_command_strings(steps, io_buffers)?;
 
-    // Probe source once for alpha detection (shared with ExpandCanvas fix below).
+    // Probe source once for alpha detection.
     let source_has_alpha = source_has_alpha(&steps, io_buffers);
 
-    // Fix transparent ExpandCanvas on opaque sources: when the source image has
-    // no alpha channel, transparent padding [0,0,0,0] produces invisible borders
-    // that appear black after alpha flattening. Replace with opaque white to match
-    // the V2 pipeline's behavior for opaque content.
-    //
-    // However, skip this fix if the pipeline creates alpha (e.g., RoundImageCorners).
-    // In those cases, transparent padding is intentional and correct.
-    if !source_has_alpha && !pipeline_creates_alpha(&steps) {
-        fix_expand_canvas_for_opaque_source(&mut steps);
-    }
+    // Track whether the pipeline produces meaningful alpha content.
+    // When the source has no alpha and no node creates alpha, the zen bitmap's
+    // alpha_meaningful flag should be false — matching v2's behavior where
+    // normalize_unused_alpha() sets alpha to 255 for opaque sources.
+    let alpha_meaningful = source_has_alpha || pipeline_creates_alpha(&steps);
 
     // Collect capture IDs before translation (CaptureBitmapKey is a no-op in translate).
     let capture_ids: Vec<i32> = steps
@@ -284,7 +279,13 @@ fn execute_steps(
             for id in &capture_ids {
                 captures.insert(
                     *id,
-                    CapturedBitmap { width: w, height: h, pixels: data.clone(), format: fmt },
+                    CapturedBitmap {
+                        width: w,
+                        height: h,
+                        pixels: data.clone(),
+                        format: fmt,
+                        alpha_meaningful,
+                    },
                 );
             }
             if has_encode {
@@ -382,7 +383,13 @@ fn execute_steps(
         for id in &capture_ids {
             captures.insert(
                 *id,
-                CapturedBitmap { width: w, height: h, pixels: data.clone(), format: fmt },
+                CapturedBitmap {
+                    width: w,
+                    height: h,
+                    pixels: data.clone(),
+                    format: fmt,
+                    alpha_meaningful,
+                },
             );
         }
 
@@ -420,7 +427,13 @@ fn execute_steps(
         for id in &capture_ids {
             captures.insert(
                 *id,
-                CapturedBitmap { width: w, height: h, pixels: data.clone(), format: fmt },
+                CapturedBitmap {
+                    width: w,
+                    height: h,
+                    pixels: data.clone(),
+                    format: fmt,
+                    alpha_meaningful,
+                },
             );
         }
         Vec::new()
@@ -1024,28 +1037,6 @@ fn source_has_alpha(steps: &[Node], io_buffers: &HashMap<i32, Vec<u8>>) -> bool 
 /// and should NOT be replaced with white.
 fn pipeline_creates_alpha(steps: &[Node]) -> bool {
     steps.iter().any(|n| matches!(n, Node::RoundImageCorners { .. }))
-}
-
-/// Fix ExpandCanvas nodes that use transparent fill on opaque source images.
-///
-/// When the source image has no alpha channel (e.g., lossy WebP, JPEG), transparent
-/// padding [0,0,0,0] is wrong — the alpha=0 pixels appear as invisible black borders
-/// after compositing or alpha flattening. This replaces `Color::Transparent` with
-/// opaque white for opaque sources, matching the visual intent.
-///
-/// Only modifies ExpandCanvas nodes where the color is exactly `Color::Transparent`.
-/// Explicitly set colors (even transparent ones via hex) are left unchanged.
-fn fix_expand_canvas_for_opaque_source(steps: &mut [Node]) {
-    // Source is opaque: replace transparent ExpandCanvas fill with opaque white.
-    for step in steps.iter_mut() {
-        if let Node::ExpandCanvas { color, .. } = step {
-            if matches!(color, imageflow_types::Color::Transparent) {
-                *color = imageflow_types::Color::Srgb(imageflow_types::ColorSrgb::Hex(
-                    "FFFFFFFF".to_owned(),
-                ));
-            }
-        }
-    }
 }
 
 /// Expand CommandString nodes into concrete steps using RIAPI parsing.
