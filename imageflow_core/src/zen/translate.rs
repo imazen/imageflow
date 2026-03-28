@@ -229,13 +229,9 @@ fn translate_one(
         Node::ColorFilterSrgb(filter) => translate_color_filter(filter, &mut result.nodes),
 
         Node::ColorMatrixSrgb { matrix } => {
-            // Flatten [[f32; 5]; 5] → [f32; 25] row-major.
-            // Uses imageflow.color_matrix_srgb (sRGB gamma space, matching v2)
-            // rather than zenfilters.color_matrix (Oklab space).
-            let mut flat = [0.0f32; 25];
-            for (i, row) in matrix.iter().enumerate() {
-                flat[i * 5..i * 5 + 5].copy_from_slice(row);
-            }
+            // Transpose v2 [[f32; 5]; 5] (m[input][output]) to flat [f32; 25]
+            // (row-per-output-channel) for the ColorMatrixSrgbConverter.
+            let flat = v2_matrix_to_flat(matrix);
             result.nodes.push(Box::new(super::nodes::ColorMatrixSrgbNode { matrix: flat }));
             Ok(())
         }
@@ -408,57 +404,163 @@ fn translate_constrain(
 
 // ─── Color filter translation ───
 
+/// Translate a v2 ColorFilterSrgb to a sRGB-space color matrix node.
+///
+/// All ColorFilterSrgb variants (except Alpha, which uses zenfilters) are
+/// implemented as 5x5 color matrices applied in sRGB gamma space on u8 values.
+/// This matches v2 behavior exactly — v2 expanded every ColorFilterSrgb into
+/// a ColorMatrixSrgb node with the same matrix functions.
 fn translate_color_filter(
     filter: &ColorFilterSrgb,
     nodes: &mut Vec<Box<dyn NodeInstance>>,
 ) -> Result<(), TranslateError> {
+    // All ColorFilterSrgb variants (including Alpha) use the v2 color matrix
+    // approach in sRGB gamma space. This avoids zenfilters' Oklab conversion
+    // and matches v2 behavior exactly.
+    let v2_matrix = color_filter_to_v2_matrix(filter);
+    let flat = v2_matrix_to_flat(&v2_matrix);
+    nodes.push(Box::new(super::nodes::ColorMatrixSrgbNode { matrix: flat }));
+    Ok(())
+}
+
+/// Convert a v2-format 5x5 color matrix to the flat [f32; 25] format used by
+/// `ColorMatrixSrgbConverter`.
+///
+/// V2 matrices use `m[input_channel][output_channel]` layout:
+///   out_R = m[0][0]*r + m[1][0]*g + m[2][0]*b + m[3][0]*a + m[4][0]*255
+///
+/// The converter uses row-per-output-channel layout:
+///   out_R = flat[0]*r + flat[1]*g + flat[2]*b + flat[3]*a + flat[4]*255
+///
+/// So we transpose: flat[out*5 + in] = m[in][out].
+fn v2_matrix_to_flat(m: &[[f32; 5]; 5]) -> [f32; 25] {
+    let mut flat = [0.0f32; 25];
+    for out_ch in 0..4 {
+        for in_ch in 0..4 {
+            flat[out_ch * 5 + in_ch] = m[in_ch][out_ch];
+        }
+        flat[out_ch * 5 + 4] = m[4][out_ch]; // bias term
+    }
+    // flat[20..25] is unused by the converter
+    flat
+}
+
+/// Build the v2-format 5x5 color matrix for a given ColorFilterSrgb variant.
+///
+/// These matrices are identical to the ones in `imageflow_core::flow::nodes::color`.
+/// The matrix format is `m[input_channel][output_channel]` with row 4 as bias.
+fn color_filter_to_v2_matrix(filter: &ColorFilterSrgb) -> [[f32; 5]; 5] {
     match filter {
-        ColorFilterSrgb::GrayscaleBt709
-        | ColorFilterSrgb::GrayscaleNtsc
-        | ColorFilterSrgb::GrayscaleFlat
-        | ColorFilterSrgb::GrayscaleRy => {
-            // Set saturation to -1.0 (full desaturation).
-            // Different grayscale modes use different luma weights,
-            // but zenfilters saturation=-1 uses the standard model.
-            push_filter_node(nodes, "zenfilters.saturation", &[("amount", ParamValue::F32(-1.0))])
-        }
-        ColorFilterSrgb::Sepia => {
-            // Desaturate then warm tint. Simplified version.
-            push_filter_node(nodes, "zenfilters.saturation", &[("amount", ParamValue::F32(-1.0))])?;
-            push_filter_node(nodes, "zenfilters.temperature", &[("amount", ParamValue::F32(0.3))])
-        }
-        ColorFilterSrgb::Invert => push_filter_node(nodes, "zenfilters.invert", &[]),
-        ColorFilterSrgb::Alpha(a) => {
-            push_filter_node(nodes, "zenfilters.alpha", &[("factor", ParamValue::F32(*a))])
-        }
-        ColorFilterSrgb::Contrast(c) => {
-            // v2 contrast is centered at 1.0 (no change), range ~0..2.
-            // zenfilters contrast is centered at 0.0, range -1..1.
-            let normalized = c - 1.0;
-            push_filter_node(
-                nodes,
-                "zenfilters.contrast",
-                &[("amount", ParamValue::F32(normalized))],
-            )
-        }
-        ColorFilterSrgb::Brightness(b) => {
-            // v2 brightness is centered at 1.0, range ~0..2.
-            // Map to zenfilters exposure in stops.
-            let stops = (*b - 1.0) * 2.0; // rough mapping
-            push_filter_node(nodes, "zenfilters.exposure", &[("stops", ParamValue::F32(stops))])
-        }
-        ColorFilterSrgb::Saturation(sat) => {
-            // v2 saturation is centered at 1.0, range ~0..2.
-            // zenfilters saturation is centered at 0.0, range -1..1.
-            let normalized = sat - 1.0;
-            push_filter_node(
-                nodes,
-                "zenfilters.saturation",
-                &[("amount", ParamValue::F32(normalized))],
-            )
-        }
-        #[allow(unreachable_patterns)]
-        _ => Err(TranslateError::Unsupported(format!("color_filter_srgb::{filter:?}"))),
+        ColorFilterSrgb::Sepia => srgb_matrix::sepia(),
+        ColorFilterSrgb::GrayscaleNtsc => srgb_matrix::grayscale_ntsc(),
+        ColorFilterSrgb::GrayscaleRy => srgb_matrix::grayscale_ry(),
+        ColorFilterSrgb::GrayscaleFlat => srgb_matrix::grayscale_flat(),
+        ColorFilterSrgb::GrayscaleBt709 => srgb_matrix::grayscale_bt709(),
+        ColorFilterSrgb::Invert => srgb_matrix::invert(),
+        ColorFilterSrgb::Alpha(a) => srgb_matrix::alpha(*a),
+        ColorFilterSrgb::Contrast(c) => srgb_matrix::contrast(*c),
+        ColorFilterSrgb::Saturation(s) => srgb_matrix::saturation(*s),
+        ColorFilterSrgb::Brightness(b) => srgb_matrix::brightness(*b),
+    }
+}
+
+/// V2-compatible sRGB color matrices.
+///
+/// Each function returns a 5x5 matrix in v2 layout: `m[input][output]`, row 4 = bias.
+/// These are exact copies of the matrices in `imageflow_core::flow::nodes::color`.
+mod srgb_matrix {
+    pub fn sepia() -> [[f32; 5]; 5] {
+        [
+            [0.393f32, 0.349f32, 0.272f32, 0f32, 0f32],
+            [0.769f32, 0.686f32, 0.534f32, 0f32, 0f32],
+            [0.189f32, 0.168f32, 0.131f32, 0f32, 0f32],
+            [0f32, 0f32, 0f32, 1f32, 0f32],
+            [0f32, 0f32, 0f32, 0f32, 0f32],
+        ]
+    }
+
+    fn grayscale(r: f32, g: f32, b: f32) -> [[f32; 5]; 5] {
+        [
+            [r, r, r, 0f32, 0f32],
+            [g, g, g, 0f32, 0f32],
+            [b, b, b, 0f32, 0f32],
+            [0f32, 0f32, 0f32, 1f32, 0f32],
+            [0f32, 0f32, 0f32, 0f32, 1f32],
+        ]
+    }
+
+    pub fn grayscale_flat() -> [[f32; 5]; 5] {
+        grayscale(0.5f32, 0.5f32, 0.5f32)
+    }
+
+    pub fn grayscale_bt709() -> [[f32; 5]; 5] {
+        grayscale(0.2125f32, 0.7154f32, 0.0721f32)
+    }
+
+    pub fn grayscale_ry() -> [[f32; 5]; 5] {
+        grayscale(0.5f32, 0.419f32, 0.081f32)
+    }
+
+    pub fn grayscale_ntsc() -> [[f32; 5]; 5] {
+        // NTSC uses the "Y" luma coefficients (same as grayscale_y in v2).
+        grayscale(0.229f32, 0.587f32, 0.114f32)
+    }
+
+    pub fn invert() -> [[f32; 5]; 5] {
+        [
+            [-1f32, 0f32, 0f32, 0f32, 0f32],
+            [0f32, -1f32, 0f32, 0f32, 0f32],
+            [0f32, 0f32, -1f32, 0f32, 0f32],
+            [0f32, 0f32, 0f32, 1f32, 0f32],
+            [1f32, 1f32, 1f32, 0f32, 1f32],
+        ]
+    }
+
+    pub fn alpha(alpha: f32) -> [[f32; 5]; 5] {
+        [
+            [1f32, 0f32, 0f32, 0f32, 0f32],
+            [0f32, 1f32, 0f32, 0f32, 0f32],
+            [0f32, 0f32, 1f32, 0f32, 0f32],
+            [0f32, 0f32, 0f32, alpha, 0f32],
+            [0f32, 0f32, 0f32, 0f32, 1f32],
+        ]
+    }
+
+    pub fn contrast(c: f32) -> [[f32; 5]; 5] {
+        let c = c + 1f32; // Stop at -1
+        let factor_t = 0.5f32 * (1.0f32 - c);
+        [
+            [c, 0f32, 0f32, 0f32, 0f32],
+            [0f32, c, 0f32, 0f32, 0f32],
+            [0f32, 0f32, c, 0f32, 0f32],
+            [0f32, 0f32, 0f32, 1f32, 0f32],
+            [factor_t, factor_t, factor_t, 0f32, 1f32],
+        ]
+    }
+
+    pub fn brightness(factor: f32) -> [[f32; 5]; 5] {
+        [
+            [1f32, 0f32, 0f32, 0f32, 0f32],
+            [0f32, 1f32, 0f32, 0f32, 0f32],
+            [0f32, 0f32, 1f32, 0f32, 0f32],
+            [0f32, 0f32, 0f32, 1f32, 0f32],
+            [factor, factor, factor, 0f32, 1f32],
+        ]
+    }
+
+    pub fn saturation(saturation: f32) -> [[f32; 5]; 5] {
+        let saturation = (saturation + 1f32).max(0f32); // Stop at -1
+        let complement = 1.0f32 - saturation;
+        let complement_r = 0.3086f32 * complement;
+        let complement_g = 0.6094f32 * complement;
+        let complement_b = 0.0820f32 * complement;
+        [
+            [complement_r + saturation, complement_r, complement_r, 0.0f32, 0.0f32],
+            [complement_g, complement_g + saturation, complement_g, 0.0f32, 0.0f32],
+            [complement_b, complement_b, complement_b + saturation, 0.0f32, 0.0f32],
+            [0.0f32, 0.0f32, 0.0f32, 1.0f32, 0.0f32],
+            [0.0f32, 0.0f32, 0.0f32, 0.0f32, 1.0f32],
+        ]
     }
 }
 
