@@ -1,4 +1,10 @@
-# Imageflow Project Instructions
+# Imageflow4 — Retired Sketch
+
+**This project is a retired sketch.** It was an early pure-Rust imageflow rewrite attempt. Useful as reference for zen crate delegation patterns, but not under active development. The active imageflow is at `~/work/zen/imageflow/` (v3, branch `imageflow3`), which uses zenpipe as its backend.
+
+---
+
+## Historical Instructions (from active development period)
 
 ## SIMD & Dispatch Crates
 
