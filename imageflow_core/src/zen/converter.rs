@@ -324,11 +324,24 @@ fn area_threshold(histogram: &[u64; 256], total_pixels: u64, threshold: f64) -> 
 }
 
 /// Create a 256-entry byte lookup table mapping [low, high] → [0, 255].
+///
+/// Matches v2's behavior exactly, including degenerate cases:
+/// - `low == high`: v2 computes `255.0 / 0 = Inf`, then `0 * Inf = NaN`,
+///   and Rust's `NaN.min(255.0).max(0.0)` yields 255 (NaN propagation rules).
+///   So all values map to 255.
+/// - `low > high`: v2's usize subtraction wraps to a huge value, making
+///   `255.0 / huge ≈ 0`, so all values map to 0.
 #[allow(clippy::manual_clamp)]
 fn create_byte_mapping(low: usize, high: usize) -> [u8; 256] {
     let mut map = [0u8; 256];
-    let range = if high > low { high - low } else { 1 };
-    let scale = 255.0 / range as f64;
+    if low > high {
+        // Degenerate: v2 wraps to huge denominator, scale ≈ 0, all map to 0.
+        return map;
+    }
+    // For low == high, scale = Inf. 0*Inf=NaN, min(255)=255, max(0)=255.
+    // For N*Inf=Inf, min(255)=255, max(0)=255. So all values map to 255.
+    // This matches v2's IEEE 754 behavior.
+    let scale = 255.0 / (high - low) as f64;
     for v in 0..256usize {
         map[v] = (v.saturating_sub(low) as f64 * scale).round().min(255.0).max(0.0) as u8;
     }
