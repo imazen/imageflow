@@ -360,7 +360,6 @@ pub(super) fn apply_icc_transform(
             }
         }
         imageflow_types::CmsMode::SceneReferred => {
-            // Strict: only skip for exact sRGB (primaries + TRC match).
             if is_srgb_icc_profile(&src_icc) {
                 return Ok(source);
             }
