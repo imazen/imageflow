@@ -189,34 +189,37 @@ impl NodeConverter for WatermarkConverter {
 /// Create a `NodeOp::Materialize` that draws a 3x3 red rectangle at the
 /// bottom-right corner of the image.
 fn make_red_dot_materialize() -> NodeOp {
-    NodeOp::Materialize { label: "red_dot", transform: Box::new(
-        move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
-            let iw = *w;
-            let ih = *h;
-            if iw < 3 || ih < 3 {
-                return; // Canvas too small for the dot.
-            }
-            let bpp = fmt.bytes_per_pixel();
-            let stride = fmt.aligned_stride(iw);
+    NodeOp::Materialize {
+        label: "red_dot",
+        transform: Box::new(
+            move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
+                let iw = *w;
+                let ih = *h;
+                if iw < 3 || ih < 3 {
+                    return; // Canvas too small for the dot.
+                }
+                let bpp = fmt.bytes_per_pixel();
+                let stride = fmt.aligned_stride(iw);
 
-            // Red color: RGBA = (255, 0, 0, 255)
-            let red: [u8; 4] = [255, 0, 0, 255];
+                // Red color: RGBA = (255, 0, 0, 255)
+                let red: [u8; 4] = [255, 0, 0, 255];
 
-            for dy in 0..3u32 {
-                for dx in 0..3u32 {
-                    let x = (iw - 3 + dx) as usize;
-                    let y = (ih - 3 + dy) as usize;
-                    let off = y * stride + x * bpp;
-                    if off + bpp <= data.len() {
-                        // Write as many bytes as the format has per pixel.
-                        for c in 0..bpp.min(4) {
-                            data[off + c] = red[c];
+                for dy in 0..3u32 {
+                    for dx in 0..3u32 {
+                        let x = (iw - 3 + dx) as usize;
+                        let y = (ih - 3 + dy) as usize;
+                        let off = y * stride + x * bpp;
+                        if off + bpp <= data.len() {
+                            // Write as many bytes as the format has per pixel.
+                            for c in 0..bpp.min(4) {
+                                data[off + c] = red[c];
+                            }
                         }
                     }
                 }
-            }
-        },
-    )}
+            },
+        ),
+    }
 }
 
 // ─── Watermark overlay Materialize ───
@@ -224,113 +227,121 @@ fn make_red_dot_materialize() -> NodeOp {
 /// Create a `NodeOp::Materialize` that composites the watermark image onto
 /// the canvas at the computed position with opacity.
 fn make_watermark_materialize(overlay: WatermarkOverlayNode) -> NodeOp {
-    NodeOp::Materialize { label: "watermark_overlay", transform: Box::new(
-        move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
-            let canvas_w = *w;
-            let canvas_h = *h;
+    NodeOp::Materialize {
+        label: "watermark_overlay",
+        transform: Box::new(
+            move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
+                let canvas_w = *w;
+                let canvas_h = *h;
 
-            // Check minimum canvas size.
-            if overlay.min_canvas_width.unwrap_or(0) > canvas_w
-                || overlay.min_canvas_height.unwrap_or(0) > canvas_h
-            {
-                return; // Canvas too small, skip watermark (matches v2 behavior).
-            }
-
-            // Compute bounding box on the canvas.
-            let bbox = get_bounding_box(canvas_w, canvas_h, overlay.fit_box.as_ref());
-            let (box_x1, box_y1, box_x2, box_y2) = match bbox {
-                Some(b) => b,
-                None => return, // Bounding box too small.
-            };
-
-            let box_w = (box_x2 - box_x1) as u32;
-            let box_h = (box_y2 - box_y1) as u32;
-
-            // Compute the target size for the watermark within the bounding box.
-            let (target_w, target_h) = compute_watermark_size(
-                overlay.width,
-                overlay.height,
-                box_w,
-                box_h,
-                overlay.fit_mode.unwrap_or(WatermarkConstraintMode::Within),
-            );
-
-            if target_w == 0 || target_h == 0 {
-                return;
-            }
-
-            // Resize the watermark to target dimensions.
-            let resized =
-                resize_rgba8(&overlay.pixels, overlay.width, overlay.height, target_w, target_h);
-
-            // Compute position within the bounding box using gravity.
-            let (place_x, place_y) = compute_gravity_position(
-                box_x1,
-                box_y1,
-                box_x2,
-                box_y2,
-                target_w as i32,
-                target_h as i32,
-                overlay.gravity.as_ref(),
-            );
-
-            // Composite the watermark onto the canvas.
-            let bpp = fmt.bytes_per_pixel();
-            let canvas_stride = fmt.aligned_stride(canvas_w);
-            let wm_stride = target_w as usize * 4; // Watermark is always RGBA8.
-            let opacity = overlay.opacity;
-
-            for wy in 0..target_h {
-                let cy = place_y + wy as i32;
-                if cy < 0 || cy >= canvas_h as i32 {
-                    continue;
+                // Check minimum canvas size.
+                if overlay.min_canvas_width.unwrap_or(0) > canvas_w
+                    || overlay.min_canvas_height.unwrap_or(0) > canvas_h
+                {
+                    return; // Canvas too small, skip watermark (matches v2 behavior).
                 }
-                for wx in 0..target_w {
-                    let cx = place_x + wx as i32;
-                    if cx < 0 || cx >= canvas_w as i32 {
+
+                // Compute bounding box on the canvas.
+                let bbox = get_bounding_box(canvas_w, canvas_h, overlay.fit_box.as_ref());
+                let (box_x1, box_y1, box_x2, box_y2) = match bbox {
+                    Some(b) => b,
+                    None => return, // Bounding box too small.
+                };
+
+                let box_w = (box_x2 - box_x1) as u32;
+                let box_h = (box_y2 - box_y1) as u32;
+
+                // Compute the target size for the watermark within the bounding box.
+                let (target_w, target_h) = compute_watermark_size(
+                    overlay.width,
+                    overlay.height,
+                    box_w,
+                    box_h,
+                    overlay.fit_mode.unwrap_or(WatermarkConstraintMode::Within),
+                );
+
+                if target_w == 0 || target_h == 0 {
+                    return;
+                }
+
+                // Resize the watermark to target dimensions.
+                let resized = resize_rgba8(
+                    &overlay.pixels,
+                    overlay.width,
+                    overlay.height,
+                    target_w,
+                    target_h,
+                );
+
+                // Compute position within the bounding box using gravity.
+                let (place_x, place_y) = compute_gravity_position(
+                    box_x1,
+                    box_y1,
+                    box_x2,
+                    box_y2,
+                    target_w as i32,
+                    target_h as i32,
+                    overlay.gravity.as_ref(),
+                );
+
+                // Composite the watermark onto the canvas.
+                let bpp = fmt.bytes_per_pixel();
+                let canvas_stride = fmt.aligned_stride(canvas_w);
+                let wm_stride = target_w as usize * 4; // Watermark is always RGBA8.
+                let opacity = overlay.opacity;
+
+                for wy in 0..target_h {
+                    let cy = place_y + wy as i32;
+                    if cy < 0 || cy >= canvas_h as i32 {
                         continue;
                     }
-                    let wm_off = wy as usize * wm_stride + wx as usize * 4;
-                    let canvas_off = cy as usize * canvas_stride + cx as usize * bpp;
+                    for wx in 0..target_w {
+                        let cx = place_x + wx as i32;
+                        if cx < 0 || cx >= canvas_w as i32 {
+                            continue;
+                        }
+                        let wm_off = wy as usize * wm_stride + wx as usize * 4;
+                        let canvas_off = cy as usize * canvas_stride + cx as usize * bpp;
 
-                    if wm_off + 4 > resized.len() || canvas_off + bpp > data.len() {
-                        continue;
-                    }
+                        if wm_off + 4 > resized.len() || canvas_off + bpp > data.len() {
+                            continue;
+                        }
 
-                    // Source pixel (RGBA8 from watermark).
-                    let sr = resized[wm_off] as f32 / 255.0;
-                    let sg = resized[wm_off + 1] as f32 / 255.0;
-                    let sb = resized[wm_off + 2] as f32 / 255.0;
-                    let sa = resized[wm_off + 3] as f32 / 255.0 * opacity;
+                        // Source pixel (RGBA8 from watermark).
+                        let sr = resized[wm_off] as f32 / 255.0;
+                        let sg = resized[wm_off + 1] as f32 / 255.0;
+                        let sb = resized[wm_off + 2] as f32 / 255.0;
+                        let sa = resized[wm_off + 3] as f32 / 255.0 * opacity;
 
-                    // Dest pixel (from canvas, assumed RGBA8).
-                    let dr = data[canvas_off] as f32 / 255.0;
-                    let dg = data[canvas_off + 1] as f32 / 255.0;
-                    let db = data[canvas_off + 2] as f32 / 255.0;
-                    let da = if bpp >= 4 { data[canvas_off + 3] as f32 / 255.0 } else { 1.0 };
+                        // Dest pixel (from canvas, assumed RGBA8).
+                        let dr = data[canvas_off] as f32 / 255.0;
+                        let dg = data[canvas_off + 1] as f32 / 255.0;
+                        let db = data[canvas_off + 2] as f32 / 255.0;
+                        let da = if bpp >= 4 { data[canvas_off + 3] as f32 / 255.0 } else { 1.0 };
 
-                    // Porter-Duff source-over in sRGB space (matches v2 behavior).
-                    let out_a = sa + da * (1.0 - sa);
-                    let (out_r, out_g, out_b) = if out_a > 0.0 {
-                        (
-                            (sr * sa + dr * da * (1.0 - sa)) / out_a,
-                            (sg * sa + dg * da * (1.0 - sa)) / out_a,
-                            (sb * sa + db * da * (1.0 - sa)) / out_a,
-                        )
-                    } else {
-                        (0.0, 0.0, 0.0)
-                    };
+                        // Porter-Duff source-over in sRGB space (matches v2 behavior).
+                        let out_a = sa + da * (1.0 - sa);
+                        let (out_r, out_g, out_b) = if out_a > 0.0 {
+                            (
+                                (sr * sa + dr * da * (1.0 - sa)) / out_a,
+                                (sg * sa + dg * da * (1.0 - sa)) / out_a,
+                                (sb * sa + db * da * (1.0 - sa)) / out_a,
+                            )
+                        } else {
+                            (0.0, 0.0, 0.0)
+                        };
 
-                    data[canvas_off] = (out_r * 255.0 + 0.5).min(255.0).max(0.0) as u8;
-                    data[canvas_off + 1] = (out_g * 255.0 + 0.5).min(255.0).max(0.0) as u8;
-                    data[canvas_off + 2] = (out_b * 255.0 + 0.5).min(255.0).max(0.0) as u8;
-                    if bpp >= 4 {
-                        data[canvas_off + 3] = (out_a * 255.0 + 0.5).min(255.0).max(0.0) as u8;
+                        data[canvas_off] = (out_r * 255.0 + 0.5).min(255.0).max(0.0) as u8;
+                        data[canvas_off + 1] = (out_g * 255.0 + 0.5).min(255.0).max(0.0) as u8;
+                        data[canvas_off + 2] = (out_b * 255.0 + 0.5).min(255.0).max(0.0) as u8;
+                        if bpp >= 4 {
+                            data[canvas_off + 3] = (out_a * 255.0 + 0.5).min(255.0).max(0.0) as u8;
+                        }
                     }
                 }
-            }
-        },
-    )}
+            },
+        ),
+    }
 }
 
 // ─── Bounding box computation ───

@@ -230,3 +230,113 @@ fn zen_execute_1_flip_rotate() {
         other => panic!("expected JobResult, got {other:?}"),
     }
 }
+
+/// Red square watermark over green canvas — easy to verify visually.
+/// Tests that the Materialize-based watermark compositing actually modifies pixels.
+#[test]
+fn zen_watermark_red_on_green() {
+    use std::collections::HashMap;
+
+    // Create a 200x200 solid green PNG.
+    fn make_solid_png(w: u32, h: u32, r: u8, g: u8, b: u8) -> Vec<u8> {
+        let descriptor = zenpixels::PixelDescriptor::RGBA8_SRGB;
+        let mut pixels = vec![0u8; (w * h * 4) as usize];
+        for i in 0..(w * h) as usize {
+            pixels[i * 4] = r;
+            pixels[i * 4 + 1] = g;
+            pixels[i * 4 + 2] = b;
+            pixels[i * 4 + 3] = 255;
+        }
+        let stride = (w * 4) as usize;
+        let ps = zenpixels::PixelSlice::new(&pixels, w, h, stride, descriptor).unwrap();
+        zencodecs::EncodeRequest::new(zencodecs::ImageFormat::Png)
+            .with_lossless(true)
+            .encode(ps, true)
+            .unwrap()
+            .into_vec()
+    }
+
+    let green_png = make_solid_png(200, 200, 0, 255, 0);
+    let red_png = make_solid_png(50, 50, 255, 0, 0);
+
+    let mut io_buffers = HashMap::new();
+    io_buffers.insert(0, green_png);
+    io_buffers.insert(1, red_png);
+
+    let steps = vec![
+        s::Node::Decode { io_id: 0, commands: None },
+        s::Node::Watermark(s::Watermark {
+            io_id: 1,
+            gravity: Some(s::ConstraintGravity::Center),
+            fit_box: None,
+            fit_mode: Some(s::WatermarkConstraintMode::Within),
+            min_canvas_width: None,
+            min_canvas_height: None,
+            opacity: Some(1.0),
+            hints: None,
+        }),
+        s::Node::Encode {
+            io_id: 2,
+            preset: s::EncoderPreset::Libpng { depth: None, matte: None, zlib_compression: None },
+        },
+    ];
+
+    let framewise = s::Framewise::Steps(steps);
+    let security = s::ExecutionSecurity::sane_defaults();
+
+    let result =
+        imageflow_core::zen::execute_framewise(&framewise, &io_buffers, &security).unwrap();
+    assert_eq!(result.encode_results.len(), 1);
+
+    let output = &result.encode_results[0];
+    assert_eq!(output.width, 200);
+    assert_eq!(output.height, 200);
+
+    // Save for visual inspection
+    std::fs::write("/tmp/wm_red_on_green.png", &output.bytes).unwrap();
+    eprintln!("Wrote /tmp/wm_red_on_green.png ({} bytes)", output.bytes.len());
+
+    // Decode the output via v2 context (handles palette PNGs correctly).
+    // zencodecs' direct decoder may not expand 1-bit palette to RGBA.
+    let mut decode_ctx = Context::create().unwrap();
+    decode_ctx.add_copied_input_buffer(0, &output.bytes).unwrap();
+    let capture_id = 0;
+    decode_ctx
+        .execute_1(s::Execute001 {
+            framewise: s::Framewise::Steps(vec![
+                s::Node::Decode { io_id: 0, commands: None },
+                s::Node::CaptureBitmapKey { capture_id },
+            ]),
+            graph_recording: None,
+            security: None,
+        })
+        .unwrap();
+
+    let bitmaps = decode_ctx.borrow_bitmaps().unwrap();
+    let bitmap_key = decode_ctx.get_captured_bitmap_key(capture_id).unwrap();
+    let mut bm = bitmaps.try_borrow_mut(bitmap_key).unwrap();
+    let window = bm.get_window_u8().unwrap();
+    let _w = window.w() as usize;
+    let _h = window.h() as usize;
+
+    // v2 decodes to BGRA, so channels are B=0, G=1, R=2, A=3
+    let row_100 = window.row(100).unwrap();
+    let center_b = row_100[100 * 4];
+    let center_g = row_100[100 * 4 + 1];
+    let center_r = row_100[100 * 4 + 2];
+    eprintln!("Center pixel (100,100): R={center_r} G={center_g} B={center_b}");
+
+    let row_0 = window.row(0).unwrap();
+    let corner_b = row_0[0];
+    let corner_g = row_0[1];
+    let corner_r = row_0[2];
+    eprintln!("Corner pixel (0,0): R={corner_r} G={corner_g} B={corner_b}");
+
+    // The center should be red (watermark was composited)
+    assert!(center_r > 200, "center R={center_r}, expected >200 (red watermark)");
+    assert!(center_g < 50, "center G={center_g}, expected <50 (red watermark)");
+
+    // The corner should be green (untouched)
+    assert!(corner_g > 200, "corner G={corner_g}, expected >200 (green canvas)");
+    assert!(corner_r < 50, "corner R={corner_r}, expected <50 (green canvas)");
+}
