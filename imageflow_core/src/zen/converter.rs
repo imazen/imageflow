@@ -155,41 +155,47 @@ impl NodeConverter for RegionConverter {
         // Use Materialize to apply the region viewport via ExpandCanvasSource.
         // ExpandCanvasSource handles negative placement (crop) and positive
         // placement (padding) transparently.
-        Ok(NodeOp::Materialize { label: "region_viewport", transform: Box::new(
-            move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
-                let src_w = *w;
-                let src_h = *h;
-                let bpp = fmt.bytes_per_pixel();
-                let src_stride = src_w as usize * bpp;
+        Ok(NodeOp::Materialize {
+            label: "region_viewport",
+            transform: Box::new(
+                move |data: &mut Vec<u8>,
+                      w: &mut u32,
+                      h: &mut u32,
+                      fmt: &mut zenpipe::PixelFormat| {
+                    let src_w = *w;
+                    let src_h = *h;
+                    let bpp = fmt.bytes_per_pixel();
+                    let src_stride = src_w as usize * bpp;
 
-                // Build the output canvas
-                let out_stride = canvas_w as usize * bpp;
-                let mut out = vec![0u8; canvas_h as usize * out_stride];
+                    // Build the output canvas
+                    let out_stride = canvas_w as usize * bpp;
+                    let mut out = vec![0u8; canvas_h as usize * out_stride];
 
-                for out_y in 0..canvas_h as i32 {
-                    let src_y = out_y - place_y;
-                    if src_y < 0 || src_y >= src_h as i32 {
-                        continue;
-                    }
-                    for out_x in 0..canvas_w as i32 {
-                        let src_x = out_x - place_x;
-                        if src_x < 0 || src_x >= src_w as i32 {
+                    for out_y in 0..canvas_h as i32 {
+                        let src_y = out_y - place_y;
+                        if src_y < 0 || src_y >= src_h as i32 {
                             continue;
                         }
-                        let src_off = src_y as usize * src_stride + src_x as usize * bpp;
-                        let dst_off = out_y as usize * out_stride + out_x as usize * bpp;
-                        if src_off + bpp <= data.len() && dst_off + bpp <= out.len() {
-                            out[dst_off..dst_off + bpp]
-                                .copy_from_slice(&data[src_off..src_off + bpp]);
+                        for out_x in 0..canvas_w as i32 {
+                            let src_x = out_x - place_x;
+                            if src_x < 0 || src_x >= src_w as i32 {
+                                continue;
+                            }
+                            let src_off = src_y as usize * src_stride + src_x as usize * bpp;
+                            let dst_off = out_y as usize * out_stride + out_x as usize * bpp;
+                            if src_off + bpp <= data.len() && dst_off + bpp <= out.len() {
+                                out[dst_off..dst_off + bpp]
+                                    .copy_from_slice(&data[src_off..src_off + bpp]);
+                            }
                         }
                     }
-                }
 
-                *data = out;
-                *w = canvas_w;
-                *h = canvas_h;
-            },
-        )})
+                    *data = out;
+                    *w = canvas_w;
+                    *h = canvas_h;
+                },
+            ),
+        })
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
@@ -223,55 +229,61 @@ impl NodeConverter for WhiteBalanceConverter {
             _ => 0.006,
         };
 
-        Ok(NodeOp::Materialize { label: "white_balance", transform: Box::new(
-            move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
-                let width = *w as usize;
-                let height = *h as usize;
-                let bpp = fmt.bytes_per_pixel();
+        Ok(NodeOp::Materialize {
+            label: "white_balance",
+            transform: Box::new(
+                move |data: &mut Vec<u8>,
+                      w: &mut u32,
+                      h: &mut u32,
+                      fmt: &mut zenpipe::PixelFormat| {
+                    let width = *w as usize;
+                    let height = *h as usize;
+                    let bpp = fmt.bytes_per_pixel();
 
-                if bpp < 3 {
-                    return; // grayscale not supported, skip
-                }
-
-                let total_pixels = (width * height) as u64;
-                if total_pixels == 0 {
-                    return;
-                }
-
-                // Build per-channel histograms (R, G, B).
-                let mut hist_r = [0u64; 256];
-                let mut hist_g = [0u64; 256];
-                let mut hist_b = [0u64; 256];
-
-                for y in 0..height {
-                    let row_start = y * width * bpp;
-                    for x in 0..width {
-                        let off = row_start + x * bpp;
-                        hist_r[data[off] as usize] += 1;
-                        hist_g[data[off + 1] as usize] += 1;
-                        hist_b[data[off + 2] as usize] += 1;
+                    if bpp < 3 {
+                        return; // grayscale not supported, skip
                     }
-                }
 
-                let (r_low, r_high) = area_threshold(&hist_r, total_pixels, threshold);
-                let (g_low, g_high) = area_threshold(&hist_g, total_pixels, threshold);
-                let (b_low, b_high) = area_threshold(&hist_b, total_pixels, threshold);
-
-                let map_r = create_byte_mapping(r_low, r_high);
-                let map_g = create_byte_mapping(g_low, g_high);
-                let map_b = create_byte_mapping(b_low, b_high);
-
-                for y in 0..height {
-                    let row_start = y * width * bpp;
-                    for x in 0..width {
-                        let off = row_start + x * bpp;
-                        data[off] = map_r[data[off] as usize];
-                        data[off + 1] = map_g[data[off + 1] as usize];
-                        data[off + 2] = map_b[data[off + 2] as usize];
+                    let total_pixels = (width * height) as u64;
+                    if total_pixels == 0 {
+                        return;
                     }
-                }
-            },
-        )})
+
+                    // Build per-channel histograms (R, G, B).
+                    let mut hist_r = [0u64; 256];
+                    let mut hist_g = [0u64; 256];
+                    let mut hist_b = [0u64; 256];
+
+                    for y in 0..height {
+                        let row_start = y * width * bpp;
+                        for x in 0..width {
+                            let off = row_start + x * bpp;
+                            hist_r[data[off] as usize] += 1;
+                            hist_g[data[off + 1] as usize] += 1;
+                            hist_b[data[off + 2] as usize] += 1;
+                        }
+                    }
+
+                    let (r_low, r_high) = area_threshold(&hist_r, total_pixels, threshold);
+                    let (g_low, g_high) = area_threshold(&hist_g, total_pixels, threshold);
+                    let (b_low, b_high) = area_threshold(&hist_b, total_pixels, threshold);
+
+                    let map_r = create_byte_mapping(r_low, r_high);
+                    let map_g = create_byte_mapping(g_low, g_high);
+                    let map_b = create_byte_mapping(b_low, b_high);
+
+                    for y in 0..height {
+                        let row_start = y * width * bpp;
+                        for x in 0..width {
+                            let off = row_start + x * bpp;
+                            data[off] = map_r[data[off] as usize];
+                            data[off + 1] = map_g[data[off + 1] as usize];
+                            data[off + 2] = map_b[data[off + 2] as usize];
+                        }
+                    }
+                },
+            ),
+        })
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
@@ -348,55 +360,61 @@ impl NodeConverter for ColorMatrixSrgbConverter {
             }
         };
 
-        Ok(NodeOp::Materialize { label: "color_matrix_srgb", transform: Box::new(
-            move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
-                let width = *w as usize;
-                let height = *h as usize;
-                let bpp = fmt.bytes_per_pixel();
+        Ok(NodeOp::Materialize {
+            label: "color_matrix_srgb",
+            transform: Box::new(
+                move |data: &mut Vec<u8>,
+                      w: &mut u32,
+                      h: &mut u32,
+                      fmt: &mut zenpipe::PixelFormat| {
+                    let width = *w as usize;
+                    let height = *h as usize;
+                    let bpp = fmt.bytes_per_pixel();
 
-                if bpp < 4 {
-                    return; // need RGBA
-                }
-
-                // Apply 5×5 matrix: out[c] = sum(m[c*5+i] * in[i], i=0..4) + m[c*5+4] * 255
-                for y in 0..height {
-                    let row_start = y * width * bpp;
-                    for x in 0..width {
-                        let off = row_start + x * bpp;
-                        let r = data[off] as f32;
-                        let g = data[off + 1] as f32;
-                        let b = data[off + 2] as f32;
-                        let a = data[off + 3] as f32;
-
-                        let out_r = matrix[0] * r
-                            + matrix[1] * g
-                            + matrix[2] * b
-                            + matrix[3] * a
-                            + matrix[4] * 255.0;
-                        let out_g = matrix[5] * r
-                            + matrix[6] * g
-                            + matrix[7] * b
-                            + matrix[8] * a
-                            + matrix[9] * 255.0;
-                        let out_b = matrix[10] * r
-                            + matrix[11] * g
-                            + matrix[12] * b
-                            + matrix[13] * a
-                            + matrix[14] * 255.0;
-                        let out_a = matrix[15] * r
-                            + matrix[16] * g
-                            + matrix[17] * b
-                            + matrix[18] * a
-                            + matrix[19] * 255.0;
-
-                        data[off] = out_r.round().min(255.0).max(0.0) as u8;
-                        data[off + 1] = out_g.round().min(255.0).max(0.0) as u8;
-                        data[off + 2] = out_b.round().min(255.0).max(0.0) as u8;
-                        data[off + 3] = out_a.round().min(255.0).max(0.0) as u8;
+                    if bpp < 4 {
+                        return; // need RGBA
                     }
-                }
-            },
-        )})
+
+                    // Apply 5×5 matrix: out[c] = sum(m[c*5+i] * in[i], i=0..4) + m[c*5+4] * 255
+                    for y in 0..height {
+                        let row_start = y * width * bpp;
+                        for x in 0..width {
+                            let off = row_start + x * bpp;
+                            let r = data[off] as f32;
+                            let g = data[off + 1] as f32;
+                            let b = data[off + 2] as f32;
+                            let a = data[off + 3] as f32;
+
+                            let out_r = matrix[0] * r
+                                + matrix[1] * g
+                                + matrix[2] * b
+                                + matrix[3] * a
+                                + matrix[4] * 255.0;
+                            let out_g = matrix[5] * r
+                                + matrix[6] * g
+                                + matrix[7] * b
+                                + matrix[8] * a
+                                + matrix[9] * 255.0;
+                            let out_b = matrix[10] * r
+                                + matrix[11] * g
+                                + matrix[12] * b
+                                + matrix[13] * a
+                                + matrix[14] * 255.0;
+                            let out_a = matrix[15] * r
+                                + matrix[16] * g
+                                + matrix[17] * b
+                                + matrix[18] * a
+                                + matrix[19] * 255.0;
+
+                            data[off] = out_r.round().min(255.0).max(0.0) as u8;
+                            data[off + 1] = out_g.round().min(255.0).max(0.0) as u8;
+                            data[off + 2] = out_b.round().min(255.0).max(0.0) as u8;
+                            data[off + 3] = out_a.round().min(255.0).max(0.0) as u8;
+                        }
+                    }
+                },
+            ),
+        })
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
