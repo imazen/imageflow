@@ -307,33 +307,30 @@ fn make_watermark_materialize(overlay: WatermarkOverlayNode) -> NodeOp {
                             continue;
                         }
 
-                        // Source pixel (RGBA8 from watermark).
-                        let sr = resized[wm_off] as f32 / 255.0;
-                        let sg = resized[wm_off + 1] as f32 / 255.0;
-                        let sb = resized[wm_off + 2] as f32 / 255.0;
+                        // Source pixel (RGBA8 from watermark) → linear.
                         let sa = resized[wm_off + 3] as f32 / 255.0 * opacity;
+                        let sr_lin = srgb_to_linear(resized[wm_off]) * sa; // premultiply
+                        let sg_lin = srgb_to_linear(resized[wm_off + 1]) * sa;
+                        let sb_lin = srgb_to_linear(resized[wm_off + 2]) * sa;
 
-                        // Dest pixel (from canvas, assumed RGBA8).
-                        let dr = data[canvas_off] as f32 / 255.0;
-                        let dg = data[canvas_off + 1] as f32 / 255.0;
-                        let db = data[canvas_off + 2] as f32 / 255.0;
+                        // Dest pixel (from canvas) → linear.
                         let da = if bpp >= 4 { data[canvas_off + 3] as f32 / 255.0 } else { 1.0 };
+                        let dest_coeff = (1.0 - sa) * da;
+                        let dr_lin = srgb_to_linear(data[canvas_off]) * dest_coeff;
+                        let dg_lin = srgb_to_linear(data[canvas_off + 1]) * dest_coeff;
+                        let db_lin = srgb_to_linear(data[canvas_off + 2]) * dest_coeff;
 
-                        // Porter-Duff source-over in sRGB space (matches v2 behavior).
-                        let out_a = sa + da * (1.0 - sa);
-                        let (out_r, out_g, out_b) = if out_a > 0.0 {
-                            (
-                                (sr * sa + dr * da * (1.0 - sa)) / out_a,
-                                (sg * sa + dg * da * (1.0 - sa)) / out_a,
-                                (sb * sa + db * da * (1.0 - sa)) / out_a,
-                            )
+                        // Porter-Duff source-over in linear space (matches v2).
+                        let out_a = sa + dest_coeff;
+                        if out_a > 0.0 {
+                            data[canvas_off] = linear_to_srgb((sr_lin + dr_lin) / out_a);
+                            data[canvas_off + 1] = linear_to_srgb((sg_lin + dg_lin) / out_a);
+                            data[canvas_off + 2] = linear_to_srgb((sb_lin + db_lin) / out_a);
                         } else {
-                            (0.0, 0.0, 0.0)
-                        };
-
-                        data[canvas_off] = (out_r * 255.0 + 0.5).min(255.0).max(0.0) as u8;
-                        data[canvas_off + 1] = (out_g * 255.0 + 0.5).min(255.0).max(0.0) as u8;
-                        data[canvas_off + 2] = (out_b * 255.0 + 0.5).min(255.0).max(0.0) as u8;
+                            data[canvas_off] = 0;
+                            data[canvas_off + 1] = 0;
+                            data[canvas_off + 2] = 0;
+                        }
                         if bpp >= 4 {
                             data[canvas_off + 3] = (out_a * 255.0 + 0.5).min(255.0).max(0.0) as u8;
                         }
@@ -571,4 +568,22 @@ pub fn decode_watermark(
         min_canvas_height: wm.min_canvas_height,
         opacity: wm.opacity.unwrap_or(1.0).min(1.0).max(0.0),
     })
+}
+
+// ─── sRGB ↔ linear conversion ───
+
+/// Convert an sRGB byte value to linear float (IEC 61966-2-1).
+fn srgb_to_linear(b: u8) -> f32 {
+    let s = b as f32 / 255.0;
+    if s <= 0.04045 {
+        s / 12.92
+    } else {
+        ((s + 0.055) / 1.055).powf(2.4)
+    }
+}
+
+/// Convert a linear float to sRGB byte (IEC 61966-2-1).
+fn linear_to_srgb(l: f32) -> u8 {
+    let s = if l <= 0.0031308 { l * 12.92 } else { 1.055 * l.powf(1.0 / 2.4) - 0.055 };
+    (s * 255.0 + 0.5).min(255.0).max(0.0) as u8
 }
