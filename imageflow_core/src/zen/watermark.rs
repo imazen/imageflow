@@ -497,54 +497,21 @@ fn compute_watermark_size(
 
 // ─── Watermark image resize ───
 
-/// Simple bilinear resize of RGBA8 pixel data.
+/// Resize RGBA8 pixel data using zenresize (Robidoux filter, linear-light).
 ///
-/// Not as high quality as zenresize's multi-tap filters, but adequate for
-/// watermark overlays which are typically simple logos/icons.
+/// Uses the same high-quality resampling pipeline as the main resize path,
+/// ensuring watermark quality matches v2 output.
 fn resize_rgba8(src: &[u8], src_w: u32, src_h: u32, dst_w: u32, dst_h: u32) -> Vec<u8> {
     if src_w == dst_w && src_h == dst_h {
         return src.to_vec();
     }
 
-    let mut dst = vec![0u8; dst_w as usize * dst_h as usize * 4];
-    let src_stride = src_w as usize * 4;
-    let dst_stride = dst_w as usize * 4;
+    let config = zenresize::ResizeConfig::builder(src_w, src_h, dst_w, dst_h)
+        .filter(zenresize::Filter::Robidoux)
+        .format(zenresize::PixelDescriptor::RGBA8_SRGB)
+        .build();
 
-    for dy in 0..dst_h {
-        let sy_f = (dy as f64 + 0.5) * src_h as f64 / dst_h as f64 - 0.5;
-        let sy0 = sy_f.floor().max(0.0) as u32;
-        let sy1 = (sy0 + 1).min(src_h - 1);
-        let fy = (sy_f - sy0 as f64).max(0.0).min(1.0);
-
-        for dx in 0..dst_w {
-            let sx_f = (dx as f64 + 0.5) * src_w as f64 / dst_w as f64 - 0.5;
-            let sx0 = sx_f.floor().max(0.0) as u32;
-            let sx1 = (sx0 + 1).min(src_w - 1);
-            let fx = (sx_f - sx0 as f64).max(0.0).min(1.0);
-
-            // Four source pixels for bilinear interpolation.
-            let off00 = sy0 as usize * src_stride + sx0 as usize * 4;
-            let off10 = sy0 as usize * src_stride + sx1 as usize * 4;
-            let off01 = sy1 as usize * src_stride + sx0 as usize * 4;
-            let off11 = sy1 as usize * src_stride + sx1 as usize * 4;
-
-            let dst_off = dy as usize * dst_stride + dx as usize * 4;
-
-            for c in 0..4 {
-                let p00 = src.get(off00 + c).copied().unwrap_or(0) as f64;
-                let p10 = src.get(off10 + c).copied().unwrap_or(0) as f64;
-                let p01 = src.get(off01 + c).copied().unwrap_or(0) as f64;
-                let p11 = src.get(off11 + c).copied().unwrap_or(0) as f64;
-
-                let top = p00 * (1.0 - fx) + p10 * fx;
-                let bot = p01 * (1.0 - fx) + p11 * fx;
-                let val = top * (1.0 - fy) + bot * fy;
-                dst[dst_off + c] = (val + 0.5).min(255.0).max(0.0) as u8;
-            }
-        }
-    }
-
-    dst
+    zenresize::Resizer::new(&config).resize(src)
 }
 
 // ─── Pre-expansion: decode watermark from io_buffers ───
