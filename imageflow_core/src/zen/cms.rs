@@ -5,6 +5,7 @@
 //! profile synthesis, cICP→ICC synthesis, and pixel format conversion.
 
 use super::execute::ZenError;
+use zencodecs::SourceColorExt as _;
 
 // ─── sRGB ICC profile cache ───
 
@@ -36,7 +37,7 @@ fn srgb_icc_profile() -> Vec<u8> {
 /// transforms for these, so we do too in compat mode.
 fn is_srgb_icc_profile_loose(icc_bytes: &[u8]) -> bool {
     // Check if the ICC profile description contains "sRGB".
-    zencodec::icc_profile_is_srgb(icc_bytes)
+    zencodecs::icc_profile_is_srgb(icc_bytes)
 }
 
 /// Check if an ICC profile is sRGB-equivalent by comparing primaries AND TRC curves.
