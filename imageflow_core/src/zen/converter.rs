@@ -155,7 +155,7 @@ impl NodeConverter for RegionConverter {
         // Use Materialize to apply the region viewport via ExpandCanvasSource.
         // ExpandCanvasSource handles negative placement (crop) and positive
         // placement (padding) transparently.
-        Ok(NodeOp::Materialize(Box::new(
+        Ok(NodeOp::Materialize { label: "region_viewport", transform: Box::new(
             move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
                 let src_w = *w;
                 let src_h = *h;
@@ -189,7 +189,7 @@ impl NodeConverter for RegionConverter {
                 *w = canvas_w;
                 *h = canvas_h;
             },
-        )))
+        )})
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
@@ -223,7 +223,7 @@ impl NodeConverter for WhiteBalanceConverter {
             _ => 0.006,
         };
 
-        Ok(NodeOp::Materialize(Box::new(
+        Ok(NodeOp::Materialize { label: "white_balance", transform: Box::new(
             move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
                 let width = *w as usize;
                 let height = *h as usize;
@@ -271,7 +271,7 @@ impl NodeConverter for WhiteBalanceConverter {
                     }
                 }
             },
-        )))
+        )})
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {
@@ -348,7 +348,7 @@ impl NodeConverter for ColorMatrixSrgbConverter {
             }
         };
 
-        Ok(NodeOp::Materialize(Box::new(
+        Ok(NodeOp::Materialize { label: "color_matrix_srgb", transform: Box::new(
             move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
                 let width = *w as usize;
                 let height = *h as usize;
@@ -396,7 +396,7 @@ impl NodeConverter for ColorMatrixSrgbConverter {
                     }
                 }
             },
-        )))
+        )})
     }
 
     fn convert_group(&self, nodes: &[&dyn NodeInstance]) -> Result<NodeOp, PipeError> {

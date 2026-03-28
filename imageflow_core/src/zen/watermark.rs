@@ -189,7 +189,7 @@ impl NodeConverter for WatermarkConverter {
 /// Create a `NodeOp::Materialize` that draws a 3x3 red rectangle at the
 /// bottom-right corner of the image.
 fn make_red_dot_materialize() -> NodeOp {
-    NodeOp::Materialize(Box::new(
+    NodeOp::Materialize { label: "red_dot", transform: Box::new(
         move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
             let iw = *w;
             let ih = *h;
@@ -216,7 +216,7 @@ fn make_red_dot_materialize() -> NodeOp {
                 }
             }
         },
-    ))
+    )}
 }
 
 // ─── Watermark overlay Materialize ───
@@ -224,7 +224,7 @@ fn make_red_dot_materialize() -> NodeOp {
 /// Create a `NodeOp::Materialize` that composites the watermark image onto
 /// the canvas at the computed position with opacity.
 fn make_watermark_materialize(overlay: WatermarkOverlayNode) -> NodeOp {
-    NodeOp::Materialize(Box::new(
+    NodeOp::Materialize { label: "watermark_overlay", transform: Box::new(
         move |data: &mut Vec<u8>, w: &mut u32, h: &mut u32, fmt: &mut zenpipe::PixelFormat| {
             let canvas_w = *w;
             let canvas_h = *h;
@@ -330,7 +330,7 @@ fn make_watermark_materialize(overlay: WatermarkOverlayNode) -> NodeOp {
                 }
             }
         },
-    ))
+    )}
 }
 
 // ─── Bounding box computation ───
