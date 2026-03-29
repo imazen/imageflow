@@ -216,6 +216,13 @@ fn execute_steps(
     // Pre-process: expand CommandString nodes using source dimensions from probe.
     let mut steps = expand_command_strings(steps, io_buffers)?;
 
+    // Remove no-op Resample2D nodes where output matches source dimensions.
+    // RIAPI expansion inserts Resample2D even for "format=png" (no resize requested).
+    // Passing source pixels through a resampling filter at 1:1 introduces rounding
+    // errors (delta up to ~49 for Robidoux). V2's graph engine optimizes these away;
+    // the zen pipeline must do the same.
+    remove_noop_resample(&mut steps, io_buffers);
+
     // Probe source once for alpha detection.
     let source_has_alpha = source_has_alpha(&steps, io_buffers);
 
@@ -1032,6 +1039,37 @@ fn create_canvas_source(
     }
 
     Ok(Box::new(zenpipe::sources::MaterializedSource::from_data(pixels, w, h, format)))
+}
+
+/// Remove Resample2D nodes that match the source dimensions (no-op resamples).
+///
+/// RIAPI expansion produces Resample2D even when no resize is requested (e.g.,
+/// `format=png`). At 1:1 scale, the resampling filter introduces rounding errors
+/// (delta ~49 for Robidoux). V2's graph engine optimizes these away during node
+/// expansion; the zen pipeline must strip them explicitly.
+fn remove_noop_resample(steps: &mut Vec<Node>, io_buffers: &HashMap<i32, Vec<u8>>) {
+    let decode_io_id = steps.iter().find_map(|n| match n {
+        Node::Decode { io_id, .. } => Some(*io_id),
+        _ => None,
+    });
+    let (src_w, src_h) = decode_io_id
+        .and_then(|id| io_buffers.get(&id))
+        .and_then(|data| zencodecs::from_bytes(data).ok())
+        .map(|info| (info.width, info.height))
+        .unwrap_or((0, 0));
+
+    if src_w == 0 || src_h == 0 {
+        return;
+    }
+
+    steps.retain(|n| {
+        if let Node::Resample2D { w, h, .. } = n {
+            // Keep only if dimensions actually change.
+            *w != src_w || *h != src_h
+        } else {
+            true
+        }
+    });
 }
 
 /// Probe whether the source image has an alpha channel.
