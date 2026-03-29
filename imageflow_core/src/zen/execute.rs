@@ -673,8 +673,10 @@ fn decode_to_source_frame(
     registry: &AllowedFormats,
     frame_index: usize,
 ) -> Result<Box<dyn zenpipe::Source>, ZenError> {
+    let codec_config = jpeg_decode_codec_config();
     let mut decoder = zencodecs::DecodeRequest::new(data)
         .with_registry(registry)
+        .with_codec_config(&codec_config)
         .animation_frame_decoder()
         .map_err(|e| ZenError::Codec(format!("frame decoder: {e}")))?;
 
@@ -703,6 +705,18 @@ fn decode_to_source_frame(
 
 /// Build a streaming decode source. Tries row-level streaming first
 /// (JPEG, PNG, GIF, AVIF, HEIC), falls back to full-frame + MaterializedSource.
+/// JPEG decode config: use libjpeg-compatible chroma upsampling for v2 parity.
+///
+/// zenjpeg defaults to Triangle (jpegli-style) upsampling which produces
+/// different pixel values from mozjpeg/libjpeg-turbo. LibjpegCompat mode
+/// matches the v2 pipeline's mozjpeg decoder output.
+fn jpeg_decode_codec_config() -> zencodecs::config::CodecConfig {
+    use zencodecs::config::jpeg::{ChromaUpsampling, DecodeConfig};
+    let mut cfg = DecodeConfig::default();
+    cfg.chroma_upsampling = ChromaUpsampling::LibjpegCompat;
+    zencodecs::config::CodecConfig::default().with_jpeg_decoder(cfg)
+}
+
 fn decode_to_source(
     data: &[u8],
     registry: &AllowedFormats,
@@ -710,9 +724,11 @@ fn decode_to_source(
     // Reject truncated/corrupt files (v2 compat) but allow everything else.
     let mut policy = zencodecs::DecodePolicy::none();
     policy.allow_truncated = Some(false);
+    let codec_config = jpeg_decode_codec_config();
     match zencodecs::DecodeRequest::new(data)
         .with_registry(registry)
         .with_decode_policy(policy.clone())
+        .with_codec_config(&codec_config)
         .build_streaming_decoder()
     {
         Ok(streaming) => {
@@ -723,6 +739,7 @@ fn decode_to_source(
             let decoded = zencodecs::DecodeRequest::new(data)
                 .with_registry(registry)
                 .with_decode_policy(policy)
+                .with_codec_config(&codec_config)
                 .decode_full_frame()
                 .map_err(|e| ZenError::Codec(format!("decode: {e}")))?;
 
