@@ -94,8 +94,8 @@ walkdir = "2"
 csv = "1"
 rayon = "1"
 colorutils-rs = "0.7"
-zensim-regress = { path = "../../zen/zensim/zensim-regress" }
-zensim = { path = "../../zen/zensim/zensim" }
+zensim-regress = "0.2.3"
+zensim = "0.2.3"
 seahash = "4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
@@ -118,8 +118,8 @@ zen-pipeline = [
     "dep:zenresize", "dep:zenlayout", "dep:zenfilters", "dep:zenpixels",
     "dep:linear-srgb",
 ]
-# Route all execute_inner/build_inner through zen pipeline instead of v2 engine.
-zen-default = ["zen-pipeline"]
+# zen-default removed — zen pipeline is the runtime default when zen-pipeline is compiled in.
+# Use Context::force_backend = Some(Backend::V2) to force the v2 engine.
 # Feature to enable OpenAPI schema generation capabilities
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]
 # Enable schemars-based JSON Schema generation. Enables the corresponding feature in imageflow_types
