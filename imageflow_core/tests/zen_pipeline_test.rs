@@ -650,3 +650,104 @@ fn zen_watermark_fullframe_resized() {
         "Full-frame resized watermark: max delta R={max_dr} G={max_dg} B={max_db} exceeds 2"
     );
 }
+
+/// Direct JPEG decoder comparison: decode same Canon 5D sRGB JPEG through
+/// both v2 (mozjpeg) and zen (zenjpeg via zencodecs streaming), compare raw pixels.
+/// This isolates the decoder from the rest of the pipeline.
+#[test]
+fn zen_jpeg_decode_parity_canon5d() {
+    use std::collections::HashMap;
+
+    // Get the Canon 5D test image
+    // Load from cache or download
+    let cache_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent().unwrap()
+        .join(".image-cache/sources/imageflow-resources/test_inputs/wide-gamut/srgb-reference/canon_eos_5d_mark_iv/wmc_81b268fc64ea796c.jpg");
+    let jpeg_bytes = if cache_path.exists() {
+        std::fs::read(&cache_path).unwrap()
+    } else {
+        eprintln!("skipping: test image not cached at {}", cache_path.display());
+        return;
+    };
+
+    eprintln!("JPEG size: {} bytes", jpeg_bytes.len());
+
+    // --- Decode with v2 (mozjpeg) ---
+    let mut v2_ctx = Context::create().unwrap();
+    v2_ctx.force_backend = Some(imageflow_core::Backend::V2);
+    v2_ctx.add_copied_input_buffer(0, &jpeg_bytes).unwrap();
+    v2_ctx.execute_1(s::Execute001 {
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::CaptureBitmapKey { capture_id: 0 },
+        ]),
+        graph_recording: None,
+        security: None,
+    }).unwrap();
+
+    let v2_bitmaps = v2_ctx.borrow_bitmaps().unwrap();
+    let v2_key = v2_ctx.get_captured_bitmap_key(0).unwrap();
+    let mut v2_bm = v2_bitmaps.try_borrow_mut(v2_key).unwrap();
+    let v2_window = v2_bm.get_window_u8().unwrap();
+    let v2_w = v2_window.w();
+    let v2_h = v2_window.h();
+
+    // --- Decode with zen (zenjpeg via zencodecs, LibjpegCompat chroma) ---
+    let mut zen_ctx = Context::create().unwrap();
+    zen_ctx.force_backend = Some(imageflow_core::Backend::Zen);
+    zen_ctx.add_copied_input_buffer(0, &jpeg_bytes).unwrap();
+    zen_ctx.execute_1(s::Execute001 {
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::CaptureBitmapKey { capture_id: 0 },
+        ]),
+        graph_recording: None,
+        security: None,
+    }).unwrap();
+
+    let zen_bitmaps = zen_ctx.borrow_bitmaps().unwrap();
+    let zen_key = zen_ctx.get_captured_bitmap_key(0).unwrap();
+    let mut zen_bm_ref = zen_bitmaps.try_borrow_mut(zen_key).unwrap();
+    let zen_window = zen_bm_ref.get_window_u8().unwrap();
+    let zen_w = zen_window.w();
+    let zen_h = zen_window.h();
+
+    eprintln!("V2: {v2_w}x{v2_h}, Zen: {zen_w}x{zen_h}");
+    assert_eq!((v2_w, v2_h), (zen_w, zen_h), "dimensions differ");
+
+    // Compare raw pixels — both are BGRA after context stores zen bitmap
+    let mut max_dr = 0u8;
+    let mut max_dg = 0u8;
+    let mut max_db = 0u8;
+    let mut differ_count = 0u32;
+    let total = (v2_w * v2_h) as u32;
+
+    for y in 0..v2_h as usize {
+        let v2_row = v2_window.row(y).unwrap();
+        let zen_row = zen_window.row(y).unwrap();
+        for x in 0..v2_w as usize {
+            // Both BGRA after context.rs R↔B swap
+            let v2_b = v2_row[x * 4];
+            let v2_g = v2_row[x * 4 + 1];
+            let v2_r = v2_row[x * 4 + 2];
+            let zen_b = zen_row[x * 4];
+            let zen_g = zen_row[x * 4 + 1];
+            let zen_r = zen_row[x * 4 + 2];
+
+            let dr = (v2_r as i16 - zen_r as i16).unsigned_abs() as u8;
+            let dg = (v2_g as i16 - zen_g as i16).unsigned_abs() as u8;
+            let db = (v2_b as i16 - zen_b as i16).unsigned_abs() as u8;
+
+            if dr > 0 || dg > 0 || db > 0 { differ_count += 1; }
+            max_dr = max_dr.max(dr);
+            max_dg = max_dg.max(dg);
+            max_db = max_db.max(db);
+        }
+    }
+
+    eprintln!("Decoder parity: max delta R={max_dr} G={max_dg} B={max_db}");
+    eprintln!("Pixels differing: {differ_count}/{total} ({:.1}%)", differ_count as f64 / total as f64 * 100.0);
+
+    assert!(max_dr <= 2 && max_dg <= 2 && max_db <= 2,
+        "JPEG decoder parity failed: max delta R={max_dr} G={max_dg} B={max_db} (expected <=2)");
+}
