@@ -56,6 +56,7 @@ static COLOR_MATRIX_SRGB_SCHEMA: NodeSchema = NodeSchema {
         is_neighborhood: false,
     },
     tags: &["color_matrix", "color", "srgb"],
+    inputs: &[],
     params: &[],
     coalesce: None,
     version: 1,

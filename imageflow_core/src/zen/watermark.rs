@@ -34,6 +34,7 @@ static RED_DOT_SCHEMA: NodeSchema = NodeSchema {
     role: zennode::NodeRole::Filter,
     params: &[],
     tags: &["watermark", "debug"],
+    inputs: &[],
     coalesce: None,
     format: zennode::FormatHint {
         preferred: zennode::PixelFormatPreference::Srgb8,
@@ -86,6 +87,7 @@ static OVERLAY_SCHEMA: NodeSchema = NodeSchema {
     role: zennode::NodeRole::Filter,
     params: &[],
     tags: &["watermark", "overlay", "composite"],
+    inputs: &[],
     coalesce: None,
     format: zennode::FormatHint {
         preferred: zennode::PixelFormatPreference::Srgb8,
