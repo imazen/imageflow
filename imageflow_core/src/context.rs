@@ -63,7 +63,7 @@ pub struct Context {
     #[cfg(feature = "zen-pipeline")]
     zen_input_bytes: std::collections::HashMap<i32, Vec<u8>>,
 
-    /// Force a specific backend for testing. None = use default (zen when zen-default on).
+    /// Force a specific backend for testing. None = zen when zen-pipeline is compiled in.
     #[cfg(feature = "zen-pipeline")]
     pub force_backend: Option<Backend>,
 
@@ -734,18 +734,25 @@ impl Context {
 
     /// For executing a complete job
     pub(crate) fn build_inner(&mut self, parsed: s::Build001) -> Result<s::JobResult> {
-        // When zen-default feature is enabled, route through zen pipeline.
-        #[cfg(feature = "zen-default")]
+        // Route through zen pipeline unless explicitly forced to v2.
+        #[cfg(feature = "zen-pipeline")]
         {
-            let output =
-                crate::zen::zen_build(&parsed, &self.security).map_err(|e| e.at(here!()))?;
-            for (io_id, bytes) in &output.output_buffers {
-                let _ = self.add_output_buffer(*io_id);
-                let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
-                codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
+            let use_zen = match self.force_backend {
+                Some(Backend::V2) => false,
+                Some(Backend::Zen) => true,
+                None => true, // zen is the default when compiled in
+            };
+            if use_zen {
+                let output =
+                    crate::zen::zen_build(&parsed, &self.security).map_err(|e| e.at(here!()))?;
+                for (io_id, bytes) in &output.output_buffers {
+                    let _ = self.add_output_buffer(*io_id);
+                    let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
+                    codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
+                }
+                self.store_zen_captured_bitmaps(output.captured_bitmaps)?;
+                return Ok(output.job_result);
             }
-            self.store_zen_captured_bitmaps(output.captured_bitmaps)?;
-            return Ok(output.job_result);
         }
 
         let g = crate::parsing::GraphTranslator::new()
@@ -819,9 +826,8 @@ impl Context {
         {
             let use_zen = match self.force_backend {
                 Some(Backend::V2) => false,
-                #[cfg(feature = "zen-pipeline")]
                 Some(Backend::Zen) => true,
-                None => cfg!(feature = "zen-default"),
+                None => true, // zen is the default when compiled in
             };
             if use_zen {
                 return self.zen_execute_inner(what).map_err(|e| e.at(here!()));
