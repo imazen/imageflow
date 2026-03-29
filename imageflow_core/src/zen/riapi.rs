@@ -110,8 +110,7 @@ pub fn expand_zen(
 ) -> Result<ExpandedRiapi, TranslateError> {
     // 1. Build a registry with all zen-native nodes.
     let mut registry = NodeRegistry::new();
-    zenlayout::zennode_defs::register(&mut registry);
-    zenresize::zennode_defs::register(&mut registry);
+    zenpipe::zennode_defs::register(&mut registry);
     zenfilters::zennode_defs::register_all(&mut registry);
     // zencodecs quality intent node — auto-generated name from derive.
     registry.register(&zencodecs::zennode_defs::QUALITY_INTENT_NODE_NODE);

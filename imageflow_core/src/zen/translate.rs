@@ -602,10 +602,8 @@ fn zen_registry() -> &'static NodeRegistry {
     static REGISTRY: OnceLock<NodeRegistry> = OnceLock::new();
     REGISTRY.get_or_init(|| {
         let mut registry = NodeRegistry::new();
-        zenlayout::zennode_defs::register(&mut registry);
-        zenresize::zennode_defs::register(&mut registry);
-        zenfilters::zennode_defs::register(&mut registry);
         zenpipe::zennode_defs::register(&mut registry);
+        zenfilters::zennode_defs::register(&mut registry);
         super::nodes::register(&mut registry);
         registry
     })
@@ -636,7 +634,7 @@ fn push_constrain_node(
     nodes: &mut Vec<Box<dyn NodeInstance>>,
     params: &[(&str, ParamValue)],
 ) -> Result<(), TranslateError> {
-    let def: &dyn NodeDef = &zenresize::zennode_defs::CONSTRAIN_NODE;
+    let def: &dyn NodeDef = &zenpipe::zennode_defs::CONSTRAIN_NODE;
     let mut node = def
         .create_default()
         .map_err(|e| TranslateError::NodeCreation(format!("zenresize.constrain: {e}")))?;

@@ -66,8 +66,8 @@ zenpipe = { path = "../../zen/zenpipe", features = ["zennode", "std"], optional 
 zencodecs = { path = "../../zen/zencodecs", features = ["zennode", "png-imagequant"], optional = true }
 zencodec = { path = "../../zen/zencodec", optional = true }
 zennode = { path = "../../zen/zennode/zennode", features = ["derive", "serde"], optional = true }
-zenresize = { path = "../../zen/zenresize", features = ["zennode"], optional = true }
-zenlayout = { path = "../../zen/zenlayout", features = ["zennode"], optional = true }
+zenresize = { path = "../../zen/zenresize", optional = true }
+zenlayout = { path = "../../zen/zenlayout", optional = true }
 zenfilters = { path = "../../zen/zenfilters", features = ["zennode"], optional = true }
 zenpixels = { version = "0.2.1", optional = true }
 linear-srgb = { path = "../../zen/linear-srgb", features = ["iec"], optional = true }

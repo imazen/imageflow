@@ -720,7 +720,7 @@ fn decode_to_source_frame(
 fn jpeg_decode_codec_config() -> zencodecs::config::CodecConfig {
     use zencodecs::config::jpeg::{ChromaUpsampling, DecodeConfig};
     let mut cfg = DecodeConfig::default();
-    cfg.chroma_upsampling = ChromaUpsampling::LibjpegCompat;
+    cfg.chroma_upsampling = ChromaUpsampling::Triangle;
     zencodecs::config::CodecConfig::default().with_jpeg_decoder(cfg)
 }
 
