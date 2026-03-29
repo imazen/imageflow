@@ -23,8 +23,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # Zen ecosystem
-zenpixels = { version = "0.2.0", default-features = false, features = ["imgref", "planar"] }
-zenpixels-convert = { version = "0.2.0", default-features = false, features = ["std", "imgref", "pipeline"] }
+zenpixels = { version = "0.2.1", default-features = false, features = ["imgref", "planar"] }
+zenpixels-convert = { version = "0.2.1", default-features = false, features = ["std", "imgref", "pipeline"] }
 # TODO: re-enable "png" once zenpng compiles (has uncommitted WIP changes against updated zencodec)
 # TODO: re-enable "jxl-decode", "jxl-encode" once zenjxl-decoder merge conflict is resolved
 zencodecs = { path = "../zencodecs", default-features = false, features = ["jpeg", "webp", "gif", "avif-decode", "avif-encode", "heic-decode", "bitmaps-bmp"] }
