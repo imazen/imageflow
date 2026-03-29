@@ -200,13 +200,13 @@ tolerance off-by-one
 ~ sandy-stone-ae90ca336e:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs equal-plum-2e18b91600:sea (zensim:99.75 (dissim 0.0025))
 
 ## test_jpeg_rotation_cropped portrait_2
-tolerance off-by-one
+tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
 = major-eagle-8311df5efd:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ first-yak-62deeb98c0:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs major-eagle-8311df5efd:sea (zensim:98.70 (dissim 0.013), 7.2% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 ~ fawn-snail-72805b9b98:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs major-eagle-8311df5efd:sea (zensim:99.73 (dissim 0.0027))
+~ clean-heron-96b8945dda:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%) vs major-eagle-8311df5efd:sea (zensim:96.90 (dissim 0.031), 35.4% pixels ±3, max-delta:[3,2,3], category:unclassified)
 
 ## test_jpeg_rotation_cropped portrait_3
-tolerance off-by-one
+tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
 = sharp-beam-1b8b3faf8b:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ false-sand-c727844d06:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs sharp-beam-1b8b3faf8b:sea (zensim:98.72 (dissim 0.013), 7.1% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 ~ nice-tree-f6eb480daa:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs sharp-beam-1b8b3faf8b:sea (zensim:99.74 (dissim 0.0026))

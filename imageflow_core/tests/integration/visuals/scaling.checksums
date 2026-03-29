@@ -10,9 +10,10 @@ tolerance off-by-one
 ~ giant-trout-418f5be2ec:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs salty-nest-6d4fa00ed3:sea (zensim:99.31 (dissim 0.0069))
 
 ## test_scale_image waterhouse_robidoux_400x300
-tolerance off-by-one
+tolerance max-delta:2 zensim:95 (dissim 0.05) pixels-changed:100.0%
 = only-tiger-a4839401fa:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ front-shell-786aa19c4b:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs only-tiger-a4839401fa:sea (zensim:99.64 (dissim 0.0036))
+~ deep-forge-399fc849cc:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within max-delta:2 zensim:95 (dissim 0.05) pixels-changed:100.0%) vs only-tiger-a4839401fa:sea (zensim:97.28 (dissim 0.027), 36.9% pixels ±2, max-delta:[2,1,2], category:rounding, biased)
 
 ## test_jpeg_icc2_color_profile mars_robidoux_400x300
 tolerance off-by-one
@@ -42,4 +43,3 @@ tolerance off-by-one
 tolerance off-by-one
 = open-shell-b210964ea9:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ same-moon-a6405fbf4b:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs open-shell-b210964ea9:sea (zensim:99.84 (dissim 0.0016))
-

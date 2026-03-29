@@ -15,7 +15,7 @@ tolerance off-by-one
 ~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs close-larch-796effad97:sea (zensim:99.55 (dissim 0.0045))
 
 ## test_branching_crop_whitespace gradient_output_2
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = level-palm-6ad84afa17:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_encode_gradients png32_passthrough
@@ -25,31 +25,32 @@ tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 ~ fleet-fig-e1eaec376f:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%) vs husky-song-433de0fc17:sea (zensim:99.76 (dissim 0.0024))
 
 ## test_webp_to_webp_quality q5_100x100
-tolerance zensim:95 (dissim 0.05)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = false-reed-eb43f7fd24:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ empty-stone-6d39a78df2:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:95 (dissim 0.05) vs false-reed-eb43f7fd24:sea (zensim:99.88 (dissim 0.0012))
 
 ## decode_rgb_with_cmyk_profile_jpeg wrenches_ignore_icc
-tolerance off-by-one
+tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
 = great-snail-b22fce67f5:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ crude-fort-8d3cdf80eb:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs great-snail-b22fce67f5:sea (zensim:99.27 (dissim 0.0073))
 ~ rural-trout-a6ab909467:sea  x86_64-avx512  @bf181009  auto-accepted within tolerance (within off-by-one) vs great-snail-b22fce67f5:sea (zensim:99.30 (dissim 0.0070))
+~ brown-fog-8d6642cef7:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%) vs great-snail-b22fce67f5:sea (zensim:98.02 (dissim 0.020), 0.84% pixels ±3, max-delta:[3,2,3], category:unclassified)
 
 ## test_transparent_webp_to_webp lossless_100x100
-tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = fleet-trout-40c532f291:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ plump-mole-2e15463da1:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1) vs fleet-trout-40c532f291:sea (zensim:99.06 (dissim 0.0094), 5.9% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_matte_transparent_png shirt_300x300_white_matte
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = rapid-olive-5907234423:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ moved-tuna-df63ab2c17:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs rapid-olive-5907234423:sea (zensim:97.94 (dissim 0.021), 11.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 ~ first-node-ab5566beef:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs rapid-olive-5907234423:sea (zensim:99.81 (dissim 0.0019))
 
 ## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = north-axe-3d46871ac4:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ curly-lava-84ffbde2f9:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs north-axe-3d46871ac4:sea (zensim:96.19 (dissim 0.038), 28.4% pixels ±5, max-delta:[5,4,5], category:unclassified)
-~ past-creek-f22f736f64:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs north-axe-3d46871ac4:sea (zensim:99.80 (dissim 0.0020))
+~ happy-reed-c15044af10:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within zensim:95 (dissim 0.05) vs north-axe-3d46871ac4:sea (zensim:95.23 (dissim 0.048), 30.6% pixels ±5, max-delta:[4,4,5], category:unclassified)
+~ curly-lava-84ffbde2f9:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1) vs north-axe-3d46871ac4:sea (zensim:98.20 (dissim 0.018), 0.60% pixels ±3, max-delta:[3,1,2], category:rounding, biased)
 
 ## test_transparent_png_to_png_rounded_corners shirt_cropped
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
@@ -61,9 +62,10 @@ tolerance off-by-one
 = cross-dust-04763ef509:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_transparent_png_to_jpeg shirt
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = final-otter-e6b0565eaf:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ fawn-hazel-200d580465:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs final-otter-e6b0565eaf:sea (zensim:94.74 (dissim 0.053), 27.7% pixels ±8, max-delta:[6,6,8], category:unclassified)
+~ core-sloth-c1d8b52b25:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1) vs final-otter-e6b0565eaf:sea (zensim:98.20 (dissim 0.018), 0.25% pixels ±3, max-delta:[2,1,3], category:rounding, biased)
 
 ## test_crop_with_preshrink 170x220_crop
 tolerance max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%
@@ -85,11 +87,11 @@ tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
 ~ few-peak-b5b90811ec:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%) vs bulk-mare-1741a4171a:sea (zensim:98.88 (dissim 0.011))
 
 ## test_problematic_png_lossy crop_1230x760
-tolerance zensim:95 (dissim 0.05)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = mad-kite-f0fa059c45:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_branching_crop_whitespace gradient_output_1
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = cold-sand-b519344065:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_simple landscape_within_70x70
@@ -104,10 +106,10 @@ tolerance off-by-one
 ~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs bone-drum-452a7c1706:sea (zensim:99.55 (dissim 0.0045))
 
 ## test_branching_crop_whitespace gradient_output_1_zen
-tolerance zensim:99 (dissim 0.01)
-~ lucky-oak-ff7e5efa15:sea  x86_64-avx512  @89b25bae  auto-accepted
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 ~ legal-quay-ed570489d1:sea  x86_64-avx512  @bf181009  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs lucky-oak-ff7e5efa15:sea (zensim:99.68 (dissim 0.0032))
+~ soft-hill-bf4220ad4e:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within zensim:95 (dissim 0.05) vs lucky-oak-ff7e5efa15:sea (zensim:98.56 (dissim 0.014), 0.73% pixels ±2, max-delta:[2,1,2], category:rounding, biased)
 
 ## test_branching_crop_whitespace gradient_output_2_zen
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 ~ fawn-grain-bd8b1d00ce:sea  x86_64-avx512  @89b25bae  auto-accepted

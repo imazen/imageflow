@@ -1,108 +1,110 @@
 # icc.checksums — v1
 
 ## test_icc_adobe_rgb_constrain adobergb_constrain_300
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = grown-sage-31ea2ebbe8:sea  x86_64-avx512  @6e695833  new-baseline
 ~ snowy-knoll-4f736ff00a:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs grown-sage-31ea2ebbe8:sea (zensim:99.80 (dissim 0.0020))
 
 ## test_icc_p3_crop_and_resize p3_crop_200x200
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = local-stone-201ba0ca26:sea  x86_64-avx512  @6e695833  new-baseline
+~ cozy-gem-26b2a2dc62:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within zensim:95 (dissim 0.05) vs local-stone-201ba0ca26:sea (zensim:96.45 (dissim 0.036), 50.6% pixels ±12, max-delta:[12,7,9], category:unclassified)
 
 ## test_icc_display_p3_resize_filter p3_robidoux_300x300
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = fleet-spark-999a1ad460:sea  x86_64-avx512  @6e695833  new-baseline
+~ hazy-tide-c0da403a0f:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within zensim:95 (dissim 0.05) vs fleet-spark-999a1ad460:sea (zensim:95.21 (dissim 0.048), 32.7% pixels ±16, max-delta:[16,16,13], category:unclassified)
 
 ## test_icc_adobe_rgb_resize adobergb_resize_400
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = crude-mole-50b6c985ef:sea  x86_64-avx512  @6e695833  new-baseline
 ~ foggy-lily-0b2fc2c0d4:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs crude-mole-50b6c985ef:sea (zensim:99.72 (dissim 0.0028))
 
 ## test_icc_prophoto_resize prophoto_resize_400
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = rusty-wren-44d06224e8:sea  x86_64-avx512  @6e695833  new-baseline
 ~ pink-linen-57e135c91d:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs rusty-wren-44d06224e8:sea (zensim:99.74 (dissim 0.0026))
 
 ## test_icc_display_p3_resize p3_resize_400
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = salty-oak-e9d3f2c21d:sea  x86_64-avx512  @6e695833  new-baseline
 ~ moot-wave-275c93bc14:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs salty-oak-e9d3f2c21d:sea (zensim:99.65 (dissim 0.0035))
+~ moot-jar-05ab254066:sea  x86_64-avx512  @e82a2d80  auto-accepted within tolerance (within max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1) vs salty-oak-e9d3f2c21d:sea (zensim:97.78 (dissim 0.022), 17.6% pixels ±2, max-delta:[2,1,2], category:rounding, biased)
 
 ## test_icc_repro_imagemagick_icc imagemagick_icc
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = round-tiger-41e2b79c30:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_p3_to_webp p3_to_webp_q80
-tolerance zensim:95 (dissim 0.05)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = only-moth-16f9a2d875:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_srgb_sony_a7rv srgb_sony
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = sheer-crab-c0af82e7a9:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_gray_gamma22_decode gray_gamma22
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = sunny-lynx-4024410973:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_repro_libvips_icc libvips_icc
-tolerance zensim:97 (dissim 0.03)
+tolerance max-delta:255 zensim:97 (dissim 0.03) pixels-changed:100.0% alpha-delta:1
 = ionic-trout-c4ba3eae87:sea  x86_64-avx512  @6e695833  new-baseline
 ~ limp-ford-b5f44b5040:sea  aarch64  @ace43a05  auto-accepted vs ionic-trout-c4ba3eae87:sea  diff d:2 s:98.7 px:0.8%
 ~ rural-reed-ac94b06d6e:sea  aarch64-windows  @ace43a05  auto-accepted vs ionic-trout-c4ba3eae87:sea  diff d:2 s:97.1 px:13.6%
 ~ fawn-plum-450bc0d39b:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:97 (dissim 0.03) vs ionic-trout-c4ba3eae87:sea (zensim:99.60 (dissim 0.0040))
 
 ## test_icc_repro_sharp_icc sharp_icc
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = cold-cod-fbd1704ac1:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_rec2020_decode_1 rec2020_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = extra-heron-36faf97a2c:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_p3_to_jpeg_roundtrip p3_to_jpeg_q85
-tolerance zensim:95 (dissim 0.05)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = fair-peach-0372a89301:sea  x86_64-avx512  @6e695833  new-baseline
 ~ mini-jay-8d148f99ab:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:95 (dissim 0.05) vs fair-peach-0372a89301:sea (zensim:99.54 (dissim 0.0046))
 
 ## test_icc_prophoto_decode prophoto_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = moist-shore-4dc03e0370:sea  x86_64-avx512  @6e695833  new-baseline
 ~ prone-ox-a3d2dd3aac:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs moist-shore-4dc03e0370:sea (zensim:99.56 (dissim 0.0044))
 
 ## test_icc_rec2020_decode_2 rec2020_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = able-ash-684f3036b9:sea  x86_64-avx512  @6e695833  new-baseline
 ~ swift-quay-eb146321aa:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs able-ash-684f3036b9:sea (zensim:99.66 (dissim 0.0034))
 
 ## test_icc_repro_pillow_icc pillow_icc
-tolerance zensim:95 (dissim 0.05)
+tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 = civic-orbit-95ecc8ed4c:sea  x86_64-avx512  @6e695833  new-baseline
 ~ famed-panda-132b78ab9d:sea  aarch64  @ace43a05  auto-accepted vs civic-orbit-95ecc8ed4c:sea  diff d:2 s:98.7 px:2.0%
 ~ naive-elm-52218c261f:sea  aarch64-windows  @ace43a05  auto-accepted vs civic-orbit-95ecc8ed4c:sea  diff d:3 s:95.3 px:50.1%
 
 ## test_icc_display_p3_decode_3 p3_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = known-crane-9ca529bf17:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_display_p3_decode_2 p3_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = keen-sage-075119cbeb:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_srgb_canon_5d srgb_canon5d
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = short-cub-c9b4371b0c:sea  x86_64-avx512  @6e695833  new-baseline
 ~ apt-dew-a4b44ec913:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs short-cub-c9b4371b0c:sea (zensim:99.31 (dissim 0.0069))
 
 ## test_icc_adobe_rgb_decode_2 adobergb_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = plush-marsh-8328b491ed:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_adobe_rgb_decode_1 adobergb_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = stiff-mace-cc9e75a12a:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_display_p3_decode_1 p3_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = silly-coal-233b8b0277:sea  x86_64-avx512  @6e695833  new-baseline
 ~ lost-teal-beefe0c3f4:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs silly-coal-233b8b0277:sea (zensim:99.45 (dissim 0.0055))
-

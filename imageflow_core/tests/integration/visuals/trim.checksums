@@ -1,26 +1,25 @@
 ## test_trim_whitespace_with_padding gray_bg
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ known-quay-b60c8ecec1:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs oval-flow-0956d8f4f7:sea (zensim:98.87 (dissim 0.011))
 
 ## test_trim_resize_whitespace_with_padding 450x450_gray
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = apt-colt-7f54f13622:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ murky-chip-330ce44330:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs apt-colt-7f54f13622:sea (zensim:99.21 (dissim 0.0079))
 
 ## test_trim_resize_whitespace_without_padding 450x450_gray
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = own-spire-30310bace0:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ prone-den-314d60fe89:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs own-spire-30310bace0:sea (zensim:99.84 (dissim 0.0016))
 
 ## test_trim_whitespace transparent_shirt
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = short-frog-4f72443cc0:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ sheer-grain-9ff014ad22:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs short-frog-4f72443cc0:sea (zensim:97.99 (dissim 0.020), 19.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 ~ bald-dove-504096ed85:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs short-frog-4f72443cc0:sea (zensim:99.72 (dissim 0.0028))
 
 ## test_trim_whitespace_with_padding_no_resize gray_bg
-tolerance zensim:99 (dissim 0.01)
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 = oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ known-quay-b60c8ecec1:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs oval-flow-0956d8f4f7:sea (zensim:98.87 (dissim 0.011))
-

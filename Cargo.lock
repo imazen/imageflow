@@ -1429,7 +1429,7 @@ dependencies = [
  "libpng-sys",
  "libwebp-sys",
  "libz-sys",
- "linear-srgb 0.6.5",
+ "linear-srgb 0.6.6",
  "lodepng",
  "moxcms 0.8.1 (git+https://github.com/awxkee/moxcms.git?rev=c4affa1)",
  "mozjpeg",
@@ -1454,6 +1454,7 @@ dependencies = [
  "zencodec",
  "zencodecs",
  "zenfilters",
+ "zenjpeg",
  "zenlayout",
  "zennode",
  "zenpipe",
@@ -1792,7 +1793,7 @@ dependencies = [
 
 [[package]]
 name = "linear-srgb"
-version = "0.6.5"
+version = "0.6.6"
 dependencies = [
  "archmage 0.9.15",
  "bytemuck",
@@ -1802,9 +1803,9 @@ dependencies = [
 
 [[package]]
 name = "linear-srgb"
-version = "0.6.5"
+version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4b75067bc1e8c2c28413cab5777c0fe8473499e55f2e09076b9076f344ce9d5"
+checksum = "fc735204d942021e5f869a7fbe13593ccd480121131b2938efe410ad80aee984"
 dependencies = [
  "archmage 0.9.15",
  "bytemuck",
@@ -3104,7 +3105,7 @@ checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 
 [[package]]
 name = "ultrahdr-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bytemuck",
  "enough",
@@ -3726,14 +3727,14 @@ dependencies = [
 
 [[package]]
 name = "zenavif"
-version = "0.1.0"
+version = "0.1.3"
 dependencies = [
  "almost-enough",
  "archmage 0.9.15",
  "bytemuck",
  "enough",
  "imgref",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
  "magetypes",
  "rav1d-safe",
@@ -3750,9 +3751,9 @@ dependencies = [
 
 [[package]]
 name = "zenavif-parse"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d205737a3e1d5ea9b005efee79d53324a929fc8f0b06cd0bac42de52b65994a"
+checksum = "d0543efca02c713fa12bc1fa7675ec55af949120d165358a2a5024df3b69cac6"
 dependencies = [
  "arrayvec 0.7.6",
  "bitreader",
@@ -3765,7 +3766,7 @@ dependencies = [
 
 [[package]]
 name = "zenbitmaps"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "enough",
  "imgref",
@@ -3787,7 +3788,7 @@ dependencies = [
 
 [[package]]
 name = "zencodec"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "almost-enough",
  "enough",
@@ -3803,7 +3804,7 @@ dependencies = [
  "enough",
  "heic",
  "imgref",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb",
  "thiserror",
  "whereat",
@@ -3826,7 +3827,7 @@ version = "0.1.0"
 dependencies = [
  "archmage 0.9.15",
  "bytemuck",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "magetypes",
  "whereat",
  "zennode",
@@ -3847,12 +3848,12 @@ dependencies = [
 
 [[package]]
 name = "zengif"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bytemuck",
  "enough",
  "gif",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb",
  "thiserror",
  "whereat",
@@ -3863,7 +3864,7 @@ dependencies = [
 
 [[package]]
 name = "zenjpeg"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "aligned-vec",
  "archmage 0.9.15",
@@ -3871,6 +3872,7 @@ dependencies = [
  "enough",
  "imgref",
  "magetypes",
+ "moxcms 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb",
  "safe_unaligned_simd",
  "thiserror",
@@ -3889,7 +3891,7 @@ version = "0.1.0"
 dependencies = [
  "enough",
  "imgref",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb",
  "thiserror",
  "whereat",
@@ -3937,7 +3939,7 @@ dependencies = [
 
 [[package]]
 name = "zenlayout"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "whereat",
 ]
@@ -3967,8 +3969,9 @@ dependencies = [
  "bytemuck",
  "enough",
  "hashbrown 0.15.5",
- "linear-srgb 0.6.5",
+ "linear-srgb 0.6.6",
  "moxcms 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json",
  "whereat",
  "zenblend",
  "zencodec",
@@ -3997,7 +4000,7 @@ dependencies = [
  "archmage 0.9.15",
  "bytemuck",
  "garb 0.2.5",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "moxcms 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb",
  "whereat",
@@ -4014,7 +4017,7 @@ dependencies = [
  "enough",
  "imagequant",
  "imgref",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb",
  "safe_unaligned_simd",
  "thiserror",
@@ -4028,13 +4031,13 @@ dependencies = [
 
 [[package]]
 name = "zenquant"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88a5766f917b4a5e3321e7e64401fa3158e6db006996f83fb511b40f39b405cd"
+checksum = "524b631d0e34ab1317a31379e27cf10cef3bb7d90234d3b52c71bc28263b6907"
 dependencies = [
  "archmage 0.9.15",
  "imgref",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "magetypes",
  "num-traits",
  "rgb",
@@ -4043,12 +4046,12 @@ dependencies = [
 
 [[package]]
 name = "zenresize"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "archmage 0.9.15",
  "imgref",
  "libm",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "magetypes",
  "rgb",
  "safe_unaligned_simd",
@@ -4060,12 +4063,14 @@ dependencies = [
 
 [[package]]
 name = "zensim"
-version = "0.2.2"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c2cfe0d24afe29012b75eb79cb151a10e7ce6460232682422ec92751985cb1b"
 dependencies = [
  "archmage 0.9.15",
  "bytemuck",
  "imgref",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "magetypes",
  "rayon",
  "rgb",
@@ -4075,6 +4080,8 @@ dependencies = [
 [[package]]
 name = "zensim-regress"
 version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a069038e58016d4ead73eeeb9e7aeebbf2878f9531f6de2f9e34c09e979727bb"
 dependencies = [
  "base64",
  "fs2",
@@ -4095,7 +4102,7 @@ dependencies = [
  "garb 0.2.5",
  "hashbrown 0.16.1",
  "libm",
- "linear-srgb 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "magetypes",
  "rgb",
  "self_cell",
