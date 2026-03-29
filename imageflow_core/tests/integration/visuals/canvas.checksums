@@ -1,7 +1,7 @@
 ## test_round_corners_circle_wide_canvas 200x150_black
 tolerance off-by-one
-~ cozy-cloud-312b8c473b:sea  x86_64-avx512  @bf181009  auto-accepted
 ~ airy-curl-0fdee54613:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs mad-port-dff48806b5:sea (zensim:99.74 (dissim 0.0026))
+~ fatal-maple-3ce16356d5:sea  x86_64-avx512  @c306a698  auto-accepted within tolerance (within off-by-one) vs cozy-cloud-312b8c473b:sea (zensim:98.92 (dissim 0.011), 0.05% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_fill_rect_original blue_on_transparent
 tolerance off-by-one
@@ -57,6 +57,7 @@ tolerance off-by-one
 tolerance off-by-one
 = north-doe-e6e0c779a0:sea  x86_64-avx512  @8ca16e2d  human-verified
 ~ airy-reed-f945b12e3b:sea  x86_64-avx512  @bf181009  auto-accepted within tolerance (within off-by-one) vs north-doe-e6e0c779a0:sea (zensim:98.11 (dissim 0.019), 13.2% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ open-glen-3d124b2752:sea  x86_64-avx512  @c306a698  auto-accepted within tolerance (within off-by-one) vs north-doe-e6e0c779a0:sea (zensim:98.07 (dissim 0.019), 14.6% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_expand_rect fill_expand_hermite_linear
 tolerance off-by-one
@@ -85,3 +86,7 @@ tolerance off-by-one
 ## test_fill_rect eeccff_hermite_400x400
 tolerance off-by-one
 = novel-box-967914e71e:sea  x86_64-avx512  @8ca16e2d  human-verified
+
+## test_round_corners_custom_percent semitransparent_mixed_radii
+tolerance off-by-one
+~ mad-port-dff48806b5:sea  x86_64-avx512  @c306a698  auto-accepted

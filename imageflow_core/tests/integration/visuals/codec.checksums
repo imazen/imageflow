@@ -68,6 +68,7 @@ tolerance zensim:99 (dissim 0.01)
 ## test_crop_with_preshrink 170x220_crop
 tolerance max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%
 = mild-pond-a88cf0d96f:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ calm-cone-ea17eca115:sea  x86_64-avx512  @c306a698  auto-accepted within tolerance (within max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%) vs mild-pond-a88cf0d96f:sea (zensim:98.87 (dissim 0.011), 3.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_transparent_png_to_png shirt
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%

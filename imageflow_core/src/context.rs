@@ -555,6 +555,14 @@ impl Context {
                 }
             }
 
+            // Normalize alpha to 255 for opaque sources (matching v2 behavior).
+            {
+                let bitmaps = self.borrow_bitmaps_mut()?;
+                let mut bm = bitmaps.get(key).unwrap().borrow_mut();
+                let mut window = bm.get_window_u8().unwrap();
+                window.normalize_unused_alpha().map_err(|e| e.at(here!()))?;
+            }
+
             self.insert_captured_bitmap_key(capture_id, key);
             // Also keep in zen_captured_bitmaps for any code that reads it directly.
             self.zen_captured_bitmaps.insert(capture_id, bitmap);

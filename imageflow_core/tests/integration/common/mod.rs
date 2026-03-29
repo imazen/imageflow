@@ -480,7 +480,7 @@ fn compare_bitmaps_zensim(
         eprintln!("{msg}");
 
         // Always save diff image on failure for debugging
-        save_diff_image(expected, actual, aw as u32, ah as u32, diff_name, amplification);
+        save_diff_image(expected, actual, aw as u32, ah as u32, diff_name, amplification, &report, tolerance);
 
         if do_panic {
             panic!("{msg}");
@@ -489,7 +489,7 @@ fn compare_bitmaps_zensim(
         // Print informational report even on pass when pixels differ
         eprintln!("{report}");
         // Save diff image for accepted tests too (for CI reports)
-        save_diff_image(expected, actual, aw as u32, ah as u32, diff_name, amplification);
+        save_diff_image(expected, actual, aw as u32, ah as u32, diff_name, amplification, &report, tolerance);
     }
     (report.passed(), zdsim)
 }
@@ -523,7 +523,12 @@ fn save_diff_image(
     h: u32,
     diff_name: &str,
     amplification: u8,
+    report: &zensim_regress::testing::RegressionReport,
+    tolerance: &zensim_regress::testing::RegressionTolerance,
 ) -> Option<PathBuf> {
+    use image::RgbaImage;
+    use zensim_regress::diff_image::{AnnotationText, MontageOptions};
+
     let diffs_dir = Path::new(env!("CARGO_MANIFEST_DIR")).parent()?.join(".image-cache/diffs");
     std::fs::create_dir_all(&diffs_dir).ok()?;
 
@@ -532,29 +537,17 @@ fn save_diff_image(
 
     let exp_rgba = bitmap_to_rgba_bytes(expected, w, h);
     let act_rgba = bitmap_to_rgba_bytes(actual, w, h);
-    zensim_regress::display::save_comparison_png(
-        &exp_rgba,
-        &act_rgba,
-        w,
-        h,
-        amplification,
-        Some(600),
-        &path,
-    );
-    eprintln!("Saved comparison diff to {} (amplification: {amplification}x)", path.display());
 
-    // Also show sixel if requested
-    if std::env::var("SIXEL_DIFF").is_ok_and(|v| v == "1") {
-        let _ = std::io::stderr().flush();
-        zensim_regress::display::print_comparison_raw(
-            &exp_rgba,
-            &act_rgba,
-            w,
-            h,
-            amplification,
-            Some(600),
-        );
+    let exp_img = RgbaImage::from_raw(w, h, exp_rgba)?;
+    let act_img = RgbaImage::from_raw(w, h, act_rgba)?;
+    let annotation = AnnotationText::from_report(report, tolerance);
+    let montage = MontageOptions {
+        amplification,
+        ..Default::default()
     }
+    .render(&exp_img, &act_img, &annotation);
+    montage.save(&path).expect("failed to save montage PNG");
+    eprintln!("Saved annotated montage to {} (amplification: {amplification}x)", path.display());
 
     Some(path)
 }
