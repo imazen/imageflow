@@ -1,8 +1,6 @@
-# canvas.checksums — v1
-
-## test_round_corners_custom_percent semitransparent_mixed_radii
+## test_round_corners_circle_wide_canvas 200x150_black
 tolerance off-by-one
-= mad-port-dff48806b5:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ cozy-cloud-312b8c473b:sea  x86_64-avx512  @bf181009  auto-accepted
 ~ airy-curl-0fdee54613:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs mad-port-dff48806b5:sea (zensim:99.74 (dissim 0.0026))
 
 ## test_fill_rect_original blue_on_transparent
@@ -34,6 +32,7 @@ tolerance off-by-one
 tolerance off-by-one
 = fresh-pine-80bf247392:sea  x86_64-avx512  @8ca16e2d  human-verified
 ~ front-fish-af784d2f3e:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs fresh-pine-80bf247392:sea (zensim:99.80 (dissim 0.0020))
+~ ivory-bat-1d7a62f3f4:sea  x86_64-avx512  @bf181009  auto-accepted within tolerance (within off-by-one) vs fresh-pine-80bf247392:sea (zensim:99.45 (dissim 0.0055), 0.03% pixels ±1, max-delta:[1,1,0], category:rounding, balanced)
 
 ## test_pixels_region pixel_coords
 tolerance off-by-one
@@ -57,6 +56,7 @@ tolerance off-by-one
 ## test_round_image_corners_transparent waterhouse_400x300_r100
 tolerance off-by-one
 = north-doe-e6e0c779a0:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ airy-reed-f945b12e3b:sea  x86_64-avx512  @bf181009  auto-accepted within tolerance (within off-by-one) vs north-doe-e6e0c779a0:sea (zensim:98.11 (dissim 0.019), 13.2% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_expand_rect fill_expand_hermite_linear
 tolerance off-by-one
@@ -80,6 +80,7 @@ tolerance off-by-one
 ## test_round_corners_large 400x400_r200
 tolerance off-by-one
 = heavy-yew-a70bb2e52e:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ lame-glen-9986d6828c:sea  x86_64-avx512  @bf181009  auto-accepted within tolerance (within off-by-one) vs heavy-yew-a70bb2e52e:sea (zensim:99.28 (dissim 0.0072), 0.02% pixels ±1, max-delta:[1,1,0], category:rounding, biased)
 
 ## test_fill_rect eeccff_hermite_400x400
 tolerance off-by-one

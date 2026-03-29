@@ -73,6 +73,7 @@ tolerance off-by-one
 tolerance off-by-one
 = royal-rose-c398febefd:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ famed-poppy-0f970efa94:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs royal-rose-c398febefd:sea (zensim:99.41 (dissim 0.0059))
+~ many-linen-5162137f71:sea  x86_64-avx512  @bf181009  auto-accepted within tolerance (within off-by-one) vs royal-rose-c398febefd:sea (zensim:89.07 (dissim 0.11), 3.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_crop_exif landscape_2
 tolerance off-by-one
@@ -120,12 +121,13 @@ tolerance off-by-one
 tolerance off-by-one
 = dense-brick-1fdbcb0226:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ solar-flock-307dde9107:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs dense-brick-1fdbcb0226:sea (zensim:99.92 (dissim 0.0008))
+~ lunar-lamb-fc95d9a50b:sea  x86_64-avx512  @bf181009  auto-accepted within tolerance (within off-by-one) vs dense-brick-1fdbcb0226:sea (zensim:99.00 (dissim 0.010), 2.1% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_fit_pad_exif landscape_2
 tolerance off-by-one
 = long-ford-e4b2ab8f16:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ neat-lark-79a9a88f75:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs long-ford-e4b2ab8f16:sea (zensim:99.03 (dissim 0.0097), 3.9% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 ~ lucky-trout-f238d7b6bc:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs long-ford-e4b2ab8f16:sea (zensim:99.91 (dissim 0.0009))
+~ sandy-panda-5605a7d69d:sea  x86_64-avx512  @bf181009  auto-accepted within tolerance (within off-by-one) vs long-ford-e4b2ab8f16:sea (zensim:96.98 (dissim 0.030), 46.2% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_fit_pad_exif landscape_3
 tolerance off-by-one
@@ -232,4 +234,3 @@ tolerance off-by-one
 = cool-beam-a9eb293ee9:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ lone-bay-0011aac3a6:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs cool-beam-a9eb293ee9:sea (zensim:98.72 (dissim 0.013), 6.9% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 ~ pure-jay-07bb4f4c6f:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs cool-beam-a9eb293ee9:sea (zensim:99.75 (dissim 0.0025))
-
