@@ -104,6 +104,32 @@ pub fn try_invoke_static(method: &str, json: &[u8]) -> Result<Option<JsonRespons
             let output = get_json_schemas_v1()?;
             Ok(Some(JsonResponse::ok(output)))
         }
+        // ── V3 schema endpoints (zen-pipeline node/querystring schemas) ──
+        #[cfg(feature = "zen-pipeline")]
+        "v3/schema/nodes" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_v3_node_schemas()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+        #[cfg(feature = "zen-pipeline")]
+        "v3/schema/openapi" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_v3_openapi_schemas()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+        #[cfg(feature = "zen-pipeline")]
+        "v3/schema/querystring" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_v3_querystring_schema()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+        #[cfg(feature = "zen-pipeline")]
+        "v3/schema/querystring/keys" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_v3_querystring_keys()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+
         "v1/brew_coffee" => Ok(Some(JsonResponse::teapot())),
         _ => Ok(None),
     }
@@ -781,6 +807,12 @@ pub(super) fn list_schema_endpoints() -> Result<ListSchemaEndpointsResponse> {
     if cfg!(feature = "json-schema") {
         endpoints.push("/v1/schema/json/latest/v1/all".to_string());
     }
+    if cfg!(feature = "zen-pipeline") {
+        endpoints.push("/v3/schema/nodes".to_string());
+        endpoints.push("/v3/schema/openapi".to_string());
+        endpoints.push("/v3/schema/querystring".to_string());
+        endpoints.push("/v3/schema/querystring/keys".to_string());
+    }
     endpoints.sort();
     Ok(ListSchemaEndpointsResponse { endpoints })
 }
@@ -845,4 +877,39 @@ fn zen_build(context: &mut Context, parsed: Build001) -> Result<BuildV1Response>
     }
 
     Ok(BuildV1Response { job_result: output.job_result })
+}
+
+// ─── V3 schema endpoints ───
+//
+// Expose zennode registry schemas for client SDK code generation.
+// These return raw JSON values (serde_json::Value serialized as-is)
+// containing JSON Schema 2020-12 with x-zennode-* extensions.
+
+/// All registered zen node schemas as JSON Schema 2020-12 with $defs.
+#[cfg(feature = "zen-pipeline")]
+fn get_v3_node_schemas() -> Result<serde_json::Value> {
+    Ok(zenpipe::schema_export::export_node_schemas())
+}
+
+/// Zen node schemas formatted as OpenAPI 3.1+ components/schemas.
+/// Keys are normalized (dots → underscores) for OpenAPI compatibility.
+#[cfg(feature = "zen-pipeline")]
+fn get_v3_openapi_schemas() -> Result<serde_json::Value> {
+    Ok(zenpipe::schema_export::export_openapi_schemas())
+}
+
+/// JSON Schema for validating RIAPI querystrings against zen nodes.
+/// Each property is a querystring key with type/range/default from the
+/// node parameter it maps to.
+#[cfg(feature = "zen-pipeline")]
+fn get_v3_querystring_schema() -> Result<serde_json::Value> {
+    Ok(zenpipe::schema_export::export_querystring_schema())
+}
+
+/// Structured querystring key registry grouped by node.
+/// Includes key names, aliases, parameter labels, descriptions,
+/// and value schemas. For documentation generation and SDK hints.
+#[cfg(feature = "zen-pipeline")]
+fn get_v3_querystring_keys() -> Result<serde_json::Value> {
+    Ok(zenpipe::schema_export::export_querystring_keys())
 }

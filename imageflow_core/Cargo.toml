@@ -62,8 +62,9 @@ utoipa = { version = "5.3.1", features = [], optional = true }
 schemars = { version = "1", features = ["derive"], optional = true }
 
 # --- Zen crate dependencies (optional, gated behind zen-pipeline feature) ---
-zenpipe = { path = "../../zen/zenpipe", features = ["zennode", "std"], optional = true }
+zenpipe = { path = "../../zen/zenpipe", features = ["zennode", "std", "json-schema"], optional = true }
 zencodecs = { path = "../../zen/zencodecs", features = ["zennode", "png-imagequant"], optional = true }
+zenjpeg = { path = "../../zen/zenjpeg/zenjpeg", features = ["moxcms"], optional = true }
 zencodec = { path = "../../zen/zencodec", optional = true }
 zennode = { path = "../../zen/zennode/zennode", features = ["derive", "serde"], optional = true }
 zenresize = { path = "../../zen/zenresize", optional = true }
@@ -116,7 +117,7 @@ c-codecs = [
 zen-pipeline = [
     "dep:zenpipe", "dep:zencodecs", "dep:zencodec", "dep:zennode",
     "dep:zenresize", "dep:zenlayout", "dep:zenfilters", "dep:zenpixels",
-    "dep:linear-srgb",
+    "dep:zenjpeg", "dep:linear-srgb",
 ]
 # zen-default removed — zen pipeline is the runtime default when zen-pipeline is compiled in.
 # Use Context::force_backend = Some(Backend::V2) to force the v2 engine.
