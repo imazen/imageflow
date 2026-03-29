@@ -597,7 +597,7 @@ mod srgb_matrix {
 ///
 /// Initialized once on first use; avoids re-registering all node definitions on every
 /// `push_layout_node` call.
-fn zen_registry() -> &'static NodeRegistry {
+pub(super) fn zen_registry() -> &'static NodeRegistry {
     use std::sync::OnceLock;
     static REGISTRY: OnceLock<NodeRegistry> = OnceLock::new();
     REGISTRY.get_or_init(|| {

@@ -241,7 +241,7 @@ fn execute_steps(
         })
         .collect();
 
-    let pipeline = translate::translate_nodes(&steps, io_buffers)?;
+    let mut pipeline = translate::translate_nodes(&steps, io_buffers)?;
     let has_encode = pipeline.encode_io_id.is_some();
 
     // Handle CreateCanvas — create solid-color source instead of decoding.
@@ -358,8 +358,22 @@ fn execute_steps(
         }
     }
 
-    let (decision, source) =
+    let (decision, source, exif_flag) =
         probe_resolve_decode(input_data, &pipeline, &pipeline.decoder_commands, security.cms_mode)?;
+
+    // Auto-apply EXIF orientation unless the pipeline already has an explicit orient node.
+    // zenjpeg auto-orients by default (exif_flag returns 1/Identity after decode),
+    // but other codecs may report orientation without applying it.
+    let has_explicit_orient = pipeline.nodes.iter().any(|n| n.schema().id == "zenlayout.orient");
+    if exif_flag > 1 && !has_explicit_orient {
+        let registry = super::translate::zen_registry();
+        if let Some(def) = registry.get("zenlayout.orient") {
+            if let Ok(mut node) = def.create_default() {
+                node.set_param("orientation", zennode::ParamValue::I32(exif_flag as i32));
+                pipeline.nodes.insert(0, node);
+            }
+        }
+    }
 
     let converters = super::converter::imageflow_converters();
     let converters: &[&dyn zenpipe::bridge::NodeConverter] = &converters;
@@ -546,12 +560,13 @@ fn execute_graph(
 // ─── Decode ───
 
 /// Probe, resolve format/quality, and build a streaming decode source.
+/// Return type includes EXIF orientation flag (1-8, 1=identity) for auto-orient.
 fn probe_resolve_decode(
     input_data: &[u8],
     pipeline: &TranslatedPipeline,
     decoder_commands: &Option<Vec<imageflow_types::DecoderCommand>>,
     cms_mode: imageflow_types::CmsMode,
-) -> Result<(zencodecs::FormatDecision, Box<dyn zenpipe::Source>), ZenError> {
+) -> Result<(zencodecs::FormatDecision, Box<dyn zenpipe::Source>, u8), ZenError> {
     let registry = AllowedFormats::all();
     let info =
         zencodecs::from_bytes(input_data).map_err(|e| ZenError::Codec(format!("probe: {e}")))?;
@@ -582,8 +597,11 @@ fn probe_resolve_decode(
     };
 
     // ICC color management: if the source has an embedded ICC profile that
-    // isn't sRGB, transform to sRGB using moxcms. This matches v2 behavior
-    // where CMS transforms to sRGB during decode.
+    // isn't sRGB, transform to sRGB using moxcms/lcms2. This matches v2 behavior.
+    // NOTE: zenjpeg has correct_color(Srgb) support via its own moxcms, but it
+    // doesn't pass allow_use_cicp_transfer:false, causing CICP-override mismatches
+    // for some ICC profiles. Keep imageflow's CMS until zenjpeg's moxcms settings
+    // are aligned.
     source = apply_icc_transform(source, &info, cms_mode)?;
 
     // PNG gAMA/cHRM: if no ICC profile, try to synthesize from PNG metadata.
@@ -615,7 +633,8 @@ fn probe_resolve_decode(
     // Format conversion: ensure RGBA8 sRGB pixel format for downstream.
     source = ensure_srgb_rgba8(source)?;
 
-    Ok((decision, source))
+    let exif_flag = info.orientation.to_exif();
+    Ok((decision, source, exif_flag))
 }
 
 /// Stream-encode an animated image via zencodecs: decode frame → push_frame → repeat → finish.
