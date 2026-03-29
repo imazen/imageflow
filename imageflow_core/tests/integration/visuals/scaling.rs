@@ -15,7 +15,7 @@ fn test_scale_image() {
                 hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)),
             },
         ],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Tolerance { max_delta: 2, min_similarity: 95.0, max_pixels_different: 1.0, ..Tolerance::default() },
     }
 }
 

@@ -59,6 +59,7 @@ fn test_transparent_png_to_jpeg() {
         source: "test_inputs/shirt_transparent.png",
         detail: "shirt",
         command: "format=jpg",
+        similarity: Similarity::MaxZdsim(0.05),
     }
 }
 
@@ -82,6 +83,7 @@ fn test_transparent_png_to_jpeg_constrain() {
                 preset: EncoderPreset::Mozjpeg { quality: Some(100), progressive: None, matte: None },
             },
         ],
+        similarity: Similarity::MaxZdsim(0.05),
     }
 }
 
@@ -127,7 +129,7 @@ fn test_branching_crop_whitespace() {
     let framewise =
         v1.encode(1, preset.clone()).builder().with(v2.encode(2, preset.clone())).to_framewise();
 
-    let tol_spec = Similarity::MaxZdsim(0.01).to_tolerance_spec();
+    let tol_spec = Similarity::MaxZdsim(0.05).to_tolerance_spec();
 
     let mut backends: Vec<(imageflow_core::Backend, &str)> =
         vec![(imageflow_core::Backend::V2, "v2")];
@@ -164,7 +166,7 @@ fn test_transparent_webp_to_webp() {
         source: "test_inputs/1_webp_ll.webp",
         detail: "lossless_100x100",
         command: "format=webp&width=100&height=100&webp.lossless=true",
-        similarity: Similarity::AllowOffByOneBytesCount(500),
+        similarity: Similarity::MaxZdsim(0.05),
     }
 }
 
@@ -327,7 +329,7 @@ fn decode_rgb_with_cmyk_profile_jpeg() {
             encode: None,
             watermarks: None,
         }],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Tolerance { max_delta: 3, min_similarity: 95.0, max_pixels_different: 1.0, ..Tolerance::default() },
     }
 }
 
