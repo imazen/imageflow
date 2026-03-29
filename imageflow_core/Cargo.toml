@@ -95,8 +95,8 @@ walkdir = "2"
 csv = "1"
 rayon = "1"
 colorutils-rs = "0.7"
-zensim-regress = "0.2.3"
-zensim = "0.2.3"
+zensim-regress = { path = "../../zen/zensim/zensim-regress" }
+zensim = { path = "../../zen/zensim/zensim" }
 seahash = "4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
