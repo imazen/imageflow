@@ -9,9 +9,8 @@ use std::path::Path;
 #[cfg(feature = "c-codecs")]
 fn decode_mozjpeg(jpeg_bytes: &[u8]) -> (Vec<u8>, u32, u32) {
     let mut ctx = imageflow_core::Context::create().unwrap();
-    ctx.add_copied_input_buffer(0, jpeg_bytes).unwrap();
 
-    // Force v2 backend
+    // Force v2 backend — io provided via Build001.io below
     ctx.force_backend = Some(imageflow_core::Backend::V2);
 
     let steps = vec![
