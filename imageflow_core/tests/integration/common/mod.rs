@@ -402,6 +402,7 @@ impl Similarity {
                         max_delta: 255,
                         min_similarity,
                         max_pixels_different: 1.0,
+                        max_alpha_delta: 1,
                         ..Tolerance::exact()
                     }
                 }
