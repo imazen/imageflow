@@ -49,6 +49,15 @@ zenwebp vs libwebp decoder alpha differences.
 
 `crop_exif` — RGB identical, alpha=255 on 24% pixels. The `alpha_meaningful` flag isn't propagating correctly for Crop+Within pipeline.
 
+## Zennode Consolidation (2026-03-29)
+
+Node schema ownership changed — affects imports in `imageflow_core/src/zen/`:
+- **zencodecs::zennode_defs** — all codec encode/decode, Quantize, QualityIntentNode (16 nodes)
+- **zenpipe::zennode_defs** — Constrain, Resize, CropWhitespace, FillRect, RemoveAlpha, RoundCorners (6 nodes)
+- **zenfilters::zennode_defs** — all 43 filter nodes (unchanged)
+- Individual codec crates (zenjpeg, zenpng, etc.) no longer export zennode_defs
+- Constrain node renamed fields: sharpen→unsharp_percent, lobe_ratio→kernel_lobe_ratio, added matte_color
+
 ## Architecture
 
 ### Zen module structure (`imageflow_core/src/zen/`)
