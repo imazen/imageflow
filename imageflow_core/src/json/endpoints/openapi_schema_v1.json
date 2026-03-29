@@ -690,6 +690,14 @@
           }
         }
       },
+      "CmsMode": {
+        "type": "string",
+        "description": "Color management mode for the pipeline.",
+        "enum": [
+          "Imageflow2Compat",
+          "SceneReferred"
+        ]
+      },
       "Color": {
         "oneOf": [
           {
@@ -1557,7 +1565,14 @@
       },
       "ExecutionSecurity": {
         "type": "object",
+        "required": [
+          "cms_mode"
+        ],
         "properties": {
+          "cms_mode": {
+            "$ref": "#/components/schemas/CmsMode",
+            "description": "Color management mode. Defaults to Imageflow2Compat."
+          },
           "max_decode_size": {
             "oneOf": [
               {
