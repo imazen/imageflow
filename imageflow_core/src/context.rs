@@ -743,12 +743,16 @@ impl Context {
                 None => true, // zen is the default when compiled in
             };
             if use_zen {
+                // Resolve job_options: top-level overrides builder_config
+                let job_options = parsed.job_options.clone()
+                    .or_else(|| parsed.builder_config.as_ref().and_then(|c| c.job_options.clone()))
+                    .unwrap_or_default();
                 let output =
-                    crate::zen::zen_build(&parsed, &self.security).map_err(|e| e.at(here!()))?;
-                for (io_id, bytes) in &output.output_buffers {
-                    let _ = self.add_output_buffer(*io_id);
-                    let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
-                    codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
+                    crate::zen::zen_build(parsed, &self.security, &job_options).map_err(|e| e.at(here!()))?;
+                for (io_id, bytes) in output.output_buffers {
+                    let _ = self.add_output_buffer(io_id);
+                    let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
+                    codec.write_output_bytes(&bytes).map_err(|e| e.at(here!()))?;
                 }
                 self.store_zen_captured_bitmaps(output.captured_bitmaps)?;
                 return Ok(output.job_result);
@@ -866,17 +870,18 @@ impl Context {
         if let Some(s) = what.security {
             self.configure_security(s);
         }
+        let job_options = what.job_options.unwrap_or_default();
 
         let output =
-            crate::zen::zen_execute(&what.framewise, &self.zen_input_bytes, &self.security)
+            crate::zen::zen_execute(&what.framewise, &self.zen_input_bytes, &self.security, &job_options)
                 .map_err(|e| e.at(here!()))?;
 
         // Store encoded outputs in Context's output buffer system.
-        for (io_id, bytes) in &output.output_buffers {
+        for (io_id, bytes) in output.output_buffers {
             // Add output buffer only if not already present (test infra may pre-add it).
-            let _ = self.add_output_buffer(*io_id);
-            let mut codec = self.get_codec(*io_id).map_err(|e| e.at(here!()))?;
-            codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
+            let _ = self.add_output_buffer(io_id);
+            let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
+            codec.write_output_bytes(&bytes).map_err(|e| e.at(here!()))?;
         }
 
         // Store captured bitmaps as v2 BitmapKeys for test compatibility.
@@ -1078,6 +1083,7 @@ fn test_take_after_encode_returns_data() {
                 },
             },
         ]),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
 
@@ -1114,6 +1120,7 @@ fn test_get_ptr_after_encode_then_take_blocked() {
                 },
             },
         ]),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
 
