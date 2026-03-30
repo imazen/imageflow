@@ -17,7 +17,7 @@ use imageflow_types as s;
 
 use crate::errors::*;
 
-use super::execute::{self, ZenEncodeResult, ZenError};
+use zenpipe::imageflow_compat::execute::{self, ZenEncodeResult, ZenError};
 
 /// Result of a zen pipeline build.
 pub struct ZenBuildOutput {
@@ -27,7 +27,7 @@ pub struct ZenBuildOutput {
     /// Caller stores these in Context output buffers.
     pub output_buffers: HashMap<i32, Vec<u8>>,
     /// Pixel data captured by CaptureBitmapKey nodes.
-    pub captured_bitmaps: HashMap<i32, super::CapturedBitmap>,
+    pub captured_bitmaps: HashMap<i32, zenpipe::imageflow_compat::CapturedBitmap>,
 }
 
 /// Execute a `v1/build` request through the zen pipeline.

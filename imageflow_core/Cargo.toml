@@ -62,7 +62,7 @@ utoipa = { version = "5.3.1", features = [], optional = true }
 schemars = { version = "1", features = ["derive"], optional = true }
 
 # --- Zen crate dependencies (optional, gated behind zen-pipeline feature) ---
-zenpipe = { path = "../../zen/zenpipe", features = ["zennode", "std", "json-schema"], optional = true }
+zenpipe = { path = "../../zen/zenpipe", features = ["zennode", "std", "json-schema", "imageflow-compat"], optional = true }
 zencodecs = { path = "../../zen/zencodecs", features = ["zennode", "png-imagequant", "cms"], optional = true }
 zenjpeg = { path = "../../zen/zenjpeg/zenjpeg", features = ["moxcms"], optional = true }
 zencodec = { path = "../../zen/zencodec", optional = true }

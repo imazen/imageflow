@@ -3805,6 +3805,7 @@ dependencies = [
  "heic",
  "imgref",
  "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "moxcms 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb",
  "thiserror",
  "whereat",
@@ -3969,6 +3970,8 @@ dependencies = [
  "bytemuck",
  "enough",
  "hashbrown 0.15.5",
+ "imageflow_riapi",
+ "imageflow_types",
  "linear-srgb 0.6.6",
  "moxcms 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json",
@@ -3977,10 +3980,13 @@ dependencies = [
  "zencodec",
  "zencodecs",
  "zenfilters",
+ "zengif",
  "zennode",
  "zenpixels",
  "zenpixels-convert",
+ "zenpng",
  "zenresize",
+ "zenwebp",
 ]
 
 [[package]]
