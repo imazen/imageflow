@@ -268,7 +268,6 @@ fn test_max_encode_dimensions() {
         Some(IoTestEnum::ByteArray(tinypng)),
         Some(IoTestEnum::OutputBuffer),
         Some(imageflow_types::ExecutionSecurity {
-            cms_mode: Default::default(),
             max_decode_size: None,
             max_frame_size: None,
             max_encode_size: Some(imageflow_types::FrameSizeLimit {
@@ -298,7 +297,6 @@ fn test_max_decode_dimensions() {
         )),
         None,
         Some(imageflow_types::ExecutionSecurity {
-            cms_mode: Default::default(),
             max_decode_size: Some(imageflow_types::FrameSizeLimit {
                 w: 10,
                 h: 100000,
@@ -327,7 +325,6 @@ fn test_max_frame_dimensions() {
         None,
         None,
         Some(imageflow_types::ExecutionSecurity {
-            cms_mode: Default::default(),
             max_frame_size: Some(imageflow_types::FrameSizeLimit {
                 w: 10000,
                 h: 10000,
@@ -646,6 +643,7 @@ fn test_animated_gif_roundtrip() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
     let output_bytes = ctx.take_output_buffer(1).unwrap();
@@ -682,6 +680,7 @@ fn test_animated_gif_two_frames() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
     let output_bytes = ctx.take_output_buffer(1).unwrap();
@@ -719,6 +718,7 @@ fn test_gif_select_frame() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
 
@@ -756,6 +756,7 @@ fn test_gif_select_frame_0() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
 
@@ -792,6 +793,7 @@ fn test_gif_select_frame_via_querystring() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
 
@@ -827,6 +829,7 @@ fn test_gif_roundtrip() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx1.execute_1(execute1).unwrap();
     let bytes = ctx1.take_output_buffer(0).unwrap();
@@ -844,6 +847,7 @@ fn test_gif_roundtrip() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(vec![Node::Decode { io_id: 0, commands: None }]),
+        job_options: None,
     };
     ctx2.execute_1(execute2).unwrap();
 }

@@ -173,6 +173,7 @@ fn zen_execute_1_resize() {
             ]),
             graph_recording: None,
             security: None,
+            job_options: None,
         })
         .unwrap();
 
@@ -217,6 +218,7 @@ fn zen_execute_1_flip_rotate() {
             ]),
             graph_recording: None,
             security: None,
+            job_options: None,
         })
         .unwrap();
 
@@ -309,6 +311,7 @@ fn zen_watermark_red_on_green() {
             ]),
             graph_recording: None,
             security: None,
+            job_options: None,
         })
         .unwrap();
 
@@ -411,6 +414,7 @@ fn zen_watermark_red_alpha_on_blue() {
             framewise: s::Framewise::Steps(steps),
             graph_recording: None,
             security: None,
+            job_options: None,
         })
         .unwrap();
     let v2_bytes = v2_ctx.take_output_buffer(2).unwrap();
@@ -427,6 +431,7 @@ fn zen_watermark_red_alpha_on_blue() {
                 ]),
                 graph_recording: None,
                 security: None,
+                job_options: None,
             })
             .unwrap();
         let bitmaps = ctx.borrow_bitmaps().unwrap();
@@ -560,6 +565,7 @@ fn zen_watermark_fullframe_resized() {
             framewise: s::Framewise::Steps(steps),
             graph_recording: None,
             security: None,
+            job_options: None,
         })
         .unwrap();
     let v2_bytes = v2_ctx.take_output_buffer(2).unwrap();
@@ -575,6 +581,7 @@ fn zen_watermark_fullframe_resized() {
             ]),
             graph_recording: None,
             security: None,
+            job_options: None,
         })
         .unwrap();
         let bitmaps = ctx.borrow_bitmaps().unwrap();
@@ -683,6 +690,7 @@ fn zen_jpeg_decode_parity_canon5d() {
         ]),
         graph_recording: None,
         security: None,
+        job_options: None,
     }).unwrap();
 
     let v2_bitmaps = v2_ctx.borrow_bitmaps().unwrap();
@@ -703,6 +711,7 @@ fn zen_jpeg_decode_parity_canon5d() {
         ]),
         graph_recording: None,
         security: None,
+        job_options: None,
     }).unwrap();
 
     let zen_bitmaps = zen_ctx.borrow_bitmaps().unwrap();

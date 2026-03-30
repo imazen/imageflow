@@ -220,7 +220,7 @@ pub fn build_framewise(
         IoTestTranslator {}.add(context, ix as i32, val)?;
     }
     let build =
-        s::Execute001 { security, graph_recording: default_graph_recording(debug), framewise };
+        s::Execute001 { security, graph_recording: default_graph_recording(debug), framewise, job_options: None };
     if debug {
         println!("{}", serde_json::to_string_pretty(&build).unwrap());
     }
@@ -329,6 +329,7 @@ fn try_decode_image(c: &mut Context, io_id: i32) -> Option<BitmapKey> {
             s::Node::Decode { io_id, commands: None },
             s::Node::CaptureBitmapKey { capture_id },
         ]),
+        job_options: None,
     });
 
     result.ok()?;

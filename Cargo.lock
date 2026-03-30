@@ -2408,12 +2408,12 @@ dependencies = [
 
 [[package]]
 name = "rav1d-safe"
-version = "0.3.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "075b421380b820e3a73e28fb43c30be88880d3641ee2b85c9f63a64e9a03d62b"
+checksum = "55e2f680d62b6f75f65b90bd6dac63665f8ea3b079c25a73fd07efc0547b22a9"
 dependencies = [
  "aligned",
- "archmage 0.8.9",
+ "archmage 0.9.15",
  "assert_matches",
  "atomig",
  "bitflags",
@@ -2865,18 +2865,18 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
-version = "0.27.2"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
+checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
 dependencies = [
  "strum_macros",
 ]
 
 [[package]]
 name = "strum_macros"
-version = "0.27.2"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
+checksum = "ab85eea0270ee17587ed4156089e10b9e6880ee688791d45a905f5b1ca36f664"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -3107,9 +3107,12 @@ checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 name = "ultrahdr-core"
 version = "0.3.0"
 dependencies = [
+ "archmage 0.9.15",
  "bytemuck",
  "enough",
  "half",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "magetypes",
  "thiserror",
  "wide",
 ]
@@ -3727,7 +3730,7 @@ dependencies = [
 
 [[package]]
 name = "zenavif"
-version = "0.1.3"
+version = "0.1.0"
 dependencies = [
  "almost-enough",
  "archmage 0.9.15",
@@ -3766,7 +3769,7 @@ dependencies = [
 
 [[package]]
 name = "zenbitmaps"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "enough",
  "imgref",
@@ -3778,17 +3781,16 @@ dependencies = [
 
 [[package]]
 name = "zenblend"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "archmage 0.9.15",
  "magetypes",
  "safe_unaligned_simd",
- "wide",
 ]
 
 [[package]]
 name = "zencodec"
-version = "0.1.9"
+version = "0.1.11"
 dependencies = [
  "almost-enough",
  "enough",
@@ -3808,6 +3810,7 @@ dependencies = [
  "moxcms 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb",
  "thiserror",
+ "ultrahdr-core",
  "whereat",
  "zenavif",
  "zenbitmaps",
@@ -3865,7 +3868,7 @@ dependencies = [
 
 [[package]]
 name = "zenjpeg"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "aligned-vec",
  "archmage 0.9.15",
@@ -3903,7 +3906,7 @@ dependencies = [
 
 [[package]]
 name = "zenjxl-decoder"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "aligned-vec",
  "array-init",
@@ -3922,7 +3925,7 @@ dependencies = [
 
 [[package]]
 name = "zenjxl-decoder-macros"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "proc-macro-error2",
  "proc-macro2",
@@ -3932,7 +3935,7 @@ dependencies = [
 
 [[package]]
 name = "zenjxl-decoder-simd"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "archmage 0.9.15",
  "paste",
@@ -4069,7 +4072,7 @@ dependencies = [
 
 [[package]]
 name = "zensim"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "archmage 0.9.15",
  "bytemuck",

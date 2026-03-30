@@ -157,6 +157,7 @@ fn create_canvas_job(w: usize, h: usize) -> s::Build001 {
             format: s::PixelFormat::Bgra32,
             color: s::Color::Srgb(s::ColorSrgb::Hex("ffffff".to_owned())),
         }]),
+        job_options: None,
     }
 }
 
@@ -363,6 +364,7 @@ fn test_gif_palette_bounds() {
                 s::Node::Decode { io_id: 0, commands: None },
                 s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
             ]),
+            job_options: None,
         };
         let _ = ctx.build_1(job);
     }));

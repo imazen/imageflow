@@ -583,7 +583,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         let a = fluent::fluently().canvas_bgra32(10, 10, s::Color::Black);
         let b = a.branch().copy_rect_from(a.branch(), 0, 0, 5, 5, 0, 0);
         let recipe =
-            s::Build001 { builder_config: None, framewise: b.builder().to_framewise(), io: vec![] };
+            s::Build001 { builder_config: None, framewise: b.builder().to_framewise(), io: vec![], job_options: None };
         c.write_json("bad__canvas_and_input_equal.json", &recipe);
         c.exec("v1/build --json bad__canvas_and_input_equal.json").dump();
     }
@@ -601,7 +601,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
             nodes,
         };
         let recipe =
-            s::Build001 { builder_config: None, framewise: s::Framewise::Graph(g), io: vec![] };
+            s::Build001 { builder_config: None, framewise: s::Framewise::Graph(g), io: vec![], job_options: None };
         c.write_json("bad__cycle.json", &recipe);
         c.exec("v1/build --json bad__cycle.json").dump();
     }

@@ -27,6 +27,7 @@ fn decode_mozjpeg(jpeg_bytes: &[u8]) -> (Vec<u8>, u32, u32) {
                 io: imageflow_types::IoEnum::ByteArray(jpeg_bytes.to_vec()),
             }],
             framewise: imageflow_types::Framewise::Steps(steps),
+            job_options: None,
         })
         .unwrap();
 

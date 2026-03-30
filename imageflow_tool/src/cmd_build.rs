@@ -167,6 +167,7 @@ impl CmdBuild {
                         value: query,
                         watermarks: None,
                     }]),
+                    job_options: None,
                 };
                 Ok(build)
             } // JobSource::NamedDemo(name) => Err(CmdError::DemoNotFound(name)),
@@ -281,7 +282,6 @@ impl CmdBuild {
             s::FrameSizeLimit { w: i32::MAX as u32, h: i32::MAX as u32, megapixels: f32::MAX };
         if lowercase_args.contains(&"disabled".to_string()) {
             security = Some(s::ExecutionSecurity {
-                cms_mode: Default::default(),
                 max_decode_size: Some(unlimited_frame_size),
                 max_frame_size: Some(unlimited_frame_size),
                 max_encode_size: Some(unlimited_frame_size),
@@ -343,7 +343,6 @@ impl CmdBuild {
                 )));
             }
             security = Some(s::ExecutionSecurity {
-                cms_mode: Default::default(),
                 max_frame_size: Some(max_frame_size),
                 ..s::ExecutionSecurity::sane_defaults()
             });
@@ -436,6 +435,7 @@ impl CmdBuild {
                 io: transformed,
                 builder_config: b.builder_config,
                 framewise: b.framewise,
+                job_options: b.job_options,
             },
         ))
     }

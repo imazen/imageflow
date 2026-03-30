@@ -58,6 +58,7 @@ fn cms_cmyk_backend_divergence() {
                 },
             },
         ]),
+        job_options: None,
     };
 
     ctx.execute_1(execute).unwrap();
@@ -109,6 +110,7 @@ fn cms_dual_backend_regression() {
                     },
                 },
             ]),
+            job_options: None,
         };
 
         if let Err(e) = ctx.execute_1(execute) {
