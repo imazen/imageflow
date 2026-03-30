@@ -32,13 +32,15 @@ pub struct ZenBuildOutput {
 
 /// Execute a `v1/build` request through the zen pipeline.
 pub fn zen_build(
-    parsed: &s::Build001,
+    parsed: s::Build001,
     security: &s::ExecutionSecurity,
+    job_options: &s::JobOptions,
 ) -> std::result::Result<ZenBuildOutput, FlowError> {
-    let io_bytes = extract_input_bytes(&parsed.io)?;
+    let io_bytes = extract_input_bytes_owned(parsed.io)?;
 
     let result =
-        execute::execute_framewise(&parsed.framewise, &io_bytes, security).map_err(zen_to_flow)?;
+        execute::execute_framewise(&parsed.framewise, &io_bytes, security, job_options)
+            .map_err(zen_to_flow)?;
 
     Ok(build_output(result))
 }
@@ -51,8 +53,10 @@ pub fn zen_execute(
     framewise: &s::Framewise,
     io_bytes: &HashMap<i32, Vec<u8>>,
     security: &s::ExecutionSecurity,
+    job_options: &s::JobOptions,
 ) -> std::result::Result<ZenBuildOutput, FlowError> {
-    let result = execute::execute_framewise(framewise, io_bytes, security).map_err(zen_to_flow)?;
+    let result = execute::execute_framewise(framewise, io_bytes, security, job_options)
+        .map_err(zen_to_flow)?;
 
     Ok(build_output(result))
 }
@@ -113,35 +117,39 @@ fn build_output(result: execute::ExecuteResult) -> ZenBuildOutput {
     }
 }
 
-/// Extract input bytes from Build001 IoObject list.
+/// Extract input bytes from Build001 IoObject list, taking ownership.
 ///
-/// Only processes `In`-direction objects. Output placeholders are skipped.
-fn extract_input_bytes(
-    io_objects: &[s::IoObject],
+/// Moves `ByteArray` data instead of cloning. Only processes `In`-direction
+/// objects. Output placeholders are skipped.
+fn extract_input_bytes_owned(
+    io_objects: Vec<s::IoObject>,
 ) -> std::result::Result<HashMap<i32, Vec<u8>>, FlowError> {
     let mut map = HashMap::new();
     for obj in io_objects {
         if obj.direction == s::IoDirection::In {
-            map.insert(obj.io_id, io_to_bytes(&obj.io)?);
+            map.insert(obj.io_id, io_to_bytes_owned(obj.io)?);
         }
     }
     Ok(map)
 }
 
-/// Resolve an IoEnum to raw bytes.
-fn io_to_bytes(io: &s::IoEnum) -> std::result::Result<Vec<u8>, FlowError> {
+/// Resolve an IoEnum to raw bytes, taking ownership.
+///
+/// `ByteArray` is moved (zero-copy), other variants decode/read as needed.
+fn io_to_bytes_owned(io: s::IoEnum) -> std::result::Result<Vec<u8>, FlowError> {
     match io {
-        s::IoEnum::ByteArray(bytes) => Ok(bytes.clone()),
+        s::IoEnum::ByteArray(bytes) => Ok(bytes), // move, no clone
         s::IoEnum::Base64(b64) => {
             use base64::Engine;
             base64::engine::general_purpose::STANDARD
-                .decode(b64)
+                .decode(&b64)
                 .map_err(|e| nerror!(ErrorKind::InvalidArgument, "invalid base64: {}", e))
         }
         s::IoEnum::BytesHex(hex) => {
-            hex::decode(hex).map_err(|e| nerror!(ErrorKind::InvalidArgument, "invalid hex: {}", e))
+            hex::decode(&hex)
+                .map_err(|e| nerror!(ErrorKind::InvalidArgument, "invalid hex: {}", e))
         }
-        s::IoEnum::Filename(path) => std::fs::read(path)
+        s::IoEnum::Filename(path) => std::fs::read(&path)
             .map_err(|e| nerror!(ErrorKind::DecodingIoError, "read {}: {}", path, e)),
         s::IoEnum::OutputBuffer | s::IoEnum::OutputBase64 => {
             Err(nerror!(ErrorKind::InvalidArgument, "output IO has no input bytes"))
