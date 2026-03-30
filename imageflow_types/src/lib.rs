@@ -1154,8 +1154,6 @@ pub struct ExecutionSecurity {
     pub max_decode_size: Option<FrameSizeLimit>,
     pub max_frame_size: Option<FrameSizeLimit>,
     pub max_encode_size: Option<FrameSizeLimit>,
-    /// Color management mode. Defaults to Imageflow2Compat.
-    pub cms_mode: CmsMode,
 }
 
 impl ExecutionSecurity {
@@ -1164,7 +1162,6 @@ impl ExecutionSecurity {
             max_decode_size: Some(FrameSizeLimit { w: 12000, h: 12000, megapixels: 100f32 }),
             max_frame_size: Some(FrameSizeLimit { w: 10000, h: 10000, megapixels: 100f32 }),
             max_encode_size: None,
-            cms_mode: CmsMode::default(),
         }
     }
     pub fn unspecified() -> Self {
@@ -1172,9 +1169,21 @@ impl ExecutionSecurity {
             max_decode_size: None,
             max_frame_size: None,
             max_encode_size: None,
-            cms_mode: CmsMode::default(),
         }
     }
+}
+
+/// Per-job quality and behavior settings.
+///
+/// These affect output correctness, not security. Separated from
+/// `ExecutionSecurity` which handles DoS protection (size limits).
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct JobOptions {
+    /// Color management mode. Defaults to Imageflow2Compat.
+    #[serde(default)]
+    pub cms_mode: CmsMode,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
@@ -1434,7 +1443,7 @@ impl Framewise {
             .into_iter()
             .map(|(id, dir)| IoObject { direction: dir, io_id: id, io: IoEnum::Placeholder })
             .collect::<Vec<IoObject>>();
-        Build001 { builder_config: None, framewise: self, io: io_vec }
+        Build001 { builder_config: None, framewise: self, io: io_vec, job_options: None }
     }
 }
 
@@ -1480,6 +1489,8 @@ pub struct Build001Config {
     // pub process_all_gif_frames: Option<bool>,
     pub graph_recording: Option<Build001GraphRecording>,
     pub security: Option<ExecutionSecurity>,
+    #[serde(default)]
+    pub job_options: Option<JobOptions>,
 }
 
 /// Represents a complete build job, combining IO objects with a framewise operation graph.
@@ -1491,6 +1502,8 @@ pub struct Build001 {
     pub builder_config: Option<Build001Config>,
     pub io: Vec<IoObject>,
     pub framewise: Framewise,
+    #[serde(default)]
+    pub job_options: Option<JobOptions>,
 }
 
 impl Build001 {
@@ -1511,7 +1524,7 @@ impl Build001 {
         if !new_io_vec.as_slice().iter().any(|obj| obj.io_id == io_id) {
             panic!("No existing IoObject with io_id {} found to replace!", io_id);
         }
-        Build001 { builder_config: self.builder_config, io: new_io_vec, framewise: self.framewise }
+        Build001 { builder_config: self.builder_config, io: new_io_vec, framewise: self.framewise, job_options: self.job_options }
     }
 }
 
@@ -1556,6 +1569,7 @@ impl Build001 {
                 IoObject { io: IoEnum::OutputBase64, io_id: 3, direction: IoDirection::Out },
             ],
             framewise: Framewise::example_graph(),
+            job_options: None,
         }
     }
 }
@@ -1566,6 +1580,8 @@ pub struct Execute001 {
     pub graph_recording: Option<Build001GraphRecording>,
     pub security: Option<ExecutionSecurity>,
     pub framewise: Framewise,
+    #[serde(default)]
+    pub job_options: Option<JobOptions>,
 }
 
 impl Framewise {
@@ -1705,10 +1721,10 @@ impl Framewise {
 }
 impl Execute001 {
     pub fn example_steps() -> Execute001 {
-        Execute001 { graph_recording: None, security: None, framewise: Framewise::example_steps() }
+        Execute001 { graph_recording: None, security: None, framewise: Framewise::example_steps(), job_options: None }
     }
     pub fn example_graph() -> Execute001 {
-        Execute001 { graph_recording: None, security: None, framewise: Framewise::example_graph() }
+        Execute001 { graph_recording: None, security: None, framewise: Framewise::example_graph(), job_options: None }
     }
 }
 
