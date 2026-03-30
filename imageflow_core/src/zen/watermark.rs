@@ -228,6 +228,9 @@ fn make_red_dot_materialize() -> NodeOp {
 
 /// Create a `NodeOp::Materialize` that composites the watermark image onto
 /// the canvas at the computed position with opacity.
+///
+/// Uses `zenpipe::watermark::WatermarkLayout` for geometry (bounding box,
+/// sizing, gravity) and keeps the pixel compositing inline.
 fn make_watermark_materialize(overlay: WatermarkOverlayNode) -> NodeOp {
     NodeOp::Materialize {
         label: "watermark_overlay",
@@ -236,35 +239,16 @@ fn make_watermark_materialize(overlay: WatermarkOverlayNode) -> NodeOp {
                 let canvas_w = *w;
                 let canvas_h = *h;
 
-                // Check minimum canvas size.
-                if overlay.min_canvas_width.unwrap_or(0) > canvas_w
-                    || overlay.min_canvas_height.unwrap_or(0) > canvas_h
-                {
-                    return; // Canvas too small, skip watermark (matches v2 behavior).
-                }
-
-                // Compute bounding box on the canvas.
-                let bbox = get_bounding_box(canvas_w, canvas_h, overlay.fit_box.as_ref());
-                let (box_x1, box_y1, box_x2, box_y2) = match bbox {
-                    Some(b) => b,
-                    None => return, // Bounding box too small.
+                // Use WatermarkLayout for geometry resolution.
+                let layout = to_watermark_layout(&overlay, canvas_w, canvas_h);
+                let Some(placement) = layout.resolve(canvas_w, canvas_h) else {
+                    return; // Canvas too small or invalid box.
                 };
 
-                let box_w = (box_x2 - box_x1) as u32;
-                let box_h = (box_y2 - box_y1) as u32;
-
-                // Compute the target size for the watermark within the bounding box.
-                let (target_w, target_h) = compute_watermark_size(
-                    overlay.width,
-                    overlay.height,
-                    box_w,
-                    box_h,
-                    overlay.fit_mode.unwrap_or(WatermarkConstraintMode::Within),
-                );
-
-                if target_w == 0 || target_h == 0 {
-                    return;
-                }
+                let target_w = placement.width;
+                let target_h = placement.height;
+                let place_x = placement.x;
+                let place_y = placement.y;
 
                 // Resize the watermark to target dimensions.
                 let resized = resize_rgba8(
@@ -273,17 +257,6 @@ fn make_watermark_materialize(overlay: WatermarkOverlayNode) -> NodeOp {
                     overlay.height,
                     target_w,
                     target_h,
-                );
-
-                // Compute position within the bounding box using gravity.
-                let (place_x, place_y) = compute_gravity_position(
-                    box_x1,
-                    box_y1,
-                    box_x2,
-                    box_y2,
-                    target_w as i32,
-                    target_h as i32,
-                    overlay.gravity.as_ref(),
                 );
 
                 // Composite the watermark onto the canvas.
@@ -343,154 +316,49 @@ fn make_watermark_materialize(overlay: WatermarkOverlayNode) -> NodeOp {
     }
 }
 
-// ─── Bounding box computation ───
+// ─── V2 type → WatermarkLayout adapter ───
 
-/// Compute the bounding box for the watermark on the canvas.
-/// Returns `(x1, y1, x2, y2)` in canvas pixels, or `None` if the box is invalid.
-fn get_bounding_box(
-    w: u32,
-    h: u32,
-    fit_box: Option<&WatermarkConstraintBox>,
-) -> Option<(i32, i32, i32, i32)> {
-    match fit_box {
-        None => Some((0, 0, w as i32, h as i32)),
+/// Convert a WatermarkOverlayNode's constraints to a zenpipe WatermarkLayout.
+fn to_watermark_layout(
+    overlay: &WatermarkOverlayNode,
+    _canvas_w: u32,
+    _canvas_h: u32,
+) -> zenpipe::watermark::WatermarkLayout {
+    use zenpipe::watermark::{FitBox, FitMode, Gravity, WatermarkLayout};
+
+    let fit_box = match overlay.fit_box.as_ref() {
+        None => FitBox::FullCanvas,
         Some(WatermarkConstraintBox::ImageMargins { left, top, right, bottom })
         | Some(WatermarkConstraintBox::CanvasMargins { left, top, right, bottom }) => {
-            if left + right < w && top + bottom < h {
-                Some((
-                    *left as i32,
-                    *top as i32,
-                    w as i32 - *right as i32,
-                    h as i32 - *bottom as i32,
-                ))
-            } else {
-                None
-            }
+            FitBox::Margins { left: *left, top: *top, right: *right, bottom: *bottom }
         }
         Some(WatermarkConstraintBox::ImagePercentage { x1, y1, x2, y2 })
         | Some(WatermarkConstraintBox::CanvasPercentage { x1, y1, x2, y2 }) => {
-            fn to_pixels(percent: f32, canvas: u32) -> i32 {
-                let ratio = percent.min(100.0).max(0.0) / 100.0;
-                (ratio * canvas as f32).round() as i32
-            }
-            let px1 = to_pixels(*x1, w);
-            let py1 = to_pixels(*y1, h);
-            let px2 = to_pixels(*x2, w);
-            let py2 = to_pixels(*y2, h);
-            if px1 < px2 && py1 < py2 {
-                Some((px1, py1, px2, py2))
-            } else {
-                None
-            }
+            FitBox::Percentage { x1: *x1, y1: *y1, x2: *x2, y2: *y2 }
         }
-    }
-}
-
-/// Compute the gravity-based position within a bounding box.
-fn compute_gravity_position(
-    box_x1: i32,
-    box_y1: i32,
-    box_x2: i32,
-    box_y2: i32,
-    wm_w: i32,
-    wm_h: i32,
-    gravity: Option<&ConstraintGravity>,
-) -> (i32, i32) {
-    let (gx, gy) = match gravity {
-        Some(ConstraintGravity::Center) | None => (50.0f32, 50.0f32),
-        Some(ConstraintGravity::Percentage { x, y }) => (*x, *y),
     };
-    let box_w = box_x2 - box_x1;
-    let box_h = box_y2 - box_y1;
-    let x = if box_w > wm_w {
-        box_x1 + ((box_w - wm_w) as f32 * gx.min(100.0).max(0.0) / 100.0).round() as i32
-    } else {
-        box_x1
+
+    let fit_mode = match overlay.fit_mode {
+        None | Some(WatermarkConstraintMode::Within) => FitMode::Within,
+        Some(WatermarkConstraintMode::Distort) => FitMode::Distort,
+        Some(WatermarkConstraintMode::Fit) => FitMode::Fit,
+        Some(WatermarkConstraintMode::FitCrop) => FitMode::FitCrop,
+        Some(WatermarkConstraintMode::WithinCrop) => FitMode::WithinCrop,
     };
-    let y = if box_h > wm_h {
-        box_y1 + ((box_h - wm_h) as f32 * gy.min(100.0).max(0.0) / 100.0).round() as i32
-    } else {
-        box_y1
+
+    let gravity = match overlay.gravity.as_ref() {
+        None | Some(ConstraintGravity::Center) => Gravity::Center,
+        Some(ConstraintGravity::Percentage { x, y }) => Gravity::Percentage(*x, *y),
     };
-    (x, y)
-}
 
-/// Compute target watermark size within a bounding box using the constraint mode.
-fn compute_watermark_size(
-    wm_w: u32,
-    wm_h: u32,
-    box_w: u32,
-    box_h: u32,
-    mode: WatermarkConstraintMode,
-) -> (u32, u32) {
-    if wm_w == 0 || wm_h == 0 || box_w == 0 || box_h == 0 {
-        return (0, 0);
-    }
-
-    let wm_aspect = wm_w as f64 / wm_h as f64;
-    let box_aspect = box_w as f64 / box_h as f64;
-
-    match mode {
-        WatermarkConstraintMode::Distort => (box_w, box_h),
-
-        WatermarkConstraintMode::Fit => {
-            // Scale to fit within box, upscaling if needed.
-            if wm_aspect > box_aspect {
-                // Width-constrained.
-                let h = (box_w as f64 / wm_aspect).round() as u32;
-                (box_w, h.max(1))
-            } else {
-                // Height-constrained.
-                let w = (box_h as f64 * wm_aspect).round() as u32;
-                (w.max(1), box_h)
-            }
-        }
-
-        WatermarkConstraintMode::Within => {
-            // Scale to fit within box, no upscaling.
-            if wm_w <= box_w && wm_h <= box_h {
-                // Already fits, no scaling.
-                (wm_w, wm_h)
-            } else {
-                // Need to downscale.
-                if wm_aspect > box_aspect {
-                    let h = (box_w as f64 / wm_aspect).round() as u32;
-                    (box_w, h.max(1))
-                } else {
-                    let w = (box_h as f64 * wm_aspect).round() as u32;
-                    (w.max(1), box_h)
-                }
-            }
-        }
-
-        WatermarkConstraintMode::FitCrop => {
-            // Scale to fill box (may overshoot one dimension), then crop.
-            // "Fill" means the smaller ratio determines scale.
-            if wm_aspect > box_aspect {
-                // Height-constrained fill.
-                let w = (box_h as f64 * wm_aspect).round() as u32;
-                (w.min(box_w).max(1), box_h)
-            } else {
-                // Width-constrained fill.
-                let h = (box_w as f64 / wm_aspect).round() as u32;
-                (box_w, h.min(box_h).max(1))
-            }
-        }
-
-        WatermarkConstraintMode::WithinCrop => {
-            // Like FitCrop but no upscaling.
-            if wm_w <= box_w && wm_h <= box_h {
-                (wm_w, wm_h)
-            } else {
-                if wm_aspect > box_aspect {
-                    let w = (box_h as f64 * wm_aspect).round() as u32;
-                    (w.min(box_w).max(1), box_h.min(wm_h))
-                } else {
-                    let h = (box_w as f64 / wm_aspect).round() as u32;
-                    (box_w.min(wm_w), h.min(box_h).max(1))
-                }
-            }
-        }
+    WatermarkLayout {
+        wm_width: overlay.width,
+        wm_height: overlay.height,
+        fit_box,
+        fit_mode,
+        gravity,
+        min_canvas_width: overlay.min_canvas_width,
+        min_canvas_height: overlay.min_canvas_height,
     }
 }
 
