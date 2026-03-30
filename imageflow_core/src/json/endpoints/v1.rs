@@ -130,6 +130,19 @@ pub fn try_invoke_static(method: &str, json: &[u8]) -> Result<Option<JsonRespons
             Ok(Some(JsonResponse::ok(output)))
         }
 
+        // ── Codec info endpoints (available codecs, format detection) ──
+        #[cfg(feature = "zen-pipeline")]
+        "v1/codecs/list" | "v3/codecs/list" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_codecs_list()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+        #[cfg(feature = "zen-pipeline")]
+        "v1/codecs/detect" | "v3/codecs/detect" => {
+            let output = detect_format(json)?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+
         "v1/brew_coffee" => Ok(Some(JsonResponse::teapot())),
         _ => Ok(None),
     }
@@ -756,11 +769,13 @@ fn test_handler() {
         builder_config: Some(Build001Config {
             graph_recording: None,
             security: None,
+            job_options: None,
             //            process_all_gif_frames: Some(false),
             //            enable_jpeg_block_scaling: Some(false)
         }),
         io: vec![input_io, output_io],
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     // This test is outdated as build_1 is deprecated in favor of handle_build/build_1_raw
     // let response = Context::create().unwrap().build_1(build);
@@ -812,6 +827,10 @@ pub(super) fn list_schema_endpoints() -> Result<ListSchemaEndpointsResponse> {
         endpoints.push("/v3/schema/openapi".to_string());
         endpoints.push("/v3/schema/querystring".to_string());
         endpoints.push("/v3/schema/querystring/keys".to_string());
+        endpoints.push("/v1/codecs/list".to_string());
+        endpoints.push("/v3/codecs/list".to_string());
+        endpoints.push("/v1/codecs/detect".to_string());
+        endpoints.push("/v3/codecs/detect".to_string());
     }
     endpoints.sort();
     Ok(ListSchemaEndpointsResponse { endpoints })
@@ -866,14 +885,18 @@ fn zen_build(context: &mut Context, parsed: Build001) -> Result<BuildV1Response>
             context.configure_security(s.clone());
         }
     }
+    let job_options = parsed.job_options.clone()
+        .or_else(|| parsed.builder_config.as_ref().and_then(|c| c.job_options.clone()))
+        .unwrap_or_default();
 
-    let output = crate::zen::zen_build(&parsed, &context.security).map_err(|e| e.at(here!()))?;
+    let output = crate::zen::zen_build(parsed, &context.security, &job_options)
+        .map_err(|e| e.at(here!()))?;
 
     // Store encoded output in Context so take_output_buffer() works for C ABI.
-    for (io_id, bytes) in &output.output_buffers {
-        context.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
-        let mut codec = context.get_codec(*io_id).map_err(|e| e.at(here!()))?;
-        codec.write_output_bytes(bytes).map_err(|e| e.at(here!()))?;
+    for (io_id, bytes) in output.output_buffers {
+        context.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
+        let mut codec = context.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        codec.write_output_bytes(&bytes).map_err(|e| e.at(here!()))?;
     }
 
     Ok(BuildV1Response { job_result: output.job_result })
@@ -912,4 +935,37 @@ fn get_v3_querystring_schema() -> Result<serde_json::Value> {
 #[cfg(feature = "zen-pipeline")]
 fn get_v3_querystring_keys() -> Result<serde_json::Value> {
     Ok(zenpipe::schema_export::export_querystring_keys())
+}
+
+/// List all available codecs with capabilities (formats, extensions, MIME types).
+#[cfg(feature = "zen-pipeline")]
+fn get_codecs_list() -> Result<serde_json::Value> {
+    let registry = zencodecs::AllowedFormats::all();
+    Ok(zenpipe::codec_info::list_codecs_json(&registry))
+}
+
+/// Detect image format from raw bytes (peek buffer).
+/// The input JSON is the raw bytes to detect (passed as the JSON body).
+/// For binary peek buffers, base64-encode them or use the byte array directly.
+#[cfg(feature = "zen-pipeline")]
+fn detect_format(json: &[u8]) -> Result<serde_json::Value> {
+    // Try to parse as a JSON object with a "bytes" field (base64 or byte array).
+    if let Ok(obj) = serde_json::from_slice::<serde_json::Value>(json) {
+        if let Some(bytes_b64) = obj.get("bytes").and_then(|v| v.as_str()) {
+            use base64::Engine;
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(bytes_b64)
+                .map_err(|e| nerror!(ErrorKind::InvalidArgument, "invalid base64: {}", e))?;
+            return Ok(zenpipe::codec_info::detect_format_json(&bytes));
+        }
+        if let Some(bytes_arr) = obj.get("bytes").and_then(|v| v.as_array()) {
+            let bytes: Vec<u8> = bytes_arr
+                .iter()
+                .filter_map(|v| v.as_u64().map(|n| n as u8))
+                .collect();
+            return Ok(zenpipe::codec_info::detect_format_json(&bytes));
+        }
+    }
+    // Fallback: treat the raw JSON as the peek bytes (for non-JSON callers).
+    Ok(zenpipe::codec_info::detect_format_json(json))
 }
