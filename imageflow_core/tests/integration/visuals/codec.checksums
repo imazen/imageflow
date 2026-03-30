@@ -8,6 +8,7 @@ tolerance off-by-one
 tolerance off-by-one
 = prone-owl-3a3d75df9b:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs prone-owl-3a3d75df9b:sea (zensim:99.55 (dissim 0.0045))
+~ oval-reed-eb6c80126d:sea  x86_64-avx512  @d6c70364  auto-accepted within tolerance (within off-by-one) vs prone-owl-3a3d75df9b:sea (zensim:98.44 (dissim 0.016), 11.9% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_rot_90_and_red_dot_command_string landscape_70x70
 tolerance off-by-one
@@ -56,6 +57,7 @@ tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delt
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 = moot-song-b4af647101:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ next-flock-5c9d9d9c01:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs moot-song-b4af647101:sea (zensim:98.21 (dissim 0.018), 15.9% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ eager-prism-842c734e3a:sea  x86_64-avx512  @d6c70364  auto-accepted within tolerance (within max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%) vs moot-song-b4af647101:sea (zensim:99.68 (dissim 0.0032))
 
 ## test_jpeg_crop waterhouse_100x200
 tolerance off-by-one
@@ -71,6 +73,7 @@ tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delt
 tolerance max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%
 = mild-pond-a88cf0d96f:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ calm-cone-ea17eca115:sea  x86_64-avx512  @c306a698  auto-accepted within tolerance (within max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%) vs mild-pond-a88cf0d96f:sea (zensim:98.87 (dissim 0.011), 3.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ nice-ray-fc7d586ff8:sea  x86_64-avx512  @d6c70364  auto-accepted within tolerance (within max-delta:4 zensim:85 (dissim 0.15) pixels-changed:100.0%) vs mild-pond-a88cf0d96f:sea (zensim:98.22 (dissim 0.018), 10.9% pixels ±2, max-delta:[2,1,1], category:rounding, biased)
 
 ## test_transparent_png_to_png shirt
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
@@ -104,6 +107,7 @@ tolerance off-by-one
 tolerance off-by-one
 = bone-drum-452a7c1706:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ shy-wolf-abbe8d5a11:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs bone-drum-452a7c1706:sea (zensim:99.55 (dissim 0.0045))
+~ short-bone-b3d993deab:sea  x86_64-avx512  @d6c70364  auto-accepted within tolerance (within off-by-one) vs bone-drum-452a7c1706:sea (zensim:98.44 (dissim 0.016), 12.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_branching_crop_whitespace gradient_output_1_zen
 tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
