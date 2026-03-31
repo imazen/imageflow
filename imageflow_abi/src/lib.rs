@@ -316,7 +316,11 @@ macro_rules! context {
             eprintln!("{:?}", bt);
             ::std::process::abort();
         }
-        (unsafe { &mut *$ptr })
+        {
+            #[allow(unused_unsafe)]
+            let r = unsafe { &mut *$ptr };
+            r
+        }
     }};
 }
 
