@@ -3985,6 +3985,7 @@ dependencies = [
  "zencodecs",
  "zenfilters",
  "zengif",
+ "zenlayout",
  "zennode",
  "zenpixels",
  "zenpixels-convert",
