@@ -44,12 +44,12 @@ imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 multiversion = "0.8"
-archmage = { version = "0.9.1", features = ["macros"] }
+archmage = { version = "0.9.15", features = ["macros"] }
 safe_unaligned_simd = "0.2"
 
 evalchroma = "1"
 enough = { version = "0.4", features = ["std"] }
-garb = "0.1"
+garb = "0.2.5"
 moxcms = { version = "0.8.1", features = ["in_place", "options"] }
 
 # Used for schema generation if feature enabled
