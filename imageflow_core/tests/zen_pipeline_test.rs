@@ -287,7 +287,7 @@ fn zen_watermark_red_on_green() {
     let security = s::ExecutionSecurity::sane_defaults();
 
     let result =
-        imageflow_core::zen::execute_framewise(&framewise, &io_buffers, &security).unwrap();
+        imageflow_core::zen::execute_framewise(&framewise, &io_buffers, &security, &s::JobOptions::default()).unwrap();
     assert_eq!(result.encode_results.len(), 1);
 
     let output = &result.encode_results[0];
@@ -398,6 +398,7 @@ fn zen_watermark_red_alpha_on_blue() {
         &s::Framewise::Steps(steps.clone()),
         &zen_io,
         &s::ExecutionSecurity::sane_defaults(),
+        &s::JobOptions::default(),
     )
     .unwrap();
 
@@ -550,6 +551,7 @@ fn zen_watermark_fullframe_resized() {
         &s::Framewise::Steps(steps.clone()),
         &zen_io,
         &s::ExecutionSecurity::sane_defaults(),
+        &s::JobOptions::default(),
     )
     .unwrap();
     let zen_bytes = &zen_result.encode_results[0].bytes;

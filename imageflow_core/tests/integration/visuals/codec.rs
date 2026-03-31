@@ -144,7 +144,8 @@ fn test_branching_crop_whitespace() {
         ];
 
         let mut context = imageflow_core::Context::create().unwrap();
-        context.force_backend = Some(*backend);
+        #[cfg(feature = "zen-pipeline")]
+        { context.force_backend = Some(*backend); }
         let _ = build_framewise(&mut context, framewise.clone(), io_vec, None, false)
             .unwrap_or_else(|e| panic!("[{suffix}] pipeline failed: {e}"));
 

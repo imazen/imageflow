@@ -1,8 +1,6 @@
 ## test_jpeg_icc2_color_profile mars_robidoux_400x300
 tolerance off-by-one
 ~ edgy-bud-3c5ab5c483:sea  x86_64-avx512  @206f6467  auto-accepted
-
-tolerance off-by-one
 ~ level-bird-3dae9245da:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_read_gif_and_vertical_distort mountain_box_800x100
@@ -12,8 +10,6 @@ tolerance off-by-one
 ## test_read_gif_and_scale mountain_robidoux_400x300
 tolerance off-by-one
 ~ north-rust-f9b8c7992d:sea  x86_64-avx512  @206f6467  auto-accepted
-
-tolerance off-by-one
 ~ calm-fish-0c49580c34:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_jpeg_icc4_color_profile mars_v4_robidoux_400x300
@@ -27,36 +23,26 @@ tolerance off-by-one
 ## webp_lossless_alpha_decode_and_scale 100x100
 tolerance off-by-one
 ~ clean-ore-a59f8abf2c:sea  x86_64-avx512  @206f6467  auto-accepted
-
-tolerance off-by-one
 ~ sunny-yew-e6b27a1f2e:sea  x86_64-avx512  @206f6467  auto-accepted
-
-tolerance off-by-one
 ~ fiery-park-e273475d37:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## webp_lossy_noalpha_decode_and_scale mountain_100x100
 tolerance off-by-one
 ~ open-shell-b210964ea9:sea  x86_64-avx512  @206f6467  auto-accepted
-
-tolerance max-delta:2 zensim:80 (dissim 0.20) pixels-changed:100.0%
 ~ plain-forge-2bbaf351fa:sea  x86_64-avx512  @206f6467  auto-accepted
-
-tolerance off-by-one
 ~ raw-bee-636bc67e4d:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## webp_lossy_alpha_decode_and_scale 100x100
 tolerance off-by-one
 ~ both-path-4b02288edb:sea  x86_64-avx512  @206f6467  auto-accepted
-
-tolerance off-by-one
 ~ giant-trout-418f5be2ec:sea  x86_64-avx512  @206f6467  auto-accepted
-
-tolerance off-by-one
 ~ local-lion-fc86769d32:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_scale_image waterhouse_robidoux_400x300
 tolerance max-delta:2 zensim:95 (dissim 0.05) pixels-changed:100.0%
 ~ only-tiger-a4839401fa:sea  x86_64-avx512  @206f6467  auto-accepted
-
-tolerance max-delta:2 zensim:95 (dissim 0.05) pixels-changed:100.0%
 ~ deep-forge-399fc849cc:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_read_gif_eof buggy_animated-gif
+tolerance off-by-one
+~ dusk-pearl-3b49135249:sea  x86_64-avx512  @94440d53  auto-accepted

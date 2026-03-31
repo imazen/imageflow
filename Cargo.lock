@@ -434,7 +434,7 @@ dependencies = [
  "serde_json",
  "syn",
  "tempfile",
- "toml",
+ "toml 0.9.12+spec-1.1.0",
 ]
 
 [[package]]
@@ -786,6 +786,17 @@ checksum = "521236efef7dcf4a95af2976e34b5b10780e8747eb78fa4742aa65b2ee189222"
 name = "enum_derive"
 version = "0.1.7"
 source = "git+https://github.com/DanielKeep/rust-custom-derive.git#1252f258cdb9b7c9867f937c52c2f5c0e69a9c03"
+
+[[package]]
+name = "enumn"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f9ed6b3789237c8a0c1c505af1c7eb2c560df6186f01b098c3a1064ea532f38"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "equator"
@@ -1646,6 +1657,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "jxl-encoder"
+version = "0.1.4"
+dependencies = [
+ "archmage",
+ "bytemuck",
+ "enough",
+ "hashbrown 0.16.1",
+ "imgref",
+ "jxl-encoder-simd",
+ "once_cell",
+ "rgb",
+ "thiserror",
+ "whereat",
+]
+
+[[package]]
+name = "jxl-encoder-simd"
+version = "0.1.4"
+dependencies = [
+ "archmage",
+ "magetypes",
+]
+
+[[package]]
+name = "kamadak-exif"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1130d80c7374efad55a117d715a3af9368f0fa7a2c54573afc15a188cd984837"
+dependencies = [
+ "mutate_once",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1933,6 +1977,12 @@ dependencies = [
  "syn",
  "target-features",
 ]
+
+[[package]]
+name = "mutate_once"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13d2233c9842d08cfe13f9eac96e207ca6a2ea10b80259ebe8ad0268be27d2af"
 
 [[package]]
 name = "nasm-rs"
@@ -2281,6 +2331,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "quantizr"
+version = "1.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b28ab4659f6754222a9e96c7a48f68dba03a620f23803c67ccd4ca7c35d55f5f"
+
+[[package]]
 name = "quick-error"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2352,6 +2408,15 @@ name = "rand_core"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c8d0fd677905edcbeedbf2edb6494d676f0e98d54d5cf9bda0b061cb8fb8aba"
+
+[[package]]
+name = "rapid-qoi"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "965d4fa3abc71547be1527fa00e08c1114f972d3d2b9209563b420d301a257ac"
+dependencies = [
+ "bytemuck",
+]
 
 [[package]]
 name = "rav1d-disjoint-mut"
@@ -2445,6 +2510,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "498cd0dc59d73224351ee52a95fee0f1a617a2eae0e7d9d720cc622c73a54186"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "rawloader"
+version = "0.37.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d8c6f168c492ffd326537b3aa5a8d5fe07f0d8a3970c5957f286bcd13f888aa"
+dependencies = [
+ "byteorder",
+ "enumn",
+ "glob",
+ "lazy_static",
+ "rayon",
+ "rustc_version",
+ "toml 0.5.11",
 ]
 
 [[package]]
@@ -2559,6 +2639,15 @@ name = "rustc-demangle"
 version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b50b8869d9fc858ce7266cce0194bd74df58b9d0e3f6df3a9fc8eb470d95c09d"
+
+[[package]]
+name = "rustc_version"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
+dependencies = [
+ "semver",
+]
 
 [[package]]
 name = "rustix"
@@ -3000,6 +3089,15 @@ name = "to_method"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7c4ceeeca15c8384bbc3e011dbd8fccb7f068a440b752b7d9b32ceb0ca0e2e8"
+
+[[package]]
+name = "toml"
+version = "0.5.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "toml"
@@ -3704,10 +3802,24 @@ dependencies = [
  "thiserror",
  "whereat",
  "yuv",
- "zenavif-parse",
+ "zenavif-parse 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "zencodec",
  "zenpixels",
  "zenpixels-convert",
+ "zenravif",
+]
+
+[[package]]
+name = "zenavif-parse"
+version = "0.5.1"
+dependencies = [
+ "arrayvec 0.7.6",
+ "bitreader",
+ "byteorder",
+ "enough",
+ "fallible_collections",
+ "leb128",
+ "log",
 ]
 
 [[package]]
@@ -3726,11 +3838,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "zenavif-serialize"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bd8754ecfde1d4fe4100fb3a33540747e88f249f6eba090363dc06e2f889d76"
+dependencies = [
+ "arrayvec 0.7.6",
+]
+
+[[package]]
 name = "zenbitmaps"
 version = "0.1.2"
 dependencies = [
  "enough",
  "imgref",
+ "rapid-qoi",
  "rgb",
  "thiserror",
  "zencodec",
@@ -3771,6 +3893,7 @@ dependencies = [
  "ultrahdr-core",
  "whereat",
  "zenavif",
+ "zenavif-parse 0.5.1",
  "zenbitmaps",
  "zencodec",
  "zengif",
@@ -3780,6 +3903,8 @@ dependencies = [
  "zenpixels",
  "zenpixels-convert",
  "zenpng",
+ "zenraw",
+ "zentiff",
  "zenwebp",
 ]
 
@@ -3816,12 +3941,13 @@ dependencies = [
  "enough",
  "gif",
  "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quantizr",
  "rgb",
  "thiserror",
  "whereat",
  "zencodec",
  "zenpixels",
- "zenquant",
+ "zenquant 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3854,6 +3980,7 @@ version = "0.1.0"
 dependencies = [
  "enough",
  "imgref",
+ "jxl-encoder",
  "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb",
  "thiserror",
@@ -3909,7 +4036,7 @@ dependencies = [
 
 [[package]]
 name = "zennode"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -3918,7 +4045,7 @@ dependencies = [
 
 [[package]]
 name = "zennode-derive"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3938,18 +4065,23 @@ dependencies = [
  "moxcms",
  "serde_json",
  "whereat",
+ "zenavif",
+ "zenbitmaps",
  "zenblend",
  "zencodec",
  "zencodecs",
  "zenfilters",
  "zengif",
  "zenjpeg",
+ "zenjxl",
  "zenlayout",
  "zennode",
  "zenpixels",
  "zenpixels-convert",
  "zenpng",
+ "zenquant 0.1.2",
  "zenresize",
+ "zentiff",
  "zenwebp",
 ]
 
@@ -3979,7 +4111,7 @@ dependencies = [
 
 [[package]]
 name = "zenpng"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "almost-enough",
  "archmage",
@@ -3996,7 +4128,20 @@ dependencies = [
  "zenflate",
  "zenpixels",
  "zenpixels-convert",
- "zenquant",
+ "zenquant 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "zenquant"
+version = "0.1.2"
+dependencies = [
+ "archmage",
+ "imgref",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "magetypes",
+ "num-traits",
+ "rgb",
+ "thiserror",
 ]
 
 [[package]]
@@ -4012,6 +4157,73 @@ dependencies = [
  "num-traits",
  "rgb",
  "thiserror",
+]
+
+[[package]]
+name = "zenrav1e"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb9e4cb8deb0ebd49083d27d50a0078e4019b6f29f4e882b5b2f38b9bfe8c328"
+dependencies = [
+ "aligned-vec",
+ "arbitrary",
+ "arg_enum_proc_macro",
+ "arrayvec 0.7.6",
+ "av-scenechange",
+ "av1-grain",
+ "bitstream-io",
+ "built",
+ "cfg-if",
+ "enough",
+ "interpolate_name",
+ "itertools 0.14.0",
+ "libc",
+ "libfuzzer-sys",
+ "log",
+ "maybe-rayon",
+ "new_debug_unreachable",
+ "noop_proc_macro",
+ "num-derive",
+ "num-traits",
+ "pastey",
+ "profiling",
+ "rand 0.9.2",
+ "rand_chacha",
+ "simd_helpers",
+ "thiserror",
+ "v_frame",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "zenravif"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95695202c3a6790c6811f6b5c3f0e0a3ea85dccb0ac1f4d6a24828c6e4bc08d8"
+dependencies = [
+ "almost-enough",
+ "imgref",
+ "loop9",
+ "quick-error",
+ "rgb",
+ "zenavif-serialize",
+ "zenrav1e",
+]
+
+[[package]]
+name = "zenraw"
+version = "0.1.0"
+dependencies = [
+ "archmage",
+ "bytemuck",
+ "enough",
+ "kamadak-exif",
+ "magetypes",
+ "rawloader",
+ "thiserror",
+ "whereat",
+ "zencodec",
+ "zenpixels",
 ]
 
 [[package]]
@@ -4058,8 +4270,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "zentiff"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "enough",
+ "thiserror",
+ "tiff",
+ "whereat",
+ "zencodec",
+ "zenpixels",
+]
+
+[[package]]
 name = "zenwebp"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "archmage",
  "bytemuck",
