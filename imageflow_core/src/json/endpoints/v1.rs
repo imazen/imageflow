@@ -894,9 +894,7 @@ fn zen_build(context: &mut Context, parsed: Build001) -> Result<BuildV1Response>
 
     // Store encoded output in Context so take_output_buffer() works for C ABI.
     for (io_id, bytes) in output.output_buffers {
-        context.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
-        let mut codec = context.get_codec(io_id).map_err(|e| e.at(here!()))?;
-        codec.write_output_bytes(&bytes).map_err(|e| e.at(here!()))?;
+        context.add_output_buffer_from_vec(io_id, bytes).map_err(|e| e.at(here!()))?;
     }
 
     Ok(BuildV1Response { job_result: output.job_result })

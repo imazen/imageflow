@@ -423,29 +423,4 @@ impl CodecInstanceContainer {
             )),
         }
     }
-
-    /// Write encoded bytes to the output buffer (for zen pipeline).
-    ///
-    /// Replaces the output IoProxy with one backed by the given bytes.
-    /// The buffer then works with `take_output_buffer()` and
-    /// `output_buffer_raw_parts()` as if an encoder had written it.
-    /// Write encoded bytes into the output buffer (for zen pipeline).
-    ///
-    /// The buffer must be in `Ready` state (freshly created via `add_output_buffer`).
-    /// After writing, `take_output_buffer()` and `output_buffer_raw_parts()` work
-    /// as if an encoder had written the bytes.
-    pub fn write_output_bytes(&mut self, bytes: &[u8]) -> Result<()> {
-        match &mut self.output_state {
-            OutputBufferState::Ready(ref mut io) => {
-                use std::io::Write;
-                io.write_all(bytes).map_err(|e| nerror!(ErrorKind::EncodingIoError, "{}", e))?;
-                Ok(())
-            }
-            _ => Err(nerror!(
-                ErrorKind::InvalidState,
-                "io_id {} output buffer not in Ready state for write_output_bytes",
-                self.io_id
-            )),
-        }
-    }
 }

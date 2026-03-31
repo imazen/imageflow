@@ -201,6 +201,12 @@ impl IoProxy {
         Ok(IoProxy { path: None, io_id, backend: IoBackend::WriteVec(Cursor::new(Vec::new())) })
     }
 
+    /// Wrap an already-encoded `Vec<u8>` as an output buffer — zero copy.
+    pub fn from_output_vec(context: &Context, io_id: i32, bytes: Vec<u8>) -> Result<IoProxy> {
+        IoProxy::check_io_id(context, io_id)?;
+        Ok(IoProxy { path: None, io_id, backend: IoBackend::WriteVec(Cursor::new(bytes)) })
+    }
+
     pub fn read_vec(context: &Context, io_id: i32, bytes: Vec<u8>) -> Result<IoProxy> {
         IoProxy::check_io_id(context, io_id)?;
 

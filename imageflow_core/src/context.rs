@@ -614,6 +614,11 @@ impl Context {
         self.add_io(io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
     }
 
+    pub fn add_output_buffer_from_vec(&mut self, io_id: i32, bytes: Vec<u8>) -> Result<()> {
+        let io = IoProxy::from_output_vec(self, io_id, bytes).map_err(|e| e.at(here!()))?;
+        self.add_io(io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
+    }
+
     fn swap_dimensions_by_exif(&mut self, io_id: i32, image_info: &mut ImageInfo) -> Result<()> {
         let exif_maybe = self
             .get_codec(io_id)
@@ -750,9 +755,7 @@ impl Context {
                 let output =
                     crate::zen::zen_build(parsed, &self.security, &job_options).map_err(|e| e.at(here!()))?;
                 for (io_id, bytes) in output.output_buffers {
-                    let _ = self.add_output_buffer(io_id);
-                    let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
-                    codec.write_output_bytes(&bytes).map_err(|e| e.at(here!()))?;
+                    self.add_output_buffer_from_vec(io_id, bytes).map_err(|e| e.at(here!()))?;
                 }
                 self.store_zen_captured_bitmaps(output.captured_bitmaps)?;
                 return Ok(output.job_result);
@@ -878,10 +881,7 @@ impl Context {
 
         // Store encoded outputs in Context's output buffer system.
         for (io_id, bytes) in output.output_buffers {
-            // Add output buffer only if not already present (test infra may pre-add it).
-            let _ = self.add_output_buffer(io_id);
-            let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
-            codec.write_output_bytes(&bytes).map_err(|e| e.at(here!()))?;
+            self.add_output_buffer_from_vec(io_id, bytes).map_err(|e| e.at(here!()))?;
         }
 
         // Store captured bitmaps as v2 BitmapKeys for test compatibility.
