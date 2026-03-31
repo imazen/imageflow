@@ -909,16 +909,21 @@ fn zen_build(context: &mut Context, parsed: Build001) -> Result<BuildV1Response>
 // containing JSON Schema 2020-12 with x-zennode-* extensions.
 
 /// All registered zen node schemas as JSON Schema 2020-12 with $defs.
+/// Cached — node schemas are static for the lifetime of the process.
 #[cfg(feature = "zen-pipeline")]
 fn get_v3_node_schemas() -> Result<serde_json::Value> {
-    Ok(zenpipe::schema_export::export_node_schemas())
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<serde_json::Value> = OnceLock::new();
+    Ok(CACHE.get_or_init(|| zenpipe::schema_export::export_node_schemas()).clone())
 }
 
 /// Zen node schemas formatted as OpenAPI 3.1+ components/schemas.
-/// Keys are normalized (dots → underscores) for OpenAPI compatibility.
+/// Cached — schemas are static for the lifetime of the process.
 #[cfg(feature = "zen-pipeline")]
 fn get_v3_openapi_schemas() -> Result<serde_json::Value> {
-    Ok(zenpipe::schema_export::export_openapi_schemas())
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<serde_json::Value> = OnceLock::new();
+    Ok(CACHE.get_or_init(|| zenpipe::schema_export::export_openapi_schemas()).clone())
 }
 
 /// JSON Schema for validating RIAPI querystrings against zen nodes.
@@ -926,22 +931,35 @@ fn get_v3_openapi_schemas() -> Result<serde_json::Value> {
 /// node parameter it maps to.
 #[cfg(feature = "zen-pipeline")]
 fn get_v3_querystring_schema() -> Result<serde_json::Value> {
-    Ok(zenpipe::schema_export::export_querystring_schema())
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<serde_json::Value> = OnceLock::new();
+    Ok(CACHE
+        .get_or_init(|| zenpipe::schema_export::export_querystring_schema())
+        .clone())
 }
 
 /// Structured querystring key registry grouped by node.
-/// Includes key names, aliases, parameter labels, descriptions,
-/// and value schemas. For documentation generation and SDK hints.
 #[cfg(feature = "zen-pipeline")]
 fn get_v3_querystring_keys() -> Result<serde_json::Value> {
-    Ok(zenpipe::schema_export::export_querystring_keys())
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<serde_json::Value> = OnceLock::new();
+    Ok(CACHE
+        .get_or_init(|| zenpipe::schema_export::export_querystring_keys())
+        .clone())
 }
 
-/// List all available codecs with capabilities (formats, extensions, MIME types).
+/// List all available codecs with capabilities.
+/// Cached — codec list is static for the lifetime of the process.
 #[cfg(feature = "zen-pipeline")]
 fn get_codecs_list() -> Result<serde_json::Value> {
-    let registry = zencodecs::AllowedFormats::all();
-    Ok(zenpipe::codec_info::list_codecs_json(&registry))
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<serde_json::Value> = OnceLock::new();
+    Ok(CACHE
+        .get_or_init(|| {
+            let registry = zencodecs::AllowedFormats::all();
+            zenpipe::codec_info::list_codecs_json(&registry)
+        })
+        .clone())
 }
 
 /// Detect image format from raw bytes (peek buffer).
