@@ -31,6 +31,25 @@ use crate::graphics::bitmaps::{Bitmap, BitmapKey, BitmapWindowMut, BitmapsContai
 use imageflow_types::ImageInfo;
 use itertools::Itertools;
 
+/// Input bytes for the zen pipeline — either an Arc-wrapped owned Vec or a static slice.
+/// Stored instead of `Vec<u8>` so the v2 non-zen path pays zero clone cost at registration time.
+/// The `Vec<u8>` zenpipe needs is built lazily in `zen_execute_inner`.
+#[cfg(feature = "zen-pipeline")]
+enum ZenInput {
+    Owned(Arc<Vec<u8>>),
+    Static(&'static [u8]),
+}
+
+#[cfg(feature = "zen-pipeline")]
+impl ZenInput {
+    fn to_vec(&self) -> Vec<u8> {
+        match self {
+            ZenInput::Owned(a) => (**a).clone(),
+            ZenInput::Static(s) => s.to_vec(),
+        }
+    }
+}
+
 /// Something of a god object (which is necessary for a reasonable FFI interface).
 /// 1025 bytes including 5 heap allocations as of Oct 2025. If on the stack, 312 bytes are taken up
 pub struct Context {
@@ -60,8 +79,9 @@ pub struct Context {
     /// Input bytes stashed for the zen pipeline (feature-gated).
     /// Populated by `add_copied_input_buffer`, `add_input_vector`, etc.
     /// The zen pipeline reads from here instead of the codec containers.
+    /// Uses Arc to avoid cloning on the v2 non-zen path — Vec is built lazily at execute time.
     #[cfg(feature = "zen-pipeline")]
-    zen_input_bytes: std::collections::HashMap<i32, Vec<u8>>,
+    zen_input_bytes: std::collections::HashMap<i32, ZenInput>,
 
     /// Force a specific backend for testing. None = zen when zen-pipeline is compiled in.
     #[cfg(feature = "zen-pipeline")]
@@ -578,17 +598,31 @@ impl Context {
 
     pub fn add_copied_input_buffer(&mut self, io_id: i32, bytes: &[u8]) -> Result<()> {
         #[cfg(feature = "zen-pipeline")]
-        self.zen_input_bytes.insert(io_id, bytes.to_vec());
-
-        let io = IoProxy::copy_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
-        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        {
+            let arc = Arc::new(bytes.to_vec());
+            self.zen_input_bytes.insert(io_id, ZenInput::Owned(arc.clone()));
+            let io = IoProxy::read_arc(self, io_id, arc).map_err(|e| e.at(here!()))?;
+            return self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()));
+        }
+        #[cfg(not(feature = "zen-pipeline"))]
+        {
+            let io = IoProxy::copy_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
+            self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        }
     }
     pub fn add_input_vector(&mut self, io_id: i32, bytes: Vec<u8>) -> Result<()> {
         #[cfg(feature = "zen-pipeline")]
-        self.zen_input_bytes.insert(io_id, bytes.clone());
-
-        let io = IoProxy::read_vec(self, io_id, bytes).map_err(|e| e.at(here!()))?;
-        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        {
+            let arc = Arc::new(bytes);
+            self.zen_input_bytes.insert(io_id, ZenInput::Owned(arc.clone()));
+            let io = IoProxy::read_arc(self, io_id, arc).map_err(|e| e.at(here!()))?;
+            return self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()));
+        }
+        #[cfg(not(feature = "zen-pipeline"))]
+        {
+            let io = IoProxy::read_vec(self, io_id, bytes).map_err(|e| e.at(here!()))?;
+            self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        }
     }
 
     /// Zero-copy: borrows `bytes` without copying.
@@ -602,7 +636,7 @@ impl Context {
     /// In practice, the ABI layer (imageflow_abi) uses transmute to erase the real lifetime.
     pub fn add_input_buffer(&mut self, io_id: i32, bytes: &'static [u8]) -> Result<()> {
         #[cfg(feature = "zen-pipeline")]
-        self.zen_input_bytes.insert(io_id, bytes.to_vec());
+        self.zen_input_bytes.insert(io_id, ZenInput::Static(bytes));
 
         let io = IoProxy::read_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
@@ -875,8 +909,11 @@ impl Context {
         }
         let job_options = what.job_options.unwrap_or_default();
 
+        let io_bytes: std::collections::HashMap<i32, Vec<u8>> =
+            self.zen_input_bytes.iter().map(|(&id, z)| (id, z.to_vec())).collect();
+
         let output =
-            crate::zen::zen_execute(&what.framewise, &self.zen_input_bytes, &self.security, &job_options)
+            crate::zen::zen_execute(&what.framewise, &io_bytes, &self.security, &job_options)
                 .map_err(|e| e.at(here!()))?;
 
         // Store encoded outputs in Context's output buffer system.

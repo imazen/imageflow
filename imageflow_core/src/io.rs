@@ -6,11 +6,22 @@ use crate::{Context, ErrorKind, JsonResponse, Result};
 use imageflow_types::collections::AddRemoveSet;
 use imageflow_types::IoDirection;
 use std::rc::Rc;
+use std::sync::Arc;
 use uuid::Uuid;
+
+/// Newtype so `Cursor<ArcBytes>` implements `Read`/`BufRead`/`Seek`.
+/// `Arc<Vec<u8>>` doesn't implement `AsRef<[u8]>` directly; this bridges the gap.
+struct ArcBytes(Arc<Vec<u8>>);
+impl AsRef<[u8]> for ArcBytes {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_slice()
+    }
+}
 
 enum IoBackend {
     ReadSlice(Cursor<&'static [u8]>),
     ReadVec(Cursor<Vec<u8>>),
+    ReadArc(Cursor<ArcBytes>),
     WriteVec(Cursor<Vec<u8>>),
     ReadFile(BufReader<File>),
     WriteFile(BufWriter<File>),
@@ -27,6 +38,7 @@ impl IoBackend {
         match self {
             IoBackend::ReadSlice(w) => Some(w),
             IoBackend::ReadVec(w) => Some(w),
+            IoBackend::ReadArc(w) => Some(w),
             IoBackend::ReadFile(w) => Some(w),
             _ => None,
         }
@@ -35,6 +47,7 @@ impl IoBackend {
         match self {
             IoBackend::ReadSlice(w) => Some(w),
             IoBackend::ReadVec(w) => Some(w),
+            IoBackend::ReadArc(w) => Some(w),
             IoBackend::ReadFile(w) => Some(w),
             _ => None,
         }
@@ -43,6 +56,7 @@ impl IoBackend {
         match self {
             IoBackend::ReadSlice(w) => Some(w),
             IoBackend::ReadVec(w) => Some(w),
+            IoBackend::ReadArc(w) => Some(w),
             IoBackend::ReadFile(w) => Some(w),
             _ => None,
         }
@@ -103,6 +117,7 @@ impl IoProxy {
     pub fn try_get_length(&mut self) -> Option<u64> {
         match &self.backend {
             IoBackend::ReadVec(v) => Some(v.get_ref().len() as u64),
+            IoBackend::ReadArc(v) => Some(v.get_ref().0.len() as u64),
             IoBackend::ReadSlice(v) => Some(v.get_ref().len() as u64),
             IoBackend::ReadFile(v) => v.get_ref().metadata().map(|m| m.len()).ok(),
             _ => None,
@@ -112,8 +127,20 @@ impl IoProxy {
     pub fn try_get_position(&mut self) -> Option<u64> {
         match &self.backend {
             IoBackend::ReadVec(v) => Some(v.position()),
+            IoBackend::ReadArc(v) => Some(v.position()),
             IoBackend::ReadSlice(v) => Some(v.position()),
             IoBackend::ReadFile(v) => v.get_ref().stream_position().ok(),
+            _ => None,
+        }
+    }
+
+    /// Return a slice view of the input bytes without copying.
+    /// Returns `None` for file-backed or write-backed proxies.
+    pub fn as_input_slice(&self) -> Option<&[u8]> {
+        match &self.backend {
+            IoBackend::ReadSlice(c) => Some(c.get_ref()),
+            IoBackend::ReadVec(c) => Some(c.get_ref()),
+            IoBackend::ReadArc(c) => Some(c.get_ref().0.as_slice()),
             _ => None,
         }
     }
@@ -211,6 +238,12 @@ impl IoProxy {
         IoProxy::check_io_id(context, io_id)?;
 
         Ok(IoProxy { path: None, io_id, backend: IoBackend::ReadVec(Cursor::new(bytes)) })
+    }
+
+    /// Wrap a shared `Arc<Vec<u8>>` as an input buffer — zero copy for the caller.
+    pub fn read_arc(context: &Context, io_id: i32, bytes: Arc<Vec<u8>>) -> Result<IoProxy> {
+        IoProxy::check_io_id(context, io_id)?;
+        Ok(IoProxy { path: None, io_id, backend: IoBackend::ReadArc(Cursor::new(ArcBytes(bytes))) })
     }
 
     pub fn copy_slice(context: &Context, io_id: i32, bytes: &[u8]) -> Result<IoProxy> {
