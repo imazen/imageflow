@@ -269,6 +269,127 @@ fn exif_auto_orient_landscape_7() { compare_backends_exif("Landscape_7.jpg", 70)
 #[test]
 fn exif_auto_orient_landscape_8() { compare_backends_exif("Landscape_8.jpg", 70); }
 
+// ═══════════════════════════════════════════════════════════════════════
+// ICC profile pixel comparison — v2 vs zen
+// ═══════════════════════════════════════════════════════════════════════
+
+fn fetch_test_input(path: &str) -> Vec<u8> {
+    let url = format!(
+        "https://s3-us-west-2.amazonaws.com/imageflow-resources/{path}"
+    );
+    common::get_url_bytes_with_retry(&url).unwrap()
+}
+
+fn compare_backends_command(input_path: &str, command: &str, label: &str) {
+    let bytes = fetch_test_input(input_path);
+
+    let run = |backend: imageflow_core::Backend| -> (Vec<u8>, u32, u32) {
+        let mut ctx = Context::create().unwrap();
+        ctx.force_backend = Some(backend);
+        ctx.add_copied_input_buffer(0, &bytes).unwrap();
+
+        let capture_id = 0;
+        ctx.execute_1(s::Execute001 {
+            graph_recording: None,
+            security: None,
+            framewise: s::Framewise::Steps(vec![
+                s::Node::CommandString {
+                    kind: s::CommandStringKind::ImageResizer4,
+                    value: command.to_string(),
+                    decode: Some(0),
+                    encode: None,
+                    watermarks: None,
+                },
+                s::Node::CaptureBitmapKey { capture_id },
+            ]),
+            job_options: None,
+        }).unwrap();
+
+        let bitmap_key = ctx.get_captured_bitmap_key(capture_id).unwrap();
+        let bitmaps = ctx.borrow_bitmaps().unwrap();
+        let mut bm = bitmaps.try_borrow_mut(bitmap_key).unwrap();
+        let mut window = bm.get_window_u8().unwrap();
+        window.normalize_unused_alpha().unwrap();
+        let w = window.w();
+        let h = window.h();
+        let stride = window.info().t_stride() as usize;
+        let mut pixels = Vec::with_capacity((w * h * 4) as usize);
+        for y in 0..h as usize {
+            let row = &window.get_slice()[y * stride..y * stride + w as usize * 4];
+            pixels.extend_from_slice(row);
+        }
+        (pixels, w, h)
+    };
+
+    let (v2_px, v2_w, v2_h) = run(imageflow_core::Backend::V2);
+    let (zen_px, zen_w, zen_h) = run(imageflow_core::Backend::Zen);
+
+    assert_eq!(
+        (v2_w, v2_h), (zen_w, zen_h),
+        "{label}: dims v2={v2_w}x{v2_h} zen={zen_w}x{zen_h}"
+    );
+
+    let mut max_delta: u8 = 0;
+    let mut diff_count: u64 = 0;
+    for (a, b) in v2_px.iter().zip(zen_px.iter()) {
+        let d = (*a as i16 - *b as i16).unsigned_abs() as u8;
+        if d > max_delta { max_delta = d; }
+        if d > 0 { diff_count += 1; }
+    }
+    let diff_pct = diff_count as f64 / v2_px.len() as f64 * 100.0;
+    eprintln!("{label}: {v2_w}x{v2_h}, max_delta={max_delta}, {diff_pct:.1}% differ");
+
+    // Decoder diff should be small. ICC diff would be huge.
+    if max_delta >= 10 {
+        panic!("{label}: max_delta={max_delta}, {diff_pct:.1}% differ — v2 and zen produce very different output");
+    }
+}
+
+#[test]
+fn icc_parity_srgb_canon5d() {
+    compare_backends_command(
+        "test_inputs/wide-gamut/srgb-reference/canon_eos_5d_mark_iv/wmc_81b268fc64ea796c.jpg",
+        "w=300&format=png",
+        "sRGB Canon 5D",
+    );
+}
+
+#[test]
+fn icc_parity_adobe_rgb() {
+    compare_backends_command(
+        "test_inputs/wide-gamut/adobe-rgb/flickr_092650e9e8211233.jpg",
+        "w=300&format=png",
+        "Adobe RGB",
+    );
+}
+
+#[test]
+fn icc_parity_display_p3() {
+    compare_backends_command(
+        "test_inputs/wide-gamut/display-p3/flickr_403aa5efb8efe6e8.jpg",
+        "w=300&format=png",
+        "Display P3",
+    );
+}
+
+#[test]
+fn icc_parity_rec2020() {
+    compare_backends_command(
+        "test_inputs/wide-gamut/rec-2020-pq/flickr_2a68670c58131566.jpg",
+        "w=300&format=png",
+        "Rec 2020",
+    );
+}
+
+#[test]
+fn icc_parity_prophoto() {
+    compare_backends_command(
+        "test_inputs/wide-gamut/prophoto-rgb/flickr_0d2d634cf46df137.jpg",
+        "w=300&format=png",
+        "ProPhoto RGB",
+    );
+}
+
 // Portrait images: same set of flags
 #[test]
 fn exif_auto_orient_portrait_1() { compare_backends_exif("Portrait_1.jpg", 70); }
