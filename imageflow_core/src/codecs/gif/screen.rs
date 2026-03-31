@@ -31,7 +31,7 @@ impl Screen {
 
         let pixels = reader.width() as usize * reader.height() as usize;
         let bg_color = if let (Some(bg_index), Some(pal)) = (reader.bg_color(), pal.as_ref()) {
-            pal[bg_index]
+            pal.get(bg_index).copied().unwrap_or_default()
         } else {
             BGRA8::default()
         };
@@ -56,27 +56,39 @@ impl Screen {
             .or(self.global_pal.as_ref())
             .ok_or("the frame must have _some_ palette")?;
 
+        // Clip frame bounds to canvas (matches browser behavior for malformed GIFs).
+        let left = (frame.left as usize).min(self.width);
+        let top = (frame.top as usize).min(self.height);
+        let sub_w = (frame.width as usize).min(self.width.saturating_sub(left));
+        let sub_h = (frame.height as usize).min(self.height.saturating_sub(top));
+
         self.disposal.dispose(&mut self.pixels, self.width, self.bg_color);
-        self.disposal = Disposal::new(frame, &self.pixels, self.width);
+        self.disposal = Disposal::new(frame, &self.pixels, self.width, self.height);
+
+        if sub_w == 0 || sub_h == 0 {
+            return Ok(());
+        }
+
+        // Offset into the frame's pixel buffer to account for clipping.
+        let frame_left_clip = left.saturating_sub(frame.left as usize);
+        let frame_top_clip = top.saturating_sub(frame.top as usize);
 
         for (dst, &src) in self
             .pixels
             .iter_mut()
-            .subimage(
-                frame.left as usize,
-                frame.top as usize,
-                frame.width as usize,
-                frame.height as usize,
-                self.width,
+            .subimage(left, top, sub_w, sub_h, self.width)
+            .zip(
+                buffer
+                    .iter()
+                    .subimage(frame_left_clip, frame_top_clip, sub_w, sub_h, frame.width as usize),
             )
-            .zip(buffer.iter())
         {
             if let Some(transparent) = frame.transparent {
                 if src == transparent {
                     continue;
                 }
             }
-            *dst = pal[src as usize];
+            *dst = pal.get(src as usize).copied().unwrap_or(BGRA8 { r: 0, g: 0, b: 0, a: 0 });
         }
 
         Ok(())
