@@ -1120,6 +1120,33 @@ pub struct FrameSizeLimit {
     pub megapixels: f32,
 }
 
+/// Color management mode for the pipeline.
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub enum CmsMode {
+    /// Imageflow v2 compatibility: convert to sRGB on decode.
+    ///
+    /// Vendor "sRGB-like" profiles (e.g., Canon, Sony calibrated sRGB)
+    /// are treated as sRGB and skipped (no CMS transform). All pixel
+    /// processing happens in sRGB 8-bit. Matches v2 behavior bug-for-bug.
+    Imageflow2Compat,
+
+    /// Scene-referred: preserve source color space through the pipeline.
+    ///
+    /// ICC profiles are applied accurately. Wide-gamut content (P3,
+    /// Rec.2020, ProPhoto) is preserved. Transform to output gamut
+    /// happens at encode time. Correct for modern color workflows.
+    SceneReferred,
+}
+
+impl Default for CmsMode {
+    fn default() -> Self {
+        // Default to v2 compat for back-compatibility.
+        Self::Imageflow2Compat
+    }
+}
+
 #[non_exhaustive]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
@@ -1146,8 +1173,6 @@ pub struct ExecutionSecurity {
 impl ExecutionSecurity {
     pub fn sane_defaults() -> Self {
         ExecutionSecurity {
-            // Set max_decode_size to reject oversized images early during decode
-            // Matches typical web image limits
             max_decode_size: Some(FrameSizeLimit { w: 12000, h: 12000, megapixels: 100f32 }),
             max_frame_size: Some(FrameSizeLimit { w: 10000, h: 10000, megapixels: 100f32 }),
             max_encode_size: None,
@@ -1166,6 +1191,19 @@ impl ExecutionSecurity {
             max_total_file_pixels: None,
         }
     }
+}
+
+/// Per-job quality and behavior settings.
+///
+/// These affect output correctness, not security. Separated from
+/// `ExecutionSecurity` which handles DoS protection (size limits).
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct JobOptions {
+    /// Color management mode. Defaults to Imageflow2Compat.
+    #[serde(default)]
+    pub cms_mode: CmsMode,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
@@ -1428,7 +1466,7 @@ impl Framewise {
             .into_iter()
             .map(|(id, dir)| IoObject { direction: dir, io_id: id, io: IoEnum::Placeholder })
             .collect::<Vec<IoObject>>();
-        Build001 { builder_config: None, framewise: self, io: io_vec }
+        Build001 { builder_config: None, framewise: self, io: io_vec, job_options: None }
     }
 }
 
@@ -1495,6 +1533,8 @@ pub struct Build001 {
     pub builder_config: Option<Build001Config>,
     pub io: Vec<IoObject>,
     pub framewise: Framewise,
+    #[serde(default)]
+    pub job_options: Option<JobOptions>,
 }
 
 impl Build001 {
@@ -1515,7 +1555,7 @@ impl Build001 {
         if !new_io_vec.as_slice().iter().any(|obj| obj.io_id == io_id) {
             panic!("No existing IoObject with io_id {} found to replace!", io_id);
         }
-        Build001 { builder_config: self.builder_config, io: new_io_vec, framewise: self.framewise }
+        Build001 { builder_config: self.builder_config, io: new_io_vec, framewise: self.framewise, job_options: self.job_options }
     }
 }
 
@@ -1560,6 +1600,7 @@ impl Build001 {
                 IoObject { io: IoEnum::OutputBase64, io_id: 3, direction: IoDirection::Out },
             ],
             framewise: Framewise::example_graph(),
+            job_options: None,
         }
     }
 }
@@ -1572,6 +1613,8 @@ pub struct Execute001 {
     #[serde(default)]
     pub job_options: Option<JobOptions>,
     pub framewise: Framewise,
+    #[serde(default)]
+    pub job_options: Option<JobOptions>,
 }
 
 impl Framewise {

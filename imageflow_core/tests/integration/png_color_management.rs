@@ -169,6 +169,7 @@ fn decode_to_rgba_with_commands(
                 },
             },
         ]),
+        job_options: None,
     };
 
     ctx.execute_1(execute).unwrap();
@@ -908,6 +909,7 @@ fn decode_with_honor_gama_chrm_false(png_bytes: &[u8], decoder: NamedDecoders) -
                 },
             },
         ]),
+        job_options: None,
     };
 
     ctx.execute_1(execute).unwrap();
