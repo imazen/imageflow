@@ -12,6 +12,7 @@ members = [
     "c_components",
 #    "c_components/tests",
 ]
+exclude = ["fuzz"]
 resolver = "2"
 
 [profile.release]

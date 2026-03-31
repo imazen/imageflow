@@ -1,0 +1,48 @@
+[package]
+name = "imageflow-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+# Standalone workspace — excluded from the parent imageflow workspace.
+# This avoids inheriting profile.release.lto = true which conflicts
+# with the ASAN sanitizer coverage instrumentation.
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+imageflow_types = { path = "../imageflow_types" }
+imageflow_helpers = { path = "../imageflow_helpers" }
+imageflow_riapi = { path = "../imageflow_riapi" }
+append_only_set = { path = "../append_only_set" }
+zenpipe = { path = "../../zen/zenpipe", features = ["imageflow-compat"] }
+
+# Replicate [patch.crates-io] from the parent workspace so transitive
+# deps resolve to the same local crates.
+[patch.crates-io]
+zenpixels = { path = "../../zen/zenpixels/zenpixels" }
+zenpixels-convert = { path = "../../zen/zenpixels/zenpixels-convert" }
+zencodec = { path = "../../zen/zencodec" }
+zenjpeg = { path = "../../zen/zenjpeg/zenjpeg" }
+moxcms = { path = "../../moxcms" }
+zenlayout = { path = "../../zen/zenlayout" }
+
+[[bin]]
+name = "fuzz_decode"
+path = "fuzz_targets/fuzz_decode.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_transcode"
+path = "fuzz_targets/fuzz_transcode.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_pipeline"
+path = "fuzz_targets/fuzz_pipeline.rs"
+doc = false
