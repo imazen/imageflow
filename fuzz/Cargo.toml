@@ -21,6 +21,7 @@ imageflow_helpers = { path = "../imageflow_helpers" }
 imageflow_riapi = { path = "../imageflow_riapi" }
 append_only_set = { path = "../append_only_set" }
 zenpipe = { path = "../../zen/zenpipe", features = ["imageflow-compat"] }
+imageflow_core = { path = "../imageflow_core" }
 
 # Replicate [patch.crates-io] from the parent workspace so transitive
 # deps resolve to the same local crates.
@@ -45,4 +46,14 @@ doc = false
 [[bin]]
 name = "fuzz_pipeline"
 path = "fuzz_targets/fuzz_pipeline.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_v2_decode"
+path = "fuzz_targets/fuzz_v2_decode.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_v2_transcode"
+path = "fuzz_targets/fuzz_v2_transcode.rs"
 doc = false

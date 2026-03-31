@@ -196,9 +196,16 @@ impl Decoder for GifDecoder {
                     )
                 })?;
 
-                let buf_size = self.reader.width() as usize * self.reader.height() as usize;
-                let buf_mut = self.buffer.get_or_insert_with(|| vec![0; buf_size]);
-                let slice = &mut buf_mut[..self.reader.buffer_size()];
+                let required = self.reader.buffer_size();
+                if required > 16 * 1024 * 1024 {
+                    return Err(nerror!(ErrorKind::SizeLimitExceeded,
+                        "GIF frame buffer_size {} exceeds 16MP limit", required));
+                }
+                let buf_mut = self.buffer.get_or_insert_with(|| vec![0; required]);
+                if buf_mut.len() < required {
+                    buf_mut.resize(required, 0);
+                }
+                let slice = &mut buf_mut[..required];
                 slice.fill(0);
                 self.reader.read_into_buffer(slice).map_err(|e| FlowError::from(e).at(here!()))?;
                 self.screen
@@ -220,10 +227,16 @@ impl Decoder for GifDecoder {
             })?;
 
             //Prepare our reusable buffer
-            let buf_size = self.reader.width() as usize * self.reader.height() as usize;
-
-            let buf_mut = self.buffer.get_or_insert_with(|| vec![0; buf_size]);
-            let slice = &mut buf_mut[..self.reader.buffer_size()];
+            let required = self.reader.buffer_size();
+            if required > 16 * 1024 * 1024 {
+                return Err(nerror!(ErrorKind::SizeLimitExceeded,
+                    "GIF frame buffer_size {} exceeds 16MP limit", required));
+            }
+            let buf_mut = self.buffer.get_or_insert_with(|| vec![0; required]);
+            if buf_mut.len() < required {
+                buf_mut.resize(required, 0);
+            }
+            let slice = &mut buf_mut[..required];
 
             slice.fill(0);
             //Read into that buffer
