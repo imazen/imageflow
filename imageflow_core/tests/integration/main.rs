@@ -5,6 +5,7 @@ mod cms_diagnostic;
 mod color_conversion;
 mod encoders;
 mod jpeg_decoder_parity;
+mod orientation_pixels;
 mod png_color_management;
 mod robustness;
 mod schema;
