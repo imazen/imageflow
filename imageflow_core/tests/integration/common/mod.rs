@@ -95,6 +95,9 @@ fn handle_check_result(result: Result<CheckResult, zensim_regress::RegressError>
                 .unwrap_or_else(|| "checksum mismatch, no pixel comparison available".to_string());
             panic!("{msg}");
         }
+        Ok(other) => {
+            panic!("unexpected check result: {other:?}");
+        }
         Err(e) => {
             panic!("comparison error: {e}");
         }
