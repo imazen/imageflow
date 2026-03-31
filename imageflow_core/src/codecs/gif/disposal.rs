@@ -28,17 +28,17 @@ impl<Pixel: Copy> Default for Disposal<Pixel> {
 
 impl<Pixel: Copy> Disposal<Pixel> {
     pub fn dispose(&mut self, pixels: &mut [Pixel], stride: usize, bg_color: Pixel) {
-        if self.width == 0 || self.height == 0 {
+        let (w, h, l, t) = (
+            self.width as usize,
+            self.height as usize,
+            self.left as usize,
+            self.top as usize,
+        );
+        if w == 0 || h == 0 || l.saturating_add(w) > stride {
             return;
         }
 
-        let pixels_iter = pixels.iter_mut().subimage(
-            self.left as usize,
-            self.top as usize,
-            self.width as usize,
-            self.height as usize,
-            stride,
-        );
+        let pixels_iter = pixels.iter_mut().subimage(l, t, w, h, stride);
         match self.method {
             Background => {
                 for px in pixels_iter {
@@ -56,25 +56,26 @@ impl<Pixel: Copy> Disposal<Pixel> {
         }
     }
 
-    pub fn new(frame: &gif::Frame, pixels: &[Pixel], stride: usize) -> Self {
+    pub fn new(frame: &gif::Frame, pixels: &[Pixel], stride: usize, canvas_height: usize) -> Self {
+        // Clip frame bounds to canvas dimensions.
+        let l = (frame.left as usize).min(stride);
+        let t = (frame.top as usize).min(canvas_height);
+        let w = (frame.width as usize).min(stride.saturating_sub(l));
+        let h = (frame.height as usize).min(canvas_height.saturating_sub(t));
+        let valid = w > 0 && h > 0;
+
         Disposal {
             method: frame.dispose,
-            left: frame.left,
-            top: frame.top,
-            width: frame.width,
-            height: frame.height,
+            left: l as u16,
+            top: t as u16,
+            width: w as u16,
+            height: h as u16,
             previous_pixels: match frame.dispose {
-                Previous => Some(
+                Previous if valid => Some(
                     pixels
                         .iter()
                         .cloned()
-                        .subimage(
-                            frame.left as usize,
-                            frame.top as usize,
-                            frame.width as usize,
-                            frame.height as usize,
-                            stride,
-                        )
+                        .subimage(l, t, w, h, stride)
                         .collect(),
                 ),
                 _ => None,

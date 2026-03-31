@@ -374,6 +374,243 @@ fn test_gif_palette_bounds() {
 }
 
 // =============================================================================
+// GIF frame bounds clipping (frames extending beyond canvas)
+// =============================================================================
+
+#[test]
+fn test_gif_frame_exceeds_canvas() {
+    let gif =
+        fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_frame_exceeds_canvas.gif"))
+            .expect("read fixture");
+    let mut ctx = create_context();
+    let _ = ctx.add_copied_input_buffer(0, &gif);
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = ctx.add_output_buffer(1);
+        let _ = ctx.build_1(s::Build001 {
+            builder_config: None,
+            io: vec![
+                s::IoObject {
+                    direction: s::IoDirection::In,
+                    io_id: 0,
+                    io: s::IoEnum::Placeholder,
+                },
+                s::IoObject {
+                    direction: s::IoDirection::Out,
+                    io_id: 1,
+                    io: s::IoEnum::OutputBuffer,
+                },
+            ],
+            framewise: s::Framewise::Steps(vec![
+                s::Node::Decode { io_id: 0, commands: None },
+                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
+            ]),
+        });
+    }));
+
+    match result {
+        Ok(_) => println!("GIF with frame exceeding canvas handled safely (clipped)"),
+        Err(e) => panic!("Panic on GIF with frame exceeding canvas: {:?}", e),
+    }
+}
+
+#[test]
+fn test_gif_overflow_frame_position() {
+    let gif =
+        fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_overflow_frame_pos.gif"))
+            .expect("read fixture");
+    let mut ctx = create_context();
+    let _ = ctx.add_copied_input_buffer(0, &gif);
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = ctx.add_output_buffer(1);
+        let _ = ctx.build_1(s::Build001 {
+            builder_config: None,
+            io: vec![
+                s::IoObject {
+                    direction: s::IoDirection::In,
+                    io_id: 0,
+                    io: s::IoEnum::Placeholder,
+                },
+                s::IoObject {
+                    direction: s::IoDirection::Out,
+                    io_id: 1,
+                    io: s::IoEnum::OutputBuffer,
+                },
+            ],
+            framewise: s::Framewise::Steps(vec![
+                s::Node::Decode { io_id: 0, commands: None },
+                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
+            ]),
+        });
+    }));
+
+    match result {
+        Ok(_) => println!("GIF with overflow frame position handled safely"),
+        Err(e) => panic!("Panic on GIF with overflow frame position: {:?}", e),
+    }
+}
+
+#[test]
+fn test_gif_zero_size_frame() {
+    let gif =
+        fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_zero_size_frame.gif"))
+            .expect("read fixture");
+    let mut ctx = create_context();
+    let _ = ctx.add_copied_input_buffer(0, &gif);
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = ctx.add_output_buffer(1);
+        let _ = ctx.build_1(s::Build001 {
+            builder_config: None,
+            io: vec![
+                s::IoObject {
+                    direction: s::IoDirection::In,
+                    io_id: 0,
+                    io: s::IoEnum::Placeholder,
+                },
+                s::IoObject {
+                    direction: s::IoDirection::Out,
+                    io_id: 1,
+                    io: s::IoEnum::OutputBuffer,
+                },
+            ],
+            framewise: s::Framewise::Steps(vec![
+                s::Node::Decode { io_id: 0, commands: None },
+                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
+            ]),
+        });
+    }));
+
+    match result {
+        Ok(_) => println!("GIF with zero-size frame handled safely"),
+        Err(e) => panic!("Panic on GIF with zero-size frame: {:?}", e),
+    }
+}
+
+// =============================================================================
+// GIF invalid background color index
+// =============================================================================
+
+#[test]
+fn test_gif_bad_bg_index() {
+    let gif = fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_bad_bg_index.gif"))
+        .expect("read fixture");
+    let mut ctx = create_context();
+    let _ = ctx.add_copied_input_buffer(0, &gif);
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = ctx.add_output_buffer(1);
+        let _ = ctx.build_1(s::Build001 {
+            builder_config: None,
+            io: vec![
+                s::IoObject {
+                    direction: s::IoDirection::In,
+                    io_id: 0,
+                    io: s::IoEnum::Placeholder,
+                },
+                s::IoObject {
+                    direction: s::IoDirection::Out,
+                    io_id: 1,
+                    io: s::IoEnum::OutputBuffer,
+                },
+            ],
+            framewise: s::Framewise::Steps(vec![
+                s::Node::Decode { io_id: 0, commands: None },
+                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
+            ]),
+        });
+    }));
+
+    match result {
+        Ok(_) => println!("GIF with invalid bg_index handled safely"),
+        Err(e) => panic!("Panic on GIF with invalid bg_index: {:?}", e),
+    }
+}
+
+// =============================================================================
+// GIF out-of-bounds palette index in pixel data
+// =============================================================================
+
+#[test]
+fn test_gif_oob_palette_in_pixels() {
+    let gif =
+        fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_oob_palette_index.gif"))
+            .expect("read fixture");
+    let mut ctx = create_context();
+    let _ = ctx.add_copied_input_buffer(0, &gif);
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = ctx.add_output_buffer(1);
+        let _ = ctx.build_1(s::Build001 {
+            builder_config: None,
+            io: vec![
+                s::IoObject {
+                    direction: s::IoDirection::In,
+                    io_id: 0,
+                    io: s::IoEnum::Placeholder,
+                },
+                s::IoObject {
+                    direction: s::IoDirection::Out,
+                    io_id: 1,
+                    io: s::IoEnum::OutputBuffer,
+                },
+            ],
+            framewise: s::Framewise::Steps(vec![
+                s::Node::Decode { io_id: 0, commands: None },
+                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
+            ]),
+        });
+    }));
+
+    match result {
+        Ok(_) => println!("GIF with OOB palette indices in pixel data handled safely"),
+        Err(e) => panic!("Panic on GIF with OOB palette index: {:?}", e),
+    }
+}
+
+// =============================================================================
+// GIF frame buffer OOB (existing crash repro)
+// =============================================================================
+
+#[test]
+fn test_gif_frame_buffer_oob() {
+    let gif =
+        fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_frame_buffer_oob.gif"))
+            .expect("read fixture");
+    let mut ctx = create_context();
+    let _ = ctx.add_copied_input_buffer(0, &gif);
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = ctx.add_output_buffer(1);
+        let _ = ctx.build_1(s::Build001 {
+            builder_config: None,
+            io: vec![
+                s::IoObject {
+                    direction: s::IoDirection::In,
+                    io_id: 0,
+                    io: s::IoEnum::Placeholder,
+                },
+                s::IoObject {
+                    direction: s::IoDirection::Out,
+                    io_id: 1,
+                    io: s::IoEnum::OutputBuffer,
+                },
+            ],
+            framewise: s::Framewise::Steps(vec![
+                s::Node::Decode { io_id: 0, commands: None },
+                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
+            ]),
+        });
+    }));
+
+    match result {
+        Ok(_) => println!("GIF frame buffer OOB handled safely"),
+        Err(e) => panic!("Panic on GIF frame buffer OOB: {:?}", e),
+    }
+}
+
+// =============================================================================
 // WebP with oversized RIFF claim
 // =============================================================================
 
