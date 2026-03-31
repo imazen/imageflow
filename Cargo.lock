@@ -3875,6 +3875,7 @@ dependencies = [
  "bytemuck",
  "enough",
  "imgref",
+ "linear-srgb 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "magetypes",
  "moxcms 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb",
