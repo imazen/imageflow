@@ -24,7 +24,7 @@ type blockscale_fn =
     unsafe extern "C" fn(input: *mut u8, output_rows: *mut *mut u8, output_col: u32);
 
 // Declare external C functions
-extern "C" {
+unsafe extern "C" {
     pub fn flow_scale_spatial_srgb_7x7(input: *mut u8, output_rows: *mut *mut u8, output_col: u32);
     pub fn flow_scale_spatial_srgb_6x6(input: *mut u8, output_rows: *mut *mut u8, output_col: u32);
     pub fn flow_scale_spatial_srgb_5x5(input: *mut u8, output_rows: *mut *mut u8, output_col: u32);
