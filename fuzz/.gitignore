@@ -1,0 +1,10 @@
+# Build artifacts
+target/
+
+# Fuzzer-generated corpus (stored in imageflow-fuzz repo)
+corpus/
+
+# Crash/artifact inputs (stored in imageflow-fuzz repo)
+artifacts/
+
+# Cargo.lock is intentionally committed for reproducible fuzz builds

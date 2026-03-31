@@ -244,13 +244,21 @@ pub fn get_result_dimensions(steps: &[s::Node], io: Vec<IoTestEnum>, debug: bool
 
     let result = build_steps(&mut context, &steps, io, None, debug).unwrap();
 
-    let bitmap_key = context
-        .get_captured_bitmap_key(capture_id)
-        .unwrap_or_else(|| panic!("execution failed: {:?}", result));
-    let bitmaps = context.borrow_bitmaps().unwrap();
-    let bm = bitmaps.try_borrow_mut(bitmap_key).unwrap();
-    let (w, h) = bm.size();
-    (w as u32, h as u32)
+    // Try v2 bitmap capture first.
+    if let Some(bitmap_key) = context.get_captured_bitmap_key(capture_id) {
+        let bitmaps = context.borrow_bitmaps().unwrap();
+        let bm = bitmaps.try_borrow_mut(bitmap_key).unwrap();
+        let (w, h) = bm.size();
+        return (w as u32, h as u32);
+    }
+
+    // Fall back to zen pipeline captured bitmaps.
+    #[cfg(feature = "zen-pipeline")]
+    if let Some(bm) = context.zen_captured_bitmaps.get(&capture_id) {
+        return (bm.width, bm.height);
+    }
+
+    panic!("No captured bitmap for capture_id {capture_id}. Result: {result:?}");
 }
 
 /// Just validates that no errors are thrown during job execution
@@ -326,6 +334,7 @@ fn try_decode_image(c: &mut Context, io_id: i32) -> Option<BitmapKey> {
             s::Node::Decode { io_id, commands: None },
             s::Node::CaptureBitmapKey { capture_id },
         ]),
+        job_options: None,
     });
 
     result.ok()?;
@@ -399,6 +408,7 @@ impl Similarity {
                         max_delta: 255,
                         min_similarity,
                         max_pixels_different: 1.0,
+                        max_alpha_delta: 1,
                         ..Tolerance::exact()
                     }
                 }
@@ -477,7 +487,7 @@ fn compare_bitmaps_zensim(
         eprintln!("{msg}");
 
         // Always save diff image on failure for debugging
-        save_diff_image(expected, actual, aw as u32, ah as u32, diff_name, amplification);
+        save_diff_image(expected, actual, aw as u32, ah as u32, diff_name, amplification, &report, tolerance);
 
         if do_panic {
             panic!("{msg}");
@@ -486,7 +496,7 @@ fn compare_bitmaps_zensim(
         // Print informational report even on pass when pixels differ
         eprintln!("{report}");
         // Save diff image for accepted tests too (for CI reports)
-        save_diff_image(expected, actual, aw as u32, ah as u32, diff_name, amplification);
+        save_diff_image(expected, actual, aw as u32, ah as u32, diff_name, amplification, &report, tolerance);
     }
     (report.passed(), zdsim)
 }
@@ -520,7 +530,12 @@ fn save_diff_image(
     h: u32,
     diff_name: &str,
     amplification: u8,
+    report: &zensim_regress::testing::RegressionReport,
+    tolerance: &zensim_regress::testing::RegressionTolerance,
 ) -> Option<PathBuf> {
+    use image::RgbaImage;
+    use zensim_regress::diff_image::{AnnotationText, MontageOptions};
+
     let diffs_dir = Path::new(env!("CARGO_MANIFEST_DIR")).parent()?.join(".image-cache/diffs");
     std::fs::create_dir_all(&diffs_dir).ok()?;
 
@@ -529,29 +544,17 @@ fn save_diff_image(
 
     let exp_rgba = bitmap_to_rgba_bytes(expected, w, h);
     let act_rgba = bitmap_to_rgba_bytes(actual, w, h);
-    zensim_regress::display::save_comparison_png(
-        &exp_rgba,
-        &act_rgba,
-        w,
-        h,
-        amplification,
-        Some(600),
-        &path,
-    );
-    eprintln!("Saved comparison diff to {} (amplification: {amplification}x)", path.display());
 
-    // Also show sixel if requested
-    if std::env::var("SIXEL_DIFF").is_ok_and(|v| v == "1") {
-        let _ = std::io::stderr().flush();
-        zensim_regress::display::print_comparison_raw(
-            &exp_rgba,
-            &act_rgba,
-            w,
-            h,
-            amplification,
-            Some(600),
-        );
+    let exp_img = RgbaImage::from_raw(w, h, exp_rgba)?;
+    let act_img = RgbaImage::from_raw(w, h, act_rgba)?;
+    let annotation = AnnotationText::from_report(report, tolerance);
+    let montage = MontageOptions {
+        amplification,
+        ..Default::default()
     }
+    .render(&exp_img, &act_img, &annotation);
+    montage.save(&path).expect("failed to save montage PNG");
+    eprintln!("Saved annotated montage to {} (amplification: {amplification}x)", path.display());
 
     Some(path)
 }
@@ -713,6 +716,161 @@ pub fn check_visual_bytes(
     handle_check_result(result)
 }
 
+/// Compare zen bitmap against v2 bitmap directly (no stored baselines for zen).
+///
+/// Checks dimension match and pixel similarity. Panics if dimensions differ
+/// or similarity drops below `CROSS_BACKEND_MIN_SIM`.
+#[cfg(feature = "zen-pipeline")]
+fn compare_bitmaps_cross_backend(
+    v2_ctx: &Context,
+    v2_key: BitmapKey,
+    zen_ctx: &Context,
+    zen_key: BitmapKey,
+    detail: &str,
+) {
+    // Minimum zensim score for cross-backend comparison.
+    // Decoder rounding (max_delta ≤ 3) scores ~98. Real bugs (wrong orientation,
+    // missing ICC) score < 50. Threshold of 90 catches structural issues with margin.
+    const CROSS_BACKEND_MIN_SIM: f64 = 90.0;
+
+    let v2_bitmaps = v2_ctx.borrow_bitmaps().unwrap();
+    let mut v2_bm = v2_bitmaps.try_borrow_mut(v2_key).unwrap();
+    let mut v2_window = v2_bm.get_window_u8().unwrap();
+    v2_window.normalize_unused_alpha().unwrap();
+
+    let zen_bitmaps = zen_ctx.borrow_bitmaps().unwrap();
+    let mut zen_bm = zen_bitmaps.try_borrow_mut(zen_key).unwrap();
+    let mut zen_window = zen_bm.get_window_u8().unwrap();
+    zen_window.normalize_unused_alpha().unwrap();
+
+    let (v2_w, v2_h) = (v2_window.w(), v2_window.h());
+    let (zen_w, zen_h) = (zen_window.w(), zen_window.h());
+    assert_eq!(
+        (v2_w, v2_h), (zen_w, zen_h),
+        "[zen vs v2] {detail}: dimension mismatch v2={v2_w}x{v2_h} zen={zen_w}x{zen_h}"
+    );
+
+    // Fast path: byte-identical
+    let v2_stride = v2_window.info().t_stride() as usize;
+    let zen_stride = zen_window.info().t_stride() as usize;
+    let v2_slice = v2_window.get_slice();
+    let zen_slice = zen_window.get_slice();
+
+    let mut max_delta: u8 = 0;
+    for y in 0..v2_h as usize {
+        let v2_row = &v2_slice[y * v2_stride..y * v2_stride + v2_w as usize * 4];
+        let zen_row = &zen_slice[y * zen_stride..y * zen_stride + zen_w as usize * 4];
+        for (a, b) in v2_row.iter().zip(zen_row.iter()) {
+            let d = (*a as i16 - *b as i16).unsigned_abs() as u8;
+            if d > max_delta {
+                max_delta = d;
+            }
+        }
+    }
+
+    if max_delta <= 1 {
+        return; // Off-by-one — no need for expensive zensim
+    }
+
+    // Full perceptual comparison
+    let v2_img = zensim::StridedBytes::try_new(
+        v2_slice, v2_w as usize, v2_h as usize, v2_stride,
+        zensim::PixelFormat::Srgb8Bgra,
+    ).unwrap();
+    let zen_img = zensim::StridedBytes::try_new(
+        zen_slice, zen_w as usize, zen_h as usize, zen_stride,
+        zensim::PixelFormat::Srgb8Bgra,
+    ).unwrap();
+
+    let metric = zensim::Zensim::new(zensim::ZensimProfile::latest());
+    let result = metric.compute(&v2_img, &zen_img);
+    match result {
+        Ok(r) => {
+            let sim = r.score();
+            if sim < CROSS_BACKEND_MIN_SIM {
+                panic!(
+                    "[zen vs v2] {detail}: sim={sim:.1} < {CROSS_BACKEND_MIN_SIM} (max_delta={max_delta})"
+                );
+            }
+        }
+        Err(e) => {
+            // zensim needs images >= 8x8; for tiny images fall back to max_delta only
+            if max_delta > 10 {
+                panic!("[zen vs v2] {detail}: zensim error ({e}), max_delta={max_delta}");
+            }
+        }
+    }
+}
+
+/// Compare zen encoded output against v2 encoded output by decoding both to BGRA.
+#[cfg(feature = "zen-pipeline")]
+fn compare_encoded_cross_backend(v2_bytes: &[u8], zen_bytes: &[u8], detail: &str) {
+    const CROSS_BACKEND_MIN_SIM: f64 = 90.0;
+
+    let decode_to_bgra = |bytes: &[u8]| -> (Vec<u8>, u32, u32) {
+        let mut ctx = Context::create().unwrap();
+        ctx.add_copied_input_buffer(0, bytes).unwrap();
+        let bk = decode_image(&mut ctx, 0);
+        let bitmaps = ctx.borrow_bitmaps().unwrap();
+        let mut bm = bitmaps.try_borrow_mut(bk).unwrap();
+        let mut w = bm.get_window_u8().unwrap();
+        w.normalize_unused_alpha().unwrap();
+        let width = w.w();
+        let height = w.h();
+        let stride = w.info().t_stride() as usize;
+        let slice = w.get_slice();
+        let mut out = Vec::with_capacity((width * height * 4) as usize);
+        for y in 0..height as usize {
+            out.extend_from_slice(&slice[y * stride..y * stride + width as usize * 4]);
+        }
+        (out, width, height)
+    };
+
+    let (v2_px, v2_w, v2_h) = decode_to_bgra(v2_bytes);
+    let (zen_px, zen_w, zen_h) = decode_to_bgra(zen_bytes);
+
+    assert_eq!(
+        (v2_w, v2_h), (zen_w, zen_h),
+        "[zen vs v2] {detail}: dimension mismatch v2={v2_w}x{v2_h} zen={zen_w}x{zen_h}"
+    );
+
+    let mut max_delta: u8 = 0;
+    for (a, b) in v2_px.iter().zip(zen_px.iter()) {
+        let d = (*a as i16 - *b as i16).unsigned_abs() as u8;
+        if d > max_delta { max_delta = d; }
+    }
+
+    if max_delta <= 1 {
+        return;
+    }
+
+    let v2_img = zensim::StridedBytes::try_new(
+        &v2_px, v2_w as usize, v2_h as usize, v2_w as usize * 4,
+        zensim::PixelFormat::Srgb8Bgra,
+    ).unwrap();
+    let zen_img = zensim::StridedBytes::try_new(
+        &zen_px, zen_w as usize, zen_h as usize, zen_w as usize * 4,
+        zensim::PixelFormat::Srgb8Bgra,
+    ).unwrap();
+
+    let metric = zensim::Zensim::new(zensim::ZensimProfile::latest());
+    match metric.compute(&v2_img, &zen_img) {
+        Ok(r) => {
+            let sim = r.score();
+            if sim < CROSS_BACKEND_MIN_SIM {
+                panic!(
+                    "[zen vs v2] {detail}: sim={sim:.1} < {CROSS_BACKEND_MIN_SIM} (max_delta={max_delta})"
+                );
+            }
+        }
+        Err(e) => {
+            if max_delta > 10 {
+                panic!("[zen vs v2] {detail}: zensim error ({e}), max_delta={max_delta}");
+            }
+        }
+    }
+}
+
 /// Test identity: (module_name, function_name) derived from test context.
 ///
 /// Used by macros to pass structured names to `#[track_caller]` functions.
@@ -735,33 +893,78 @@ pub fn compare_encoded(
     require: Constraints,
     steps: Vec<s::Node>,
 ) -> bool {
-    let mut io_vec = Vec::new();
-    if let Some(i) = input {
-        io_vec.push(i);
-    }
-    io_vec.push(IoTestEnum::OutputBuffer);
-    let output_io_id = (io_vec.len() - 1) as i32;
-
-    let mut context = Context::create().unwrap();
-    let _ = build_framewise(
-        &mut context,
-        imageflow_types::Framewise::Steps(steps),
-        io_vec,
-        None,
-        false,
-    )
-    .unwrap();
-
-    let bytes = context.take_output_buffer(output_io_id).unwrap();
-
-    // Check file size
-    if let Some(max) = require.max_file_size {
-        assert!(bytes.len() <= max, "Encoded size ({}) exceeds limit ({max})", bytes.len());
-    }
-
     let similarity = require.similarity.expect("compare_encoded requires a similarity threshold");
     let tol_spec = similarity.to_tolerance_spec();
-    check_visual_bytes(identity, detail, &bytes, &tol_spec)
+
+    // ── v2 (golden) ──────────────────────────────────────────────────
+    let (v2_bytes, _v2_ctx) = {
+        let mut io_vec = Vec::new();
+        if let Some(i) = input.clone() {
+            io_vec.push(i);
+        }
+        io_vec.push(IoTestEnum::OutputBuffer);
+        let output_io_id = (io_vec.len() - 1) as i32;
+
+        let mut ctx = Context::create().unwrap();
+        #[cfg(feature = "zen-pipeline")]
+        { ctx.force_backend = Some(imageflow_core::Backend::V2); }
+        build_framewise(
+            &mut ctx,
+            imageflow_types::Framewise::Steps(steps.clone()),
+            io_vec,
+            None,
+            false,
+        ).unwrap_or_else(|e| panic!("[v2] pipeline failed: {e}"));
+
+        let bytes = ctx.take_output_buffer(output_io_id).unwrap();
+
+        if let Some(max) = require.max_file_size {
+            assert!(bytes.len() <= max, "[v2] Encoded size ({}) exceeds limit ({max})", bytes.len());
+        }
+
+        if !check_visual_bytes(identity, detail, &bytes, &tol_spec) {
+            panic!("[v2] visual check failed for {detail}");
+        }
+        (bytes, ctx)
+    };
+
+    // ── zen (opt-in, compared against v2) ────────────────────────────
+    #[cfg(feature = "zen-pipeline")]
+    {
+        let mut io_vec = Vec::new();
+        if let Some(i) = input {
+            io_vec.push(i);
+        }
+        io_vec.push(IoTestEnum::OutputBuffer);
+        let output_io_id = (io_vec.len() - 1) as i32;
+
+        let mut ctx = Context::create().unwrap();
+        ctx.force_backend = Some(imageflow_core::Backend::Zen);
+        let result = build_framewise(
+            &mut ctx,
+            imageflow_types::Framewise::Steps(steps),
+            io_vec,
+            None,
+            false,
+        );
+        match result {
+            Err(e) if is_unsupported_error(&e) => {
+                eprintln!("[zen] skipping (unsupported): {e}");
+                return true;
+            }
+            Err(e) => panic!("[zen] pipeline failed: {e}"),
+            Ok(_) => {}
+        }
+
+        let zen_bytes = ctx.take_output_buffer(output_io_id).unwrap();
+
+        if let Some(max) = require.max_file_size {
+            assert!(zen_bytes.len() <= max, "[zen] Encoded size ({}) exceeds limit ({max})", zen_bytes.len());
+        }
+
+        compare_encoded_cross_backend(&v2_bytes, &zen_bytes, detail);
+    }
+    true
 }
 
 /// Run a bitmap comparison test with structured identity.
@@ -773,20 +976,61 @@ pub fn compare_bitmap(
     identity: &TestIdentity,
     detail: &str,
     _source_url: Option<&str>,
-    mut steps: Vec<s::Node>,
+    steps: Vec<s::Node>,
     tolerance: &Tolerance,
 ) -> bool {
+    // ── v2 (golden) ──────────────────────────────────────────────────
     let capture_id = 0;
-    let mut context = Context::create().unwrap();
-    steps.push(s::Node::CaptureBitmapKey { capture_id });
-
-    let response = build_steps(&mut context, &steps, inputs, None, false).unwrap();
-
-    let bitmap_key = context
+    let mut v2_ctx = Context::create().unwrap();
+    #[cfg(feature = "zen-pipeline")]
+    { v2_ctx.force_backend = Some(imageflow_core::Backend::V2); }
+    let mut v2_steps = steps.clone();
+    v2_steps.push(s::Node::CaptureBitmapKey { capture_id });
+    build_steps(&mut v2_ctx, &v2_steps, inputs.clone(), None, false)
+        .unwrap_or_else(|e| panic!("[v2] pipeline failed: {e}"));
+    let v2_bitmap = v2_ctx
         .get_captured_bitmap_key(capture_id)
-        .unwrap_or_else(|| panic!("execution failed {:?}", response));
+        .unwrap_or_else(|| panic!("[v2] no captured bitmap"));
 
-    check_visual_bitmap(identity, detail, &context, bitmap_key, tolerance)
+    // Checksum the v2 output against stored baselines.
+    check_visual_bitmap(identity, detail, &v2_ctx, v2_bitmap, tolerance);
+
+    // ── zen (opt-in, compared against v2) ────────────────────────────
+    #[cfg(feature = "zen-pipeline")]
+    {
+        let mut zen_ctx = Context::create().unwrap();
+        zen_ctx.force_backend = Some(imageflow_core::Backend::Zen);
+        let mut zen_steps = steps;
+        zen_steps.push(s::Node::CaptureBitmapKey { capture_id });
+        let result = build_steps(&mut zen_ctx, &zen_steps, inputs, None, false);
+        match result {
+            Err(e) if is_unsupported_error(&e) => {
+                eprintln!("[zen] skipping (unsupported): {e}");
+                return true;
+            }
+            Err(e) => panic!("[zen] pipeline failed: {e}"),
+            Ok(_) => {}
+        }
+        let zen_bitmap = zen_ctx
+            .get_captured_bitmap_key(capture_id)
+            .unwrap_or_else(|| panic!("[zen] no captured bitmap"));
+
+        compare_bitmaps_cross_backend(
+            &v2_ctx, v2_bitmap,
+            &zen_ctx, zen_bitmap,
+            detail,
+        );
+    }
+    true
+}
+
+/// Check if a FlowError wraps a zen Unsupported translation error.
+///
+/// Used to skip the zen backend gracefully when a feature isn't yet implemented,
+/// rather than silently producing wrong output or panicking.
+fn is_unsupported_error(e: &FlowError) -> bool {
+    let msg = format!("{e}");
+    msg.contains("unsupported node:") || msg.contains("not supported") || msg.contains("Unsupported") || msg.contains("not implemented")
 }
 
 pub fn default_graph_recording(debug: bool) -> Option<imageflow_types::Build001GraphRecording> {

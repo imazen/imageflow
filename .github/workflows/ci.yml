@@ -143,8 +143,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Checkout zensim (sibling dependency)
-        run: git clone --depth 1 https://github.com/imazen/zensim.git ../zensim
+      - name: Checkout zen sibling dependencies
+        shell: bash
+        run: |
+          mkdir -p ../zen
+          # Core pixel/codec infrastructure
+          git clone --depth 1 https://github.com/imazen/zenpixels.git       ../zen/zenpixels
+          git clone --depth 1 https://github.com/imazen/zencodec.git        ../zen/zencodec
+          git clone --depth 1 https://github.com/imazen/zennode.git         ../zen/zennode
+          git clone --depth 1 https://github.com/imazen/zenlayout.git       ../zen/zenlayout
+          git clone --depth 1 https://github.com/imazen/zenresize.git       ../zen/zenresize
+          git clone --depth 1 https://github.com/imazen/zenfilters.git      ../zen/zenfilters
+          git clone --depth 1 https://github.com/imazen/zenblend.git        ../zen/zenblend
+          git clone --depth 1 https://github.com/imazen/linear-srgb.git     ../zen/linear-srgb
+          # Codec crates (all needed — Cargo resolves optional path deps too)
+          git clone --depth 1 https://github.com/imazen/zenjpeg.git         ../zen/zenjpeg
+          git clone --depth 1 https://github.com/imazen/zenpng.git          ../zen/zenpng
+          git clone --depth 1 https://github.com/imazen/zenwebp.git         ../zen/zenwebp
+          git clone --depth 1 https://github.com/imazen/zengif.git          ../zen/zengif
+          git clone --depth 1 https://github.com/imazen/zenavif.git         ../zen/zenavif
+          git clone --depth 1 https://github.com/imazen/zenavif-parse.git   ../zen/zenavif-parse
+          git clone --depth 1 https://github.com/imazen/zenjxl.git          ../zen/zenjxl
+          git clone --depth 1 https://github.com/imazen/zenjxl-decoder.git  ../zen/zenjxl-decoder
+          git clone --depth 1 https://github.com/imazen/jxl-encoder.git     ../zen/jxl-encoder
+          git clone --depth 1 https://github.com/imazen/heic.git            ../zen/heic
+          git clone --depth 1 https://github.com/imazen/zenbitmaps.git      ../zen/zenbitmaps
+          git clone --depth 1 https://github.com/imazen/zentiff.git         ../zen/zentiff
+          git clone --depth 1 https://github.com/imazen/zenraw.git          ../zen/zenraw
+          git clone --depth 1 https://github.com/imazen/zenquant.git        ../zen/zenquant
+          git clone --depth 1 https://github.com/imazen/ultrahdr.git        ../zen/ultrahdr
+          # Unified codec/pipeline dispatch
+          git clone --depth 1 https://github.com/imazen/zencodecs.git       ../zen/zencodecs
+          git clone --depth 1 https://github.com/imazen/zenpipe.git         ../zen/zenpipe
+          # Metrics/testing
+          git clone --depth 1 https://github.com/imazen/zensim.git          ../zen/zensim
 
       - name: Parse version
         uses: ./.github/actions/parse-version
@@ -283,7 +315,7 @@ jobs:
             cargo nextest run --target ${{ matrix.target }} ${{ env.CROSS_ARGS }} --profile ci
           fi
         env:
-          CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zensim:${{ github.workspace }}/../zensim"
+          CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zen:${{ github.workspace }}/../zen"
           REGRESS_MANIFEST_DIR: ${{ github.workspace }}/.image-cache/manifests
         if: matrix.cross == 'true'
 
@@ -353,7 +385,7 @@ jobs:
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
           force-use-cross: ${{ matrix.force-cross == 'true' || false }}
         env:
-          CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zensim:${{ github.workspace }}/../zensim"
+          CROSS_CONTAINER_OPTS: "--volume ${{ github.workspace }}/../zen:${{ github.workspace }}/../zen"
         if: matrix.cross == 'true'
 
 

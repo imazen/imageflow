@@ -1,73 +1,125 @@
-# canvas.checksums — v1
-
-## test_round_corners_custom_percent semitransparent_mixed_radii
+## test_crop red_canvas_blue_strip
 tolerance off-by-one
-= mad-port-dff48806b5:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_fill_rect_original blue_on_transparent
-tolerance off-by-one
-= meek-bear-103bc946d6:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ paced-curl-e833f82320:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_detect_whitespace blue_on_transparent
 tolerance off-by-one
-= steep-wolf-3fcacdd24a:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_crop red_canvas_blue_strip
-tolerance off-by-one
-= paced-curl-e833f82320:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_round_corners_circle_wide_canvas 200x150_black
-tolerance off-by-one
-= cozy-cloud-312b8c473b:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_partial_region overlap_40pct
-tolerance off-by-one
-= base-seal-6844b098e5:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_round_corners_excessive_radius 200x150_r100
-tolerance off-by-one
-= fresh-pine-80bf247392:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_pixels_region pixel_coords
-tolerance off-by-one
-= brave-bay-8a0677e9af:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_round_corners_small 100x100_r5
-tolerance off-by-one
-= sole-wolf-a89e7d6ea8:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_round_corners_custom_pixels semitransparent_mixed_radii
-tolerance off-by-one
-= late-sand-154de3acc8:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_round_corners_circle_tall_canvas 150x200_transparent
-tolerance off-by-one
-= final-loom-31f079eefc:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_round_image_corners_transparent waterhouse_400x300_r100
-tolerance off-by-one
-= north-doe-e6e0c779a0:sea  x86_64-avx512  @8ca16e2d  human-verified
-
-## test_expand_rect fill_expand_hermite_linear
-tolerance off-by-one
-= raw-nest-dd2079bbc7:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ steep-wolf-3fcacdd24a:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_off_surface_region all_negative
 tolerance off-by-one
-= final-fort-b3b19bf16c:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ final-fort-b3b19bf16c:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_transparent_canvas 200x200
+## test_fill_rect_original blue_on_transparent
 tolerance off-by-one
-= meek-eagle-8cb229c079:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ meek-bear-103bc946d6:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_round_corners_command_string landscape_mixed_radii_png
+## test_round_corners_circle_wide_canvas 200x150_black
 tolerance off-by-one
-= avid-kelp-a0a5bd26d5:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ cozy-cloud-312b8c473b:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_pixels_region pixel_coords
+tolerance off-by-one
+~ brave-bay-8a0677e9af:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_round_corners_excessive_radius 200x150_r100
+tolerance off-by-one
+~ fresh-pine-80bf247392:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_expand_rect fill_expand_hermite_linear
+tolerance off-by-one
+~ raw-nest-dd2079bbc7:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ meek-bear-103bc946d6:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_round_corners_large 400x400_r200
 tolerance off-by-one
-= heavy-yew-a70bb2e52e:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ heavy-yew-a70bb2e52e:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_partial_region overlap_40pct
+tolerance off-by-one
+~ base-seal-6844b098e5:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ fatal-maple-3ce16356d5:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ snowy-bear-3784a8f0f2:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_round_corners_circle_tall_canvas 150x200_transparent
+tolerance off-by-one
+~ final-loom-31f079eefc:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ green-cub-8042ef1906:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ meek-bear-103bc946d6:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ neat-hill-ca5d14c4a5:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ raw-nest-dd2079bbc7:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ final-loom-31f079eefc:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_round_corners_small 100x100_r5
+tolerance off-by-one
+~ sole-wolf-a89e7d6ea8:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ novel-box-967914e71e:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ neat-hill-ca5d14c4a5:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_transparent_canvas 200x200
+tolerance off-by-one
+~ meek-eagle-8cb229c079:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ dear-ace-8b9ea0583b:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_round_corners_custom_pixels semitransparent_mixed_radii
+tolerance off-by-one
+~ late-sand-154de3acc8:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ meek-eagle-8cb229c079:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ known-flock-dae03811f0:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_round_corners_custom_percent semitransparent_mixed_radii
+tolerance off-by-one
+~ mad-port-dff48806b5:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ legal-voice-0ab0ae84cb:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ glad-bear-c65e01aad6:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_round_corners_command_string landscape_mixed_radii_png
+tolerance off-by-one
+~ avid-kelp-a0a5bd26d5:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ royal-gate-7feb4fb21c:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_round_image_corners_transparent waterhouse_400x300_r100
+tolerance off-by-one
+~ north-doe-e6e0c779a0:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ open-glen-3d124b2752:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_fill_rect eeccff_hermite_400x400
 tolerance off-by-one
-= novel-box-967914e71e:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ novel-box-967914e71e:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance off-by-one
+~ civic-marsh-9025d01eeb:sea  x86_64-avx512  @206f6467  auto-accepted

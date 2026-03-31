@@ -1,20 +1,34 @@
-## test_trim_whitespace_with_padding gray_bg
-tolerance zensim:99 (dissim 0.01)
-= oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
-
-## test_trim_resize_whitespace_with_padding 450x450_gray
-tolerance zensim:99 (dissim 0.01)
-= apt-colt-7f54f13622:sea  x86_64-avx512  @8ca16e2d  new-baseline
+## test_trim_whitespace transparent_shirt
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
+~ sheer-grain-9ff014ad22:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_trim_resize_whitespace_without_padding 450x450_gray
-tolerance zensim:99 (dissim 0.01)
-= own-spire-30310bace0:sea  x86_64-avx512  @8ca16e2d  new-baseline
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
+~ own-spire-30310bace0:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_trim_whitespace transparent_shirt
-tolerance zensim:99 (dissim 0.01)
-= short-frog-4f72443cc0:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ sheer-grain-9ff014ad22:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs short-frog-4f72443cc0:sea (zensim:97.99 (dissim 0.020), 19.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+## test_trim_resize_whitespace_with_padding 450x450_gray
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
+~ apt-colt-7f54f13622:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
+~ lone-gust-29ffb7713b:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
+~ oral-eagle-4fea34981f:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
+~ easy-finch-e9ebb062ef:sea  x86_64-avx512  @206f6467  auto-accepted
+
+## test_trim_whitespace_with_padding gray_bg
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
+~ oval-flow-0956d8f4f7:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_trim_whitespace_with_padding_no_resize gray_bg
-tolerance zensim:99 (dissim 0.01)
-= oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
+~ oval-flow-0956d8f4f7:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
+~ acid-osprey-02197f34bf:sea  x86_64-avx512  @206f6467  auto-accepted
+
+tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
+~ acid-osprey-02197f34bf:sea  x86_64-avx512  @206f6467  auto-accepted

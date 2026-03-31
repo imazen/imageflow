@@ -167,6 +167,7 @@ impl CmdBuild {
                         value: query,
                         watermarks: None,
                     }]),
+                    job_options: None,
                 };
                 Ok(build)
             } // JobSource::NamedDemo(name) => Err(CmdError::DemoNotFound(name)),
@@ -433,6 +434,7 @@ impl CmdBuild {
                 io: transformed,
                 builder_config: b.builder_config,
                 framewise: b.framewise,
+                job_options: b.job_options,
             },
         ))
     }

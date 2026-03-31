@@ -69,6 +69,7 @@ fn run_idct_test(
         framewise: imageflow_types::Framewise::Steps(steps),
         security: None,
         graph_recording: None,
+        job_options: None,
     };
     context.execute_1(send_execute).unwrap();
 
