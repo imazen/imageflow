@@ -198,8 +198,11 @@ impl Decoder for GifDecoder {
 
                 let required = self.reader.buffer_size();
                 if required > 16 * 1024 * 1024 {
-                    return Err(nerror!(ErrorKind::SizeLimitExceeded,
-                        "GIF frame buffer_size {} exceeds 16MP limit", required));
+                    return Err(nerror!(
+                        ErrorKind::SizeLimitExceeded,
+                        "GIF frame buffer_size {} exceeds 16MP limit",
+                        required
+                    ));
                 }
                 let buf_mut = self.buffer.get_or_insert_with(|| vec![0; required]);
                 if buf_mut.len() < required {
@@ -229,8 +232,11 @@ impl Decoder for GifDecoder {
             //Prepare our reusable buffer
             let required = self.reader.buffer_size();
             if required > 16 * 1024 * 1024 {
-                return Err(nerror!(ErrorKind::SizeLimitExceeded,
-                    "GIF frame buffer_size {} exceeds 16MP limit", required));
+                return Err(nerror!(
+                    ErrorKind::SizeLimitExceeded,
+                    "GIF frame buffer_size {} exceeds 16MP limit",
+                    required
+                ));
             }
             let buf_mut = self.buffer.get_or_insert_with(|| vec![0; required]);
             if buf_mut.len() < required {
