@@ -3,7 +3,9 @@
 ## test_idct_spatial_no_gamma roof_approx
 tolerance off-by-one
 = easy-whale-d79756bc1f:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ peak-toad-0e0d3995ac:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within off-by-one) vs easy-whale-d79756bc1f:sea (zensim:99.59 (dissim 0.0041))
 
 ## test_idct_linear roof_gamma_corrected
 tolerance off-by-one
 = rural-box-9c80b17da0:sea  x86_64-avx512  @8ca16e2d  human-verified
+~ local-hub-05ea70b7b0:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within off-by-one) vs rural-box-9c80b17da0:sea (zensim:99.70 (dissim 0.0030))

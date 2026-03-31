@@ -5,9 +5,8 @@ use crate::graphics::swizzle::{copy_swap_br, swap_br_inplace};
 use crate::{ErrorKind, FlowError, Result};
 use moxcms::{
     curve_from_gamma, BarycentricWeightScale, Chromaticity, CicpColorPrimaries, CicpProfile,
-    CmsError, ColorPrimaries, ColorProfile, DataColorSpace, InPlaceTransformExecutor,
-    InterpolationMethod, Layout, MatrixCoefficients, TransferCharacteristics,
-    Transform8BitExecutor, TransformOptions, XyY,
+    CmsError, ColorPrimaries, ColorProfile, DataColorSpace, InPlaceTransformExecutor, Layout,
+    MatrixCoefficients, TransferCharacteristics, Transform8BitExecutor, TransformOptions, XyY,
 };
 use std::sync::Arc;
 
@@ -158,13 +157,7 @@ impl MoxcmsTransformCache {
         // curv/para TRCs from the CICP transfer characteristics, so they are honored
         // even with allow_use_cicp_transfer=false. This prevents the destination
         // profile's CICP metadata (from new_srgb()) from overriding its curv TRC.
-        let opts = TransformOptions {
-            allow_use_cicp_transfer: false,
-            interpolation_method: InterpolationMethod::Tetrahedral,
-            barycentric_weight_scale: BarycentricWeightScale::High,
-            prefer_fixed_point: false,
-            ..Default::default()
-        };
+        let opts = TransformOptions { allow_use_cicp_transfer: false, ..Default::default() };
         Self::create_transform_prefer_in_place(&src, &dst, opts)
     }
 
@@ -185,11 +178,11 @@ impl MoxcmsTransformCache {
 
         // ICC profiles: honor the profile's own curv/para TRCs, not any
         // embedded CICP transfer characteristics (e.g., PQ in Rec. 2020 profiles).
+        // High weight scale improves LUT interpolation accuracy (reduces max divergence
+        // from lcms2 from ~14 to ~2 for typical ICC LUT profiles).
         let opts = TransformOptions {
             allow_use_cicp_transfer: false,
-            interpolation_method: InterpolationMethod::Tetrahedral,
             barycentric_weight_scale: BarycentricWeightScale::High,
-            prefer_fixed_point: false,
             ..Default::default()
         };
 
@@ -238,13 +231,7 @@ impl MoxcmsTransformCache {
 
         let dst = ColorProfile::new_srgb();
         // Gamma/primaries profiles have no CICP — disable for safety.
-        let opts = TransformOptions {
-            allow_use_cicp_transfer: false,
-            interpolation_method: InterpolationMethod::Tetrahedral,
-            barycentric_weight_scale: BarycentricWeightScale::High,
-            prefer_fixed_point: false,
-            ..Default::default()
-        };
+        let opts = TransformOptions { allow_use_cicp_transfer: false, ..Default::default() };
         Self::create_transform_prefer_in_place(&src, &dst, opts)
     }
 
@@ -270,9 +257,7 @@ impl MoxcmsTransformCache {
                     Layout::Rgba,
                     TransformOptions {
                         allow_use_cicp_transfer: false,
-                        interpolation_method: InterpolationMethod::Tetrahedral,
                         barycentric_weight_scale: BarycentricWeightScale::High,
-                        prefer_fixed_point: false,
                         ..Default::default()
                     },
                 )

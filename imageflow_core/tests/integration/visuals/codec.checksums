@@ -19,6 +19,7 @@ tolerance zensim:99 (dissim 0.01)
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 = husky-song-433de0fc17:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ odd-ore-da1ac7d3f2:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs husky-song-433de0fc17:sea (zensim:99.87 (dissim 0.0013), 0.37% pixels ±1, max-delta:[1,0,0], category:rounding, biased)
+~ iron-knoll-6f15b2193f:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%) vs husky-song-433de0fc17:sea (zensim:99.62 (dissim 0.0038))
 
 ## test_webp_to_webp_quality q5_100x100
 tolerance zensim:95 (dissim 0.05)
@@ -36,16 +37,19 @@ tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 tolerance zensim:99 (dissim 0.01)
 = rapid-olive-5907234423:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ moved-tuna-df63ab2c17:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs rapid-olive-5907234423:sea (zensim:97.94 (dissim 0.021), 11.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ dusk-pulse-6ab571914b:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs rapid-olive-5907234423:sea (zensim:99.15 (dissim 0.0085))
 
 ## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg
 tolerance zensim:99 (dissim 0.01)
 = north-axe-3d46871ac4:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ curly-lava-84ffbde2f9:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs north-axe-3d46871ac4:sea (zensim:96.19 (dissim 0.038), 28.4% pixels ±5, max-delta:[5,4,5], category:unclassified)
+~ idle-cork-7c8be3f03a:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs north-axe-3d46871ac4:sea (zensim:99.18 (dissim 0.0082))
 
 ## test_transparent_png_to_png_rounded_corners shirt_cropped
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 = moot-song-b4af647101:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ next-flock-5c9d9d9c01:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs moot-song-b4af647101:sea (zensim:98.21 (dissim 0.018), 15.9% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ bone-doe-b98a960688:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%) vs moot-song-b4af647101:sea (zensim:99.67 (dissim 0.0033))
 
 ## test_jpeg_crop waterhouse_100x200
 tolerance off-by-one
@@ -55,6 +59,7 @@ tolerance off-by-one
 tolerance zensim:99 (dissim 0.01)
 = final-otter-e6b0565eaf:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ fawn-hazel-200d580465:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs final-otter-e6b0565eaf:sea (zensim:94.74 (dissim 0.053), 27.7% pixels ±8, max-delta:[6,6,8], category:unclassified)
+~ false-mule-f31a02e326:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within zensim:99 (dissim 0.01) vs final-otter-e6b0565eaf:sea (zensim:98.99 (dissim 0.010))
 
 ## test_crop_with_preshrink 170x220_crop
 tolerance off-by-one
@@ -64,13 +69,15 @@ tolerance off-by-one
 tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
 = loud-stork-e3a76d92e7:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ lazy-disc-329f73dcff:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs loud-stork-e3a76d92e7:sea (zensim:98.34 (dissim 0.017), 13.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ holy-fig-cf1c42f75e:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%) vs loud-stork-e3a76d92e7:sea (zensim:99.59 (dissim 0.0041))
 
 ## decode_cmyk_jpeg logo_passthrough
 tolerance max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%
 = bulk-mare-1741a4171a:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ ill-slate-0bfaf9f16b:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs bulk-mare-1741a4171a:sea (zensim:98.41 (dissim 0.016), 32.4% pixels ±3, max-delta:[2,2,3], category:unclassified)
 ~ red-box-ccae6b6de4:sea  aarch64  @ace43a05  auto-accepted vs bulk-mare-1741a4171a:sea  diff d:3 s:98.4 px:32.4%
 ~ brave-wheat-a1d8dbb9f1:sea  aarch64-windows  @ace43a05  auto-accepted vs bulk-mare-1741a4171a:sea  diff d:2 s:98.4 px:31.9%
+~ high-den-3a7bb5953f:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%) vs bulk-mare-1741a4171a:sea (zensim:98.96 (dissim 0.010))
+~ level-ember-f6e3798bd9:sea  x86_64-avx512  @abf0cd0c  auto-accepted within tolerance (within max-delta:3 zensim:95 (dissim 0.05) pixels-changed:100.0%) vs bulk-mare-1741a4171a:sea (zensim:97.79 (dissim 0.022), 31.9% pixels ±2, max-delta:[2,2,2], category:rounding, biased)
 
 ## test_problematic_png_lossy crop_1230x760
 tolerance zensim:95 (dissim 0.05)

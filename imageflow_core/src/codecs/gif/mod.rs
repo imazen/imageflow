@@ -97,9 +97,14 @@ impl GifDecoder {
 
     fn read_next_frame_info(&mut self) -> Result<()> {
         self.last_frame = self.next_frame.take();
-        // Currently clones local palette
-        self.next_frame =
-            self.reader.next_frame_info().map_err(|e| FlowError::from(e).at(here!()))?.cloned();
+        // Currently clones local palette.
+        // UnexpectedEof means the GIF is missing the Trailer byte (0x3B) but the frame data
+        // is otherwise intact — treat as end of stream rather than a hard error.
+        self.next_frame = match self.reader.next_frame_info() {
+            Ok(frame) => frame.cloned(),
+            Err(::gif::DecodingError::UnexpectedEof) => None,
+            Err(e) => return Err(FlowError::from(e).at(here!())),
+        };
         Ok(())
     }
 

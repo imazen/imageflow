@@ -50,7 +50,7 @@ safe_unaligned_simd = "0.2"
 evalchroma = "1"
 enough = { version = "0.4", features = ["std"] }
 garb = "0.1"
-moxcms = { git = "https://github.com/awxkee/moxcms.git", rev = "c4affa1", features = ["in_place"] }
+moxcms = { version = "0.8.1", features = ["in_place", "options"] }
 
 # Used for schema generation if feature enabled
 utoipa = { version = "5.3.1", features = [], optional = true }

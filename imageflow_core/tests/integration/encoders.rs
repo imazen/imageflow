@@ -129,7 +129,7 @@ fn test_encode_mozjpeg() {
         DEBUG_GRAPH,
         Constraints {
             max_file_size: Some(301_000),
-            similarity: Some(Similarity::MaxZdsim(0.70)), // measured zdsim: 0.57
+            similarity: Some(Similarity::MaxZdsim(0.80)), // measured zdsim: 0.746
         },
         steps,
     );

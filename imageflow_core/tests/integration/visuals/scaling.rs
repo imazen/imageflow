@@ -71,7 +71,6 @@ fn test_read_gif_and_vertical_distort() {
 }
 
 #[test]
-#[ignore] // gif crate doesn't support files without Trailer: https://github.com/image-rs/image-gif/issues/138
 fn test_read_gif_eof() {
     visual_check_bitmap! {
         source: "https://user-images.githubusercontent.com/657201/139770827-18e25c4e-eb0a-4058-ba48-ddc3849090ee.gif",

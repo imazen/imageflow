@@ -30,6 +30,8 @@ just test-build        # compile-check tests without running
 Checksum TOML files: `imageflow_core/tests/visuals/checksums/`
 Reference images: `imageflow_core/tests/visuals/checksums/images/`
 
+## Known Bugs
+
 ## Delayed TODOs
 
 - **Licensing/caching module** (`imageflow_helpers/src/unused/`): ~2300 lines of draft licensing, caching, and polling code. Currently unreferenced (no `mod` declaration). Needs review, modernization, and wiring into the build when ready to complete.

@@ -14,6 +14,7 @@ tolerance zensim:99 (dissim 0.01)
 tolerance zensim:99 (dissim 0.01)
 = short-frog-4f72443cc0:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ sheer-grain-9ff014ad22:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs short-frog-4f72443cc0:sea (zensim:97.99 (dissim 0.020), 19.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
+~ full-osprey-6c87c3f3cb:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within zensim:99 (dissim 0.01)) vs short-frog-4f72443cc0:sea (zensim:99.64 (dissim 0.0036))
 
 ## test_trim_whitespace_with_padding_no_resize gray_bg
 tolerance zensim:99 (dissim 0.01)
