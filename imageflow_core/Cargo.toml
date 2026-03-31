@@ -70,7 +70,7 @@ zennode = { path = "../../zen/zennode/zennode", features = ["derive", "serde"], 
 zenresize = { path = "../../zen/zenresize", optional = true }
 zenlayout = { path = "../../zen/zenlayout", optional = true }
 zenfilters = { path = "../../zen/zenfilters", features = ["zennode"], optional = true }
-zenpixels = { version = "0.2.1", optional = true }
+zenpixels = { version = "0.2.2", optional = true }
 linear-srgb = { path = "../../zen/linear-srgb", features = ["iec"], optional = true }
 
 # --- C codec dependencies (optional, gated behind c-codecs feature) ---
