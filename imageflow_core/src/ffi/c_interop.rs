@@ -113,7 +113,7 @@ pub enum JpegMarker {
     EXIF = 0xE1,
 }
 
-extern "C" {
+unsafe extern "C" {
 
     pub fn wrap_jpeg_error_state_bytes() -> usize;
 

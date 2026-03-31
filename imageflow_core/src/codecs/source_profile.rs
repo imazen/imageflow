@@ -190,7 +190,7 @@ impl SourceProfile {
     /// The `profile_buffer` pointer in `color` must be valid for `buffer_length` bytes
     /// if `source` is `ICCP` or `ICCP_GRAY`.
     #[cfg(feature = "c-codecs")]
-    pub unsafe fn from_decoder_color_info(color: &DecoderColorInfo) -> Self {
+    pub unsafe fn from_decoder_color_info(color: &DecoderColorInfo) -> Self { unsafe {
         match color.source {
             ColorProfileSource::Null | ColorProfileSource::sRGB => SourceProfile::Srgb,
             ColorProfileSource::ICCP => {
@@ -250,7 +250,7 @@ impl SourceProfile {
                 }
             }
         }
-    }
+    }}
 
     /// Returns true if this profile is sRGB (no transform needed).
     pub fn is_srgb(&self) -> bool {

@@ -380,7 +380,7 @@ include!("abi_version.rs");
 ///
 /// False means that
 ///
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(clippy::absurd_extreme_comparisons)]
 pub extern "C" fn imageflow_abi_compatible(
     imageflow_abi_ver_major: u32,
@@ -389,11 +389,11 @@ pub extern "C" fn imageflow_abi_compatible(
     imageflow_abi_ver_major == IMAGEFLOW_ABI_VER_MAJOR
         && imageflow_abi_ver_minor <= IMAGEFLOW_ABI_VER_MINOR
 }
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn imageflow_abi_version_major() -> u32 {
     IMAGEFLOW_ABI_VER_MAJOR
 }
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn imageflow_abi_version_minor() -> u32 {
     IMAGEFLOW_ABI_VER_MINOR
 }
@@ -422,7 +422,7 @@ pub extern "C" fn imageflow_abi_version_minor() -> u32 {
 ///
 /// This function is safe to call from multiple threads simultaneously. Each call creates an
 /// independent context.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn imageflow_context_create(
     imageflow_abi_ver_major: u32,
     imageflow_abi_ver_minor: u32,
@@ -451,7 +451,7 @@ pub extern "C" fn imageflow_context_create(
 /// # Panics
 ///
 /// Cannot panic - designed to be panic-safe for cleanup paths.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_begin_terminate(
     context: *mut ThreadSafeContext,
 ) -> bool {
@@ -484,7 +484,7 @@ pub unsafe extern "C" fn imageflow_context_begin_terminate(
 ///
 /// This function is NOT safe to call while other threads are using the context.
 /// Ensure all threads have finished using the context before destroying it.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_destroy(context: *mut ThreadSafeContext) {
     if !context.is_null() {
         unsafe {
@@ -522,7 +522,7 @@ pub fn exercise_create_destroy() {
 /// # Thread Safety
 ///
 /// Safe to call from multiple threads on the same context (acquires read lock).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_has_error(context: *mut ThreadSafeContext) -> bool {
     context!(context).outward_error().has_error()
 }
@@ -541,7 +541,7 @@ pub unsafe extern "C" fn imageflow_context_has_error(context: *mut ThreadSafeCon
 /// # Thread Safety
 ///
 /// Safe to call from multiple threads on the same context (acquires read lock).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_error_recoverable(
     context: *mut ThreadSafeContext,
 ) -> bool {
@@ -564,7 +564,7 @@ pub unsafe extern "C" fn imageflow_context_error_recoverable(
 /// # Thread Safety
 ///
 /// Safe to call from multiple threads on the same context (acquires write lock).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_error_try_clear(
     context: *mut ThreadSafeContext,
 ) -> bool {
@@ -582,7 +582,7 @@ pub unsafe extern "C" fn imageflow_context_error_try_clear(
 /// * `context` must be a valid pointer from `imageflow_context_create`
 /// * `context` must not be NULL (will abort process)
 /// * `context` must not have been destroyed
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_error_code(context: *mut ThreadSafeContext) -> i32 {
     context!(context).outward_error().category().to_outward_error_code()
 }
@@ -607,7 +607,7 @@ pub unsafe extern "C" fn imageflow_context_error_code(context: *mut ThreadSafeCo
 /// * `context` must be a valid pointer from `imageflow_context_create`
 /// * `context` must not be NULL (will abort process)
 /// * `context` must not have been destroyed
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_error_as_exit_code(
     context: *mut ThreadSafeContext,
 ) -> i32 {
@@ -633,7 +633,7 @@ pub unsafe extern "C" fn imageflow_context_error_as_exit_code(
 /// * `context` must be a valid pointer from `imageflow_context_create`
 /// * `context` must not be NULL (will abort process)
 /// * `context` must not have been destroyed
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_error_as_http_code(
     context: *mut ThreadSafeContext,
 ) -> i32 {
@@ -676,7 +676,7 @@ pub unsafe extern "C" fn imageflow_context_error_as_http_code(
 /// # Thread Safety
 ///
 /// Safe to call from multiple threads on the same context (acquires read lock on error state).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(
     context: *mut ThreadSafeContext,
     buffer: *mut libc::c_char,
@@ -736,7 +736,7 @@ pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(
 ///
 /// If called while other threads are running, those threads will be terminated without cleanup.
 /// Only use this in single-threaded command-line programs.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(
     context: *mut ThreadSafeContext,
 ) -> bool {
@@ -775,7 +775,7 @@ pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(
 ///
 /// The response object is not protected by locks. Do not read a response while another thread
 /// might be freeing it or destroying the context.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_json_response_read(
     context: *mut ThreadSafeContext,
     response_in: *const JsonResponse,
@@ -834,14 +834,14 @@ pub unsafe extern "C" fn imageflow_json_response_read(
 ///
 /// Safe to call from multiple threads on the same context, but ensure no other thread is reading
 /// this specific response object.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_json_response_destroy(
     context: *mut ThreadSafeContext,
     response: *mut JsonResponse,
-) -> bool {
+) -> bool { unsafe {
     let context = context!(context);
     imageflow_context_memory_free(context, response as *mut libc::c_void, ptr::null(), 0)
-}
+}}
 
 /// Requests cancellation of any running or future operations on this context.
 ///
@@ -868,7 +868,7 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(
 ///
 /// **This is the only function specifically designed to be called from another thread while an
 /// operation is running.** Use this to implement timeouts or user cancellation.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_request_cancellation(context: *mut ThreadSafeContext) {
     let c: &mut ThreadSafeContext = context!(context);
     c.request_cancellation();
@@ -934,7 +934,7 @@ pub unsafe extern "C" fn imageflow_context_request_cancellation(context: *mut Th
 ///
 /// Safe to call from multiple threads on the same context (acquires write lock).
 /// Operations will serialize - only one operation executes at a time per context.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_send_json(
     context: *mut ThreadSafeContext,
     method: *const libc::c_char,
@@ -1122,7 +1122,7 @@ pub fn create_abi_json_response(
 /// # Thread Safety
 ///
 /// Safe to call from multiple threads on the same context (acquires write lock).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_add_input_buffer(
     context: *mut ThreadSafeContext,
     io_id: i32,
@@ -1209,7 +1209,7 @@ pub unsafe extern "C" fn imageflow_context_add_input_buffer(
 /// # Thread Safety
 ///
 /// Safe to call from multiple threads on the same context (acquires write lock).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_add_output_buffer(
     context: *mut ThreadSafeContext,
     io_id: i32,
@@ -1257,7 +1257,7 @@ pub unsafe extern "C" fn imageflow_context_add_output_buffer(
 ///
 /// Safe to call from multiple threads on the same context (acquires write lock).
 /// Note: The buffer pointer becomes shared - ensure no thread is writing to outputs while reading.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
     context: *mut ThreadSafeContext,
     io_id: i32,
@@ -1320,7 +1320,7 @@ pub unsafe extern "C" fn imageflow_context_get_output_buffer_by_id(
 /// # Thread Safety
 ///
 /// Safe to call from multiple threads on the same context (acquires write lock).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_take_output_buffer(
     context: *mut ThreadSafeContext,
     io_id: i32,
@@ -1370,7 +1370,7 @@ pub unsafe extern "C" fn imageflow_context_take_output_buffer(
 /// * `buffer` must be NULL or a pointer returned by `imageflow_context_take_output_buffer`
 /// * `length` must match the length returned by the same call
 /// * The buffer must not have been freed before
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_buffer_free(buffer: *mut u8, length: libc::size_t) -> bool {
     if buffer.is_null() {
         return true; // NULL is a safe no-op
@@ -1409,7 +1409,7 @@ pub unsafe extern "C" fn imageflow_buffer_free(buffer: *mut u8, length: libc::si
 /// # Thread Safety
 ///
 /// Safe to call from multiple threads on the same context (uses separate allocation lock).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_memory_allocate(
     context: *mut ThreadSafeContext,
     bytes: libc::size_t,
@@ -1469,7 +1469,7 @@ pub unsafe extern "C" fn imageflow_context_memory_allocate(
 /// # Thread Safety
 ///
 /// Safe to call from multiple threads on the same context (uses separate allocation lock).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_memory_free(
     context: *mut ThreadSafeContext,
     pointer: *mut libc::c_void,

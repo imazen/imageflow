@@ -51,7 +51,7 @@ impl MoxcmsTransformCache {
             return Ok(());
         }
 
-        if let SourceProfile::CmykIcc(ref icc_bytes) = profile {
+        if let SourceProfile::CmykIcc(icc_bytes) = profile {
             return Self::transform_cmyk_to_srgb(frame, icc_bytes);
         }
 

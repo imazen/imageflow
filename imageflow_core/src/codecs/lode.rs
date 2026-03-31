@@ -196,7 +196,7 @@ impl LodepngEncoder {
     }
 }
 
-extern "C" {
+unsafe extern "C" {
     /// zlib
     fn compress2(
         dest: *mut u8,

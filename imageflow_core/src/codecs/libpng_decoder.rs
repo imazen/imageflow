@@ -135,7 +135,7 @@ impl Drop for PngDec {
 }
 
 impl PngDec {
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     extern "C" fn png_decoder_error_handler(
         png_ptr: *mut c_void,
         custom_state: *mut c_void,
@@ -157,7 +157,7 @@ impl PngDec {
         }
     }
 
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     extern "C" fn png_decoder_custom_read_function(
         png_ptr: *mut c_void,
         custom_state: *mut c_void,

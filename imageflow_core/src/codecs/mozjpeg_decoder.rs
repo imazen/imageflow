@@ -162,7 +162,7 @@ impl Drop for MzDec {
 }
 
 impl MzDec {
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     extern "C" fn jpeg_error_handler(
         custom_state: *mut c_void,
         codec_info: *mut mozjpeg_sys::jpeg_common_struct,
@@ -405,7 +405,7 @@ impl MzDec {
         Ok(())
     }
 
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     extern "C" fn source_fill_buffer(
         codec_info: &mut mozjpeg_sys::jpeg_decompress_struct,
         custom_state: *mut c_void,
@@ -454,7 +454,7 @@ impl MzDec {
         }
     }
 
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     extern "C" fn source_skip_bytes(
         codec_info: &mut mozjpeg_sys::jpeg_decompress_struct,
         custom_state: *mut c_void,

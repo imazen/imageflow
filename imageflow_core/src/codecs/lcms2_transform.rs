@@ -25,7 +25,7 @@ impl Lcms2TransformCache {
         _context_id: lcms2_sys::Context,
         error_code: u32,
         text: *const core::ffi::c_char,
-    ) {
+    ) { unsafe {
         if text.is_null() {
             return;
         }
@@ -36,7 +36,7 @@ impl Lcms2TransformCache {
         LAST_PROFILE_ERROR_MESSAGE.with(|m| {
             *m.borrow_mut() = Some(message);
         })
-    }
+    }}
 
     fn create_thread_context() -> ThreadContext {
         let mut context = ThreadContext::new();

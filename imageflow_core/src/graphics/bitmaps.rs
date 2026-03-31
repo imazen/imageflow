@@ -482,7 +482,7 @@ impl Bitmap {
 
     fn get_u8_slice(&mut self) -> Option<&mut [u8]> {
         let offset = self.offset() as usize;
-        if let BitmapBuffer::Bytes(ref mut buf) = &mut (self).buffer {
+        if let BitmapBuffer::Bytes(buf) = &mut (self).buffer {
             Some(&mut buf.as_slice_mut()[offset..])
         } else {
             None
@@ -493,7 +493,7 @@ impl Bitmap {
             return None;
         }
         let offset = self.offset() as usize / 4;
-        if let BitmapBuffer::Bytes(ref mut buf) = &mut (self).buffer {
+        if let BitmapBuffer::Bytes(buf) = &mut (self).buffer {
             match bytemuck::try_cast_slice_mut::<u8, rgb::alt::BGRA<u8, u8>>(buf.as_slice_mut()) {
                 Ok(slice) => Some(&mut slice[offset..]),
                 Err(_) => None,
@@ -504,7 +504,7 @@ impl Bitmap {
     }
     fn get_f32_slice(&mut self) -> Option<&mut [f32]> {
         let offset = self.offset() as usize;
-        if let BitmapBuffer::Floats(ref mut buf) = &mut (self).buffer {
+        if let BitmapBuffer::Floats(buf) = &mut (self).buffer {
             Some(&mut buf.as_slice_mut()[offset..])
         } else {
             None
@@ -515,7 +515,7 @@ impl Bitmap {
             return None;
         }
         let offset = self.offset() as usize / 4;
-        if let BitmapBuffer::Floats(ref mut buf) = &mut (self).buffer {
+        if let BitmapBuffer::Floats(buf) = &mut (self).buffer {
             match bytemuck::try_cast_slice_mut::<f32, Bgra<f32>>(buf.as_slice_mut()) {
                 Ok(slice) => Some(&mut slice[offset..]),
                 Err(_) => None,

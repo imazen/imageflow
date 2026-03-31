@@ -3,14 +3,14 @@ name = "imageflow_helpers"
 version = "0.1.0"
 authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
-edition = "2021"
+edition = "2024"
 rust-version = "1.93"
 
 [dependencies]
 libc = "0.2"
 
 # time
-time = "*"
+time = "0.3.47"
 chrono =  "0.4"
 
 # serialization

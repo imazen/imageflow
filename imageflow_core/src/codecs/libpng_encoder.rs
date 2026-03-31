@@ -77,7 +77,7 @@ impl Encoder for LibPngEncoder {
 }
 
 impl LibPngEncoder {
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     extern "C" fn png_encoder_error_handler(
         png_ptr: *mut c_void,
         custom_state: *mut c_void,
@@ -103,7 +103,7 @@ impl LibPngEncoder {
         }
     }
 
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     extern "C" fn png_encoder_custom_write_function(
         png_ptr: *mut c_void,
         custom_state: *mut c_void,
