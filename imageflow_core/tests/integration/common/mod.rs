@@ -777,9 +777,14 @@ pub fn compare_encoded(
             );
         }
 
-        // Both backends use the same detail name — zen is compared against the v2 golden.
-        if !check_visual_bytes(identity, detail, &bytes, &tol_spec) {
-            panic!("[{suffix}] visual check failed for {detail}");
+        // Each backend gets its own baseline to avoid cross-decoder tolerance issues.
+        let backend_detail = if suffix == "v2" {
+            detail.to_string()
+        } else {
+            format!("{detail}_{suffix}")
+        };
+        if !check_visual_bytes(identity, &backend_detail, &bytes, &tol_spec) {
+            panic!("[{suffix}] visual check failed for {backend_detail}");
         }
     }
     true
@@ -820,8 +825,13 @@ pub fn compare_bitmap(
             .get_captured_bitmap_key(capture_id)
             .unwrap_or_else(|| panic!("[{suffix}] no captured bitmap"));
 
-        // Both backends use the same detail name — zen is compared against the v2 golden.
-        check_visual_bitmap(identity, detail, &context, bitmap_key, tolerance);
+        // Each backend gets its own baseline to avoid cross-decoder tolerance issues.
+        let backend_detail = if suffix == "v2" {
+            detail.to_string()
+        } else {
+            format!("{detail}_{suffix}")
+        };
+        check_visual_bitmap(identity, &backend_detail, &context, bitmap_key, tolerance);
     }
     true
 }
