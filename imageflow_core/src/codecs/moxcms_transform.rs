@@ -8,6 +8,21 @@ use moxcms::{
     CmsError, ColorPrimaries, ColorProfile, DataColorSpace, InPlaceTransformExecutor, Layout,
     MatrixCoefficients, TransferCharacteristics, Transform8BitExecutor, TransformOptions, XyY,
 };
+
+/// Standard moxcms transform options for all ICC/CICP/gAMA color transforms.
+///
+/// - `allow_use_cicp_transfer: false` — honor the profile's own curv/para TRCs,
+///   not any embedded CICP transfer characteristics.
+/// - `BarycentricWeightScale::High` — reduces LUT interpolation divergence vs
+///   lcms2 from max≤14 to max≤2 for standard ICC LUT profiles, at no measurable
+///   performance cost on modern hardware.
+fn lut_transform_opts() -> TransformOptions {
+    TransformOptions {
+        allow_use_cicp_transfer: false,
+        barycentric_weight_scale: BarycentricWeightScale::High,
+        ..Default::default()
+    }
+}
 use std::sync::Arc;
 
 /// Cached transforms keyed by hash of profile parameters.
@@ -153,11 +168,11 @@ impl MoxcmsTransformCache {
 
         let src = ColorProfile::new_from_cicp(cicp);
         let dst = ColorProfile::new_srgb();
-        // Disable CICP transfer override for safety: new_from_cicp() already sets
-        // curv/para TRCs from the CICP transfer characteristics, so they are honored
-        // even with allow_use_cicp_transfer=false. This prevents the destination
-        // profile's CICP metadata (from new_srgb()) from overriding its curv TRC.
-        let opts = TransformOptions { allow_use_cicp_transfer: false, ..Default::default() };
+        // allow_use_cicp_transfer=false: new_from_cicp() already bakes the CICP
+        // transfer characteristics into curv/para TRCs, so they are honored without
+        // this flag. Disabling prevents new_srgb()'s CICP metadata from overriding
+        // the destination profile's own curv TRC.
+        let opts = lut_transform_opts();
         Self::create_transform_prefer_in_place(&src, &dst, opts)
     }
 
@@ -176,15 +191,9 @@ impl MoxcmsTransformCache {
 
         let dst = ColorProfile::new_srgb();
 
-        // ICC profiles: honor the profile's own curv/para TRCs, not any
-        // embedded CICP transfer characteristics (e.g., PQ in Rec. 2020 profiles).
-        // High weight scale improves LUT interpolation accuracy (reduces max divergence
-        // from lcms2 from ~14 to ~2 for typical ICC LUT profiles).
-        let opts = TransformOptions {
-            allow_use_cicp_transfer: false,
-            barycentric_weight_scale: BarycentricWeightScale::High,
-            ..Default::default()
-        };
+        // Honor the ICC profile's own curv/para TRCs rather than any embedded
+        // CICP transfer characteristics (e.g., PQ in Rec.2020 ICC profiles).
+        let opts = lut_transform_opts();
 
         if is_gray {
             // Gray ICC → RGBA: needs dedicated apply path because the frame
@@ -230,8 +239,8 @@ impl MoxcmsTransformCache {
         src.blue_trc = Some(trc);
 
         let dst = ColorProfile::new_srgb();
-        // Gamma/primaries profiles have no CICP — disable for safety.
-        let opts = TransformOptions { allow_use_cicp_transfer: false, ..Default::default() };
+        // Gamma/primaries profiles carry no CICP metadata; disable for consistency.
+        let opts = lut_transform_opts();
         Self::create_transform_prefer_in_place(&src, &dst, opts)
     }
 
@@ -247,20 +256,10 @@ impl MoxcmsTransformCache {
             let src = ColorProfile::new_from_slice(icc_bytes)
                 .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
             let dst = ColorProfile::new_srgb();
-            // CMYK ICC profiles require Layout::Rgba (4 channels) — moxcms maps
-            // channel semantics from the ICC profile, not from the Layout enum.
-            // Disable CICP override — honor the ICC profile's own TRCs.
+            // CMYK ICC profiles use Layout::Rgba (4 channels) — moxcms maps channel
+            // semantics from the ICC profile's color space, not the Layout enum.
             let t = src
-                .create_transform_8bit(
-                    Layout::Rgba,
-                    &dst,
-                    Layout::Rgba,
-                    TransformOptions {
-                        allow_use_cicp_transfer: false,
-                        barycentric_weight_scale: BarycentricWeightScale::High,
-                        ..Default::default()
-                    },
-                )
+                .create_transform_8bit(Layout::Rgba, &dst, Layout::Rgba, lut_transform_opts())
                 .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
             CMYK_TRANSFORMS.get_or_create(hash, || t)
         };
