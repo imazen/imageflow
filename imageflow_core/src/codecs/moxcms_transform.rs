@@ -5,8 +5,9 @@ use crate::graphics::swizzle::{copy_swap_br, swap_br_inplace};
 use crate::{ErrorKind, FlowError, Result};
 use moxcms::{
     curve_from_gamma, BarycentricWeightScale, Chromaticity, CicpColorPrimaries, CicpProfile,
-    CmsError, ColorPrimaries, ColorProfile, DataColorSpace, InPlaceTransformExecutor, Layout,
-    MatrixCoefficients, TransferCharacteristics, Transform8BitExecutor, TransformOptions, XyY,
+    CmsError, ColorPrimaries, ColorProfile, DataColorSpace, InPlaceTransformExecutor,
+    InterpolationMethod, Layout, MatrixCoefficients, TransferCharacteristics,
+    Transform8BitExecutor, TransformOptions, XyY,
 };
 
 /// Standard moxcms transform options for all ICC/CICP/gAMA color transforms.
@@ -20,6 +21,7 @@ fn lut_transform_opts() -> TransformOptions {
     TransformOptions {
         allow_use_cicp_transfer: false,
         barycentric_weight_scale: BarycentricWeightScale::High,
+        interpolation_method: InterpolationMethod::Tetrahedral,
         ..Default::default()
     }
 }
