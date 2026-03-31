@@ -9,6 +9,7 @@
 
 use imageflow_core::Context;
 use imageflow_types as s;
+use crate::common;
 
 /// Run a pipeline with ApplyOrientation and check pixel content.
 ///
@@ -139,3 +140,141 @@ fn orientation_pixels_zen_flip_h() {
 fn orientation_pixels_zen_rotate90() {
     check_orientation_pixels(imageflow_core::Backend::Zen, 6, "zen/rotate90");
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// JPEG EXIF auto-orient tests
+//
+// These use real JPEG files with EXIF orientation tags from S3.
+// The pipeline uses Decode + Constrain (no explicit ApplyOrientation).
+// The backend must auto-detect EXIF orientation and apply it.
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Fetch a test JPEG from S3 and return bytes.
+fn fetch_test_jpeg(name: &str) -> Vec<u8> {
+    let url = format!(
+        "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{name}"
+    );
+    common::get_url_bytes_with_retry(&url).unwrap()
+}
+
+/// Run Decode + Constrain (no explicit ApplyOrientation) and return captured BGRA pixels.
+fn decode_constrain_capture(
+    backend: imageflow_core::Backend,
+    jpeg_bytes: &[u8],
+    max_w: u32,
+    max_h: u32,
+) -> (Vec<u8>, u32, u32) {
+    let mut ctx = Context::create().unwrap();
+    ctx.force_backend = Some(backend);
+    ctx.add_copied_input_buffer(0, jpeg_bytes).unwrap();
+
+    let capture_id = 0;
+    let result = ctx.execute_1(s::Execute001 {
+        graph_recording: None,
+        security: None,
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::Constrain(s::Constraint {
+                mode: s::ConstraintMode::Within,
+                w: Some(max_w),
+                h: Some(max_h),
+                hints: None,
+                gravity: None,
+                canvas_color: None,
+            }),
+            s::Node::CaptureBitmapKey { capture_id },
+        ]),
+        job_options: None,
+    });
+    result.unwrap();
+
+    let bitmap_key = ctx.get_captured_bitmap_key(capture_id).unwrap();
+    let bitmaps = ctx.borrow_bitmaps().unwrap();
+    let mut bm = bitmaps.try_borrow_mut(bitmap_key).unwrap();
+    let mut window = bm.get_window_u8().unwrap();
+    window.normalize_unused_alpha().unwrap();
+    let w = window.w();
+    let h = window.h();
+    let stride = window.info().t_stride() as usize;
+
+    let mut pixels = Vec::with_capacity((w * h * 4) as usize);
+    for y in 0..h as usize {
+        let row = &window.get_slice()[y * stride..y * stride + w as usize * 4];
+        pixels.extend_from_slice(row);
+    }
+    (pixels, w, h)
+}
+
+/// Compare v2 and zen output dimensions and pixel similarity for a JPEG with EXIF flag.
+fn compare_backends_exif(jpeg_name: &str, max_dim: u32) {
+    let bytes = fetch_test_jpeg(jpeg_name);
+
+    let (v2_px, v2_w, v2_h) = decode_constrain_capture(
+        imageflow_core::Backend::V2, &bytes, max_dim, max_dim,
+    );
+    let (zen_px, zen_w, zen_h) = decode_constrain_capture(
+        imageflow_core::Backend::Zen, &bytes, max_dim, max_dim,
+    );
+
+    // Dimensions must match (both should auto-orient the same way)
+    assert_eq!(
+        (v2_w, v2_h), (zen_w, zen_h),
+        "{jpeg_name}: v2 dims {v2_w}x{v2_h} != zen dims {zen_w}x{zen_h}"
+    );
+
+    // Pixel similarity: compute max delta across all pixels
+    let mut max_delta: u8 = 0;
+    let mut diff_count: u64 = 0;
+    let total = v2_px.len();
+    for (a, b) in v2_px.iter().zip(zen_px.iter()) {
+        let d = (*a as i16 - *b as i16).unsigned_abs() as u8;
+        if d > max_delta {
+            max_delta = d;
+        }
+        if d > 0 {
+            diff_count += 1;
+        }
+    }
+    let diff_pct = diff_count as f64 / total as f64 * 100.0;
+    eprintln!(
+        "{jpeg_name}: {v2_w}x{v2_h}, max_delta={max_delta}, {diff_pct:.1}% pixels differ"
+    );
+
+    // Allow decoder rounding differences but not structural mismatches.
+    // If orientation is wrong, max_delta will be very large (>100).
+    assert!(
+        max_delta < 100,
+        "{jpeg_name}: max_delta={max_delta} — likely orientation mismatch between v2 and zen"
+    );
+}
+
+// Landscape images: EXIF flags 1-8 (all have the same scene, different orientation)
+// Flag 1 = identity, 2 = FlipH, 3 = Rotate180, 4 = FlipV,
+// 5 = Transpose, 6 = Rotate90, 7 = Transverse, 8 = Rotate270
+
+#[test]
+fn exif_auto_orient_landscape_1() { compare_backends_exif("Landscape_1.jpg", 70); }
+#[test]
+fn exif_auto_orient_landscape_2() { compare_backends_exif("Landscape_2.jpg", 70); }
+#[test]
+fn exif_auto_orient_landscape_3() { compare_backends_exif("Landscape_3.jpg", 70); }
+#[test]
+fn exif_auto_orient_landscape_4() { compare_backends_exif("Landscape_4.jpg", 70); }
+#[test]
+fn exif_auto_orient_landscape_5() { compare_backends_exif("Landscape_5.jpg", 70); }
+#[test]
+fn exif_auto_orient_landscape_6() { compare_backends_exif("Landscape_6.jpg", 70); }
+#[test]
+fn exif_auto_orient_landscape_7() { compare_backends_exif("Landscape_7.jpg", 70); }
+#[test]
+fn exif_auto_orient_landscape_8() { compare_backends_exif("Landscape_8.jpg", 70); }
+
+// Portrait images: same set of flags
+#[test]
+fn exif_auto_orient_portrait_1() { compare_backends_exif("Portrait_1.jpg", 70); }
+#[test]
+fn exif_auto_orient_portrait_2() { compare_backends_exif("Portrait_2.jpg", 70); }
+#[test]
+fn exif_auto_orient_portrait_6() { compare_backends_exif("Portrait_6.jpg", 70); }
+#[test]
+fn exif_auto_orient_portrait_8() { compare_backends_exif("Portrait_8.jpg", 70); }
