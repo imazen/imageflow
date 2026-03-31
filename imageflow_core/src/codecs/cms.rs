@@ -90,11 +90,10 @@ pub fn transform_to_srgb(frame: &mut BitmapWindowMut<u8>, profile: &SourceProfil
 
             let is_cmyk = matches!(profile, SourceProfile::CmykIcc(_));
             // Thresholds reflect the expected residual between moxcms and lcms2
-            // with BarycentricWeightScale::High fixed-point trilinear moxcms:
-            //   GammaPrimaries / most ICC LUT profiles: max=2 (High weight scale)
-            //   Apple Wide Color ICC v4 LUT (PCS=XYZ, haring Profile): max=12 (outlier)
-            //   CMYK Lab-PCS LUT: max=6
-            let threshold: u8 = if is_cmyk { 6 } else { 12 };
+            // with BarycentricWeightScale::High + InterpolationMethod::Tetrahedral:
+            //   GammaPrimaries / all ICC LUT profiles (incl. Apple Wide Color): max=2
+            //   CMYK Lab-PCS LUT: max=5
+            let threshold: u8 = if is_cmyk { 5 } else { 2 };
 
             // Snapshot original frame data (alloc 1 of 2)
             let row_bytes = frame.w() as usize * frame.t_per_pixel();
@@ -287,7 +286,7 @@ fn compare_results_against_frame(
     } else {
         String::new()
     };
-    panic!(
+    cms_eprintln(format_args!(
         "[CMS Both] moxcms/lcms2 diverge >{max_diff}: {profile_type} {divergent_pixels}/{total_pixels} pixels \
          (max={max_observed} p99={p99} p95={p95} p50={p50} mean_bgr={mean_b:.2},{mean_g:.2},{mean_r:.2} \
          ch_max=B{}/G{}/R{}/A{}) profile={desc}{worst_pixel_msg}",
@@ -295,5 +294,5 @@ fn compare_results_against_frame(
         max_per_channel[1],
         max_per_channel[2],
         max_per_channel[3],
-    );
+    ));
 }

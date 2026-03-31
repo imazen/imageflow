@@ -1,6 +1,9 @@
 ## test_jpeg_icc4_color_profile mars_v4_robidoux_400x300
 tolerance max-delta:2 zensim:80 (dissim 0.20) pixels-changed:100.0%
-~ plain-forge-2bbaf351fa:sea  x86_64-avx512  @7f57bc57  auto-accepted
+= old-ant-f705618161:sea  x86_64-avx512  @8ca16e2d  new-baseline
+~ plain-forge-2bbaf351fa:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs old-ant-f705618161:sea (zensim:99.85 (dissim 0.0015), 100.0% pixels ±1, max-delta:[0,1,0], category:rounding, biased)
+~ raw-otter-b8c900dccf:sea  aarch64-windows  @ace43a05  auto-accepted vs old-ant-f705618161:sea  diff d:2 s:82.9 px:100.0%
+~ same-crab-1a6b76cfd1:sea  x86_64-avx512  @1ebabe5d  auto-accepted within tolerance (within max-delta:2 zensim:80 (dissim 0.20) pixels-changed:100.0%) vs old-ant-f705618161:sea (zensim:99.22 (dissim 0.0078), 100.0% pixels ±1, max-delta:[1,0,1], category:rounding, biased)
 
 ## test_scale_rings hermite_400x400
 tolerance off-by-one
@@ -9,7 +12,6 @@ tolerance off-by-one
 ## test_scale_image waterhouse_robidoux_400x300
 tolerance off-by-one
 = only-tiger-a4839401fa:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ red-cape-644c5e757b:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within off-by-one) vs only-tiger-a4839401fa:sea (zensim:99.62 (dissim 0.0038))
 
 ## test_jpeg_icc2_color_profile mars_robidoux_400x300
 tolerance off-by-one
@@ -37,4 +39,4 @@ tolerance off-by-one
 
 ## test_read_gif_eof buggy_animated-gif
 tolerance off-by-one
-~ dusk-pearl-3b49135249:sea  x86_64-avx512  @e849c188  auto-accepted
+~ dusk-pearl-3b49135249:sea  x86_64-avx512  @1ebabe5d  auto-accepted

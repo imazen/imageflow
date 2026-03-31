@@ -3,18 +3,15 @@
 ## test_watermark_image_command_string dice_fitcrop_90pct
 tolerance off-by-one
 = ripe-marsh-dd75ce382a:sea  x86_64-avx512  @8ca16e2d  human-verified
-~ mere-shell-46ff44ca46:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within off-by-one) vs ripe-marsh-dd75ce382a:sea (zensim:99.48 (dissim 0.0052))
 
 ## test_watermark_image dice_fitcrop_90pct
 tolerance off-by-one
 = ripe-marsh-dd75ce382a:sea  x86_64-avx512  @8ca16e2d  human-verified
-~ mere-shell-46ff44ca46:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within off-by-one) vs ripe-marsh-dd75ce382a:sea (zensim:99.48 (dissim 0.0052))
 
 ## test_watermark_image_on_png shirt_with_webp
 tolerance off-by-one
 = novel-pulse-c8d51eb293:sea  x86_64-avx512  @8ca16e2d  human-verified
 ~ elite-mace-1b22fb8dfd:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs novel-pulse-c8d51eb293:sea (zensim:98.42 (dissim 0.016), 11.1% pixels ±2, max-delta:[2,1,1], category:rounding, biased)
-~ faded-trail-191f01803a:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within off-by-one) vs novel-pulse-c8d51eb293:sea (zensim:99.60 (dissim 0.0040))
 
 ## test_watermark_image_small webp_within_90pct
 tolerance off-by-one
@@ -28,7 +25,6 @@ tolerance off-by-one
 ## test_watermark_image_command_string_with_bgcolor dice_aaeeff
 tolerance off-by-one
 = ripe-marsh-dd75ce382a:sea  x86_64-avx512  @8ca16e2d  human-verified
-~ mere-shell-46ff44ca46:sea  x86_64-avx512  @d62e2513  auto-accepted within tolerance (within off-by-one) vs ripe-marsh-dd75ce382a:sea (zensim:99.48 (dissim 0.0052))
 
 ## test_watermark_image_pixel_margins webp_700px_offset
 tolerance off-by-one
