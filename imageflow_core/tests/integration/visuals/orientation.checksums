@@ -167,8 +167,8 @@ tolerance off-by-one
 ## test_jpeg_rotation Landscape_2
 tolerance off-by-one
 = damp-snow-6d4ea7726c:sea  x86_64-avx512  @8ca16e2d  new-baseline
-~ murky-olive-3b5ef7d31e:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs damp-snow-6d4ea7726c:sea (zensim:99.28 (dissim 0.0072), 5.2% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 ~ roomy-fire-fdc4d957be:sea  x86_64-avx512  @542276d2  auto-accepted within tolerance (within off-by-one) vs damp-snow-6d4ea7726c:sea (zensim:99.32 (dissim 0.0068))
+~ grand-bird-37607208c2:sea  x86_64-avx512  @70ff748d  auto-accepted within tolerance (within off-by-one) vs damp-snow-6d4ea7726c:sea (zensim:93.46 (dissim 0.065), 56.8% pixels ±1, max-delta:[1,1,1], category:rounding, biased, dims:70x53vs70x53/orientation swap)
 
 ## test_jpeg_rotation Landscape_3
 tolerance off-by-one

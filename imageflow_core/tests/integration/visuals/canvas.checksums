@@ -48,6 +48,7 @@ tolerance off-by-one
 tolerance off-by-one
 = late-sand-154de3acc8:sea  x86_64-avx512  @8ca16e2d  human-verified
 ~ flat-glen-8427fff5c3:sea  x86_64-avx512  @9ba39526  auto-accepted within tolerance (within off-by-one) vs late-sand-154de3acc8:sea (zensim:99.89 (dissim 0.0011))
+~ legal-voice-0ab0ae84cb:sea  x86_64-avx512  @70ff748d  auto-accepted within tolerance (within off-by-one) vs late-sand-154de3acc8:sea (zensim:99.45 (dissim 0.0055), 0.12% pixels ±1, max-delta:[0,0,1], category:rounding, balanced)
 
 ## test_round_corners_circle_tall_canvas 150x200_transparent
 tolerance off-by-one
