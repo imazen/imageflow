@@ -2,7 +2,6 @@
 tolerance off-by-one
 ~ elite-mace-1b22fb8dfd:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_watermark_image_on_png shirt_with_webp_zen
 tolerance off-by-one
 ~ grown-eagle-450b02f42e:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -10,7 +9,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ damp-palm-cef4e7d314:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_watermark_jpeg_over_pnga gamma_test_30pct_zen
 tolerance off-by-one
 ~ paid-dew-b4f3a082c9:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -34,22 +32,17 @@ tolerance off-by-one
 tolerance off-by-one
 ~ oral-cliff-ee411f978a:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_watermark_image_pixel_margins webp_700px_offset_zen
 tolerance off-by-one
 ~ lone-pond-642728a85d:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_watermark_image_command_string dice_fitcrop_90pct_zen
 tolerance off-by-one
 ~ paced-ledge-30b47a4836:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_watermark_image_small webp_within_90pct_zen
 tolerance off-by-one
 ~ chief-mast-5ddb52a219:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_watermark_image dice_fitcrop_90pct_zen
 tolerance off-by-one
 ~ paced-ledge-30b47a4836:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_watermark_image_command_string_with_bgcolor dice_aaeeff_zen
 tolerance off-by-one
 ~ paced-ledge-30b47a4836:sea  x86_64-avx512  @206f6467  auto-accepted

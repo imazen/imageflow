@@ -9,9 +9,6 @@ tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delt
 ## test_icc_p3_crop_and_resize p3_crop_200x200
 tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 ~ local-stone-201ba0ca26:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_adobe_rgb_constrain adobergb_constrain_300_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ snowy-knoll-4f736ff00a:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_icc_display_p3_resize_filter p3_robidoux_300x300
@@ -21,13 +18,7 @@ tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delt
 ## test_icc_display_p3_resize p3_resize_400
 tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 ~ salty-oak-e9d3f2c21d:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_adobe_rgb_resize adobergb_resize_400_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ foggy-lily-0b2fc2c0d4:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_p3_crop_and_resize p3_crop_200x200_zen
-tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 ~ fond-shell-3422f5cf78:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_icc_p3_to_webp p3_to_webp_q80
@@ -49,9 +40,6 @@ tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delt
 ## test_icc_adobe_rgb_decode_1 adobergb_decode
 tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ stiff-mace-cc9e75a12a:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_display_p3_resize_filter p3_robidoux_300x300_zen
-tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 ~ rural-mare-e506a6cd21:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_icc_rec2020_decode_1 rec2020_decode
@@ -81,9 +69,6 @@ tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delt
 ## test_icc_srgb_sony_a7rv srgb_sony
 tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ sheer-crab-c0af82e7a9:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_p3_to_webp p3_to_webp_q80_zen
-tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 ~ grim-moth-1a3d3631d8:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_icc_prophoto_decode prophoto_decode
@@ -97,13 +82,7 @@ tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delt
 ## test_icc_repro_libvips_icc libvips_icc
 tolerance max-delta:255 zensim:97 (dissim 0.03) pixels-changed:100.0% alpha-delta:1
 ~ ionic-trout-c4ba3eae87:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_display_p3_resize p3_resize_400_zen
-tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 ~ moot-jar-05ab254066:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_prophoto_resize prophoto_resize_400_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ pink-linen-57e135c91d:sea  x86_64-avx512  @206f6467  auto-accepted
 
 ## test_icc_repro_sharp_icc sharp_icc
@@ -117,67 +96,19 @@ tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delt
 ## test_icc_srgb_canon_5d srgb_canon5d
 tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ short-cub-c9b4371b0c:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_p3_to_jpeg_roundtrip p3_to_jpeg_q85_zen
-tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 ~ mad-cave-19ce406324:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_repro_imagemagick_icc imagemagick_icc_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ south-bloom-a10a1b3995:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_gray_gamma22_decode gray_gamma22_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ open-mare-5e230dc690:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_srgb_sony_a7rv srgb_sony_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ proud-ace-5e3cbbc785:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_repro_libvips_icc libvips_icc_zen
-tolerance max-delta:255 zensim:97 (dissim 0.03) pixels-changed:100.0% alpha-delta:1
 ~ icy-ace-67633ef62c:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_rec2020_decode_1 rec2020_decode_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ flat-cave-494d11a4b2:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_repro_sharp_icc sharp_icc_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ equal-flint-6f5b86f598:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_srgb_canon_5d srgb_canon5d_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ old-disc-73ded6915a:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_repro_pillow_icc pillow_icc_zen
-tolerance max-delta:255 zensim:95 (dissim 0.05) pixels-changed:100.0% alpha-delta:1
 ~ drawn-birch-347d5009e0:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_adobe_rgb_decode_2 adobergb_decode_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ dried-dust-4c57634992:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_rec2020_decode_2 rec2020_decode_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ long-calf-9b5ecb4266:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_adobe_rgb_decode_1 adobergb_decode_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ bulk-tulip-5e211c1391:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_display_p3_decode_3 p3_decode_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ inner-rain-ee30df566b:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_display_p3_decode_2 p3_decode_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ rural-sage-c800d9a399:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_prophoto_decode prophoto_decode_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ moist-elm-ba443104d2:sea  x86_64-avx512  @206f6467  auto-accepted
-
-## test_icc_display_p3_decode_1 p3_decode_zen
-tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ modal-pond-41c45fa447:sea  x86_64-avx512  @206f6467  auto-accepted

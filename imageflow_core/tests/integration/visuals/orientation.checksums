@@ -2,7 +2,6 @@
 tolerance off-by-one
 ~ royal-rose-c398febefd:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_crop_exif landscape_1_zen
 tolerance off-by-one
 ~ famed-poppy-0f970efa94:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -14,15 +13,12 @@ tolerance off-by-one
 tolerance off-by-one
 ~ equal-plum-2e18b91600:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_fit_pad_exif landscape_1_zen
 tolerance off-by-one
 ~ solar-flock-307dde9107:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation_cropped portrait_1_zen
 tolerance off-by-one
 ~ dry-tuna-63345ddc7c:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Landscape_1_zen
 tolerance off-by-one
 ~ hasty-root-36619b3f62:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -30,7 +26,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ rude-wolf-602b678921:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_crop_exif landscape_2_zen
 tolerance off-by-one
 ~ brute-pulse-46fd1905ac:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -42,7 +37,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ murky-olive-3b5ef7d31e:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_fit_pad_exif landscape_2_zen
 tolerance off-by-one
 ~ dear-horn-7fd8e929fb:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -50,15 +44,12 @@ tolerance off-by-one
 tolerance off-by-one
 ~ round-sage-7985db8e13:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Landscape_2_zen
 tolerance off-by-one
 ~ grand-bird-37607208c2:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation_cropped portrait_2_zen
 tolerance off-by-one
 ~ sharp-hull-0e716705f0:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_crop_exif landscape_3_zen
 tolerance off-by-one
 ~ proud-bead-36af0a70c0:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -74,19 +65,15 @@ tolerance off-by-one
 tolerance off-by-one
 ~ false-sand-c727844d06:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_fit_pad_exif landscape_3_zen
 tolerance off-by-one
 ~ live-finch-d613d37dd7:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Landscape_3_zen
 tolerance off-by-one
 ~ dark-ford-6bfefc489e:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation_cropped portrait_3_zen
 tolerance off-by-one
 ~ calm-wren-c83e4b7ddc:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_crop_exif landscape_4_zen
 tolerance off-by-one
 ~ many-lace-eacb4306b7:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -102,11 +89,9 @@ tolerance off-by-one
 tolerance off-by-one
 ~ near-fish-b0e0a30fae:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Landscape_4_zen
 tolerance off-by-one
 ~ polar-puma-ead67a77c6:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_fit_pad_exif landscape_4_zen
 tolerance off-by-one
 ~ last-puma-da476ec76c:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -114,7 +99,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ sole-cobra-4a70b6d31b:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation_cropped portrait_4_zen
 tolerance off-by-one
 ~ sheer-gem-2757ac9140:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -126,15 +110,12 @@ tolerance off-by-one
 tolerance off-by-one
 ~ coral-crow-36f0a668d0:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_crop_exif landscape_5_zen
 tolerance off-by-one
 ~ sole-fig-7c894df85c:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_fit_pad_exif landscape_5_zen
 tolerance off-by-one
 ~ clean-tuna-6aabcf6036:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Landscape_5_zen
 tolerance off-by-one
 ~ born-bow-8c0cf2a7f8:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -150,7 +131,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ real-cod-2546dc25cd:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_crop_exif landscape_6_zen
 tolerance off-by-one
 ~ long-frost-4b3cb3cc90:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -158,7 +138,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ late-box-d2cbbf09ea:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Landscape_6_zen
 tolerance off-by-one
 ~ dull-plum-8884b5045a:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -166,7 +145,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ core-cod-b990ff4f3c:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation_cropped portrait_5_zen
 tolerance off-by-one
 ~ plain-mesa-449a6049e8:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -174,11 +152,9 @@ tolerance off-by-one
 tolerance off-by-one
 ~ proud-hub-796f8d7d40:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_fit_pad_exif landscape_6_zen
 tolerance off-by-one
 ~ just-mouse-f6b9fbe0fa:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_crop_exif landscape_7_zen
 tolerance off-by-one
 ~ equal-tide-70ae4f4115:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -186,7 +162,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ north-raven-4a9b78e8ca:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Landscape_7_zen
 tolerance off-by-one
 ~ last-pulse-e88334b93c:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -198,15 +173,12 @@ tolerance off-by-one
 tolerance off-by-one
 ~ curly-curl-b4c48a71ed:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_crop_exif landscape_8_zen
 tolerance off-by-one
 ~ large-kelp-8443315357:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation_cropped portrait_6_zen
 tolerance off-by-one
 ~ done-oat-578482a69a:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_fit_pad_exif landscape_7_zen
 tolerance off-by-one
 ~ draft-bass-c09940c803:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -222,11 +194,9 @@ tolerance off-by-one
 tolerance off-by-one
 ~ outer-sloth-d4ed2ea913:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Landscape_8_zen
 tolerance off-by-one
 ~ fit-raven-f5ae005588:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation_cropped portrait_7_zen
 tolerance off-by-one
 ~ prime-whale-42f5faee13:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -238,15 +208,12 @@ tolerance off-by-one
 tolerance off-by-one
 ~ like-lamb-c0899bd64e:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_fit_pad_exif landscape_8_zen
 tolerance off-by-one
 ~ stiff-hawk-1644fd5424:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Portrait_1_zen
 tolerance off-by-one
 ~ naive-cone-5ceb0591d3:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation_cropped portrait_8_zen
 tolerance off-by-one
 ~ novel-fort-b9e2e4fdd2:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -254,7 +221,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ sheer-axe-5df32392dc:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Portrait_2_zen
 tolerance off-by-one
 ~ lucky-stone-f5cd71480d:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -262,7 +228,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ green-lilac-86e07de24e:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Portrait_3_zen
 tolerance off-by-one
 ~ solid-axe-363fdbaea6:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -270,7 +235,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ major-rose-296e47e01c:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Portrait_4_zen
 tolerance off-by-one
 ~ prior-shell-fa8b5b6252:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -278,7 +242,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ brisk-bull-1f4cd3e3f1:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Portrait_5_zen
 tolerance off-by-one
 ~ same-root-f29299a54e:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -286,7 +249,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ fair-peak-e7fd656c1c:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Portrait_6_zen
 tolerance off-by-one
 ~ lone-cape-ead76ab15f:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -294,7 +256,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ mild-glow-0c86aea0f7:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Portrait_7_zen
 tolerance off-by-one
 ~ novel-boot-d8b795d6f4:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -302,7 +263,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ pure-ram-f9cef056b8:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_jpeg_rotation Portrait_8_zen
 tolerance off-by-one
 ~ flat-olive-cf51609ff0:sea  x86_64-avx512  @206f6467  auto-accepted
 

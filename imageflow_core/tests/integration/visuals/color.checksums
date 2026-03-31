@@ -2,7 +2,6 @@
 tolerance off-by-one
 ~ spare-sloth-6adae801d8:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Contrast(1.0)_zen
 tolerance off-by-one
 ~ spare-sloth-6adae801d8:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -10,7 +9,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ red-foam-e67b1515b9:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Brightness(1.0)_zen
 tolerance off-by-one
 ~ red-foam-e67b1515b9:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -26,11 +24,9 @@ tolerance off-by-one
 tolerance off-by-one
 ~ fixed-bud-debef595dc:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_white_balance_image red_night_auto_zen
 tolerance off-by-one
 ~ murky-stork-1a0ab17a07:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Saturation(1.0)_zen
 tolerance off-by-one
 ~ fixed-bud-debef595dc:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -38,11 +34,9 @@ tolerance off-by-one
 tolerance off-by-one
 ~ lunar-hull-58c137af98:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Alpha(1.0)_zen
 tolerance off-by-one
 ~ lunar-hull-58c137af98:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_white_balance_image_threshold_5 t0.5_zen
 tolerance off-by-one
 ~ funny-ridge-b6510558f0:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -50,7 +44,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ quick-bone-4ecbdac7ac:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Contrast(0.3)_zen
 tolerance off-by-one
 ~ quick-bone-4ecbdac7ac:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -58,7 +51,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ jolly-tree-a82ec324e9:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Brightness(0.3)_zen
 tolerance off-by-one
 ~ jolly-tree-a82ec324e9:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -66,7 +58,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ focal-node-9cdda5ae98:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Saturation(0.3)_zen
 tolerance off-by-one
 ~ focal-node-9cdda5ae98:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -74,7 +65,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ open-snow-72e04a3a6e:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Alpha(0.3)_zen
 tolerance off-by-one
 ~ open-snow-72e04a3a6e:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -82,7 +72,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ fiery-wren-71e5629689:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Contrast(-1.0)_zen
 tolerance off-by-one
 ~ fiery-wren-71e5629689:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -90,7 +79,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ fatal-eagle-bdeff8b442:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Brightness(-1.0)_zen
 tolerance off-by-one
 ~ fatal-eagle-bdeff8b442:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -98,7 +86,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ elfin-sage-8eb7d1552d:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Saturation(-1.0)_zen
 tolerance off-by-one
 ~ elfin-sage-8eb7d1552d:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -106,7 +93,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ loud-river-f6aff1a2b4:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Alpha(-1.0)_zen
 tolerance off-by-one
 ~ loud-river-f6aff1a2b4:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -114,7 +100,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ draft-tuna-474aab8287:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Contrast(-0.2)_zen
 tolerance off-by-one
 ~ draft-tuna-474aab8287:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -122,7 +107,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ faded-cloud-1f7cc01bfb:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Brightness(-0.2)_zen
 tolerance off-by-one
 ~ faded-cloud-1f7cc01bfb:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -130,7 +114,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ fluid-torch-97456e009b:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Saturation(-0.2)_zen
 tolerance off-by-one
 ~ fluid-torch-97456e009b:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -138,7 +121,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ loud-river-f6aff1a2b4:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Alpha(-0.2)_zen
 tolerance off-by-one
 ~ loud-river-f6aff1a2b4:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -146,7 +128,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ modal-oak-cf235ac8be:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Sepia_zen
 tolerance off-by-one
 ~ modal-oak-cf235ac8be:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -154,7 +135,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ muted-hill-eb0e29e7b6:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters GrayscaleNtsc_zen
 tolerance off-by-one
 ~ muted-hill-eb0e29e7b6:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -162,7 +142,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ fresh-hawk-8a7cf2158a:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters GrayscaleRy_zen
 tolerance off-by-one
 ~ fresh-hawk-8a7cf2158a:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -170,7 +149,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ last-gull-1b3b404349:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters GrayscaleFlat_zen
 tolerance off-by-one
 ~ last-gull-1b3b404349:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -178,7 +156,6 @@ tolerance off-by-one
 tolerance off-by-one
 ~ cold-bloom-d7708bc3b7:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters GrayscaleBt709_zen
 tolerance off-by-one
 ~ cold-bloom-d7708bc3b7:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -186,6 +163,5 @@ tolerance off-by-one
 tolerance off-by-one
 ~ gruff-pearl-30d0d15faf:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_simple_filters Invert_zen
 tolerance off-by-one
 ~ gruff-pearl-30d0d15faf:sea  x86_64-avx512  @206f6467  auto-accepted

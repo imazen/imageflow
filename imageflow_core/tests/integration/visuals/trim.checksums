@@ -10,15 +10,12 @@ tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delt
 tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ apt-colt-7f54f13622:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_trim_resize_whitespace_without_padding 450x450_gray_zen
 tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ lone-gust-29ffb7713b:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_trim_whitespace transparent_shirt_zen
 tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ oral-eagle-4fea34981f:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_trim_resize_whitespace_with_padding 450x450_gray_zen
 tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ easy-finch-e9ebb062ef:sea  x86_64-avx512  @206f6467  auto-accepted
 
@@ -30,10 +27,8 @@ tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delt
 tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ oval-flow-0956d8f4f7:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_trim_whitespace_with_padding gray_bg_zen
 tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ acid-osprey-02197f34bf:sea  x86_64-avx512  @206f6467  auto-accepted
 
-## test_trim_whitespace_with_padding_no_resize gray_bg_zen
 tolerance max-delta:255 zensim:99 (dissim 0.01) pixels-changed:100.0% alpha-delta:1
 ~ acid-osprey-02197f34bf:sea  x86_64-avx512  @206f6467  auto-accepted
