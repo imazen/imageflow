@@ -190,67 +190,71 @@ impl SourceProfile {
     /// The `profile_buffer` pointer in `color` must be valid for `buffer_length` bytes
     /// if `source` is `ICCP` or `ICCP_GRAY`.
     #[cfg(feature = "c-codecs")]
-    pub unsafe fn from_decoder_color_info(color: &DecoderColorInfo) -> Self { unsafe {
-        match color.source {
-            ColorProfileSource::Null | ColorProfileSource::sRGB => SourceProfile::Srgb,
-            ColorProfileSource::ICCP => {
-                if color.profile_buffer.is_null() || color.buffer_length == 0 {
-                    return SourceProfile::Srgb;
+    pub unsafe fn from_decoder_color_info(color: &DecoderColorInfo) -> Self {
+        unsafe {
+            match color.source {
+                ColorProfileSource::Null | ColorProfileSource::sRGB => SourceProfile::Srgb,
+                ColorProfileSource::ICCP => {
+                    if color.profile_buffer.is_null() || color.buffer_length == 0 {
+                        return SourceProfile::Srgb;
+                    }
+                    let bytes =
+                        std::slice::from_raw_parts(color.profile_buffer, color.buffer_length)
+                            .to_vec();
+                    SourceProfile::IccProfile(bytes)
                 }
-                let bytes =
-                    std::slice::from_raw_parts(color.profile_buffer, color.buffer_length).to_vec();
-                SourceProfile::IccProfile(bytes)
-            }
-            ColorProfileSource::ICCP_GRAY => {
-                if color.profile_buffer.is_null() || color.buffer_length == 0 {
-                    return SourceProfile::Srgb;
+                ColorProfileSource::ICCP_GRAY => {
+                    if color.profile_buffer.is_null() || color.buffer_length == 0 {
+                        return SourceProfile::Srgb;
+                    }
+                    let bytes =
+                        std::slice::from_raw_parts(color.profile_buffer, color.buffer_length)
+                            .to_vec();
+                    SourceProfile::IccProfileGray(bytes)
                 }
-                let bytes =
-                    std::slice::from_raw_parts(color.profile_buffer, color.buffer_length).to_vec();
-                SourceProfile::IccProfileGray(bytes)
-            }
-            ColorProfileSource::GAMA_CHRM => {
-                let g = color.gamma;
-                let wx = color.white_point.x;
-                let wy = color.white_point.y;
-                let rx = color.primaries.Red.x;
-                let ry = color.primaries.Red.y;
-                let gx = color.primaries.Green.x;
-                let gy = color.primaries.Green.y;
-                let bx = color.primaries.Blue.x;
-                let by = color.primaries.Blue.y;
-                // Reject degenerate values: NaN, infinity, zero gamma, or y=0
-                let all_finite = [wx, wy, rx, ry, gx, gy, bx, by].iter().all(|v| v.is_finite());
-                if g <= 0.0
-                    || !g.is_finite()
-                    || !all_finite
-                    || wy == 0.0
-                    || ry == 0.0
-                    || gy == 0.0
-                    || by == 0.0
-                {
-                    return SourceProfile::Srgb;
-                }
-                // If gamma is neutral and primaries match sRGB, this is effectively
-                // sRGB — no transform needed. This catches gAMA-only PNGs where the
-                // C code synthesized sRGB primaries.
-                if is_neutral_gamma(g) && is_srgb_primaries([wx, wy, rx, ry, gx, gy, bx, by]) {
-                    return SourceProfile::Srgb;
-                }
-                SourceProfile::GammaPrimaries {
-                    gamma: g,
-                    white_x: wx,
-                    white_y: wy,
-                    red_x: rx,
-                    red_y: ry,
-                    green_x: gx,
-                    green_y: gy,
-                    blue_x: bx,
-                    blue_y: by,
+                ColorProfileSource::GAMA_CHRM => {
+                    let g = color.gamma;
+                    let wx = color.white_point.x;
+                    let wy = color.white_point.y;
+                    let rx = color.primaries.Red.x;
+                    let ry = color.primaries.Red.y;
+                    let gx = color.primaries.Green.x;
+                    let gy = color.primaries.Green.y;
+                    let bx = color.primaries.Blue.x;
+                    let by = color.primaries.Blue.y;
+                    // Reject degenerate values: NaN, infinity, zero gamma, or y=0
+                    let all_finite = [wx, wy, rx, ry, gx, gy, bx, by].iter().all(|v| v.is_finite());
+                    if g <= 0.0
+                        || !g.is_finite()
+                        || !all_finite
+                        || wy == 0.0
+                        || ry == 0.0
+                        || gy == 0.0
+                        || by == 0.0
+                    {
+                        return SourceProfile::Srgb;
+                    }
+                    // If gamma is neutral and primaries match sRGB, this is effectively
+                    // sRGB — no transform needed. This catches gAMA-only PNGs where the
+                    // C code synthesized sRGB primaries.
+                    if is_neutral_gamma(g) && is_srgb_primaries([wx, wy, rx, ry, gx, gy, bx, by]) {
+                        return SourceProfile::Srgb;
+                    }
+                    SourceProfile::GammaPrimaries {
+                        gamma: g,
+                        white_x: wx,
+                        white_y: wy,
+                        red_x: rx,
+                        red_y: ry,
+                        green_x: gx,
+                        green_y: gy,
+                        blue_x: bx,
+                        blue_y: by,
+                    }
                 }
             }
         }
-    }}
+    }
 
     /// Returns true if this profile is sRGB (no transform needed).
     pub fn is_srgb(&self) -> bool {

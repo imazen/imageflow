@@ -838,10 +838,12 @@ pub unsafe extern "C" fn imageflow_json_response_read(
 pub unsafe extern "C" fn imageflow_json_response_destroy(
     context: *mut ThreadSafeContext,
     response: *mut JsonResponse,
-) -> bool { unsafe {
-    let context = context!(context);
-    imageflow_context_memory_free(context, response as *mut libc::c_void, ptr::null(), 0)
-}}
+) -> bool {
+    unsafe {
+        let context = context!(context);
+        imageflow_context_memory_free(context, response as *mut libc::c_void, ptr::null(), 0)
+    }
+}
 
 /// Requests cancellation of any running or future operations on this context.
 ///

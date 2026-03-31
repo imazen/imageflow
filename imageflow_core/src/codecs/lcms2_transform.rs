@@ -25,18 +25,21 @@ impl Lcms2TransformCache {
         _context_id: lcms2_sys::Context,
         error_code: u32,
         text: *const core::ffi::c_char,
-    ) { unsafe {
-        if text.is_null() {
-            return;
-        }
-        let text_str =
-            std::ffi::CStr::from_ptr(text).to_str().unwrap_or("LCMS error message not valid UTF8");
-        let message = format!("Error {}: {}", error_code, text_str);
+    ) {
+        unsafe {
+            if text.is_null() {
+                return;
+            }
+            let text_str = std::ffi::CStr::from_ptr(text)
+                .to_str()
+                .unwrap_or("LCMS error message not valid UTF8");
+            let message = format!("Error {}: {}", error_code, text_str);
 
-        LAST_PROFILE_ERROR_MESSAGE.with(|m| {
-            *m.borrow_mut() = Some(message);
-        })
-    }}
+            LAST_PROFILE_ERROR_MESSAGE.with(|m| {
+                *m.borrow_mut() = Some(message);
+            })
+        }
+    }
 
     fn create_thread_context() -> ThreadContext {
         let mut context = ThreadContext::new();

@@ -64,8 +64,7 @@ impl NodeDefMutateBitmap for RoundImageCornersMut {
         "imazen.round_image_corners_mut"
     }
     fn mutate(&self, c: &Context, bitmap_key: BitmapKey, p: &NodeParams) -> Result<()> {
-        if let NodeParams::Json(s::Node::RoundImageCorners { background_color, radius }) = p
-        {
+        if let NodeParams::Json(s::Node::RoundImageCorners { background_color, radius }) = p {
             let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
             let mut bitmap_bitmap =
                 bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
