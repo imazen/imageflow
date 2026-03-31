@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
 edition = "2021"
+rust-version = "1.93"
 
 description = "A command-line tool for interacting with the Imageflow library, primarily for testing and debugging."
 homepage = "https://imageflow.io"

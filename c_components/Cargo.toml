@@ -6,6 +6,7 @@ links = "imageflow_c"
 workspace = "../"
 build = "build.rs"
 edition = "2021"
+rust-version = "1.93"
 
 [lib]
 name = "imageflow_c_components"

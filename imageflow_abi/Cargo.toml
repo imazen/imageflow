@@ -5,6 +5,7 @@ authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
 build = "build.rs"
 edition = "2021"
+rust-version = "1.93"
 
 [lib]
 name = "imageflow"
