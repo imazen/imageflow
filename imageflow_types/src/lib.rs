@@ -1197,6 +1197,7 @@ impl ExecutionSecurity {
 ///
 /// These affect output correctness, not security. Separated from
 /// `ExecutionSecurity` which handles DoS protection (size limits).
+#[non_exhaustive]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -1505,14 +1506,6 @@ impl Build001GraphRecording {
     }
 }
 
-/// Reserved for future options controlling backends, color management,
-/// and other job-level behavior. Currently empty.
-#[non_exhaustive]
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
-#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
-#[cfg_attr(feature = "schema-export", derive(ToSchema))]
-pub struct JobOptions {}
-
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -1555,7 +1548,12 @@ impl Build001 {
         if !new_io_vec.as_slice().iter().any(|obj| obj.io_id == io_id) {
             panic!("No existing IoObject with io_id {} found to replace!", io_id);
         }
-        Build001 { builder_config: self.builder_config, io: new_io_vec, framewise: self.framewise, job_options: self.job_options }
+        Build001 {
+            builder_config: self.builder_config,
+            io: new_io_vec,
+            framewise: self.framewise,
+            job_options: self.job_options,
+        }
     }
 }
 
@@ -1613,8 +1611,6 @@ pub struct Execute001 {
     #[serde(default)]
     pub job_options: Option<JobOptions>,
     pub framewise: Framewise,
-    #[serde(default)]
-    pub job_options: Option<JobOptions>,
 }
 
 impl Framewise {
