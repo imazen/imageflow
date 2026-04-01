@@ -3,8 +3,7 @@ name = "imageflow_core"
 version = "0.1.0"
 authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
-edition = "2024"
-rust-version = "1.93"
+edition = "2021"
 
 [lib]
 name = "imageflow_core"
@@ -33,6 +32,7 @@ rgb = { version = "0.8.50", features = ["bytemuck"] }
 imagequant = "4"
 lodepng = "3"
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }
+zune-bmp = "0.5.0-rc4"
 # zune-png = "0.5.0-rc1"
 
 bytemuck = { version = "1", features = ["derive"] }
@@ -43,14 +43,27 @@ uuid = { version = "1", features = ["v4"] }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
+imageflow-graph = { path = "../imageflow-graph" }
+imageflow-commands = { path = "../imageflow-commands" }
 multiversion = "0.8"
-archmage = { version = "0.9.15", features = ["macros"] }
+archmage = { version = "0.9.1", features = ["macros"] }
 safe_unaligned_simd = "0.2"
 
 evalchroma = "1"
 enough = { version = "0.4", features = ["std"] }
-garb = "0.2.5"
-moxcms = { version = "0.8.1", features = ["in_place", "options"] }
+garb = "0.2.1"
+moxcms = { git = "https://github.com/awxkee/moxcms.git", rev = "c4affa1", features = ["in_place"] }
+
+# --- Zen codec dependencies (pure Rust, default) ---
+# Using path deps until next publish cycle
+zenjpeg = { path = "../../zen/zenjpeg/zenjpeg", features = ["decoder", "parallel", "zencodec"], optional = true }
+zengif = { path = "../../zen/zengif", features = ["color_quant", "zencodec"], optional = true }
+zenwebp = { path = "../../zen/zenwebp", features = ["zencodec"], optional = true }
+zenjxl = { path = "../../zen/zenjxl", features = ["zencodec"], optional = true }
+zenavif = { path = "../../zen/zenavif", features = ["zencodec", "encode"], optional = true }
+heic-decoder = { path = "../../zen/heic-decoder-rs", features = ["zencodec"], optional = true }
+zenpixels = { path = "../../zen/zenpixels/zenpixels", default-features = false, optional = true }
+zc = { path = "../../zen/zencodec", package = "zencodec", optional = true }
 
 # Used for schema generation if feature enabled
 utoipa = { version = "5.3.1", features = [], optional = true }
@@ -60,18 +73,6 @@ utoipa = { version = "5.3.1", features = [], optional = true }
 #jpegxl-rs = { version = "0.11", features = ["vendored"] }
 
 schemars = { version = "1", features = ["derive"], optional = true }
-
-# --- Zen crate dependencies (optional, gated behind zen-pipeline feature) ---
-zenpipe = { path = "../../zen/zenpipe", features = ["zennode", "std", "json-schema", "imageflow-compat", "nodes-all"], optional = true }
-zencodecs = { path = "../../zen/zencodecs", features = ["zennode", "png-imagequant", "cms", "all"], optional = true }
-zenjpeg = { path = "../../zen/zenjpeg/zenjpeg", features = ["moxcms"], optional = true }
-zencodec = { path = "../../zen/zencodec", optional = true }
-zennode = { path = "../../zen/zennode/zennode", features = ["derive", "serde"], optional = true }
-zenresize = { path = "../../zen/zenresize", optional = true }
-zenlayout = { path = "../../zen/zenlayout", optional = true }
-zenfilters = { path = "../../zen/zenfilters", features = ["zennode"], optional = true }
-zenpixels = { version = "0.2.1", optional = true }
-linear-srgb = { path = "../../zen/linear-srgb", features = ["iec"], optional = true }
 
 # --- C codec dependencies (optional, gated behind c-codecs feature) ---
 imageflow_c_components = { path = "../c_components", optional = true }
@@ -101,7 +102,7 @@ seahash = "4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [features]
-default = ["c-codecs"]
+default = ["c-codecs", "zen-codecs"]
 neon = ["libwebp-sys/neon"]
 # All C library codecs: mozjpeg, libpng, libwebp, lcms2, and the C components library.
 c-codecs = [
@@ -113,22 +114,21 @@ c-codecs = [
     "dep:lcms2", "dep:lcms2-sys",
     "dep:libz-sys",
 ]
-# Zen-crate streaming pipeline (available alongside v2 engine).
-zen-pipeline = [
-    "dep:zenpipe", "dep:zencodecs", "dep:zencodec", "dep:zennode",
-    "dep:zenresize", "dep:zenlayout", "dep:zenfilters", "dep:zenpixels",
-    "dep:zenjpeg", "dep:linear-srgb",
+# Pure Rust codecs: zenjpeg, zengif, zenwebp (no C dependencies)
+zen-codecs = [
+    "dep:zenjpeg",
+    "dep:zengif",
+    "dep:zenwebp",
+    "dep:zenjxl",
+    "dep:zenavif",
+    "dep:heic-decoder",
+    "dep:zenpixels",
+    "dep:zc",
 ]
-# zen-default removed — zen pipeline is the runtime default when zen-pipeline is compiled in.
-# Use Context::force_backend = Some(Backend::V2) to force the v2 engine.
 # Feature to enable OpenAPI schema generation capabilities
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]
 # Enable schemars-based JSON Schema generation. Enables the corresponding feature in imageflow_types
 json-schema = ["dep:schemars", "imageflow_types/json-schema"]
-
-[[example]]
-name = "zen_heaptrack"
-required-features = ["zen-pipeline"]
 
 [[bench]]
 name="bench_graphics"

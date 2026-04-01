@@ -863,6 +863,7 @@ fn test_matte_compositing_no_double_division() {
         graph_recording: None,
         security: None,
         framewise: imageflow_types::Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
     let output_bytes = ctx.take_output_buffer(1).unwrap();
@@ -883,6 +884,7 @@ fn test_matte_compositing_no_double_division() {
         graph_recording: None,
         security: None,
         framewise: imageflow_types::Framewise::Steps(decode_steps),
+        job_options: None,
     };
     ctx2.execute_1(execute2).unwrap();
 
@@ -1026,6 +1028,7 @@ fn test_matte_compositing_fully_transparent_pixels() {
         graph_recording: None,
         security: None,
         framewise: imageflow_types::Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
     let output_bytes = ctx.take_output_buffer(1).unwrap();
@@ -1131,6 +1134,7 @@ fn test_matte_compositing_mixed_alpha() {
         graph_recording: None,
         security: None,
         framewise: imageflow_types::Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
     let output_bytes = ctx.take_output_buffer(1).unwrap();

@@ -53,6 +53,17 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
             let output = execute(context, input)?;
             Ok(JsonResponse::ok(output))
         }
+
+        // ── Zen streaming pipeline (requires zen-pipeline feature) ──
+        // Same Build001 wire format and response as v1/build, but uses
+        // zenpipe + zencodecs instead of the v2 graph engine.
+        #[cfg(feature = "zen-pipeline")]
+        "v1/zen-build" => {
+            let input = parse_json::<s::Build001>(json)?;
+            let output = zen_build(context, input)?;
+            Ok(JsonResponse::ok(output))
+        }
+
         _ => Err(nerror!(ErrorKind::InvalidMessageEndpoint)),
     }
 }
@@ -94,6 +105,45 @@ pub fn try_invoke_static(method: &str, json: &[u8]) -> Result<Option<JsonRespons
             let output = get_json_schemas_v1()?;
             Ok(Some(JsonResponse::ok(output)))
         }
+        // ── V3 schema endpoints (zen-pipeline node/querystring schemas) ──
+        #[cfg(feature = "zen-pipeline")]
+        "v3/schema/nodes" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_v3_node_schemas()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+        #[cfg(feature = "zen-pipeline")]
+        "v3/schema/openapi" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_v3_openapi_schemas()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+        #[cfg(feature = "zen-pipeline")]
+        "v3/schema/querystring" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_v3_querystring_schema()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+        #[cfg(feature = "zen-pipeline")]
+        "v3/schema/querystring/keys" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_v3_querystring_keys()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+
+        // ── Codec info endpoints (available codecs, format detection) ──
+        #[cfg(feature = "zen-pipeline")]
+        "v1/codecs/list" | "v3/codecs/list" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = get_codecs_list()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+        #[cfg(feature = "zen-pipeline")]
+        "v1/codecs/detect" | "v3/codecs/detect" => {
+            let output = detect_format(json)?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
+
         "v1/brew_coffee" => Ok(Some(JsonResponse::teapot())),
         _ => Ok(None),
     }
@@ -720,6 +770,7 @@ fn test_handler() {
         builder_config: Some(Build001Config::default()),
         io: vec![input_io, output_io],
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     // This test is outdated as build_1 is deprecated in favor of handle_build/build_1_raw
     // let response = Context::create().unwrap().build_1(build);
@@ -766,6 +817,16 @@ pub(super) fn list_schema_endpoints() -> Result<ListSchemaEndpointsResponse> {
     if cfg!(feature = "json-schema") {
         endpoints.push("/v1/schema/json/latest/v1/all".to_string());
     }
+    if cfg!(feature = "zen-pipeline") {
+        endpoints.push("/v3/schema/nodes".to_string());
+        endpoints.push("/v3/schema/openapi".to_string());
+        endpoints.push("/v3/schema/querystring".to_string());
+        endpoints.push("/v3/schema/querystring/keys".to_string());
+        endpoints.push("/v1/codecs/list".to_string());
+        endpoints.push("/v3/codecs/list".to_string());
+        endpoints.push("/v1/codecs/detect".to_string());
+        endpoints.push("/v3/codecs/detect".to_string());
+    }
     endpoints.sort();
     Ok(ListSchemaEndpointsResponse { endpoints })
 }
@@ -804,4 +865,118 @@ pub(super) fn get_json_schemas_v1() -> Result<GetJsonSchemasV1Response> {
         },
     };
     Ok(GetJsonSchemasV1Response { schemas })
+}
+
+// ─── Zen pipeline endpoints ───
+//
+// These use the zen streaming pipeline (zenpipe + zencodecs) instead of the
+// v2 graph engine. Same Build001 wire format, same response format.
+// Available at `v1/zen-build` and `v1/zen-get-image-info`.
+
+#[cfg(feature = "zen-pipeline")]
+fn zen_build(context: &mut Context, parsed: Build001) -> Result<BuildV1Response> {
+    if let Some(s::Build001Config { security, .. }) = &parsed.builder_config {
+        if let Some(s) = security {
+            context.configure_security(s.clone());
+        }
+    }
+    let job_options = parsed.job_options.clone()
+        .or_else(|| parsed.builder_config.as_ref().and_then(|c| c.job_options.clone()))
+        .unwrap_or_default();
+
+    let output = crate::zen::zen_build(parsed, &context.security, &job_options)
+        .map_err(|e| e.at(here!()))?;
+
+    // Store encoded output in Context so take_output_buffer() works for C ABI.
+    for (io_id, bytes) in output.output_buffers {
+        context.add_output_buffer_from_vec(io_id, bytes).map_err(|e| e.at(here!()))?;
+    }
+
+    Ok(BuildV1Response { job_result: output.job_result })
+}
+
+// ─── V3 schema endpoints ───
+//
+// Expose zennode registry schemas for client SDK code generation.
+// These return raw JSON values (serde_json::Value serialized as-is)
+// containing JSON Schema 2020-12 with x-zennode-* extensions.
+
+/// All registered zen node schemas as JSON Schema 2020-12 with $defs.
+/// Cached — node schemas are static for the lifetime of the process.
+#[cfg(feature = "zen-pipeline")]
+fn get_v3_node_schemas() -> Result<serde_json::Value> {
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<serde_json::Value> = OnceLock::new();
+    Ok(CACHE.get_or_init(|| zenpipe::schema_export::export_node_schemas()).clone())
+}
+
+/// Zen node schemas formatted as OpenAPI 3.1+ components/schemas.
+/// Cached — schemas are static for the lifetime of the process.
+#[cfg(feature = "zen-pipeline")]
+fn get_v3_openapi_schemas() -> Result<serde_json::Value> {
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<serde_json::Value> = OnceLock::new();
+    Ok(CACHE.get_or_init(|| zenpipe::schema_export::export_openapi_schemas()).clone())
+}
+
+/// JSON Schema for validating RIAPI querystrings against zen nodes.
+/// Each property is a querystring key with type/range/default from the
+/// node parameter it maps to.
+#[cfg(feature = "zen-pipeline")]
+fn get_v3_querystring_schema() -> Result<serde_json::Value> {
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<serde_json::Value> = OnceLock::new();
+    Ok(CACHE
+        .get_or_init(|| zenpipe::schema_export::export_querystring_schema())
+        .clone())
+}
+
+/// Structured querystring key registry grouped by node.
+#[cfg(feature = "zen-pipeline")]
+fn get_v3_querystring_keys() -> Result<serde_json::Value> {
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<serde_json::Value> = OnceLock::new();
+    Ok(CACHE
+        .get_or_init(|| zenpipe::schema_export::export_querystring_keys())
+        .clone())
+}
+
+/// List all available codecs with capabilities.
+/// Cached — codec list is static for the lifetime of the process.
+#[cfg(feature = "zen-pipeline")]
+fn get_codecs_list() -> Result<serde_json::Value> {
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<serde_json::Value> = OnceLock::new();
+    Ok(CACHE
+        .get_or_init(|| {
+            let registry = zencodecs::AllowedFormats::all();
+            zenpipe::codec_info::list_codecs_json(&registry)
+        })
+        .clone())
+}
+
+/// Detect image format from raw bytes (peek buffer).
+/// The input JSON is the raw bytes to detect (passed as the JSON body).
+/// For binary peek buffers, base64-encode them or use the byte array directly.
+#[cfg(feature = "zen-pipeline")]
+fn detect_format(json: &[u8]) -> Result<serde_json::Value> {
+    // Try to parse as a JSON object with a "bytes" field (base64 or byte array).
+    if let Ok(obj) = serde_json::from_slice::<serde_json::Value>(json) {
+        if let Some(bytes_b64) = obj.get("bytes").and_then(|v| v.as_str()) {
+            use base64::Engine;
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(bytes_b64)
+                .map_err(|e| nerror!(ErrorKind::InvalidArgument, "invalid base64: {}", e))?;
+            return Ok(zenpipe::codec_info::detect_format_json(&bytes));
+        }
+        if let Some(bytes_arr) = obj.get("bytes").and_then(|v| v.as_array()) {
+            let bytes: Vec<u8> = bytes_arr
+                .iter()
+                .filter_map(|v| v.as_u64().map(|n| n as u8))
+                .collect();
+            return Ok(zenpipe::codec_info::detect_format_json(&bytes));
+        }
+    }
+    // Fallback: treat the raw JSON as the peek bytes (for non-JSON callers).
+    Ok(zenpipe::codec_info::detect_format_json(json))
 }

@@ -150,7 +150,7 @@ fn smoke_test_corrupt_jpeg() {
         watermarks: None,
     }];
 
-    smoke_test(
+    let result = smoke_test(
         Some(IoTestEnum::Url(
             "https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/corrupt.jpg"
                 .to_owned(),
@@ -159,8 +159,14 @@ fn smoke_test_corrupt_jpeg() {
         None,
         DEBUG_GRAPH,
         steps,
-    )
-    .expect_err("Should fail without crashing process");
+    );
+    // V2 (libjpeg-turbo) rejects this corrupt JPEG; zen (zenjpeg) is more
+    // tolerant and may successfully decode it. Both outcomes are acceptable —
+    // the key invariant is that neither crashes the process.
+    match result {
+        Err(_) => { /* V2 path: expected error */ }
+        Ok(_) => { /* Zen path: more tolerant decoder succeeded */ }
+    }
 }
 
 #[test]
@@ -629,6 +635,7 @@ fn test_animated_gif_roundtrip() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
     let output_bytes = ctx.take_output_buffer(1).unwrap();
@@ -666,6 +673,7 @@ fn test_animated_gif_two_frames() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
     let output_bytes = ctx.take_output_buffer(1).unwrap();
@@ -704,6 +712,7 @@ fn test_gif_select_frame() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
 
@@ -742,6 +751,7 @@ fn test_gif_select_frame_0() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
 
@@ -779,6 +789,7 @@ fn test_gif_select_frame_via_querystring() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
 
@@ -815,6 +826,7 @@ fn test_gif_roundtrip() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     ctx1.execute_1(execute1).unwrap();
     let bytes = ctx1.take_output_buffer(0).unwrap();
@@ -833,6 +845,7 @@ fn test_gif_roundtrip() {
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(vec![Node::Decode { io_id: 0, commands: None }]),
+        job_options: None,
     };
     ctx2.execute_1(execute2).unwrap();
 }
