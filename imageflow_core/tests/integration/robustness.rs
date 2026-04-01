@@ -390,11 +390,7 @@ fn test_gif_frame_exceeds_canvas() {
         let _ = ctx.build_1(s::Build001 {
             builder_config: None,
             io: vec![
-                s::IoObject {
-                    direction: s::IoDirection::In,
-                    io_id: 0,
-                    io: s::IoEnum::Placeholder,
-                },
+                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
                 s::IoObject {
                     direction: s::IoDirection::Out,
                     io_id: 1,
@@ -427,11 +423,7 @@ fn test_gif_overflow_frame_position() {
         let _ = ctx.build_1(s::Build001 {
             builder_config: None,
             io: vec![
-                s::IoObject {
-                    direction: s::IoDirection::In,
-                    io_id: 0,
-                    io: s::IoEnum::Placeholder,
-                },
+                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
                 s::IoObject {
                     direction: s::IoDirection::Out,
                     io_id: 1,
@@ -464,11 +456,7 @@ fn test_gif_zero_size_frame() {
         let _ = ctx.build_1(s::Build001 {
             builder_config: None,
             io: vec![
-                s::IoObject {
-                    direction: s::IoDirection::In,
-                    io_id: 0,
-                    io: s::IoEnum::Placeholder,
-                },
+                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
                 s::IoObject {
                     direction: s::IoDirection::Out,
                     io_id: 1,
@@ -504,11 +492,7 @@ fn test_gif_bad_bg_index() {
         let _ = ctx.build_1(s::Build001 {
             builder_config: None,
             io: vec![
-                s::IoObject {
-                    direction: s::IoDirection::In,
-                    io_id: 0,
-                    io: s::IoEnum::Placeholder,
-                },
+                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
                 s::IoObject {
                     direction: s::IoDirection::Out,
                     io_id: 1,
@@ -545,11 +529,7 @@ fn test_gif_oob_palette_in_pixels() {
         let _ = ctx.build_1(s::Build001 {
             builder_config: None,
             io: vec![
-                s::IoObject {
-                    direction: s::IoDirection::In,
-                    io_id: 0,
-                    io: s::IoEnum::Placeholder,
-                },
+                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
                 s::IoObject {
                     direction: s::IoDirection::Out,
                     io_id: 1,
@@ -586,11 +566,7 @@ fn test_gif_frame_buffer_oob() {
         let _ = ctx.build_1(s::Build001 {
             builder_config: None,
             io: vec![
-                s::IoObject {
-                    direction: s::IoDirection::In,
-                    io_id: 0,
-                    io: s::IoEnum::Placeholder,
-                },
+                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
                 s::IoObject {
                     direction: s::IoDirection::Out,
                     io_id: 1,

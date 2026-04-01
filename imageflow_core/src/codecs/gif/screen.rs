@@ -73,16 +73,15 @@ impl Screen {
         let frame_left_clip = left.saturating_sub(frame.left as usize);
         let frame_top_clip = top.saturating_sub(frame.top as usize);
 
-        for (dst, &src) in self
-            .pixels
-            .iter_mut()
-            .subimage(left, top, sub_w, sub_h, self.width)
-            .zip(
-                buffer
-                    .iter()
-                    .subimage(frame_left_clip, frame_top_clip, sub_w, sub_h, frame.width as usize),
-            )
-        {
+        for (dst, &src) in self.pixels.iter_mut().subimage(left, top, sub_w, sub_h, self.width).zip(
+            buffer.iter().subimage(
+                frame_left_clip,
+                frame_top_clip,
+                sub_w,
+                sub_h,
+                frame.width as usize,
+            ),
+        ) {
             if let Some(transparent) = frame.transparent {
                 if src == transparent {
                     continue;
@@ -97,7 +96,7 @@ impl Screen {
 
 fn to_bgra(palette_bytes: &[u8]) -> Vec<BGRA8> {
     palette_bytes
-        .chunks(3)
+        .chunks_exact(3)
         .map(|byte| BGRA8 { r: byte[0], g: byte[1], b: byte[2], a: 255 })
         .collect()
 }

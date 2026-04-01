@@ -28,12 +28,8 @@ impl<Pixel: Copy> Default for Disposal<Pixel> {
 
 impl<Pixel: Copy> Disposal<Pixel> {
     pub fn dispose(&mut self, pixels: &mut [Pixel], stride: usize, bg_color: Pixel) {
-        let (w, h, l, t) = (
-            self.width as usize,
-            self.height as usize,
-            self.left as usize,
-            self.top as usize,
-        );
+        let (w, h, l, t) =
+            (self.width as usize, self.height as usize, self.left as usize, self.top as usize);
         if w == 0 || h == 0 || l.saturating_add(w) > stride {
             return;
         }
@@ -71,13 +67,9 @@ impl<Pixel: Copy> Disposal<Pixel> {
             width: w as u16,
             height: h as u16,
             previous_pixels: match frame.dispose {
-                Previous if valid => Some(
-                    pixels
-                        .iter()
-                        .cloned()
-                        .subimage(l, t, w, h, stride)
-                        .collect(),
-                ),
+                Previous if valid => {
+                    Some(pixels.iter().cloned().subimage(l, t, w, h, stride).collect())
+                }
                 _ => None,
             },
         }
