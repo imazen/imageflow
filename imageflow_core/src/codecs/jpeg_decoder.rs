@@ -119,8 +119,12 @@ impl Decoder for JpegDecoder {
                     crate::graphics::swizzle::gray_to_bgra(from_slice, dst);
                 }
             }
-            _ => {
-                panic!("Unsupported jpeg type (grayscale or CMYK)")
+            other => {
+                return Err(nerror!(
+                    ErrorKind::ImageDecodingError,
+                    "Unsupported JPEG pixel format: {:?}",
+                    other
+                ));
             }
         }
         Ok(bitmap_key)

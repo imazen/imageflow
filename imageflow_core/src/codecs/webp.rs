@@ -13,6 +13,7 @@ use libwebp_sys::WEBP_CSP_MODE::MODE_BGRA;
 use libwebp_sys::*;
 use rgb::alt::BGRA8;
 use std::any::Any;
+use std::io::Read;
 use std::rc::Rc;
 use uuid::Uuid;
 
@@ -21,6 +22,7 @@ pub struct WebPDecoder {
     bytes: Option<Vec<u8>>,
     config: WebPDecoderConfig,
     features_read: bool,
+    max_input_file_bytes: Option<usize>,
 }
 
 impl WebPDecoder {
@@ -30,13 +32,28 @@ impl WebPDecoder {
             bytes: None,
             config: WebPDecoderConfig::new().expect("Failed to initialize WebPDecoderConfig"),
             features_read: false,
+            max_input_file_bytes: c.security.max_input_file_bytes,
         })
     }
 
     fn ensure_data_buffered(&mut self) -> Result<()> {
         if self.bytes.is_none() {
             let mut bytes = Vec::with_capacity(2048);
-            let _ = self.io.read_to_end(&mut bytes).map_err(FlowError::from_decoder);
+            if let Some(max_bytes) = self.max_input_file_bytes {
+                let bytes_read = Read::by_ref(&mut self.io)
+                    .take(max_bytes as u64 + 1)
+                    .read_to_end(&mut bytes)
+                    .map_err(FlowError::from_decoder)?;
+                if bytes_read > max_bytes {
+                    return Err(nerror!(
+                        ErrorKind::ImageDecodingError,
+                        "WebP input exceeds maximum of {} bytes",
+                        max_bytes
+                    ));
+                }
+            } else {
+                self.io.read_to_end(&mut bytes).map_err(FlowError::from_decoder)?;
+            }
             self.bytes = Some(bytes);
         }
         Ok(())

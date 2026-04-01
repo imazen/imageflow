@@ -1,4 +1,4 @@
-use super::parse_json;
+use super::{parse_json, parse_json_with_limit};
 use crate::internal_prelude::works_everywhere::*;
 use crate::json::*;
 use crate::parsing::GraphTranslator;
@@ -26,29 +26,30 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
     if let Some(response) = try_invoke_static(method, json)? {
         return Ok(response);
     }
+    let max_json = context.security.max_json_bytes;
     match method {
         "v1/build" | "v0.1/build" => {
-            let input = parse_json::<s::Build001>(json)?;
+            let input = parse_json_with_limit::<s::Build001>(json, max_json)?;
             let output = build(context, input)?;
             Ok(JsonResponse::ok(output))
         }
         "v1/get_image_info" | "v0.1/get_image_info" => {
-            let input = parse_json::<s::GetImageInfo001>(json)?;
+            let input = parse_json_with_limit::<s::GetImageInfo001>(json, max_json)?;
             let output = get_image_info(context, input)?;
             Ok(JsonResponse::ok(output))
         }
         "v1/get_scaled_image_info" => {
-            let input = parse_json::<s::GetImageInfo001>(json)?;
+            let input = parse_json_with_limit::<s::GetImageInfo001>(json, max_json)?;
             let output = get_scaled_image_info(context, input)?;
             Ok(JsonResponse::ok(output))
         }
         "v1/tell_decoder" | "v0.1/tell_decoder" => {
-            let input = parse_json::<s::TellDecoder001>(json)?;
+            let input = parse_json_with_limit::<s::TellDecoder001>(json, max_json)?;
             let output = tell_decoder(context, input)?;
             Ok(JsonResponse::ok(output))
         }
         "v1/execute" | "v0.1/execute" => {
-            let input = parse_json::<s::Execute001>(json)?;
+            let input = parse_json_with_limit::<s::Execute001>(json, max_json)?;
             let output = execute(context, input)?;
             Ok(JsonResponse::ok(output))
         }

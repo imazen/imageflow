@@ -1319,7 +1319,6 @@ dependencies = [
  "walkdir",
  "zensim",
  "zensim-regress",
- "zune-bmp",
 ]
 
 [[package]]
@@ -3521,16 +3520,6 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
-
-[[package]]
-name = "zune-bmp"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b77b890dbf6b1a32fc57d9f1f30e22175694c454581de7c6e466f2853cf9fe3"
-dependencies = [
- "log",
- "zune-core",
-]
 
 [[package]]
 name = "zune-core"

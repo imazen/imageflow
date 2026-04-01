@@ -1024,12 +1024,17 @@ pub fn create_abi_json_response(
 ) -> *const JsonResponse {
     unsafe {
         let sizeof_struct = std::mem::size_of::<JsonResponse>();
-        let alloc_size = sizeof_struct + json_bytes.len();
 
-        if json_bytes.len().leading_zeros() == 0 {
-            c.outward_error_mut().try_set_error(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error in creating JSON structure; length overflow prevented (most significant bit set)."));
-            return ptr::null();
-        }
+        let alloc_size = match sizeof_struct.checked_add(json_bytes.len()) {
+            Some(size) if size.leading_zeros() > 0 => size,
+            _ => {
+                c.outward_error_mut().try_set_error(nerror!(
+                    ErrorKind::Category(ErrorCategory::InternalError),
+                    "Error in creating JSON structure; length overflow prevented."
+                ));
+                return ptr::null();
+            }
+        };
 
         let pointer = match c.mem_calloc(alloc_size, 16, None, -1) {
             Err(e) => {

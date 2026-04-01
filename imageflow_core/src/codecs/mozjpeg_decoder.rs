@@ -186,15 +186,29 @@ impl MzDec {
                 };
                 if let Some(null_index) = bytes.iter().position(|x| *x == 0) {
                     let cstr = CStr::from_bytes_with_nul(&bytes[0..=null_index]).unwrap();
-                    let message = cstr.to_str().expect("MozJpeg error message was not UTF-8");
+                    match cstr.to_str() {
+                        Ok(message) => {
+                            decoder.error = Some(nerror!(
+                                ErrorKind::JpegDecodingError,
+                                "MozJPEG error {}: {}",
+                                error_code,
+                                message
+                            ));
+                        }
+                        Err(_) => {
+                            decoder.error = Some(nerror!(
+                                ErrorKind::JpegDecodingError,
+                                "MozJPEG error {} (non-UTF-8 message)",
+                                error_code
+                            ));
+                        }
+                    }
+                } else {
                     decoder.error = Some(nerror!(
                         ErrorKind::JpegDecodingError,
-                        "MozJPEG error {}: {}",
-                        error_code,
-                        message
+                        "MozJPEG error {} (no null terminator in message)",
+                        error_code
                     ));
-                } else {
-                    panic!("MozJpeg error message was not null terminated");
                 }
             } else {
                 decoder.error =

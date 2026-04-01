@@ -33,8 +33,8 @@ impl NodeDefOneInputExpand for EnableTransparencyDef {
             Ok(())
         } else {
             let canvas_params = imageflow_types::Node::CreateCanvas {
-                w: parent.h as usize,
-                h: parent.w as usize,
+                w: parent.w as usize,
+                h: parent.h as usize,
                 format: PixelFormat::Bgra32,
                 color: imageflow_types::Color::Transparent,
             };

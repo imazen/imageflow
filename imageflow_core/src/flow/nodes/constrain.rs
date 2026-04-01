@@ -19,7 +19,14 @@ impl NodeDefOneInputExpand for ConstrainDef {
         if let NodeParams::Json(s::Node::Constrain(ref constraint)) = *params {
             input.map_frame(|input| {
                 let constraint_results =
-                    imageflow_riapi::ir4::process_constraint(input.w, input.h, constraint).unwrap(); //TODO: fix unwrap
+                    imageflow_riapi::ir4::process_constraint(input.w, input.h, constraint)
+                        .map_err(|e| {
+                            nerror!(
+                                crate::ErrorKind::InvalidNodeParams,
+                                "Constraint error: {:?}",
+                                e
+                            )
+                        })?;
                 Ok(FrameInfo {
                     w: constraint_results.final_canvas.width() as i32,
                     h: constraint_results.final_canvas.height() as i32,
@@ -40,7 +47,9 @@ impl NodeDefOneInputExpand for ConstrainDef {
     ) -> Result<()> {
         if let NodeParams::Json(s::Node::Constrain(constraint)) = params {
             let constraint_results =
-                imageflow_riapi::ir4::process_constraint(input.w, input.h, &constraint).unwrap(); //TODO: fix unwrap
+                imageflow_riapi::ir4::process_constraint(input.w, input.h, &constraint).map_err(
+                    |e| nerror!(crate::ErrorKind::InvalidNodeParams, "Constraint error: {:?}", e),
+                )?;
 
             let mut b = Vec::new();
             if let Some(c) = constraint_results.crop {
