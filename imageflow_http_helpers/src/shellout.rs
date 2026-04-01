@@ -23,6 +23,8 @@ impl ShellFetcher {
                 "curl",
                 vec![
                     "-L".to_string(), // Follow redirects
+                    "--max-redirs".to_string(),
+                    "10".to_string(),
                     "-s".to_string(), // Silent mode
                     "-f".to_string(), // Fail on HTTP errors
                     "-o".to_string(), // Output to file
@@ -36,7 +38,6 @@ impl ShellFetcher {
                 "wget",
                 vec![
                     "-q".to_string(), // Quiet mode
-                    "--no-check-certificate".to_string(),
                     "-O".to_string(), // Output to file
                 ],
             ));
@@ -103,11 +104,13 @@ impl HttpFetcher for ShellFetcher {
                     .output()?
             }
             "powershell.exe" => {
-                // Simpler PowerShell approach that works with older versions
+                // Escape single quotes for PowerShell string interpolation
+                let escaped_url = url.replace('\'', "''");
+                let escaped_path = temp_path.replace('\'', "''");
                 let args = vec![
                     "-Command".to_string(),
                     format!("try {{ (New-Object System.Net.WebClient).DownloadFile('{}', '{}') }} catch {{ $_.Exception.Response.StatusCode.Value__ }}",
-                        url, temp_path)
+                        escaped_url, escaped_path)
                 ];
 
                 Command::new(tool)

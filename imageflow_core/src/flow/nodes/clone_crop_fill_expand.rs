@@ -200,9 +200,19 @@ impl NodeDefOneInputExpand for ExpandCanvasDef {
         }) = *p
         {
             input.map_frame(|info| {
+                let w = (info.w as i64) + (left as i64) + (right as i64);
+                let h = (info.h as i64) + (top as i64) + (bottom as i64);
+                if w > i32::MAX as i64 || h > i32::MAX as i64 {
+                    return Err(nerror!(
+                        crate::ErrorKind::InvalidNodeParams,
+                        "ExpandCanvas dimensions overflow: {}x{}",
+                        w,
+                        h
+                    ));
+                }
                 Ok(FrameInfo {
-                    w: info.w + left as i32 + right as i32,
-                    h: info.h + top as i32 + bottom as i32,
+                    w: w as i32,
+                    h: h as i32,
                     fmt: if color.is_opaque() { info.fmt } else { PixelFormat::Bgra32 },
                 })
             })

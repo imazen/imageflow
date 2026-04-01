@@ -45,13 +45,28 @@ impl HttpFetcher for UreqFetcher {
                     .unwrap_or("application/octet-stream")
                     .to_string();
 
+                const MAX_RESPONSE_BYTES: usize = 256 * 1024 * 1024; // 256 MB
+
                 let mut bytes: Vec<u8> = Vec::new();
                 if let Some(len) = content_length {
+                    if len > MAX_RESPONSE_BYTES {
+                        return Err(FetchError::ToolError(format!(
+                            "Response Content-Length {} exceeds maximum of {} bytes",
+                            len, MAX_RESPONSE_BYTES
+                        )));
+                    }
                     bytes.reserve(len);
                 }
 
-                let mut reader = response.into_body().into_reader();
+                let mut reader =
+                    response.into_body().into_reader().take(MAX_RESPONSE_BYTES as u64 + 1);
                 reader.read_to_end(&mut bytes)?;
+                if bytes.len() > MAX_RESPONSE_BYTES {
+                    return Err(FetchError::ToolError(format!(
+                        "Response body exceeds maximum of {} bytes",
+                        MAX_RESPONSE_BYTES
+                    )));
+                }
 
                 if content_length.is_some() && content_length.unwrap() != bytes.len() {
                     return Err(FetchError::ContentLengthMismatch);

@@ -26,6 +26,15 @@ where
     D: serde::de::DeserializeOwned,
     D: 'a,
 {
+    const MAX_JSON_BYTES: usize = 64 * 1024 * 1024; // 64 MB
+    if json.len() > MAX_JSON_BYTES {
+        return Err(nerror!(
+            ErrorKind::InvalidArgument,
+            "JSON payload is {} bytes, exceeding maximum of {} bytes",
+            json.len(),
+            MAX_JSON_BYTES
+        ));
+    }
     match serde_json::from_slice(json) {
         Ok(d) => Ok(d),
         Err(e) => Err(FlowError::from_serde(e, json, std::any::type_name::<D>()).at(here!())),

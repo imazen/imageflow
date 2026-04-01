@@ -30,6 +30,24 @@ impl GraphTranslator {
     }
 
     pub fn translate_graph(&self, from: s::Graph) -> Result<Graph> {
+        const MAX_GRAPH_NODES: usize = 2048;
+        if from.nodes.len() > MAX_GRAPH_NODES {
+            return Err(nerror!(
+                ErrorKind::GraphInvalid,
+                "Graph has {} nodes, exceeding maximum of {}",
+                from.nodes.len(),
+                MAX_GRAPH_NODES
+            ));
+        }
+        if from.edges.len() > MAX_GRAPH_NODES * 2 {
+            return Err(nerror!(
+                ErrorKind::GraphInvalid,
+                "Graph has {} edges, exceeding maximum of {}",
+                from.edges.len(),
+                MAX_GRAPH_NODES * 2
+            ));
+        }
+
         let mut g = Graph::with_capacity(10, 10); //Estimate better than this
 
         let mut node_id_map: HashMap<i32, NodeIndex> = HashMap::new();
@@ -37,12 +55,19 @@ impl GraphTranslator {
         for (old_id, node) in from.nodes {
             let new_id = g.add_node(Node::from(node));
 
-            node_id_map.insert(old_id.parse::<i32>().unwrap(), new_id);
+            let parsed_id = old_id.parse::<i32>().map_err(|_| {
+                nerror!(ErrorKind::GraphInvalid, "Node key '{}' is not a valid i32", old_id)
+            })?;
+            node_id_map.insert(parsed_id, new_id);
         }
 
         for edge in from.edges {
-            let from_id = node_id_map[&edge.from];
-            let to_id = node_id_map[&edge.to];
+            let from_id = *node_id_map.get(&edge.from).ok_or_else(|| {
+                nerror!(ErrorKind::GraphInvalid, "Edge references missing node {}", edge.from)
+            })?;
+            let to_id = *node_id_map.get(&edge.to).ok_or_else(|| {
+                nerror!(ErrorKind::GraphInvalid, "Edge references missing node {}", edge.to)
+            })?;
             let new_edge_kind = match edge.kind {
                 s::EdgeKind::Input => EdgeKind::Input,
                 s::EdgeKind::Canvas => EdgeKind::Canvas,
@@ -85,7 +110,8 @@ impl IoTranslator {
                 c.add_copied_input_buffer(io_id, &decoded_vec).map_err(|e| e.at(here!()))
             }
             s::IoEnum::BytesHex(hex_string) => {
-                let bytes = hex::decode(hex_string.as_str()).unwrap();
+                let bytes = hex::decode(hex_string.as_str())
+                    .map_err(|e| nerror!(ErrorKind::InvalidArgument, "hex: {}", e))?;
                 c.add_copied_input_buffer(io_id, &bytes).map_err(|e| e.at(here!()))
             }
             s::IoEnum::Filename(path) => c.add_file(io_id, dir, &path),

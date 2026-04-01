@@ -13,6 +13,7 @@ use libwebp_sys::WEBP_CSP_MODE::MODE_BGRA;
 use libwebp_sys::*;
 use rgb::alt::BGRA8;
 use std::any::Any;
+use std::io::Read;
 use std::rc::Rc;
 use uuid::Uuid;
 
@@ -35,8 +36,19 @@ impl WebPDecoder {
 
     fn ensure_data_buffered(&mut self) -> Result<()> {
         if self.bytes.is_none() {
+            const MAX_WEBP_INPUT_BYTES: usize = 256 * 1024 * 1024; // 256 MB
             let mut bytes = Vec::with_capacity(2048);
-            let _ = self.io.read_to_end(&mut bytes).map_err(FlowError::from_decoder);
+            let bytes_read = Read::by_ref(&mut self.io)
+                .take(MAX_WEBP_INPUT_BYTES as u64 + 1)
+                .read_to_end(&mut bytes)
+                .map_err(FlowError::from_decoder)?;
+            if bytes_read > MAX_WEBP_INPUT_BYTES {
+                return Err(nerror!(
+                    ErrorKind::ImageDecodingError,
+                    "WebP input exceeds maximum of {} bytes",
+                    MAX_WEBP_INPUT_BYTES
+                ));
+            }
             self.bytes = Some(bytes);
         }
         Ok(())
