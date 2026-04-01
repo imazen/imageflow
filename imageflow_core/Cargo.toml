@@ -33,7 +33,6 @@ rgb = { version = "0.8.50", features = ["bytemuck"] }
 imagequant = "4"
 lodepng = "3"
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }
-zune-bmp = "0.5.0-rc4"
 # zune-png = "0.5.0-rc1"
 
 bytemuck = { version = "1", features = ["derive"] }

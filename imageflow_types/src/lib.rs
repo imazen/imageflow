@@ -1346,7 +1346,10 @@ pub enum IoEnum {
     Base64(String),
     #[serde(rename = "byte_array")]
     ByteArray(Vec<u8>),
-    // TODO: A PathBuf might be more appropriate
+    /// # Security
+    /// This path is used as-is with no sanitization. The caller is responsible
+    /// for validating paths before constructing this variant. Server deployments
+    /// must reject absolute paths, `..` traversal, and symlinks at the API layer.
     #[serde(rename = "file")]
     Filename(String),
     #[serde(rename = "output_buffer")]

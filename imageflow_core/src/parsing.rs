@@ -114,6 +114,11 @@ impl IoTranslator {
                     .map_err(|e| nerror!(ErrorKind::InvalidArgument, "hex: {}", e))?;
                 c.add_copied_input_buffer(io_id, &bytes).map_err(|e| e.at(here!()))
             }
+            // SECURITY: Filename is trusted input only. The caller is responsible
+            // for sanitizing paths before they reach the core. No path traversal
+            // protection is applied here — this is by design, as the CLI user
+            // already has filesystem access and server deployments must validate
+            // paths at the HTTP/API layer before constructing IoEnum::Filename.
             s::IoEnum::Filename(path) => c.add_file(io_id, dir, &path),
 
             s::IoEnum::OutputBuffer | s::IoEnum::OutputBase64 => {
