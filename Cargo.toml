@@ -45,7 +45,7 @@ enough = { version = "0.4", features = ["std"] }
 
 # Core utilities
 rgb = { version = "0.8", features = ["as-bytes"] }
-linear-srgb = { version = "0.6.7", default-features = false, features = ["std"] }
+linear-srgb = { version = "0.6", default-features = false, features = ["std"] }
 imgref = "1.12"
 bytemuck = { version = "1.14", features = ["derive"] }
 
