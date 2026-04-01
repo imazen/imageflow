@@ -1895,12 +1895,14 @@
           },
           {
             "type": "object",
+            "description": "# Security\nThis path is used as-is with no sanitization. The caller is responsible\nfor validating paths before constructing this variant. Server deployments\nmust reject absolute paths, `..` traversal, and symlinks at the API layer.",
             "required": [
               "file"
             ],
             "properties": {
               "file": {
-                "type": "string"
+                "type": "string",
+                "description": "# Security\nThis path is used as-is with no sanitization. The caller is responsible\nfor validating paths before constructing this variant. Server deployments\nmust reject absolute paths, `..` traversal, and symlinks at the API layer."
               }
             }
           },
