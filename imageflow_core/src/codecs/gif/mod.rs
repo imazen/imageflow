@@ -26,6 +26,8 @@ pub struct GifDecoder {
     next_frame: Option<Frame<'static>>,
     target_frame: Option<i32>,
     current_frame: i32,
+    max_total_file_pixels: Option<u64>,
+    pixels_per_frame: u64,
 }
 
 impl GifDecoder {
@@ -83,6 +85,7 @@ impl GifDecoder {
         }
 
         let screen = Screen::new(&reader);
+        let pixels_per_frame = w as u64 * h as u64;
 
         Ok(GifDecoder {
             reader,
@@ -92,7 +95,26 @@ impl GifDecoder {
             next_frame: None,
             target_frame: None,
             current_frame: 0,
+            max_total_file_pixels: c.security.max_total_file_pixels,
+            pixels_per_frame,
         })
+    }
+
+    fn check_total_pixels(&self) -> Result<()> {
+        if let Some(max) = self.max_total_file_pixels {
+            let total = self.current_frame as u64 * self.pixels_per_frame;
+            if total > max {
+                return Err(nerror!(
+                    ErrorKind::SizeLimitExceeded,
+                    "GIF total decoded pixels ({} frames x {} pixels = {}) exceeds max_total_file_pixels {}",
+                    self.current_frame,
+                    self.pixels_per_frame,
+                    total,
+                    max
+                ));
+            }
+        }
+        Ok(())
     }
 
     fn read_next_frame_info(&mut self) -> Result<()> {
@@ -221,6 +243,7 @@ impl Decoder for GifDecoder {
                     .map_err(|e| nerror!(ErrorKind::GifDecodingError, "{:?}", e))?;
 
                 self.current_frame += 1;
+                self.check_total_pixels()?;
                 self.read_next_frame_info().map_err(|e| e.at(here!()))?;
             }
         }
@@ -261,6 +284,7 @@ impl Decoder for GifDecoder {
         }
 
         self.current_frame += 1;
+        self.check_total_pixels()?;
 
         // If we have a target frame, don't pre-fetch next frame (signals single-frame output)
         if self.target_frame.is_none() {
