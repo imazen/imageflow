@@ -407,9 +407,9 @@ impl MzDec {
 
     #[unsafe(no_mangle)]
     extern "C" fn source_fill_buffer(
-        codec_info: &mut mozjpeg_sys::jpeg_decompress_struct,
+        _codec_info: *mut mozjpeg_sys::jpeg_decompress_struct,
         custom_state: *mut c_void,
-        suspend_io: &mut bool,
+        _suspend_io: *mut bool,
     ) -> bool {
         if custom_state.is_null() {
             return false;
@@ -456,7 +456,7 @@ impl MzDec {
 
     #[unsafe(no_mangle)]
     extern "C" fn source_skip_bytes(
-        codec_info: &mut mozjpeg_sys::jpeg_decompress_struct,
+        _codec_info: *mut mozjpeg_sys::jpeg_decompress_struct,
         custom_state: *mut c_void,
         mut byte_count: c_long,
     ) -> bool {
@@ -466,7 +466,7 @@ impl MzDec {
         if byte_count > 0 {
             // Re-derive decoder/source_manager references each iteration to avoid
             // holding &mut MzDec across the source_fill_buffer call (which also
-            // derives &mut MzDec from custom_state, causing mutable aliasing UB).
+            // derives &mut MzDec from custom_state).
             loop {
                 let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
                 let source_manager = decoder.source_manager.as_deref_mut().unwrap();
@@ -478,7 +478,8 @@ impl MzDec {
                 let _ = source_manager;
                 let _ = decoder;
                 let mut suspend = false;
-                if !MzDec::source_fill_buffer(codec_info, custom_state, &mut suspend) {
+                if !MzDec::source_fill_buffer(_codec_info, custom_state, &mut suspend as *mut bool)
+                {
                     let decoder = unsafe { &mut *(custom_state as *mut MzDec) };
                     decoder.error = decoder.error.clone().map(|e| e.at(here!()));
                     return false;
