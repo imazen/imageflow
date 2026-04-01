@@ -81,11 +81,11 @@ type WrapJpegErrorHandler = extern "C" fn(
 ) -> bool;
 
 type WrapJpegSourceManagerFunc =
-    extern "C" fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void) -> bool;
+    extern "C" fn(*mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void) -> bool;
 type WrapJpegSourceManagerFillBufferFunc =
-    extern "C" fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, &mut bool) -> bool;
+    extern "C" fn(*mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, *mut bool) -> bool;
 type WrapJpegSourceManagerSkipBytesFunc =
-    extern "C" fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, c_long) -> bool;
+    extern "C" fn(*mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, c_long) -> bool;
 
 // typedef  bool (*wrap_png_custom_read_function) (png_structp png_ptr, void * custom_state, uint8_t * buffer, size_t bytes_requested, size_t * out_bytes_read);
 type WrapPngCustomReadFunction =
