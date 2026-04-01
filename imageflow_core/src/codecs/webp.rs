@@ -22,6 +22,7 @@ pub struct WebPDecoder {
     bytes: Option<Vec<u8>>,
     config: WebPDecoderConfig,
     features_read: bool,
+    max_input_file_bytes: Option<usize>,
 }
 
 impl WebPDecoder {
@@ -31,23 +32,27 @@ impl WebPDecoder {
             bytes: None,
             config: WebPDecoderConfig::new().expect("Failed to initialize WebPDecoderConfig"),
             features_read: false,
+            max_input_file_bytes: c.security.max_input_file_bytes,
         })
     }
 
     fn ensure_data_buffered(&mut self) -> Result<()> {
         if self.bytes.is_none() {
-            const MAX_WEBP_INPUT_BYTES: usize = 256 * 1024 * 1024; // 256 MB
             let mut bytes = Vec::with_capacity(2048);
-            let bytes_read = Read::by_ref(&mut self.io)
-                .take(MAX_WEBP_INPUT_BYTES as u64 + 1)
-                .read_to_end(&mut bytes)
-                .map_err(FlowError::from_decoder)?;
-            if bytes_read > MAX_WEBP_INPUT_BYTES {
-                return Err(nerror!(
-                    ErrorKind::ImageDecodingError,
-                    "WebP input exceeds maximum of {} bytes",
-                    MAX_WEBP_INPUT_BYTES
-                ));
+            if let Some(max_bytes) = self.max_input_file_bytes {
+                let bytes_read = Read::by_ref(&mut self.io)
+                    .take(max_bytes as u64 + 1)
+                    .read_to_end(&mut bytes)
+                    .map_err(FlowError::from_decoder)?;
+                if bytes_read > max_bytes {
+                    return Err(nerror!(
+                        ErrorKind::ImageDecodingError,
+                        "WebP input exceeds maximum of {} bytes",
+                        max_bytes
+                    ));
+                }
+            } else {
+                self.io.read_to_end(&mut bytes).map_err(FlowError::from_decoder)?;
             }
             self.bytes = Some(bytes);
         }

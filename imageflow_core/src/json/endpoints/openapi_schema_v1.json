@@ -1587,6 +1587,22 @@
                 "$ref": "#/components/schemas/FrameSizeLimit"
               }
             ]
+          },
+          "max_input_file_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Maximum bytes for a single codec input stream (e.g., WebP buffering).\nDefault: 256 MB. Set to `None` to disable.",
+            "minimum": 0
+          },
+          "max_json_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Maximum bytes for a JSON API payload before deserialization.\nDefault: 64 MB. Set to `None` to disable.",
+            "minimum": 0
           }
         }
       },

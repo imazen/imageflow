@@ -1127,6 +1127,14 @@ pub struct ExecutionSecurity {
     pub max_decode_size: Option<FrameSizeLimit>,
     pub max_frame_size: Option<FrameSizeLimit>,
     pub max_encode_size: Option<FrameSizeLimit>,
+    /// Maximum bytes for a single codec input stream (e.g., WebP buffering).
+    /// Default: 256 MB. Set to `None` to disable.
+    #[serde(default)]
+    pub max_input_file_bytes: Option<usize>,
+    /// Maximum bytes for a JSON API payload before deserialization.
+    /// Default: 64 MB. Set to `None` to disable.
+    #[serde(default)]
+    pub max_json_bytes: Option<usize>,
 }
 
 impl ExecutionSecurity {
@@ -1137,10 +1145,18 @@ impl ExecutionSecurity {
             max_decode_size: Some(FrameSizeLimit { w: 12000, h: 12000, megapixels: 100f32 }),
             max_frame_size: Some(FrameSizeLimit { w: 10000, h: 10000, megapixels: 100f32 }),
             max_encode_size: None,
+            max_input_file_bytes: Some(256 * 1024 * 1024),
+            max_json_bytes: Some(64 * 1024 * 1024),
         }
     }
     pub fn unspecified() -> Self {
-        ExecutionSecurity { max_decode_size: None, max_frame_size: None, max_encode_size: None }
+        ExecutionSecurity {
+            max_decode_size: None,
+            max_frame_size: None,
+            max_encode_size: None,
+            max_input_file_bytes: None,
+            max_json_bytes: None,
+        }
     }
 }
 

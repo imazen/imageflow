@@ -98,6 +98,9 @@ impl fmt::Debug for FetchedResponse {
 #[derive(Default, Clone, Debug)]
 pub struct FetchConfig {
     pub read_error_body: Option<bool>,
+    /// Maximum response body size in bytes. Default: 256 MB.
+    /// Set to `None` to disable the limit.
+    pub max_response_bytes: Option<usize>,
 }
 
 impl From<std::io::Error> for FetchError {

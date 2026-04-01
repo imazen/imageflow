@@ -21,19 +21,31 @@ pub fn try_invoke_static(endpoint: &str, json: &[u8]) -> Result<Option<JsonRespo
     endpoints::try_invoke_static(endpoint, json).map_err(|e| e.at(here!()))
 }
 
+/// Default JSON size limit (64 MB), used when no context-configured limit is available.
+const DEFAULT_MAX_JSON_BYTES: usize = 64 * 1024 * 1024;
+
 pub(crate) fn parse_json<'a, D>(json: &[u8]) -> Result<D>
 where
     D: serde::de::DeserializeOwned,
     D: 'a,
 {
-    const MAX_JSON_BYTES: usize = 64 * 1024 * 1024; // 64 MB
-    if json.len() > MAX_JSON_BYTES {
-        return Err(nerror!(
-            ErrorKind::InvalidArgument,
-            "JSON payload is {} bytes, exceeding maximum of {} bytes",
-            json.len(),
-            MAX_JSON_BYTES
-        ));
+    parse_json_with_limit(json, Some(DEFAULT_MAX_JSON_BYTES))
+}
+
+pub(crate) fn parse_json_with_limit<'a, D>(json: &[u8], max_bytes: Option<usize>) -> Result<D>
+where
+    D: serde::de::DeserializeOwned,
+    D: 'a,
+{
+    if let Some(max) = max_bytes {
+        if json.len() > max {
+            return Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "JSON payload is {} bytes, exceeding maximum of {} bytes",
+                json.len(),
+                max
+            ));
+        }
     }
     match serde_json::from_slice(json) {
         Ok(d) => Ok(d),

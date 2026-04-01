@@ -284,6 +284,8 @@ impl CmdBuild {
                 max_decode_size: Some(unlimited_frame_size),
                 max_frame_size: Some(unlimited_frame_size),
                 max_encode_size: Some(unlimited_frame_size),
+                max_input_file_bytes: None,
+                max_json_bytes: None,
             })
         } else {
             let mut max_frame_size = unlimited_frame_size;

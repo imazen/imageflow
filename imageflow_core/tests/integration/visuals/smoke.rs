@@ -262,13 +262,12 @@ fn test_max_encode_dimensions() {
         Some(IoTestEnum::ByteArray(tinypng)),
         Some(IoTestEnum::OutputBuffer),
         Some(imageflow_types::ExecutionSecurity {
-            max_decode_size: None,
-            max_frame_size: None,
             max_encode_size: Some(imageflow_types::FrameSizeLimit {
                 w: 3,
                 h: 1,
                 megapixels: 100.0,
             }),
+            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
@@ -296,8 +295,7 @@ fn test_max_decode_dimensions() {
                 h: 100000,
                 megapixels: 100.0,
             }),
-            max_frame_size: None,
-            max_encode_size: None,
+            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
@@ -324,8 +322,7 @@ fn test_max_frame_dimensions() {
                 h: 10000,
                 megapixels: 0.5,
             }),
-            max_decode_size: None,
-            max_encode_size: None,
+            ..imageflow_types::ExecutionSecurity::unspecified()
         }),
         DEBUG_GRAPH,
         steps,
