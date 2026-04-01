@@ -859,6 +859,7 @@ fn test_matte_compositing_no_double_division() {
     ctx.add_input_vector(0, png_bytes).unwrap();
     ctx.add_output_buffer(1).unwrap();
     let execute = imageflow_types::Execute001 {
+        job_options: None,
         graph_recording: None,
         security: None,
         framewise: imageflow_types::Framewise::Steps(steps),
@@ -878,6 +879,7 @@ fn test_matte_compositing_no_double_division() {
         },
     ];
     let execute2 = imageflow_types::Execute001 {
+        job_options: None,
         graph_recording: None,
         security: None,
         framewise: imageflow_types::Framewise::Steps(decode_steps),
@@ -1020,6 +1022,7 @@ fn test_matte_compositing_fully_transparent_pixels() {
     ctx.add_input_vector(0, png_bytes).unwrap();
     ctx.add_output_buffer(1).unwrap();
     let execute = imageflow_types::Execute001 {
+        job_options: None,
         graph_recording: None,
         security: None,
         framewise: imageflow_types::Framewise::Steps(steps),
@@ -1124,6 +1127,7 @@ fn test_matte_compositing_mixed_alpha() {
     ctx.add_input_vector(0, png_bytes).unwrap();
     ctx.add_output_buffer(1).unwrap();
     let execute = imageflow_types::Execute001 {
+        job_options: None,
         graph_recording: None,
         security: None,
         framewise: imageflow_types::Framewise::Steps(steps),

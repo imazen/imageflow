@@ -155,6 +155,7 @@ fn decode_to_rgba_with_commands(
     ctx.add_output_buffer(1).unwrap();
 
     let execute = s::Execute001 {
+        job_options: None,
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
         framewise: s::Framewise::Steps(vec![
@@ -890,6 +891,7 @@ fn decode_with_honor_gama_chrm_false(png_bytes: &[u8], decoder: NamedDecoders) -
     ctx.add_output_buffer(1).unwrap();
 
     let execute = s::Execute001 {
+        job_options: None,
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
         framewise: s::Framewise::Steps(vec![

@@ -647,6 +647,9 @@ impl Context {
         if s.max_json_bytes.is_some() {
             self.security.max_json_bytes = s.max_json_bytes;
         }
+        if s.max_total_file_pixels.is_some() {
+            self.security.max_total_file_pixels = s.max_total_file_pixels;
+        }
     }
 
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
@@ -860,6 +863,7 @@ fn test_take_after_encode_returns_data() {
     let execute = s::Execute001 {
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
+        job_options: None,
         framewise: s::Framewise::Steps(vec![
             s::Node::Decode { io_id: 0, commands: None },
             s::Node::Encode {
@@ -896,6 +900,7 @@ fn test_get_ptr_after_encode_then_take_blocked() {
     let execute = s::Execute001 {
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
+        job_options: None,
         framewise: s::Framewise::Steps(vec![
             s::Node::Decode { io_id: 0, commands: None },
             s::Node::Encode {
@@ -940,7 +945,7 @@ impl Drop for Context {
 #[test]
 fn test_context_size() {
     eprintln!("std::mem::sizeof(Context) = {}", std::mem::size_of::<Context>());
-    assert!(std::mem::size_of::<Context>() < 380);
+    assert!(std::mem::size_of::<Context>() < 400);
 }
 
 #[test]
@@ -975,10 +980,10 @@ fn test_calculate_context_heap_size() {
     // Fail if this grows so we can notice it
     // Windows has larger RwLock/Mutex, so allow a few extra bytes
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 1024);
+    assert!(context_bytes <= 1056);
 
     assert!(context_allocs <= 6);
-    assert!(thread_safe_bytes <= 1216);
+    assert!(thread_safe_bytes <= 1248);
 }
 
 #[test]

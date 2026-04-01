@@ -145,12 +145,7 @@ fn test_handler() {
     ];
 
     let build = Build001 {
-        builder_config: Some(Build001Config {
-            graph_recording: None,
-            security: None,
-            //            process_all_gif_frames: Some(false),
-            //            enable_jpeg_block_scaling: Some(false)
-        }),
+        builder_config: Some(Build001Config::default()),
         io: vec![input_io, output_io],
         framewise: Framewise::Steps(steps),
     };

@@ -125,6 +125,7 @@ impl LibClient {
         let send_execute = s::Execute001 {
             framewise: task.framewise,
             security: None,
+            job_options: None,
             graph_recording: task
                 .export_graphs_to
                 .map(|_| s::Build001GraphRecording::debug_defaults()),

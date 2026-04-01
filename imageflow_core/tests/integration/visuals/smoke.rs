@@ -261,14 +261,12 @@ fn test_max_encode_dimensions() {
     let e = smoke_test(
         Some(IoTestEnum::ByteArray(tinypng)),
         Some(IoTestEnum::OutputBuffer),
-        Some(imageflow_types::ExecutionSecurity {
-            max_encode_size: Some(imageflow_types::FrameSizeLimit {
-                w: 3,
-                h: 1,
-                megapixels: 100.0,
-            }),
-            ..imageflow_types::ExecutionSecurity::unspecified()
-        }),
+        {
+            let mut sec = imageflow_types::ExecutionSecurity::unspecified();
+            sec.max_encode_size =
+                Some(imageflow_types::FrameSizeLimit { w: 3, h: 1, megapixels: 100.0 });
+            Some(sec)
+        },
         DEBUG_GRAPH,
         steps,
     )
@@ -289,14 +287,12 @@ fn test_max_decode_dimensions() {
                 .to_owned(),
         )),
         None,
-        Some(imageflow_types::ExecutionSecurity {
-            max_decode_size: Some(imageflow_types::FrameSizeLimit {
-                w: 10,
-                h: 100000,
-                megapixels: 100.0,
-            }),
-            ..imageflow_types::ExecutionSecurity::unspecified()
-        }),
+        {
+            let mut sec = imageflow_types::ExecutionSecurity::unspecified();
+            sec.max_decode_size =
+                Some(imageflow_types::FrameSizeLimit { w: 10, h: 100000, megapixels: 100.0 });
+            Some(sec)
+        },
         DEBUG_GRAPH,
         steps,
     )
@@ -316,14 +312,12 @@ fn test_max_frame_dimensions() {
     let e = smoke_test(
         None,
         None,
-        Some(imageflow_types::ExecutionSecurity {
-            max_frame_size: Some(imageflow_types::FrameSizeLimit {
-                w: 10000,
-                h: 10000,
-                megapixels: 0.5,
-            }),
-            ..imageflow_types::ExecutionSecurity::unspecified()
-        }),
+        {
+            let mut sec = imageflow_types::ExecutionSecurity::unspecified();
+            sec.max_frame_size =
+                Some(imageflow_types::FrameSizeLimit { w: 10000, h: 10000, megapixels: 0.5 });
+            Some(sec)
+        },
         DEBUG_GRAPH,
         steps,
     )
@@ -631,6 +625,7 @@ fn test_animated_gif_roundtrip() {
     ctx.add_input_vector(0, input_gif).unwrap();
     ctx.add_output_buffer(1).unwrap();
     let execute = Execute001 {
+        job_options: None,
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
@@ -667,6 +662,7 @@ fn test_animated_gif_two_frames() {
     ctx.add_input_vector(0, input_gif).unwrap();
     ctx.add_output_buffer(1).unwrap();
     let execute = Execute001 {
+        job_options: None,
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
@@ -704,6 +700,7 @@ fn test_gif_select_frame() {
     ctx.add_input_vector(0, input_gif).unwrap();
     ctx.add_output_buffer(1).unwrap();
     let execute = Execute001 {
+        job_options: None,
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
@@ -741,6 +738,7 @@ fn test_gif_select_frame_0() {
     ctx.add_input_vector(0, input_gif).unwrap();
     ctx.add_output_buffer(1).unwrap();
     let execute = Execute001 {
+        job_options: None,
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
@@ -777,6 +775,7 @@ fn test_gif_select_frame_via_querystring() {
     ctx.add_input_vector(0, input_gif).unwrap();
     ctx.add_output_buffer(1).unwrap();
     let execute = Execute001 {
+        job_options: None,
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
@@ -812,6 +811,7 @@ fn test_gif_roundtrip() {
     let mut ctx1 = Context::create().unwrap();
     ctx1.add_output_buffer(0).unwrap();
     let execute1 = Execute001 {
+        job_options: None,
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(steps),
@@ -829,6 +829,7 @@ fn test_gif_roundtrip() {
     let mut ctx2 = Context::create().unwrap();
     ctx2.add_input_vector(0, bytes.to_vec()).unwrap();
     let execute2 = Execute001 {
+        job_options: None,
         graph_recording: default_graph_recording(false),
         security: None,
         framewise: Framewise::Steps(vec![Node::Decode { io_id: 0, commands: None }]),

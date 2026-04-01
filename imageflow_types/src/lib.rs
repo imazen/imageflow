@@ -1120,6 +1120,7 @@ pub struct FrameSizeLimit {
     pub megapixels: f32,
 }
 
+#[non_exhaustive]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -1135,6 +1136,11 @@ pub struct ExecutionSecurity {
     /// Default: 64 MB. Set to `None` to disable.
     #[serde(default)]
     pub max_json_bytes: Option<usize>,
+    /// Maximum total decoded pixels across all frames in a file.
+    /// For animation, this is checked as frame_count * width * height.
+    /// Default: 400 megapixels. Set to `None` to disable.
+    #[serde(default)]
+    pub max_total_file_pixels: Option<u64>,
 }
 
 impl ExecutionSecurity {
@@ -1147,6 +1153,7 @@ impl ExecutionSecurity {
             max_encode_size: None,
             max_input_file_bytes: Some(256 * 1024 * 1024),
             max_json_bytes: Some(64 * 1024 * 1024),
+            max_total_file_pixels: Some(400_000_000),
         }
     }
     pub fn unspecified() -> Self {
@@ -1156,6 +1163,7 @@ impl ExecutionSecurity {
             max_encode_size: None,
             max_input_file_bytes: None,
             max_json_bytes: None,
+            max_total_file_pixels: None,
         }
     }
 }
@@ -1459,6 +1467,14 @@ impl Build001GraphRecording {
     }
 }
 
+/// Reserved for future options controlling backends, color management,
+/// and other job-level behavior. Currently empty.
+#[non_exhaustive]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct JobOptions {}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -1466,6 +1482,8 @@ pub struct Build001Config {
     // pub process_all_gif_frames: Option<bool>,
     pub graph_recording: Option<Build001GraphRecording>,
     pub security: Option<ExecutionSecurity>,
+    #[serde(default)]
+    pub job_options: Option<JobOptions>,
 }
 
 /// Represents a complete build job, combining IO objects with a framewise operation graph.
@@ -1551,6 +1569,8 @@ impl Build001 {
 pub struct Execute001 {
     pub graph_recording: Option<Build001GraphRecording>,
     pub security: Option<ExecutionSecurity>,
+    #[serde(default)]
+    pub job_options: Option<JobOptions>,
     pub framewise: Framewise,
 }
 
@@ -1691,10 +1711,20 @@ impl Framewise {
 }
 impl Execute001 {
     pub fn example_steps() -> Execute001 {
-        Execute001 { graph_recording: None, security: None, framewise: Framewise::example_steps() }
+        Execute001 {
+            graph_recording: None,
+            security: None,
+            job_options: None,
+            framewise: Framewise::example_steps(),
+        }
     }
     pub fn example_graph() -> Execute001 {
-        Execute001 { graph_recording: None, security: None, framewise: Framewise::example_graph() }
+        Execute001 {
+            graph_recording: None,
+            security: None,
+            job_options: None,
+            framewise: Framewise::example_graph(),
+        }
     }
 }
 

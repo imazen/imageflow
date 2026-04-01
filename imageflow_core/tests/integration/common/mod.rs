@@ -219,8 +219,12 @@ pub fn build_framewise(
     for (ix, val) in io.into_iter().enumerate() {
         IoTestTranslator {}.add(context, ix as i32, val)?;
     }
-    let build =
-        s::Execute001 { security, graph_recording: default_graph_recording(debug), framewise };
+    let build = s::Execute001 {
+        job_options: None,
+        security,
+        graph_recording: default_graph_recording(debug),
+        framewise,
+    };
     if debug {
         println!("{}", serde_json::to_string_pretty(&build).unwrap());
     }
@@ -315,6 +319,7 @@ pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
 fn try_decode_image(c: &mut Context, io_id: i32) -> Option<BitmapKey> {
     let capture_id = 0;
     let result = c.execute_1(s::Execute001 {
+        job_options: None,
         graph_recording: None,
         security: None,
         framewise: s::Framewise::Steps(vec![

@@ -45,6 +45,7 @@ fn cms_cmyk_backend_divergence() {
     ctx.add_output_buffer(1).unwrap();
 
     let execute = s::Execute001 {
+        job_options: None,
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
         framewise: s::Framewise::Steps(vec![
@@ -88,6 +89,7 @@ fn cms_dual_backend_regression() {
         ctx.add_output_buffer(1).unwrap();
 
         let execute = s::Execute001 {
+            job_options: None,
             graph_recording: Some(s::Build001GraphRecording::off()),
             security: None,
             framewise: s::Framewise::Steps(vec![

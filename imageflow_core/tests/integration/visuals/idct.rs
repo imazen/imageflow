@@ -65,6 +65,7 @@ fn run_idct_test(
     steps.push(imageflow_types::Node::CaptureBitmapKey { capture_id });
 
     let send_execute = imageflow_types::Execute001 {
+        job_options: None,
         framewise: imageflow_types::Framewise::Steps(steps),
         security: None,
         graph_recording: None,

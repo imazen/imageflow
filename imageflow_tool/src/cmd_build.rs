@@ -280,13 +280,11 @@ impl CmdBuild {
         let unlimited_frame_size =
             s::FrameSizeLimit { w: i32::MAX as u32, h: i32::MAX as u32, megapixels: f32::MAX };
         if lowercase_args.contains(&"disabled".to_string()) {
-            security = Some(s::ExecutionSecurity {
-                max_decode_size: Some(unlimited_frame_size),
-                max_frame_size: Some(unlimited_frame_size),
-                max_encode_size: Some(unlimited_frame_size),
-                max_input_file_bytes: None,
-                max_json_bytes: None,
-            })
+            let mut sec = s::ExecutionSecurity::unspecified();
+            sec.max_decode_size = Some(unlimited_frame_size);
+            sec.max_frame_size = Some(unlimited_frame_size);
+            sec.max_encode_size = Some(unlimited_frame_size);
+            security = Some(sec)
         } else {
             let mut max_frame_size = unlimited_frame_size;
             let mut found_arg = false;
@@ -343,10 +341,9 @@ impl CmdBuild {
                     args_string
                 )));
             }
-            security = Some(s::ExecutionSecurity {
-                max_frame_size: Some(max_frame_size),
-                ..s::ExecutionSecurity::sane_defaults()
-            });
+            let mut sec = s::ExecutionSecurity::sane_defaults();
+            sec.max_frame_size = Some(max_frame_size);
+            security = Some(sec);
         }
 
         let builder_config =

@@ -617,6 +617,16 @@
               }
             ]
           },
+          "job_options": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JobOptions"
+              }
+            ]
+          },
           "security": {
             "oneOf": [
               {
@@ -1532,6 +1542,16 @@
               }
             ]
           },
+          "job_options": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JobOptions"
+              }
+            ]
+          },
           "security": {
             "oneOf": [
               {
@@ -1602,6 +1622,15 @@
               "null"
             ],
             "description": "Maximum bytes for a JSON API payload before deserialization.\nDefault: 64 MB. Set to `None` to disable.",
+            "minimum": 0
+          },
+          "max_total_file_pixels": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Maximum total decoded pixels across all frames in a file.\nFor animation, this is checked as frame_count * width * height.\nDefault: 400 megapixels. Set to `None` to disable.",
             "minimum": 0
           }
         }
@@ -1948,6 +1977,10 @@
             "format": "int32"
           }
         }
+      },
+      "JobOptions": {
+        "type": "object",
+        "description": "Reserved for future options controlling backends, color management,\nand other job-level behavior. Currently empty."
       },
       "JobResult": {
         "type": "object",

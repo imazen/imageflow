@@ -202,6 +202,7 @@ pub fn compare_encoded_to_source(
     let input_copy = input.clone();
 
     let execute = s::Execute001 {
+        job_options: None,
         graph_recording: default_graph_recording(debug),
         security: None,
         framewise: s::Framewise::Steps(steps),
