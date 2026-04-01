@@ -861,13 +861,22 @@ impl<'a> Parser<'a> {
         self.parse(key, |s| s.parse::<i32>())
     }
     fn parse_f64(&mut self, key: &'static str) -> Option<f64> {
-        self.parse(key, |s| s.parse::<f64>())
+        self.parse(key, |s| match s.parse::<f64>() {
+            Ok(v) if v.is_finite() => Ok(v),
+            _ => Err(()),
+        })
     }
     fn parse_f32(&mut self, key: &'static str) -> Option<f32> {
-        self.parse(key, |s| s.parse::<f32>())
+        self.parse(key, |s| match s.parse::<f32>() {
+            Ok(v) if v.is_finite() => Ok(v),
+            _ => Err(()),
+        })
     }
     fn parse_dpr(&mut self, key: &'static str) -> Option<f32> {
-        self.parse(key, |s| s.trim_end_matches("x").parse::<f32>())
+        self.parse(key, |s| match s.trim_end_matches("x").parse::<f32>() {
+            Ok(v) if v.is_finite() => Ok(v),
+            _ => Err(()),
+        })
     }
     fn parse_qp_dpr(&mut self, key: &'static str, dpr: Option<f32>) -> Option<f32> {
         self.parse(key, |s| {

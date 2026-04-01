@@ -10,7 +10,6 @@ use imageflow_types::{Color, PixelFormat};
 use lodepng::{CompressSettings, DecompressSettings};
 use std::cell::RefCell;
 use std::io::Write;
-use std::os::raw::{c_int, c_uint, c_ulong};
 use std::rc::Rc;
 use std::slice;
 
@@ -194,17 +193,6 @@ impl LodepngEncoder {
         writer.write_all(&png).map_err(FlowError::from_encoder)?;
         Ok(())
     }
-}
-
-unsafe extern "C" {
-    /// zlib
-    fn compress2(
-        dest: *mut u8,
-        dest_len: &mut c_ulong,
-        source: *const u8,
-        source_len: c_ulong,
-        level: c_int,
-    ) -> c_int;
 }
 
 fn zlib_compressor_6(
