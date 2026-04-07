@@ -1,0 +1,24 @@
+schema_version = 1
+superworkspace = "zen"
+generated_at = "1775432435"
+
+[crates.imageflow_tool]
+head = "e5c40ce1"
+tag = ""
+tag_found = false
+version = "4.0.0-alpha.1"
+class = "library"
+tier = 11
+dependents = 0
+files_changed = 0
+lines_added = 0
+lines_removed = 0
+src_files_changed = 0
+commit_count = 0
+commit_subjects = []
+category = ""
+bump = ""
+reason = ""
+needs_review = false
+semver_check = ""
+copter = ""
