@@ -27,15 +27,15 @@ zenpixels = { version = "0.2.1", default-features = false, features = ["imgref",
 zenpixels-convert = { version = "0.2.1", default-features = false, features = ["std", "imgref", "pipeline"] }
 # TODO: re-enable "png" once zenpng compiles (has uncommitted WIP changes against updated zencodec)
 # TODO: re-enable "jxl-decode", "jxl-encode" once zenjxl-decoder merge conflict is resolved
-zencodecs = { path = "../zencodecs", default-features = false, features = ["jpeg", "webp", "gif", "avif-decode", "avif-encode", "heic-decode", "bitmaps-bmp"] }
-zenlayout = { path = "../zenlayout", default-features = false, features = ["std", "riapi"] }
-zenresize = { path = "../zenresize", default-features = false, features = ["std", "layout"] }
-zenfilters = { path = "../zenfilters", default-features = false, features = ["srgb-filters"] }
-zenjpeg = { path = "../zenjpeg/zenjpeg", features = ["decoder"] }
+zencodecs = { default-features = false, features = ["jpeg", "webp", "gif", "avif-decode", "avif-encode", "heic-decode", "bitmaps-bmp"] , git = "https://github.com/imazen/zencodecs" }
+zenlayout = { default-features = false, features = ["std", "riapi"] , git = "https://github.com/imazen/zenlayout" }
+zenresize = { default-features = false, features = ["std", "layout"] , git = "https://github.com/imazen/zenresize" }
+zenfilters = { default-features = false, features = ["srgb-filters"] , git = "https://github.com/imazen/zenfilters" }
+zenjpeg = { features = ["decoder"] , git = "https://github.com/imazen/zenjpeg" }
 garb = { version = "0.2.5", default-features = false, features = ["std", "experimental"] }
 zencodec = { version = "0.1.8" }
-ultrahdr-core = { path = "../ultrahdr/ultrahdr-core" }
-ultrahdr-rs = { path = "../ultrahdr/ultrahdr" }
+ultrahdr-core = { git = "https://github.com/imazen/ultrahdr" }
+ultrahdr-rs = { git = "https://github.com/imazen/ultrahdr" }
 
 # Color management
 moxcms = { git = "https://github.com/awxkee/moxcms.git", rev = "c4affa1", features = ["in_place"] }
@@ -48,10 +48,6 @@ rgb = { version = "0.8", features = ["as-bytes"] }
 linear-srgb = { version = "0.6.7", default-features = false, features = ["std"] }
 imgref = "1.12"
 bytemuck = { version = "1.14", features = ["derive"] }
-
-# Patch crates.io deps to use local path versions (sub-codecs reference published versions)
-[patch.crates-io]
-zenlayout = { path = "../zenlayout" }
 
 [profile.release]
 debug = true

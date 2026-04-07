@@ -13,7 +13,7 @@ path = "src/main.rs"
 doc = false
 
 [dependencies]
-imageflow_core = { path = "../imageflow_core" }
-imageflow_types = { path = "../imageflow_types" }
+imageflow_core = { version = "0.1.0" , git = "https://github.com/imazen/imageflow" }
+imageflow_types = { version = "0.1.0" , git = "https://github.com/imazen/imageflow" }
 serde_json = { workspace = true }
 clap = "4"
