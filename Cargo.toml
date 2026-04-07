@@ -45,7 +45,7 @@ zenlayout = { path = "../zen/zenlayout" }
 # ── Superwork CI configuration ──
 # Used by `cargo superwork ci-prep` to transform path deps → git deps for CI.
 [workspace.metadata.superwork.ci]
-strategy = "git_url"
+strategy = "strip_path"
 delete_sections = ["patch.crates-io"]
 
 #bennch with cpu native
