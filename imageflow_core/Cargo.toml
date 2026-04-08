@@ -5,20 +5,6 @@ authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
 edition = "2024"
 rust-version = "1.93"
-exclude = [
-    "CLAUDE.md",
-    "CONTEXT-HANDOFF.md",
-    "FEEDBACK.md",
-    ".claude/",
-    ".superwork/",
-    ".zenbench/",
-    "copter-report/",
-    ".github/",
-    "Cross.toml",
-    "justfile",
-    "Cargo.toml.original.txt",
-    "fuzz/",
-]
 
 [lib]
 name = "imageflow_core"
@@ -76,16 +62,16 @@ utoipa = { version = "5.3.1", features = [], optional = true }
 schemars = { version = "1", features = ["derive"], optional = true }
 
 # --- Zen crate dependencies (optional, gated behind zen-pipeline feature) ---
-zenpipe = { path = "../../zen/zenpipe", features = ["zennode", "std", "json-schema", "imageflow-compat"], optional = true }
-zencodecs = { path = "../../zen/zencodecs", features = ["zennode", "png-imagequant", "cms"], optional = true }
-zenjpeg = { path = "../../zen/zenjpeg/zenjpeg", features = ["moxcms"], optional = true }
-zencodec = { path = "../../zen/zencodec", optional = true }
-zennode = { path = "../../zen/zennode/zennode", features = ["derive", "serde"], optional = true }
-zenresize = { path = "../../zen/zenresize", optional = true }
-zenlayout = { path = "../../zen/zenlayout", optional = true }
-zenfilters = { path = "../../zen/zenfilters", features = ["zennode"], optional = true }
+zenpipe = { features = ["zennode", "std", "json-schema", "imageflow-compat", "nodes-all"], optional = true , git = "https://github.com/imazen/zenpipe" }
+zencodecs = { features = ["zennode", "png-imagequant", "cms", "all"], optional = true , git = "https://github.com/imazen/zencodecs" }
+zenjpeg = { features = ["moxcms"], optional = true , git = "https://github.com/imazen/zenjpeg" }
+zencodec = { optional = true , git = "https://github.com/imazen/zencodec" }
+zennode = { features = ["derive", "serde"], optional = true , git = "https://github.com/imazen/zennode" }
+zenresize = { optional = true , git = "https://github.com/imazen/zenresize" }
+zenlayout = { optional = true , git = "https://github.com/imazen/zenlayout" }
+zenfilters = { features = ["zennode"], optional = true , git = "https://github.com/imazen/zenfilters" }
 zenpixels = { version = "0.2.1", optional = true }
-linear-srgb = { path = "../../zen/linear-srgb", features = ["iec"], optional = true }
+linear-srgb = { features = ["iec"], optional = true , git = "https://github.com/imazen/linear-srgb" }
 
 # --- C codec dependencies (optional, gated behind c-codecs feature) ---
 imageflow_c_components = { path = "../c_components", optional = true }
@@ -109,8 +95,8 @@ walkdir = "2"
 csv = "1"
 rayon = "1"
 colorutils-rs = "0.7"
-zensim-regress = { path = "../../zen/zensim/zensim-regress" }
-zensim = { path = "../../zen/zensim/zensim" }
+zensim-regress = { git = "https://github.com/imazen/zensim" }
+zensim = { git = "https://github.com/imazen/zensim" }
 seahash = "4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
@@ -139,6 +125,10 @@ zen-pipeline = [
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]
 # Enable schemars-based JSON Schema generation. Enables the corresponding feature in imageflow_types
 json-schema = ["dep:schemars", "imageflow_types/json-schema"]
+
+[[example]]
+name = "zen_heaptrack"
+required-features = ["zen-pipeline"]
 
 [[bench]]
 name="bench_graphics"
