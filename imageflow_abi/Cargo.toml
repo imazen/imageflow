@@ -6,6 +6,20 @@ workspace = "../"
 build = "build.rs"
 edition = "2024"
 rust-version = "1.93"
+exclude = [
+    "CLAUDE.md",
+    "CONTEXT-HANDOFF.md",
+    "FEEDBACK.md",
+    ".claude/",
+    ".superwork/",
+    ".zenbench/",
+    "copter-report/",
+    ".github/",
+    "Cross.toml",
+    "justfile",
+    "Cargo.toml.original.txt",
+    "fuzz/",
+]
 
 [lib]
 name = "imageflow"
