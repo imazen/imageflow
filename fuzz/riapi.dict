@@ -1,0 +1,148 @@
+# RIAPI query string dictionary for imageflow fuzzing
+# Keys and values from imageflow_riapi IR4 parser
+
+# Sizing keys
+kw_w="w="
+kw_h="h="
+kw_width="width="
+kw_height="height="
+kw_maxwidth="maxwidth="
+kw_maxheight="maxheight="
+
+# Mode values
+kw_mode="mode="
+v_max="max"
+v_pad="pad"
+v_crop="crop"
+v_stretch="stretch"
+v_within="within"
+
+# Scale
+kw_scale="scale="
+v_down="down"
+v_both="both"
+v_canvas="canvas"
+
+# Crop
+kw_crop="crop="
+kw_cropxunits="cropxunits="
+kw_cropyunits="cropyunits="
+kw_c_gravity="c.gravity="
+
+# Transform
+kw_flip="flip="
+kw_sflip="sflip="
+kw_rotate="rotate="
+kw_srotate="srotate="
+kw_autorotate="autorotate="
+
+# Format
+kw_format="format="
+v_jpeg="jpeg"
+v_jpg="jpg"
+v_png="png"
+v_webp="webp"
+v_gif="gif"
+v_avif="avif"
+v_jxl="jxl"
+
+# Quality
+kw_quality="quality="
+kw_jpeg_quality="jpeg.quality="
+kw_jpeg_progressive="jpeg.progressive="
+kw_png_quality="png.quality="
+kw_png_min_quality="png.min_quality="
+kw_webp_quality="webp.quality="
+kw_webp_lossless="webp.lossless="
+
+# Filters
+kw_sharpen="f.sharpen="
+kw_sharpen_when="f.sharpen_when="
+kw_down_filter="down.filter="
+kw_up_filter="up.filter="
+v_lanczos="lanczos"
+v_cubic="cubic"
+v_linear="linear"
+
+# Color
+kw_contrast="s.contrast="
+kw_brightness="s.brightness="
+kw_saturation="s.saturation="
+kw_alpha="s.alpha="
+kw_sepia="s.sepia="
+kw_grayscale="s.grayscale="
+kw_bgcolor="bgcolor="
+kw_ignoreicc="ignoreicc="
+kw_ignore_icc_errors="ignore_icc_errors="
+kw_down_colorspace="down.colorspace="
+
+# Trim
+kw_trim_threshold="trim.threshold="
+kw_trim_padding="trim.percentpadding="
+
+# Zoom/DPR
+kw_zoom="zoom="
+kw_dpr="dpr="
+kw_dppx="dppx="
+
+# Srcset
+kw_srcset="srcset="
+
+# Anchor values
+kw_anchor="anchor="
+v_topleft="topleft"
+v_topcenter="topcenter"
+v_topright="topright"
+v_middleleft="middleleft"
+v_middlecenter="middlecenter"
+v_middleright="middleright"
+v_bottomleft="bottomleft"
+v_bottomcenter="bottomcenter"
+v_bottomright="bottomright"
+
+# Lossless
+kw_lossless="lossless="
+
+# Boolean values
+v_true="true"
+v_false="false"
+
+# Separators
+sep_amp="&"
+sep_eq="="
+
+# Common numeric values
+v_0="0"
+v_1="1"
+v_50="50"
+v_100="100"
+v_200="200"
+v_400="400"
+v_800="800"
+v_1024="1024"
+v_2048="2048"
+v_neg1="-1"
+v_0_5="0.5"
+v_1_0="1.0"
+v_75="75"
+v_90="90"
+v_180="180"
+v_270="270"
+
+# Rotation values
+v_rot90="90"
+v_rot180="180"
+v_rot270="270"
+
+# Flip values
+v_flip_h="h"
+v_flip_v="v"
+v_flip_xy="xy"
+
+# Frame selection
+kw_frame="frame="
+
+# Accept headers
+kw_accept_webp="accept.webp="
+kw_accept_avif="accept.avif="
+kw_accept_jxl="accept.jxl="
