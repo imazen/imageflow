@@ -300,6 +300,8 @@ pub enum LayoutError {
     },
     /// The result depends on the bitmap contents, and can't be calculated based on input size alone
     ContentDependent,
+    /// The URL or query string could not be parsed
+    InvalidQueryString,
 }
 
 pub type Result<T> = ::std::result::Result<T, LayoutError>;

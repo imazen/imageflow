@@ -52,14 +52,15 @@ pub enum Ir4Command {
 impl Ir4Command {
     pub fn parse(&self) -> sizing::Result<Ir4Result> {
         let (i, warn) = match *self {
-            Ir4Command::Url(ref url) => parsing::parse_url(
-                &::url::Url::from_str(url)
-                    .expect("ImageResizer4 Url cannot be parsed into instructions: invalid URI"),
-            ),
+            Ir4Command::Url(ref url) => {
+                let parsed = ::url::Url::from_str(url)
+                    .map_err(|_| sizing::LayoutError::InvalidQueryString)?;
+                parsing::parse_url(&parsed)
+            }
             Ir4Command::Instructions(ref i) => (**i, vec![]),
             Ir4Command::QueryString(ref s) => {
                 let url = ::url::Url::from_str(&format!("https://fakeurl/img.jpg?{}", s))
-                    .expect("Must be a valid querystring, excluding ?");
+                    .map_err(|_| sizing::LayoutError::InvalidQueryString)?;
                 parsing::parse_url(&url)
             }
         };
