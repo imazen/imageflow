@@ -80,9 +80,9 @@ impl NodeDef for CommandStringPostDecodeDef {
         if old_estimate == FrameEstimate::InvalidateGraph {
             Ok(FrameEstimate::Impossible)
         } else {
-            let e = get_expand(ctx, ix).map_err(|e| e.at(here!()))?;
+            let expand = get_expand(ctx, ix).map_err(|e| e.at(here!()))?;
 
-            let decode_commands_result = e.get_decode_commands();
+            let decode_commands_result = expand.get_decode_commands();
 
             match decode_commands_result {
                 Err(LayoutError::ContentDependent) | Ok(None) => {}
@@ -97,7 +97,7 @@ impl NodeDef for CommandStringPostDecodeDef {
                     }
                 }
                 Err(e) => {
-                    return Err(FlowError::from_layout(e).at(here!()));
+                    return Err(FlowError::from_layout_for(e, &expand.i).at(here!()));
                 }
             }
 
@@ -109,9 +109,9 @@ impl NodeDef for CommandStringPostDecodeDef {
     }
 
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<()> {
-        let e = get_expand(ctx, ix).map_err(|e| e.at(here!()))?;
+        let expand = get_expand(ctx, ix).map_err(|e| e.at(here!()))?;
 
-        match e.expand_steps().map_err(|e| FlowError::from_layout(e).at(here!())) {
+        match expand.expand_steps().map_err(|e| FlowError::from_layout_for(e, &expand.i).at(here!())) {
             Ok(r) => {
                 //TODO: Find a way to expose warnings
                 ctx.replace_node(ix, r.steps.unwrap().into_iter().map(Node::from).collect());
@@ -234,7 +234,7 @@ impl NodeDef for CommandStringDef {
                 watermarks,
             }
             .translate()
-            .map_err(|e| FlowError::from_layout(e).at(here!()))?;
+            .map_err(|e| FlowError::from_layout_for(e, &value).at(here!()))?;
 
             let translation_nodes = translation_result
                 .steps

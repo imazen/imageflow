@@ -11,22 +11,19 @@ use imageflow_riapi::ir4::{Ir4Command, Ir4Translate};
 fuzz_target!(|data: &[u8]| {
     let Ok(query) = std::str::from_utf8(data) else { return; };
 
-    // Ir4Command::QueryString has an expect() on URL construction that
-    // can panic on pathological input, so we must catch_unwind.
     let query = query.to_string();
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let cmd = Ir4Command::QueryString(query.clone());
-        // Phase 1: parse query string into Instructions.
-        let _ = cmd.parse();
 
-        // Phase 2: translate through the full pipeline (decode/encode
-        // node insertion, layout computation, CommandString generation).
-        let translate = Ir4Translate {
-            i: Ir4Command::QueryString(query),
-            decode_id: Some(0),
-            encode_id: Some(1),
-            watermarks: None,
-        };
-        let _ = translate.translate();
-    }));
+    // Phase 1: parse query string into Instructions.
+    let cmd = Ir4Command::QueryString(query.clone());
+    if cmd.parse().is_err() { return; }
+
+    // Phase 2: translate through the full pipeline (decode/encode
+    // node insertion, layout computation, CommandString generation).
+    let translate = Ir4Translate {
+        i: Ir4Command::QueryString(query),
+        decode_id: Some(0),
+        encode_id: Some(1),
+        watermarks: None,
+    };
+    let _ = translate.translate();
 });

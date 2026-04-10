@@ -598,6 +598,14 @@ impl FlowError {
             message: format!("LayoutError: {:?}", &e),
         }
     }
+    pub fn from_layout_for(e: LayoutError, context: &dyn std::fmt::Debug) -> FlowError {
+        FlowError {
+            kind: ErrorKind::LayoutError,
+            at: ::smallvec::SmallVec::new(),
+            node: None,
+            message: format!("LayoutError: {:?} for {:?}", &e, context),
+        }
+    }
 }
 
 /// The only difference between display and debug is that display prepends the category
