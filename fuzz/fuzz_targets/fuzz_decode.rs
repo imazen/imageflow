@@ -26,14 +26,10 @@ fuzz_target!(|data: &[u8]| {
     let Ok(mut ctx) = Context::create_can_panic() else { return; };
     ctx.configure_security(limits());
     if ctx.add_copied_input_buffer(0, data).is_err() { return; }
-    if ctx.add_output_buffer(1).is_err() { return; }
 
     let execute = s::Execute001 {
         framewise: s::Framewise::Steps(vec![
             s::Node::Decode { io_id: 0, commands: None },
-            s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Libpng {
-                depth: None, matte: None, zlib_compression: None,
-            }},
         ]),
         graph_recording: None,
         security: Some(limits()),

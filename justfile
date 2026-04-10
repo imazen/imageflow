@@ -71,3 +71,47 @@ check:
 fmt:
     cargo fmt --all
     cargo clippy -p imageflow_core --tests -- -D warnings
+
+# Build fuzz targets with C decoder coverage instrumentation
+fuzz-build:
+    cd fuzz && CC=clang CXX=clang++ \
+        CFLAGS="-fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table" \
+        CXXFLAGS="-fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table" \
+        cargo +nightly fuzz build
+
+# Run all fuzz targets for a given duration (default 120s each)
+fuzz duration="120":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export CC=clang CXX=clang++
+    export CFLAGS="-fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table"
+    export CXXFLAGS="$CFLAGS"
+    cd fuzz
+    for target in fuzz_decode fuzz_transcode fuzz_riapi fuzz_json; do
+        echo "=== Running $target for {{duration}}s ==="
+        dict=imageflow.dict
+        if [ "$target" = "fuzz_riapi" ]; then dict=riapi.dict; fi
+        if [ "$target" = "fuzz_json" ]; then dict=json.dict; fi
+        cargo +nightly fuzz run "$target" -- \
+            -fork=4 -dict="$dict" -max_total_time={{duration}} \
+            -rss_limit_mb=2048 -max_len=4096 \
+            2>&1 | tee /tmp/fuzz-${target}.log
+        echo ""
+    done
+    echo "=== All targets complete ==="
+    grep "oom/timeout/crash:" /tmp/fuzz-fuzz_*.log | tail -4
+
+# Run a single fuzz target (e.g., just fuzz-one fuzz_decode 300)
+fuzz-one target duration="120":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export CC=clang CXX=clang++
+    export CFLAGS="-fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table"
+    export CXXFLAGS="$CFLAGS"
+    cd fuzz
+    dict=imageflow.dict
+    if [ "{{target}}" = "fuzz_riapi" ]; then dict=riapi.dict; fi
+    if [ "{{target}}" = "fuzz_json" ]; then dict=json.dict; fi
+    cargo +nightly fuzz run "{{target}}" -- \
+        -fork=4 -dict="$dict" -max_total_time={{duration}} \
+        -rss_limit_mb=2048 -max_len=4096
