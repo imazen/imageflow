@@ -1,0 +1,16 @@
+name: Rust Tests
+
+on:
+  push:
+    branches: [main, master, imageflow-3-rebased]
+  pull_request:
+
+jobs:
+  rust:
+    uses: imazen/zen-workspace/.github/workflows/rust-ci.yml@main
+    with:
+      # imageflow has zen-pipeline as an optional feature — test both
+      test_extra_runs: |
+        cargo test --workspace --features zen-pipeline
+      clippy_extra_runs: |
+        cargo clippy --all-targets --features zen-pipeline -- -D warnings

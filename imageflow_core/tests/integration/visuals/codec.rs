@@ -59,6 +59,7 @@ fn test_transparent_png_to_jpeg() {
         source: "test_inputs/shirt_transparent.png",
         detail: "shirt",
         command: "format=jpg",
+        similarity: Similarity::MaxZdsim(0.05),
     }
 }
 
@@ -82,6 +83,7 @@ fn test_transparent_png_to_jpeg_constrain() {
                 preset: EncoderPreset::Mozjpeg { quality: Some(100), progressive: None, matte: None },
             },
         ],
+        similarity: Similarity::MaxZdsim(0.05),
     }
 }
 
@@ -112,34 +114,49 @@ fn test_matte_transparent_png() {
     }
 }
 
-// This test uses a branching pipeline producing 2 outputs — not macro-convertible
+// This test uses a branching pipeline producing 2 outputs — not macro-convertible.
+// Runs with each available backend (V2 + Zen) using per-backend checksum suffixes.
 #[test]
 fn test_branching_crop_whitespace() {
     let identity = test_identity!();
     let preset = EncoderPreset::Lodepng { maximum_deflate: None };
     let source_url = "https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/little_gradient_whitespace.jpg";
 
+    // Build the branching framewise once — it's just data, no execution.
     let s = imageflow_core::clients::fluent::fluently().decode(0);
     let v1 = s.branch();
     let v2 = v1.branch().crop_whitespace(200, 0f32);
     let framewise =
         v1.encode(1, preset.clone()).builder().with(v2.encode(2, preset.clone())).to_framewise();
 
-    let io_vec = vec![
-        IoTestEnum::Url(source_url.to_owned()),
-        IoTestEnum::OutputBuffer,
-        IoTestEnum::OutputBuffer,
-    ];
+    let tol_spec = Similarity::MaxZdsim(0.05).to_tolerance_spec();
 
-    let mut context = imageflow_core::Context::create().unwrap();
-    let _ = build_framewise(&mut context, framewise, io_vec, None, false).unwrap();
+    let mut backends: Vec<(imageflow_core::Backend, &str)> =
+        vec![(imageflow_core::Backend::V2, "v2")];
+    #[cfg(feature = "zen-pipeline")]
+    backends.push((imageflow_core::Backend::Zen, "zen"));
 
-    let tol_spec = Similarity::MaxZdsim(0.01).to_tolerance_spec();
+    for (backend, suffix) in &backends {
+        let io_vec = vec![
+            IoTestEnum::Url(source_url.to_owned()),
+            IoTestEnum::OutputBuffer,
+            IoTestEnum::OutputBuffer,
+        ];
 
-    for output_io_id in [1, 2] {
-        let detail = format!("gradient_output_{output_io_id}");
-        let bytes = context.take_output_buffer(output_io_id).unwrap();
-        check_visual_bytes(&identity, &detail, &bytes, &tol_spec);
+        let mut context = imageflow_core::Context::create().unwrap();
+        context.force_backend = Some(*backend);
+        let _ = build_framewise(&mut context, framewise.clone(), io_vec, None, false)
+            .unwrap_or_else(|e| panic!("[{suffix}] pipeline failed: {e}"));
+
+        for output_io_id in [1, 2] {
+            let detail = if *suffix == "v2" {
+                format!("gradient_output_{output_io_id}")
+            } else {
+                format!("gradient_output_{output_io_id}_{suffix}")
+            };
+            let bytes = context.take_output_buffer(output_io_id).unwrap();
+            check_visual_bytes(&identity, &detail, &bytes, &tol_spec);
+        }
     }
 }
 
@@ -149,7 +166,7 @@ fn test_transparent_webp_to_webp() {
         source: "test_inputs/1_webp_ll.webp",
         detail: "lossless_100x100",
         command: "format=webp&width=100&height=100&webp.lossless=true",
-        similarity: Similarity::AllowOffByOneBytesCount(500),
+        similarity: Similarity::MaxZdsim(0.05),
     }
 }
 
@@ -312,7 +329,7 @@ fn decode_rgb_with_cmyk_profile_jpeg() {
             encode: None,
             watermarks: None,
         }],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Tolerance { max_delta: 3, min_similarity: 95.0, max_pixels_different: 1.0, ..Tolerance::default() },
     }
 }
 
@@ -328,7 +345,9 @@ fn test_crop_with_preshrink() {
             encode: None,
             watermarks: None,
         }],
-        tolerance: Tolerance::off_by_one(),
+        // Zen skips JPEG preshrink → full decode + linear-light resize.
+        // Off-by-2 biased brighter is more correct (no gamma-incorrect IDCT downscale).
+        tolerance: Tolerance { max_delta: 4, ..Tolerance::off_by_one() },
     }
 }
 

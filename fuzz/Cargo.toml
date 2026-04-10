@@ -15,17 +15,28 @@ members = ["."]
 
 [dependencies]
 libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
 serde_json = "1"
 imageflow_types = { path = "../imageflow_types" }
-imageflow_core = { path = "../imageflow_core" }
+imageflow_helpers = { path = "../imageflow_helpers" }
 imageflow_riapi = { path = "../imageflow_riapi" }
+append_only_set = { path = "../append_only_set" }
+zenpipe = { path = "../../zen/zenpipe", features = ["imageflow-compat"] }
+imageflow_core = { path = "../imageflow_core" }
 
 # Replicate [patch.crates-io] from the parent workspace so transitive
 # deps resolve to the same local crates.
 [patch.crates-io]
 libpng-sys = { git = "https://github.com/imazen/rust-libpng-sys" }
 lcms2-sys = { git = "https://github.com/imazen/rust-lcms2-sys", branch = "update-lcms2-2.18" }
+zenpixels = { path = "../../zen/zenpixels/zenpixels" }
+zenpixels-convert = { path = "../../zen/zenpixels/zenpixels-convert" }
+zencodec = { path = "../../zen/zencodec" }
+zenjpeg = { path = "../../zen/zenjpeg/zenjpeg" }
+moxcms = { path = "../../moxcms" }
+zenlayout = { path = "../../zen/zenlayout" }
 
+# v2 targets (improved — dict-driven, no seeds)
 [[bin]]
 name = "fuzz_decode"
 path = "fuzz_targets/fuzz_decode.rs"
@@ -44,4 +55,20 @@ doc = false
 [[bin]]
 name = "fuzz_json"
 path = "fuzz_targets/fuzz_json.rs"
+doc = false
+
+# v3 targets (zen-pipeline)
+[[bin]]
+name = "fuzz_pipeline"
+path = "fuzz_targets/fuzz_pipeline.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_v2_decode"
+path = "fuzz_targets/fuzz_v2_decode.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_v2_transcode"
+path = "fuzz_targets/fuzz_v2_transcode.rs"
 doc = false

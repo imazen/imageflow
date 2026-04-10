@@ -22,6 +22,7 @@ pub mod json;
 
 pub use crate::codecs::cms::CmsBackend;
 pub use crate::codecs::NamedDecoders;
+pub use crate::context::Backend;
 pub use crate::context::Context;
 pub use crate::context::ThreadSafeContext;
 pub use crate::flow::definitions::Graph;
@@ -33,6 +34,9 @@ pub mod clients;
 pub mod ffi;
 pub mod parsing;
 pub mod test_helpers;
+
+#[cfg(feature = "zen-pipeline")]
+pub mod zen;
 
 use petgraph::graph::NodeIndex;
 use std::borrow::Cow;

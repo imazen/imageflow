@@ -148,6 +148,7 @@ fn test_handler() {
         builder_config: Some(Build001Config::default()),
         io: vec![input_io, output_io],
         framewise: Framewise::Steps(steps),
+        job_options: None,
     };
     // This test is outdated as build_1 is deprecated in favor of handle_build/build_1_raw
     // let response = Context::create().unwrap().build_1(build);

@@ -54,6 +54,7 @@ fn test_icc_display_p3_resize() {
         source: "test_inputs/wide-gamut/display-p3/flickr_403aa5efb8efe6e8.jpg",
         detail: "p3_resize_400",
         command: "w=400&format=png",
+        similarity: Similarity::MaxZdsim(0.05),
     }
 }
 
@@ -63,6 +64,7 @@ fn test_icc_display_p3_resize_filter() {
         source: "test_inputs/wide-gamut/display-p3/flickr_47b2cd2c048f29b3.jpg",
         detail: "p3_robidoux_300x300",
         command: "w=300&h=300&mode=crop&filter=Robidoux&format=png",
+        similarity: Similarity::MaxZdsim(0.05),
     }
 }
 
@@ -213,6 +215,7 @@ fn test_icc_p3_crop_and_resize() {
         source: "test_inputs/wide-gamut/display-p3/flickr_769c664daf96b5d5.jpg",
         detail: "p3_crop_200x200",
         command: "w=200&h=200&mode=crop&format=png",
+        similarity: Similarity::MaxZdsim(0.05),
     }
 }
 

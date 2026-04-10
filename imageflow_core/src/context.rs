@@ -1,3 +1,13 @@
+/// Which execution backend to use for image processing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Backend {
+    /// V2 graph engine (legacy, C-based codecs).
+    V2,
+    /// Zen streaming pipeline (pure Rust).
+    #[cfg(feature = "zen-pipeline")]
+    Zen,
+}
+
 use crate::errors::OutwardErrorBuffer;
 use crate::flow::definitions::Graph;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
@@ -20,6 +30,25 @@ use crate::codecs::EnabledCodecs;
 use crate::graphics::bitmaps::{Bitmap, BitmapKey, BitmapWindowMut, BitmapsContainer};
 use imageflow_types::ImageInfo;
 use itertools::Itertools;
+
+/// Input bytes for the zen pipeline — either an Arc-wrapped owned Vec or a static slice.
+/// Stored instead of `Vec<u8>` so the v2 non-zen path pays zero clone cost at registration time.
+/// The `Vec<u8>` zenpipe needs is built lazily in `zen_execute_inner`.
+#[cfg(feature = "zen-pipeline")]
+enum ZenInput {
+    Owned(Arc<Vec<u8>>),
+    Static(&'static [u8]),
+}
+
+#[cfg(feature = "zen-pipeline")]
+impl ZenInput {
+    fn to_vec(&self) -> Vec<u8> {
+        match self {
+            ZenInput::Owned(a) => (**a).clone(),
+            ZenInput::Static(s) => s.to_vec(),
+        }
+    }
+}
 
 /// Something of a god object (which is necessary for a reasonable FFI interface).
 /// 1025 bytes including 5 heap allocations as of Oct 2025. If on the stack, 312 bytes are taken up
@@ -46,6 +75,23 @@ pub struct Context {
 
     /// Bitmap keys captured by CaptureBitmapKey nodes during graph execution.
     captured_bitmap_keys: Option<Box<std::collections::HashMap<i32, BitmapKey>>>,
+
+    /// Input bytes stashed for the zen pipeline (feature-gated).
+    /// Populated by `add_copied_input_buffer`, `add_input_vector`, etc.
+    /// The zen pipeline reads from here instead of the codec containers.
+    /// Uses Arc to avoid cloning on the v2 non-zen path — Vec is built lazily at execute time.
+    #[cfg(feature = "zen-pipeline")]
+    zen_input_bytes: std::collections::HashMap<i32, ZenInput>,
+
+    /// Force a specific backend for testing. None = zen when zen-pipeline is compiled in.
+    #[cfg(feature = "zen-pipeline")]
+    pub force_backend: Option<Backend>,
+
+    /// Pixel data captured by CaptureBitmapKey in the zen pipeline.
+    /// Maps capture_id → (width, height, pixel_bytes, bytes_per_pixel).
+    /// Pixel bytes are contiguous rows in the source pixel format.
+    #[cfg(feature = "zen-pipeline")]
+    pub zen_captured_bitmaps: std::collections::HashMap<i32, crate::zen::CapturedBitmap>,
 }
 
 // This token is the shared state.
@@ -298,8 +344,13 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-
             captured_bitmap_keys: None,
+            #[cfg(feature = "zen-pipeline")]
+            zen_input_bytes: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            zen_captured_bitmaps: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            force_backend: None,
         }))
     }
     fn default_codecs_capacity() -> usize {
@@ -321,8 +372,13 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-
             captured_bitmap_keys: None,
+            #[cfg(feature = "zen-pipeline")]
+            zen_input_bytes: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            zen_captured_bitmaps: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            force_backend: None,
         })
     }
     fn create_with_cancellation_token_and_can_panic(
@@ -343,8 +399,13 @@ impl Context {
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
             allocations: RefCell::new(AllocationContainer::new()),
-
             captured_bitmap_keys: None,
+            #[cfg(feature = "zen-pipeline")]
+            zen_input_bytes: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            zen_captured_bitmaps: std::collections::HashMap::new(),
+            #[cfg(feature = "zen-pipeline")]
+            force_backend: None,
         }))
     }
 
@@ -436,6 +497,99 @@ impl Context {
             .insert(capture_id, key);
     }
 
+    /// Convert zen CapturedBitmap → v2 BitmapKey and store in captured_bitmap_keys.
+    ///
+    /// The zen pipeline captures raw RGBA8 pixels. The v2 test infrastructure expects
+    /// BitmapKeys in the BitmapsContainer. This bridges the two by allocating a BGRA
+    /// bitmap and copying pixels with R↔B swap.
+    #[cfg(feature = "zen-pipeline")]
+    fn store_zen_captured_bitmaps(
+        &mut self,
+        captured: std::collections::HashMap<i32, crate::zen::CapturedBitmap>,
+    ) -> Result<()> {
+        use crate::graphics::bitmaps::{BitmapCompositing, ColorSpace};
+        use imageflow_types::PixelLayout;
+
+        for (capture_id, bitmap) in captured {
+            let w = bitmap.width;
+            let h = bitmap.height;
+            let bpp = bitmap.bytes_per_pixel();
+
+            // Use the alpha_meaningful flag from the zen pipeline.
+            // This tracks whether the source had alpha or the pipeline created alpha
+            // (e.g., RoundImageCorners). When false, normalize_unused_alpha() will
+            // set alpha to 255, matching v2's behavior for opaque sources.
+            let alpha_meaningful = bitmap.alpha_meaningful;
+
+            // Create a BGRA u8 bitmap in the BitmapsContainer.
+            let key = self.borrow_bitmaps_mut()?.create_bitmap_u8(
+                w,
+                h,
+                PixelLayout::BGRA,
+                false, // alpha_premultiplied — zen pipeline uses straight alpha
+                alpha_meaningful,
+                ColorSpace::StandardRGB,
+                BitmapCompositing::ReplaceSelf,
+            )?;
+
+            // Copy pixel data row by row, swapping R↔B for RGBA→BGRA conversion.
+            {
+                let bitmaps = self.borrow_bitmaps_mut()?;
+                let mut bm = bitmaps.get(key).unwrap().borrow_mut();
+                let mut window = bm.get_window_u8().unwrap();
+                let src_stride = w as usize * bpp;
+
+                for y in 0..h as usize {
+                    let src_row = &bitmap.pixels
+                        [y * src_stride..(y * src_stride + src_stride).min(bitmap.pixels.len())];
+                    let dst_row = window.row_mut(y).unwrap();
+                    if bpp == 4 {
+                        // RGBA → BGRA: swap R and B
+                        for x in 0..w as usize {
+                            let si = x * 4;
+                            let di = x * 4;
+                            if si + 3 < src_row.len() && di + 3 < dst_row.len() {
+                                dst_row[di] = src_row[si + 2]; // B ← R
+                                dst_row[di + 1] = src_row[si + 1]; // G ← G
+                                dst_row[di + 2] = src_row[si]; // R ← B
+                                dst_row[di + 3] = src_row[si + 3]; // A ← A
+                            }
+                        }
+                    } else if bpp == 3 {
+                        // RGB → BGRA: swap R and B, set A=255
+                        for x in 0..w as usize {
+                            let si = x * 3;
+                            let di = x * 4;
+                            if si + 2 < src_row.len() && di + 3 < dst_row.len() {
+                                dst_row[di] = src_row[si + 2]; // B ← R
+                                dst_row[di + 1] = src_row[si + 1]; // G ← G
+                                dst_row[di + 2] = src_row[si]; // R ← B
+                                dst_row[di + 3] = 255; // A = opaque
+                            }
+                        }
+                    } else {
+                        // Unknown layout — copy raw bytes (best effort)
+                        let len = src_row.len().min(dst_row.len());
+                        dst_row[..len].copy_from_slice(&src_row[..len]);
+                    }
+                }
+            }
+
+            // Normalize alpha to 255 for opaque sources (matching v2 behavior).
+            {
+                let bitmaps = self.borrow_bitmaps_mut()?;
+                let mut bm = bitmaps.get(key).unwrap().borrow_mut();
+                let mut window = bm.get_window_u8().unwrap();
+                window.normalize_unused_alpha().map_err(|e| e.at(here!()))?;
+            }
+
+            self.insert_captured_bitmap_key(capture_id, key);
+            // Also keep in zen_captured_bitmaps for any code that reads it directly.
+            self.zen_captured_bitmaps.insert(capture_id, bitmap);
+        }
+        Ok(())
+    }
+
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
         let io =
             IoProxy::file_with_mode(self, io_id, path, direction).map_err(|e| e.at(here!()))?;
@@ -443,14 +597,32 @@ impl Context {
     }
 
     pub fn add_copied_input_buffer(&mut self, io_id: i32, bytes: &[u8]) -> Result<()> {
-        let io = IoProxy::copy_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
-
-        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        #[cfg(feature = "zen-pipeline")]
+        {
+            let arc = Arc::new(bytes.to_vec());
+            self.zen_input_bytes.insert(io_id, ZenInput::Owned(arc.clone()));
+            let io = IoProxy::read_arc(self, io_id, arc).map_err(|e| e.at(here!()))?;
+            return self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()));
+        }
+        #[cfg(not(feature = "zen-pipeline"))]
+        {
+            let io = IoProxy::copy_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
+            self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        }
     }
     pub fn add_input_vector(&mut self, io_id: i32, bytes: Vec<u8>) -> Result<()> {
-        let io = IoProxy::read_vec(self, io_id, bytes).map_err(|e| e.at(here!()))?;
-
-        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        #[cfg(feature = "zen-pipeline")]
+        {
+            let arc = Arc::new(bytes);
+            self.zen_input_bytes.insert(io_id, ZenInput::Owned(arc.clone()));
+            let io = IoProxy::read_arc(self, io_id, arc).map_err(|e| e.at(here!()))?;
+            return self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()));
+        }
+        #[cfg(not(feature = "zen-pipeline"))]
+        {
+            let io = IoProxy::read_vec(self, io_id, bytes).map_err(|e| e.at(here!()))?;
+            self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        }
     }
 
     /// Zero-copy: borrows `bytes` without copying.
@@ -463,14 +635,21 @@ impl Context {
     /// The `'static` lifetime means callers must guarantee the data outlives the Context.
     /// In practice, the ABI layer (imageflow_abi) uses transmute to erase the real lifetime.
     pub fn add_input_buffer(&mut self, io_id: i32, bytes: &'static [u8]) -> Result<()> {
-        let io = IoProxy::read_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
+        #[cfg(feature = "zen-pipeline")]
+        self.zen_input_bytes.insert(io_id, ZenInput::Static(bytes));
 
+        let io = IoProxy::read_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
 
     pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
         let io = IoProxy::create_output_buffer(self, io_id).map_err(|e| e.at(here!()))?;
 
+        self.add_io(io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
+    }
+
+    pub fn add_output_buffer_from_vec(&mut self, io_id: i32, bytes: Vec<u8>) -> Result<()> {
+        let io = IoProxy::from_output_vec(self, io_id, bytes).map_err(|e| e.at(here!()))?;
         self.add_io(io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
     }
 
@@ -594,6 +773,29 @@ impl Context {
 
     /// For executing a complete job
     pub(crate) fn build_inner(&mut self, parsed: s::Build001) -> Result<s::JobResult> {
+        // Route through zen pipeline unless explicitly forced to v2.
+        #[cfg(feature = "zen-pipeline")]
+        {
+            let use_zen = match self.force_backend {
+                Some(Backend::V2) => false,
+                Some(Backend::Zen) => true,
+                None => true, // zen is the default when compiled in
+            };
+            if use_zen {
+                // Resolve job_options: top-level overrides builder_config
+                let job_options = parsed.job_options.clone()
+                    .or_else(|| parsed.builder_config.as_ref().and_then(|c| c.job_options.clone()))
+                    .unwrap_or_default();
+                let output =
+                    crate::zen::zen_build(parsed, &self.security, &job_options).map_err(|e| e.at(here!()))?;
+                for (io_id, bytes) in output.output_buffers {
+                    self.add_output_buffer_from_vec(io_id, bytes).map_err(|e| e.at(here!()))?;
+                }
+                self.store_zen_captured_bitmaps(output.captured_bitmaps)?;
+                return Ok(output.job_result);
+            }
+        }
+
         let g = crate::parsing::GraphTranslator::new()
             .translate_framewise(parsed.framewise)
             .map_err(|e| e.at(here!()))?;
@@ -652,12 +854,36 @@ impl Context {
         }
     }
 
+    /// Execute through the zen streaming pipeline.
+    ///
+    /// Same API as `execute_1` but uses zenpipe + zencodecs instead of the v2
+    /// graph engine. Requires input buffers to have been added via
+    /// `add_copied_input_buffer` / `add_input_vector`.
+    #[cfg(feature = "zen-pipeline")]
+    pub fn zen_execute_1(&mut self, what: s::Execute001) -> Result<s::ResponsePayload> {
+        let job_result = self.zen_execute_inner(what).map_err(|e| e.at(here!()))?;
+        Ok(s::ResponsePayload::JobResult(job_result))
+    }
+
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
     pub fn execute_1(&mut self, what: s::Execute001) -> Result<s::ResponsePayload> {
         let job_result = self.execute_inner(what).map_err(|e| e.at(here!()))?;
         Ok(s::ResponsePayload::JobResult(job_result))
     }
     pub(crate) fn execute_inner(&mut self, what: s::Execute001) -> Result<s::JobResult> {
+        // Check runtime backend override, then compile-time default.
+        #[cfg(feature = "zen-pipeline")]
+        {
+            let use_zen = match self.force_backend {
+                Some(Backend::V2) => false,
+                Some(Backend::Zen) => true,
+                None => true, // zen is the default when compiled in
+            };
+            if use_zen {
+                return self.zen_execute_inner(what).map_err(|e| e.at(here!()));
+            }
+        }
+
         let g = crate::parsing::GraphTranslator::new()
             .translate_framewise(what.framewise)
             .map_err(|e| e.at(here!()))?;
@@ -679,6 +905,35 @@ impl Context {
             encodes: engine.collect_encode_results(),
             performance: Some(perf),
         })
+    }
+
+    /// Execute through the zen streaming pipeline instead of the v2 graph engine.
+    ///
+    /// Uses input bytes stashed by `add_copied_input_buffer` / `add_input_vector`.
+    /// Output bytes are written to Context's output buffers.
+    #[cfg(feature = "zen-pipeline")]
+    pub(crate) fn zen_execute_inner(&mut self, what: s::Execute001) -> Result<s::JobResult> {
+        if let Some(s) = what.security {
+            self.configure_security(s);
+        }
+        let job_options = what.job_options.unwrap_or_default();
+
+        let io_bytes: std::collections::HashMap<i32, Vec<u8>> =
+            self.zen_input_bytes.iter().map(|(&id, z)| (id, z.to_vec())).collect();
+
+        let output =
+            crate::zen::zen_execute(&what.framewise, &io_bytes, &self.security, &job_options)
+                .map_err(|e| e.at(here!()))?;
+
+        // Store encoded outputs in Context's output buffer system.
+        for (io_id, bytes) in output.output_buffers {
+            self.add_output_buffer_from_vec(io_id, bytes).map_err(|e| e.at(here!()))?;
+        }
+
+        // Store captured bitmaps as v2 BitmapKeys for test compatibility.
+        self.store_zen_captured_bitmaps(output.captured_bitmaps)?;
+
+        Ok(output.job_result)
     }
 
     pub fn get_version_info(&self) -> Result<s::VersionInfo> {
@@ -875,6 +1130,7 @@ fn test_take_after_encode_returns_data() {
                 },
             },
         ]),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
 
@@ -912,6 +1168,7 @@ fn test_get_ptr_after_encode_then_take_blocked() {
                 },
             },
         ]),
+        job_options: None,
     };
     ctx.execute_1(execute).unwrap();
 
