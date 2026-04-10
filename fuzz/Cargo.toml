@@ -1,0 +1,47 @@
+[package]
+name = "imageflow-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+# Standalone workspace — excluded from the parent imageflow workspace.
+# This avoids inheriting profile.release.lto = true which conflicts
+# with the ASAN sanitizer coverage instrumentation.
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+serde_json = "1"
+imageflow_types = { path = "../imageflow_types" }
+imageflow_core = { path = "../imageflow_core" }
+imageflow_riapi = { path = "../imageflow_riapi" }
+
+# Replicate [patch.crates-io] from the parent workspace so transitive
+# deps resolve to the same local crates.
+[patch.crates-io]
+libpng-sys = { git = "https://github.com/imazen/rust-libpng-sys" }
+lcms2-sys = { git = "https://github.com/imazen/rust-lcms2-sys", branch = "update-lcms2-2.18" }
+
+[[bin]]
+name = "fuzz_decode"
+path = "fuzz_targets/fuzz_decode.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_transcode"
+path = "fuzz_targets/fuzz_transcode.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_riapi"
+path = "fuzz_targets/fuzz_riapi.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_json"
+path = "fuzz_targets/fuzz_json.rs"
+doc = false

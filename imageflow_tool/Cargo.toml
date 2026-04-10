@@ -12,6 +12,20 @@ repository = "https://github.com/imazen/imageflow"
 readme = "README.md"
 keywords = ["image", "imaging", "resizing", "graphics", "server"]
 categories = ["multimedia::images", "command-line-utilities"]
+exclude = [
+    "CLAUDE.md",
+    "CONTEXT-HANDOFF.md",
+    "FEEDBACK.md",
+    ".claude/",
+    ".superwork/",
+    ".zenbench/",
+    "copter-report/",
+    ".github/",
+    "Cross.toml",
+    "justfile",
+    "Cargo.toml.original.txt",
+    "fuzz/",
+]
 
 [dependencies]
 imageflow_core = { path = "../imageflow_core", version = "*" }

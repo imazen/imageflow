@@ -1,0 +1,7 @@
+target/
+corpus/
+artifacts/
+coverage/
+seeds/
+Cargo.lock
+*.log

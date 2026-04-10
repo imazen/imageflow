@@ -1,0 +1,156 @@
+# JSON API dictionary for imageflow Execute001 fuzzing
+# Covers serde field names, enum variants, and structural tokens.
+
+# Top-level
+kw_framewise="\"framewise\""
+kw_steps="\"steps\""
+kw_graph="\"graph\""
+kw_security="\"security\""
+kw_graph_recording="\"graph_recording\""
+kw_job_options="\"job_options\""
+
+# Node variants (serde rename_all = snake_case)
+kw_decode="\"decode\""
+kw_encode="\"encode\""
+kw_flip_h="\"flip_h\""
+kw_flip_v="\"flip_v\""
+kw_rotate_90="\"rotate_90\""
+kw_rotate_180="\"rotate_180\""
+kw_rotate_270="\"rotate_270\""
+kw_transpose="\"transpose\""
+kw_crop="\"crop\""
+kw_crop_whitespace="\"crop_whitespace\""
+kw_constrain="\"constrain\""
+kw_resample_2d="\"resample_2d\""
+kw_expand_canvas="\"expand_canvas\""
+kw_color_filter_srgb="\"color_filter_srgb\""
+kw_command_string="\"command_string\""
+
+# Node fields
+kw_io_id="\"io_id\""
+kw_preset="\"preset\""
+kw_commands="\"commands\""
+kw_w="\"w\""
+kw_h="\"h\""
+kw_x1="\"x1\""
+kw_y1="\"y1\""
+kw_x2="\"x2\""
+kw_y2="\"y2\""
+kw_hints="\"hints\""
+kw_mode="\"mode\""
+kw_gravity="\"gravity\""
+kw_canvas_color="\"canvas_color\""
+kw_left="\"left\""
+kw_top="\"top\""
+kw_right="\"right\""
+kw_bottom="\"bottom\""
+kw_color="\"color\""
+kw_threshold="\"threshold\""
+kw_percent_padding="\"percent_padding\""
+
+# EncoderPreset variants
+kw_libpng="\"libpng\""
+kw_mozjpeg="\"mozjpeg\""
+kw_libjpeg_turbo="\"libjpeg_turbo\""
+kw_webplossy="\"webplossy\""
+kw_webplossless="\"webplossless\""
+kw_gif="\"gif\""
+kw_lodepng="\"lodepng\""
+kw_pngquant="\"pngquant\""
+kw_auto="\"auto\""
+kw_format="\"format\""
+
+# EncoderPreset fields
+kw_quality="\"quality\""
+kw_progressive="\"progressive\""
+kw_matte="\"matte\""
+kw_depth="\"depth\""
+kw_zlib_compression="\"zlib_compression\""
+kw_lossless="\"lossless\""
+kw_quality_profile="\"quality_profile\""
+kw_quality_profile_dpr="\"quality_profile_dpr\""
+kw_allow="\"allow\""
+kw_optimize_huffman_coding="\"optimize_huffman_coding\""
+kw_maximum_deflate="\"maximum_deflate\""
+kw_minimum_quality="\"minimum_quality\""
+kw_speed="\"speed\""
+kw_encoder_hints="\"encoder_hints\""
+
+# ConstraintMode
+kw_within="\"within\""
+kw_fit="\"fit\""
+kw_max2="\"max\""
+kw_pad="\"pad\""
+kw_crop2="\"crop\""
+kw_stretch="\"stretch\""
+
+# ColorFilterSrgb
+kw_grayscale_ntsc="\"grayscale_ntsc\""
+kw_grayscale_bt709="\"grayscale_bt709\""
+kw_sepia="\"sepia\""
+kw_invert="\"invert\""
+kw_brightness="\"brightness\""
+kw_contrast="\"contrast\""
+kw_saturation="\"saturation\""
+kw_alpha="\"alpha\""
+
+# QualityProfile
+kw_lowest="\"lowest\""
+kw_low="\"low\""
+kw_medium="\"medium\""
+kw_high="\"high\""
+kw_lossless2="\"lossless\""
+
+# ExecutionSecurity
+kw_max_decode_size="\"max_decode_size\""
+kw_max_frame_size="\"max_frame_size\""
+kw_max_encode_size="\"max_encode_size\""
+kw_megapixels="\"megapixels\""
+
+# Color
+kw_transparent="\"transparent\""
+kw_black="\"black\""
+kw_srgb="\"srgb\""
+
+# OutputImageFormat
+kw_jpeg="\"jpeg\""
+kw_png="\"png\""
+kw_webp="\"webp\""
+kw_gif2="\"gif\""
+kw_avif="\"avif\""
+kw_jxl="\"jxl\""
+kw_keep="\"keep\""
+
+# PngBitDepth
+kw_png32="\"png_32\""
+kw_png24="\"png_24\""
+
+# DecoderCommand
+kw_discard_color_profile="\"discard_color_profile\""
+kw_ignore_color_profile_errors="\"ignore_color_profile_errors\""
+kw_jpeg_downscale_hints="\"jpeg_downscale_hints\""
+kw_webp_decoder_hints="\"webp_decoder_hints\""
+
+# JSON structural tokens
+tok_obj_open="{"
+tok_obj_close="}"
+tok_arr_open="["
+tok_arr_close="]"
+tok_colon=":"
+tok_comma=","
+tok_null="null"
+tok_true="true"
+tok_false="false"
+
+# Common numeric values
+v_0="0"
+v_1="1"
+v_2="2"
+v_50="50"
+v_75="75"
+v_80="80"
+v_100="100"
+v_1024="1024"
+v_4096="4096"
+v_16_0="16.0"
+v_75_0="75.0"

@@ -1,0 +1,107 @@
+name: Fuzz
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run nightly at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-24.04
+    name: "Fuzz (${{ matrix.target }}, ${{ matrix.duration }}s)"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: fuzz_decode
+            dict: imageflow.dict
+            duration: 120
+          - target: fuzz_transcode
+            dict: imageflow.dict
+            duration: 120
+          - target: fuzz_riapi
+            dict: riapi.dict
+            duration: 60
+          - target: fuzz_json
+            dict: json.dict
+            duration: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Stable Rust works — sancov instrumentation (-Cpasses=sancov-module)
+      # doesn't require nightly. Only -Zsanitizer=address needs nightly,
+      # and we don't need ASAN for coverage-guided fuzzing.
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install clang
+        run: sudo apt-get update && sudo apt-get install -y clang nasm
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz -> target
+          key: fuzz-${{ matrix.target }}
+
+      - name: Build ${{ matrix.target }}
+        working-directory: fuzz
+        env:
+          CC: clang
+          CXX: clang++
+          CFLAGS: "-fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table"
+          CXXFLAGS: "-fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table"
+          RUSTFLAGS: >-
+            -Cpasses=sancov-module
+            -Cllvm-args=-sanitizer-coverage-level=4
+            -Cllvm-args=-sanitizer-coverage-inline-8bit-counters
+            -Cllvm-args=-sanitizer-coverage-pc-table
+            -Cllvm-args=-sanitizer-coverage-trace-compares
+            -Cllvm-args=-sanitizer-coverage-stack-depth
+            --cfg fuzzing
+            -Cdebug-assertions
+            -Ccodegen-units=1
+        run: >-
+          cargo build
+          --release
+          --target x86_64-unknown-linux-gnu
+          --bin ${{ matrix.target }}
+
+      - name: Run ${{ matrix.target }}
+        working-directory: fuzz
+        run: |
+          mkdir -p artifacts/${{ matrix.target }} corpus/${{ matrix.target }}
+          ./target/x86_64-unknown-linux-gnu/release/${{ matrix.target }} \
+            -artifact_prefix=artifacts/${{ matrix.target }}/ \
+            -fork=2 \
+            -dict=${{ matrix.dict }} \
+            -max_total_time=${{ matrix.duration }} \
+            -rss_limit_mb=2048 \
+            -max_len=4096 \
+            corpus/${{ matrix.target }} \
+            2>&1 | tee /tmp/fuzz.log
+
+          # Fail the job if any crashes were found
+          if ls artifacts/${{ matrix.target }}/crash-* 1>/dev/null 2>&1; then
+            echo "::error::Fuzzer found crashes!"
+            exit 1
+          fi
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+          if-no-files-found: ignore
+
+      - name: Report coverage
+        if: always()
+        run: |
+          echo "### Fuzz Results: ${{ matrix.target }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep "exec/s:" /tmp/fuzz.log | tail -1 >> $GITHUB_STEP_SUMMARY || echo "No results" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
