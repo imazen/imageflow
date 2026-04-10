@@ -1,8 +1,7 @@
 //! Fuzz target: decode arbitrary bytes + re-encode in a random format.
 //!
-//! First 2 bytes are control (format selector, quality), rest is image data.
-//! This avoids the Arbitrary overhead so the fuzzer can mutate image bytes
-//! directly — much better coverage than the structured approach.
+//! First 2 bytes select output format and quality, rest is image data.
+//! Tests the full decode → pixel conversion → encode path through C codecs.
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
@@ -23,7 +22,6 @@ fuzz_target!(|data: &[u8]| {
         return;
     }
 
-    // First 2 bytes are control, rest is image data.
     let format_byte = data[0];
     let quality_byte = data[1];
     let image_data = &data[2..];
@@ -56,7 +54,7 @@ fuzz_target!(|data: &[u8]| {
             s::Node::Encode { io_id: 1, preset },
         ]),
         graph_recording: None,
-        security: Some(limits()),
+        security: None,
         job_options: None,
     };
 

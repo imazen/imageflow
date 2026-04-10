@@ -1,8 +1,7 @@
 //! Fuzz target: decode arbitrary bytes through the v2 graph engine.
 //!
-//! Feeds raw bytes as image input through C-based codecs (mozjpeg, libpng,
-//! giflib, libwebp). Tests format detection and all decoders for panics,
-//! OOB reads, and unbounded allocations.
+//! Feeds raw bytes through format detection and all C decoders (mozjpeg,
+//! libpng, giflib, libwebp). Decode-only — no encode overhead.
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
@@ -32,7 +31,7 @@ fuzz_target!(|data: &[u8]| {
             s::Node::Decode { io_id: 0, commands: None },
         ]),
         graph_recording: None,
-        security: Some(limits()),
+        security: None,
         job_options: None,
     };
 
