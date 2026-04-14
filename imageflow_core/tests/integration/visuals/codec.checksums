@@ -38,7 +38,7 @@ tolerance zensim:99 (dissim 0.01)
 ~ moved-tuna-df63ab2c17:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs rapid-olive-5907234423:sea (zensim:97.94 (dissim 0.021), 11.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_transparent_png_to_jpeg_constrain 300x300_mozjpeg
-tolerance zensim:99 (dissim 0.01)
+tolerance zensim:97 (dissim 0.03)
 = north-axe-3d46871ac4:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ curly-lava-84ffbde2f9:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs north-axe-3d46871ac4:sea (zensim:96.19 (dissim 0.038), 28.4% pixels ±5, max-delta:[5,4,5], category:unclassified)
 

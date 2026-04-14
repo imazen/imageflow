@@ -1,0 +1,16 @@
+# composition.checksums — v1
+# Tolerances are controlled by code (ToleranceSpec), not by this file.
+# This file tracks baselines (= lines) and auto-accepted variants (~ lines).
+# The 'tolerance' line below each section header is informational only.
+
+## test_draw_image_exact_on_canvas dice_at_50_50
+tolerance off-by-one
+~ oily-bass-2e02345744:sea  x86_64-avx512  @59b0ceb7  new-baseline
+
+## test_watermark_alpha_on_alpha dice_on_shirt_70pct
+tolerance off-by-one
+~ cheap-bird-3d51cccc2c:sea  x86_64-avx512  @59b0ceb7  new-baseline
+
+## test_watermark_alpha_on_jpeg dice_center_50pct_opacity
+tolerance off-by-one
+~ fit-zone-f4f2c04140:sea  x86_64-avx512  @59b0ceb7  new-baseline
