@@ -413,6 +413,20 @@ fn test_animated_gif_to_webp_preserves_animation() {
     );
 }
 
+#[test]
+#[ignore = "WebP lossless animation not yet supported by current encoder"]
+fn test_animated_gif_to_webp_lossless_preserves_animation() {
+    test_init();
+    let input = build_animated_gif(8, 8, &["FF0000", "00FF00", "0000FF", "FFFF00"], 5);
+    let output = roundtrip_animated_gif(input, EncoderPreset::WebPLossless);
+    assert!(output.starts_with(b"RIFF"), "Output should be WebP");
+    assert!(
+        output.len() > 200,
+        "Animated WebP lossless should have multiple frames (got {} bytes)",
+        output.len()
+    );
+}
+
 // ============================================================================
 // Issue #643: Double GIF encode (resize GIF, then resize the output again)
 // ============================================================================
