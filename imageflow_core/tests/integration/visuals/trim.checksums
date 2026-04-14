@@ -18,3 +18,27 @@ tolerance zensim:99 (dissim 0.01)
 ## test_trim_whitespace_with_padding_no_resize gray_bg
 tolerance zensim:99 (dissim 0.01)
 = oval-flow-0956d8f4f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_trim_node_on_generated_canvas blue_dot_trimmed
+tolerance off-by-one
+~ grown-yew-d644bbfa1c:sea  x86_64-avx512  @59b0ceb7  new-baseline
+
+## test_trim_node_with_padding blue_dot_padded_10pct
+tolerance off-by-one
+~ oily-trail-3770a32548:sea  x86_64-avx512  @59b0ceb7  new-baseline
+
+## test_trim_on_transparent_canvas green_on_transparent
+tolerance off-by-one
+~ inner-dove-19ee17aa3e:sea  x86_64-avx512  @59b0ceb7  new-baseline
+
+## test_trim_then_resize trimmed_then_300x300
+tolerance off-by-one
+~ own-curl-a185811359:sea  x86_64-avx512  @59b0ceb7  new-baseline
+
+## test_trim_with_high_threshold high_threshold
+tolerance zensim:99 (dissim 0.01)
+~ fawn-horn-956b44752a:sea  x86_64-avx512  @59b0ceb7  new-baseline
+
+## test_trim_on_photo low_threshold
+tolerance zensim:99 (dissim 0.01)
+~ lined-ape-5ace4e4c62:sea  x86_64-avx512  @59b0ceb7  new-baseline

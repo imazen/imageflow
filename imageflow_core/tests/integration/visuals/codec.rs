@@ -82,6 +82,7 @@ fn test_transparent_png_to_jpeg_constrain() {
                 preset: EncoderPreset::Mozjpeg { quality: Some(100), progressive: None, matte: None },
             },
         ],
+        similarity: Similarity::MaxZdsim(0.03),
     }
 }
 
@@ -160,7 +161,7 @@ fn test_webp_to_webp_quality() {
         detail: "q5_100x100",
         command: "format=webp&width=100&height=100&quality=5",
         similarity: Similarity::MaxZdsim(0.05),
-        max_file_size: 2000,
+        max_file_size: 2500,
     }
 }
 

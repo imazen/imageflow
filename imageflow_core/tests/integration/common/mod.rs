@@ -69,37 +69,52 @@ fn global_manager() -> &'static ChecksumManager {
             cache_dir,
         );
 
-        // Diff output directory
-        let diff_dir = workspace_root.join(".image-cache/diffs");
+        // Diff output directory — prefer /mnt/v/output/imageflow/diffs if it exists,
+        // otherwise fall back to .image-cache/diffs in the workspace.
+        let preferred_diff_dir = Path::new("/mnt/v/output/imageflow/diffs");
+        let diff_dir = if preferred_diff_dir.exists() {
+            preferred_diff_dir.to_path_buf()
+        } else {
+            workspace_root.join(".image-cache/diffs")
+        };
         let _ = std::fs::create_dir_all(&diff_dir);
 
-        ChecksumManager::new(&checksums_dir)
+        // Never use update_mode — it prunes old baselines and replaces them.
+        // WithinTolerance passes tests without writing to disk.
+        // New baselines are created only via CREATE_BASELINES=1 (handled in handle_check_result).
+        ChecksumManager::with_modes(&checksums_dir, false)
             .with_remote_storage(remote)
             .with_diff_output(diff_dir)
             .with_manifest_from_env()
     })
 }
 
+/// Returns true if `CREATE_BASELINES=1` env var is set.
+/// This only allows creating entries for brand-new tests — never replaces existing baselines.
+fn create_baselines_mode() -> bool {
+    static MODE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *MODE.get_or_init(|| std::env::var("CREATE_BASELINES").is_ok_and(|v| v == "1" || v == "true"))
+}
+
 /// Handle a `CheckResult` — return true on pass, panic on fail.
-fn handle_check_result(result: Result<CheckResult, zensim_regress::RegressError>) -> bool {
+fn handle_check_result(result: &Result<CheckResult, zensim_regress::RegressError>) -> bool {
     match result {
-        Ok(CheckResult::Match { .. })
-        | Ok(CheckResult::WithinTolerance { .. })
-        | Ok(CheckResult::NoBaseline { auto_accepted: true, .. }) => true,
-        Ok(CheckResult::NoBaseline { auto_accepted: false, .. }) => {
-            panic!("No baseline. Run with UPDATE_CHECKSUMS=1 to create the initial baseline.");
+        Ok(CheckResult::Match { .. }) | Ok(CheckResult::WithinTolerance { .. }) => true,
+        Ok(CheckResult::NoBaseline { .. }) if create_baselines_mode() => true,
+        Ok(CheckResult::NoBaseline { .. }) => {
+            panic!("No baseline. Run with CREATE_BASELINES=1 to create the initial baseline.");
         }
-        Ok(CheckResult::Failed { report, .. }) => {
-            let msg = report
-                .map(|r| format!("{r}"))
-                .unwrap_or_else(|| "checksum mismatch, no pixel comparison available".to_string());
-            panic!("{msg}");
+        Ok(result @ CheckResult::Failed { .. }) => {
+            panic!("{result}");
         }
         Ok(other) => {
             panic!("unexpected check result: {other:?}");
         }
         Err(e) => {
             panic!("comparison error: {e}");
+        }
+        Ok(other) => {
+            panic!("unexpected check result: {other}");
         }
     }
 }
@@ -659,7 +674,25 @@ pub fn check_visual_bitmap(
         &actual_img,
         Some(tolerance),
     );
-    handle_check_result(result)
+    let passed = handle_check_result(&result);
+    // In CREATE_BASELINES mode, write the entry for brand-new tests
+    if passed {
+        if let Ok(CheckResult::NoBaseline { .. }) = &result {
+            manager
+                .accept(
+                    identity.module,
+                    identity.func_name,
+                    detail,
+                    &hash,
+                    None,
+                    None,
+                    None,
+                    "new-baseline",
+                )
+                .expect("Failed to write new baseline entry");
+        }
+    }
+    passed
 }
 
 /// Check encoded bytes against known baselines via `ChecksumManagerV2`.
@@ -710,7 +743,25 @@ pub fn check_visual_bytes(
         &actual_img,
         Some(tolerance),
     );
-    handle_check_result(result)
+    let passed = handle_check_result(&result);
+    // In CREATE_BASELINES mode, write the entry for brand-new tests
+    if passed {
+        if let Ok(CheckResult::NoBaseline { .. }) = &result {
+            manager
+                .accept(
+                    identity.module,
+                    identity.func_name,
+                    detail,
+                    &hash,
+                    None,
+                    None,
+                    None,
+                    "new-baseline",
+                )
+                .expect("Failed to write new baseline entry");
+        }
+    }
+    passed
 }
 
 /// Test identity: (module_name, function_name) derived from test context.
