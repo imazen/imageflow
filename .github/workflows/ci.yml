@@ -2,9 +2,10 @@ name: "Test/Release" # Reminder, to test locally, https://sanjulaganepola.github
 on:
   push:
     branches:
-      - "*"
+      - "**"
     tags-ignore:
       - "v*"
+  pull_request:
   workflow_dispatch:
   release:
     types:
