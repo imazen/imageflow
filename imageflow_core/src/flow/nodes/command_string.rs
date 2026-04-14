@@ -111,7 +111,10 @@ impl NodeDef for CommandStringPostDecodeDef {
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<()> {
         let expand = get_expand(ctx, ix).map_err(|e| e.at(here!()))?;
 
-        match expand.expand_steps().map_err(|e| FlowError::from_layout_for(e, &expand.i).at(here!())) {
+        match expand
+            .expand_steps()
+            .map_err(|e| FlowError::from_layout_for(e, &expand.i).at(here!()))
+        {
             Ok(r) => {
                 //TODO: Find a way to expose warnings
                 ctx.replace_node(ix, r.steps.unwrap().into_iter().map(Node::from).collect());

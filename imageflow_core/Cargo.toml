@@ -75,6 +75,18 @@ utoipa = { version = "5.3.1", features = [], optional = true }
 
 schemars = { version = "1", features = ["derive"], optional = true }
 
+# --- Zen codec dependencies (pure Rust, published crate versions) ---
+zenjpeg = { version = "0.8.3", features = ["decoder", "parallel", "zencodec", "trellis"], optional = true }
+zengif = { version = "0.7.2", features = ["color_quant", "zencodec"], optional = true }
+zenwebp = { version = "0.4.3", features = ["zencodec"], optional = true }
+zenavif = { version = "0.1.4", features = ["zencodec", "encode"], optional = true }
+zenpixels = { version = "0.2.6", default-features = false, optional = true }
+zc = { version = "0.1.13", package = "zencodec", optional = true }
+zenpng = { version = "0.1.3", features = ["zencodec"], optional = true }
+zenjxl = { version = "0.1.1", features = ["zencodec"], optional = true }
+zenbitmaps = { version = "0.1.4", features = ["bmp", "zencodec"], optional = true }
+mozjpeg-rs = { version = "0.9.1", optional = true, default-features = false, features = ["zencodec"] }
+
 # --- C codec dependencies (optional, gated behind c-codecs feature) ---
 imageflow_c_components = { path = "../c_components", optional = true }
 mozjpeg = { version = "0.10", optional = true }
@@ -101,6 +113,7 @@ zensim-regress = "0.3.0"
 zensim = "0.2.4"
 seahash = "4.1.0"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+zenbench = "0.1.7"
 
 [features]
 default = ["c-codecs"]
@@ -115,6 +128,19 @@ c-codecs = [
     "dep:lcms2", "dep:lcms2-sys",
     "dep:libz-sys",
 ]
+# Pure Rust codecs: zenjpeg, zenpng, zenwebp, zengif, zenavif, mozjpeg-rs (no C deps)
+zen-codecs = [
+    "dep:zenjpeg",
+    "dep:zenpng",
+    "dep:zengif",
+    "dep:zenwebp",
+    "dep:zenavif",
+    "dep:zenjxl",
+    "dep:zenbitmaps",
+    "dep:zenpixels",
+    "dep:zc",
+    "dep:mozjpeg-rs",
+]
 # Feature to enable OpenAPI schema generation capabilities
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]
 # Enable schemars-based JSON Schema generation. Enables the corresponding feature in imageflow_types
@@ -123,4 +149,9 @@ json-schema = ["dep:schemars", "imageflow_types/json-schema"]
 [[bench]]
 name="bench_graphics"
 path = "benches/bench_graphics.rs"
+harness = false
+
+[[bench]]
+name = "bench_codecs"
+path = "benches/bench_codecs.rs"
 harness = false

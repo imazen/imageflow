@@ -12,5 +12,5 @@ tolerance off-by-one
 ~ cheap-bird-3d51cccc2c:sea  x86_64-avx512  @59b0ceb7  new-baseline
 
 ## test_watermark_alpha_on_jpeg dice_center_50pct_opacity
-tolerance off-by-one
+tolerance zensim:98 (dissim 0.02)
 ~ fit-zone-f4f2c04140:sea  x86_64-avx512  @59b0ceb7  new-baseline

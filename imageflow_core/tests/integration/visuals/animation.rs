@@ -414,7 +414,11 @@ fn test_animated_gif_to_webp_preserves_animation() {
 }
 
 #[test]
-#[ignore = "WebP lossless animation not yet supported by current encoder"]
+#[cfg_attr(
+    any(not(feature = "zen-codecs"), feature = "c-codecs"),
+    ignore = "WebP lossless animation requires zen-codecs without c-codecs \
+              (C libwebp is preferred for stable encode output but doesn't preserve animation)"
+)]
 fn test_animated_gif_to_webp_lossless_preserves_animation() {
     test_init();
     let input = build_animated_gif(8, 8, &["FF0000", "00FF00", "0000FF", "FFFF00"], 5);

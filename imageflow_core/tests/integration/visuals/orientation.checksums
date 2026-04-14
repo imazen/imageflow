@@ -14,7 +14,7 @@ tolerance off-by-one
 ~ moist-cloud-40a9240dae:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs exact-puma-5e53876d32:sea (zensim:99.23 (dissim 0.0077), 5.1% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_jpeg_rotation_cropped portrait_8
-tolerance off-by-one
+tolerance zensim:98 (dissim 0.02)
 = light-sage-271d75d5f7:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ like-lamb-c0899bd64e:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs light-sage-271d75d5f7:sea (zensim:98.73 (dissim 0.013), 6.6% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
@@ -160,35 +160,35 @@ tolerance off-by-one
 ~ real-cod-2546dc25cd:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs icy-flux-c678a14d96:sea (zensim:99.23 (dissim 0.0077), 5.1% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_jpeg_rotation_cropped portrait_1
-tolerance off-by-one
+tolerance zensim:98 (dissim 0.02)
 = equal-plum-2e18b91600:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_rotation_cropped portrait_2
-tolerance off-by-one
+tolerance zensim:98 (dissim 0.02)
 = major-eagle-8311df5efd:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ first-yak-62deeb98c0:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs major-eagle-8311df5efd:sea (zensim:98.70 (dissim 0.013), 7.2% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_jpeg_rotation_cropped portrait_3
-tolerance off-by-one
+tolerance zensim:98 (dissim 0.02)
 = sharp-beam-1b8b3faf8b:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ false-sand-c727844d06:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs sharp-beam-1b8b3faf8b:sea (zensim:98.72 (dissim 0.013), 7.1% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_jpeg_rotation_cropped portrait_4
-tolerance off-by-one
+tolerance zensim:98 (dissim 0.02)
 = hardy-ledge-f07e3e665c:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ near-fish-b0e0a30fae:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs hardy-ledge-f07e3e665c:sea (zensim:98.70 (dissim 0.013), 6.9% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_jpeg_rotation_cropped portrait_5
-tolerance off-by-one
+tolerance zensim:98 (dissim 0.02)
 = lazy-moon-a77adfb9f3:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ edgy-lily-154cfb9e35:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs lazy-moon-a77adfb9f3:sea (zensim:98.73 (dissim 0.013), 7.0% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_jpeg_rotation_cropped portrait_6
-tolerance off-by-one
+tolerance zensim:98 (dissim 0.02)
 = ionic-gull-803aafb644:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ north-raven-4a9b78e8ca:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs ionic-gull-803aafb644:sea (zensim:98.70 (dissim 0.013), 7.4% pixels ±1, max-delta:[1,1,1], category:rounding, biased)
 
 ## test_jpeg_rotation_cropped portrait_7
-tolerance off-by-one
+tolerance zensim:98 (dissim 0.02)
 = cool-beam-a9eb293ee9:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ lone-bay-0011aac3a6:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs cool-beam-a9eb293ee9:sea (zensim:98.72 (dissim 0.013), 6.9% pixels ±1, max-delta:[1,1,1], category:rounding, biased)

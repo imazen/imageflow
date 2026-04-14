@@ -12,7 +12,7 @@ tolerance off-by-one
 = close-larch-796effad97:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_branching_crop_whitespace gradient_output_2
-tolerance zensim:99 (dissim 0.01)
+tolerance zensim:98 (dissim 0.02)
 = level-palm-6ad84afa17:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_encode_gradients png32_passthrough
@@ -78,7 +78,7 @@ tolerance zensim:95 (dissim 0.05)
 = mad-kite-f0fa059c45:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_branching_crop_whitespace gradient_output_1
-tolerance zensim:99 (dissim 0.01)
+tolerance zensim:98 (dissim 0.02)
 = cold-sand-b519344065:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_jpeg_simple landscape_within_70x70

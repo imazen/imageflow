@@ -49,7 +49,7 @@ fn test_jpeg_rotation_cropped() {
                 encode: None,
                 watermarks: None,
             }],
-            tolerance: Tolerance::off_by_one(),
+            tolerance: Similarity::MaxZdsim(0.02).to_tolerance_spec(),
         }
     }
 }

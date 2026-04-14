@@ -74,11 +74,26 @@ pub(crate) fn create_encoder(
                 .map_err(|e| e.at(here!()))?
         }
         s::EncoderPreset::Gif => {
-            //TODO: enforce killbits - if c.enabled_codecs.encoders.contains()
-            Box::new(
-                crate::codecs::gif::GifEncoder::create(c, io, bitmap_key)
-                    .map_err(|e| e.at(here!()))?,
-            )
+            // Prefer the built-in gif crate encoder; fall back to zengif if disabled.
+            let picked = c
+                .enabled_codecs
+                .preferred_or_first(crate::codecs::NamedEncoders::GifEncoder, |e| e.is_gif())
+                .ok_or_else(|| {
+                    nerror!(ErrorKind::CodecDisabledError, "No GIF encoder is enabled")
+                })?;
+            let inner: Box<dyn Encoder> = match picked {
+                crate::codecs::NamedEncoders::GifEncoder => Box::new(
+                    crate::codecs::gif::GifEncoder::create(c, io, bitmap_key)
+                        .map_err(|e| e.at(here!()))?,
+                ),
+                #[cfg(feature = "zen-codecs")]
+                crate::codecs::NamedEncoders::ZenGifEncoder => Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_gif(c, io, bitmap_key)
+                        .map_err(|e| e.at(here!()))?,
+                ),
+                _ => unreachable!("is_gif() matched but no branch handled {:?}", picked),
+            };
+            inner
         }
         s::EncoderPreset::Pngquant { speed, quality, minimum_quality, maximum_deflate } => {
             Box::new(
@@ -95,9 +110,25 @@ pub(crate) fn create_encoder(
             )
         }
         s::EncoderPreset::Mozjpeg { quality, progressive, ref matte } => {
+            // Prefer C mozjpeg (matches preset name); fall back to any JPEG encoder.
             #[cfg(feature = "c-codecs")]
-            {
-                Box::new(
+            let preferred = crate::codecs::NamedEncoders::MozJpegEncoder;
+            #[cfg(all(not(feature = "c-codecs"), feature = "zen-codecs"))]
+            let preferred = crate::codecs::NamedEncoders::MozjpegRsEncoder;
+            #[cfg(all(not(feature = "c-codecs"), not(feature = "zen-codecs")))]
+            let preferred = {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "JPEG encoding requires 'c-codecs' or 'zen-codecs'"
+                ));
+            };
+            let picked =
+                c.enabled_codecs.preferred_or_first(preferred, |e| e.is_jpeg()).ok_or_else(
+                    || nerror!(ErrorKind::CodecDisabledError, "No JPEG encoder is enabled"),
+                )?;
+            let inner: Box<dyn Encoder> = match picked {
+                #[cfg(feature = "c-codecs")]
+                crate::codecs::NamedEncoders::MozJpegEncoder => Box::new(
                     crate::codecs::mozjpeg::MozjpegEncoder::create(
                         c,
                         quality,
@@ -106,15 +137,32 @@ pub(crate) fn create_encoder(
                         io,
                     )
                     .map_err(|e| e.at(here!()))?,
-                )
-            }
-            #[cfg(not(feature = "c-codecs"))]
-            {
-                return Err(nerror!(
-                    ErrorKind::CodecDisabledError,
-                    "Mozjpeg encoder requires the 'c-codecs' feature"
-                ));
-            }
+                ),
+                #[cfg(feature = "zen-codecs")]
+                crate::codecs::NamedEncoders::ZenJpegEncoder => Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_jpeg(
+                        c,
+                        io,
+                        quality,
+                        progressive,
+                        matte.clone(),
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ),
+                #[cfg(feature = "zen-codecs")]
+                crate::codecs::NamedEncoders::MozjpegRsEncoder => Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_mozjpeg_rs(
+                        c,
+                        io,
+                        quality,
+                        progressive,
+                        matte.clone(),
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ),
+                _ => unreachable!("is_jpeg() matched but no branch handled {:?}", picked),
+            };
+            inner
         }
         s::EncoderPreset::LibjpegTurbo {
             quality,
@@ -149,9 +197,24 @@ pub(crate) fn create_encoder(
                 .map_err(|e| e.at(here!()))?,
         ),
         s::EncoderPreset::Libpng { depth, ref matte, zlib_compression } => {
+            // Prefer C libpng; fall back to any lossless PNG encoder.
             #[cfg(feature = "c-codecs")]
-            {
-                Box::new(
+            let preferred = crate::codecs::NamedEncoders::LibPngRsEncoder;
+            #[cfg(all(not(feature = "c-codecs"), feature = "zen-codecs"))]
+            let preferred = crate::codecs::NamedEncoders::ZenPngEncoder;
+            #[cfg(all(not(feature = "c-codecs"), not(feature = "zen-codecs")))]
+            let preferred = crate::codecs::NamedEncoders::LodePngEncoder;
+            let picked = c
+                .enabled_codecs
+                .preferred_or_first(preferred, |e| {
+                    e.is_png() && !matches!(e, crate::codecs::NamedEncoders::PngQuantEncoder)
+                })
+                .ok_or_else(|| {
+                    nerror!(ErrorKind::CodecDisabledError, "No lossless PNG encoder is enabled")
+                })?;
+            let inner: Box<dyn Encoder> = match picked {
+                #[cfg(feature = "c-codecs")]
+                crate::codecs::NamedEncoders::LibPngRsEncoder => Box::new(
                     crate::codecs::libpng_encoder::LibPngEncoder::create(
                         c,
                         io,
@@ -160,36 +223,76 @@ pub(crate) fn create_encoder(
                         zlib_compression.map(|z| z.clamp(0, 255) as u8),
                     )
                     .map_err(|e| e.at(here!()))?,
-                )
-            }
-            #[cfg(not(feature = "c-codecs"))]
-            {
-                return Err(nerror!(
-                    ErrorKind::CodecDisabledError,
-                    "Libpng encoder requires the 'c-codecs' feature"
-                ));
-            }
+                ),
+                #[cfg(feature = "zen-codecs")]
+                crate::codecs::NamedEncoders::ZenPngEncoder => Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_png(c, io, matte.clone())
+                        .map_err(|e| e.at(here!()))?,
+                ),
+                crate::codecs::NamedEncoders::LodePngEncoder => Box::new(
+                    crate::codecs::lode::LodepngEncoder::create(c, io, None, matte.clone())
+                        .map_err(|e| e.at(here!()))?,
+                ),
+                _ => unreachable!("is_png() matched but no branch handled {:?}", picked),
+            };
+            inner
         }
         s::EncoderPreset::WebPLossless => {
             #[cfg(feature = "c-codecs")]
-            {
-                Box::new(
-                    crate::codecs::webp::WebPEncoder::create(c, io, None, Some(true), None)
-                        .map_err(|e| e.at(here!()))?,
-                )
-            }
-            #[cfg(not(feature = "c-codecs"))]
-            {
+            let preferred = crate::codecs::NamedEncoders::WebPEncoder;
+            #[cfg(all(not(feature = "c-codecs"), feature = "zen-codecs"))]
+            let preferred = crate::codecs::NamedEncoders::ZenWebPEncoder;
+            #[cfg(all(not(feature = "c-codecs"), not(feature = "zen-codecs")))]
+            let preferred = {
                 return Err(nerror!(
                     ErrorKind::CodecDisabledError,
-                    "WebP encoder requires the 'c-codecs' feature"
+                    "WebP encoding requires 'c-codecs' or 'zen-codecs'"
                 ));
-            }
+            };
+            let picked =
+                c.enabled_codecs.preferred_or_first(preferred, |e| e.is_webp()).ok_or_else(
+                    || nerror!(ErrorKind::CodecDisabledError, "No WebP encoder is enabled"),
+                )?;
+            let inner: Box<dyn Encoder> = match picked {
+                #[cfg(feature = "c-codecs")]
+                crate::codecs::NamedEncoders::WebPEncoder => Box::new(
+                    crate::codecs::webp::WebPEncoder::create(c, io, None, Some(true), None)
+                        .map_err(|e| e.at(here!()))?,
+                ),
+                #[cfg(feature = "zen-codecs")]
+                crate::codecs::NamedEncoders::ZenWebPEncoder => Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_webp(
+                        c,
+                        io,
+                        None,
+                        Some(true),
+                        None,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ),
+                _ => unreachable!("is_webp() matched but no branch handled {:?}", picked),
+            };
+            inner
         }
         s::EncoderPreset::WebPLossy { quality } => {
             #[cfg(feature = "c-codecs")]
-            {
-                Box::new(
+            let preferred = crate::codecs::NamedEncoders::WebPEncoder;
+            #[cfg(all(not(feature = "c-codecs"), feature = "zen-codecs"))]
+            let preferred = crate::codecs::NamedEncoders::ZenWebPEncoder;
+            #[cfg(all(not(feature = "c-codecs"), not(feature = "zen-codecs")))]
+            let preferred = {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "WebP encoding requires 'c-codecs' or 'zen-codecs'"
+                ));
+            };
+            let picked =
+                c.enabled_codecs.preferred_or_first(preferred, |e| e.is_webp()).ok_or_else(
+                    || nerror!(ErrorKind::CodecDisabledError, "No WebP encoder is enabled"),
+                )?;
+            let inner: Box<dyn Encoder> = match picked {
+                #[cfg(feature = "c-codecs")]
+                crate::codecs::NamedEncoders::WebPEncoder => Box::new(
                     crate::codecs::webp::WebPEncoder::create(
                         c,
                         io,
@@ -198,15 +301,21 @@ pub(crate) fn create_encoder(
                         None,
                     )
                     .map_err(|e| e.at(here!()))?,
-                )
-            }
-            #[cfg(not(feature = "c-codecs"))]
-            {
-                return Err(nerror!(
-                    ErrorKind::CodecDisabledError,
-                    "WebP encoder requires the 'c-codecs' feature"
-                ));
-            }
+                ),
+                #[cfg(feature = "zen-codecs")]
+                crate::codecs::NamedEncoders::ZenWebPEncoder => Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_webp(
+                        c,
+                        io,
+                        Some(quality),
+                        Some(false),
+                        None,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ),
+                _ => unreachable!("is_webp() matched but no branch handled {:?}", picked),
+            };
+            inner
         }
     };
     Ok(codec)
@@ -246,11 +355,31 @@ fn create_encoder_auto(
                 create_jpeg_auto(ctx, io, bitmap_key, decoder_io_ids, details)
                     .map_err(|e| e.at(here!()))?
             }
-            #[cfg(not(feature = "c-codecs"))]
+            #[cfg(all(not(feature = "c-codecs"), feature = "zen-codecs"))]
+            {
+                let quality = details
+                    .quality_profile
+                    .map(|qp| {
+                        let hints = get_quality_hints(&qp);
+                        hints.moz as u8
+                    })
+                    .unwrap_or(85);
+                Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_jpeg(
+                        ctx,
+                        io,
+                        Some(quality),
+                        Some(true),
+                        None,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(all(not(feature = "c-codecs"), not(feature = "zen-codecs")))]
             {
                 return Err(nerror!(
                     ErrorKind::CodecDisabledError,
-                    "JPEG encoding requires the 'c-codecs' feature"
+                    "JPEG encoding requires 'c-codecs' or 'zen-codecs' feature"
                 ));
             }
         }
@@ -262,19 +391,78 @@ fn create_encoder_auto(
                 create_webp_auto(ctx, io, bitmap_key, decoder_io_ids, details)
                     .map_err(|e| e.at(here!()))?
             }
-            #[cfg(not(feature = "c-codecs"))]
+            #[cfg(all(not(feature = "c-codecs"), feature = "zen-codecs"))]
+            {
+                let quality = details
+                    .quality_profile
+                    .map(|qp| {
+                        let hints = get_quality_hints(&qp);
+                        hints.webp
+                    })
+                    .unwrap_or(80.0);
+                let lossless = details.needs_lossless.unwrap_or(false);
+                Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_webp(
+                        ctx,
+                        io,
+                        Some(quality),
+                        Some(lossless),
+                        None,
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(all(not(feature = "c-codecs"), not(feature = "zen-codecs")))]
             {
                 return Err(nerror!(
                     ErrorKind::CodecDisabledError,
-                    "WebP encoding requires the 'c-codecs' feature"
+                    "WebP encoding requires 'c-codecs' or 'zen-codecs' feature"
                 ));
             }
         }
         OutputImageFormat::Jxl => {
-            unimplemented!()
+            #[cfg(feature = "zen-codecs")]
+            {
+                let distance = details.quality_profile.map(|qp| get_quality_hints(&qp).jxl);
+                let lossless = details.needs_lossless.unwrap_or(false);
+                Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_jxl(ctx, io, distance, lossless)
+                        .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "zen-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "JXL encoding requires 'zen-codecs' feature"
+                ));
+            }
         }
         OutputImageFormat::Avif => {
-            unimplemented!()
+            #[cfg(feature = "zen-codecs")]
+            {
+                let quality = details.quality_profile.map(|qp| get_quality_hints(&qp).avif);
+                let speed = details.quality_profile.map(|qp| get_quality_hints(&qp).avif_s);
+                let lossless = details.needs_lossless.unwrap_or(false);
+                Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_avif(
+                        ctx,
+                        io,
+                        quality,
+                        speed,
+                        lossless,
+                        details.matte.clone(),
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                )
+            }
+            #[cfg(not(feature = "zen-codecs"))]
+            {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "AVIF encoding requires 'zen-codecs' feature"
+                ));
+            }
         }
     })
     //libpng depth is 32 if alpha, 24 otherwise, zlib=9 if png_max_deflate=true, otherwise none
@@ -778,8 +966,14 @@ struct FeaturesImplemented {
     webp_animation: bool,
     jpegli: bool,
 }
-const FEATURES_IMPLEMENTED: FeaturesImplemented =
-    FeaturesImplemented { jxl: false, avif: false, webp_animation: false, jpegli: false };
+const FEATURES_IMPLEMENTED: FeaturesImplemented = FeaturesImplemented {
+    jxl: cfg!(feature = "zen-codecs"),
+    avif: cfg!(feature = "zen-codecs"),
+    // zenwebp supports animation encoding
+    webp_animation: cfg!(feature = "zen-codecs"),
+    // zenjpeg implements jpegli-class quantization tables + trellis
+    jpegli: cfg!(feature = "zen-codecs"),
+};
 
 fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat> {
     let allowed = details.allow;

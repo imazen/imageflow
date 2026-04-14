@@ -39,6 +39,12 @@ mod mozjpeg_decoder_helpers;
 #[cfg(feature = "c-codecs")]
 mod webp;
 
+// Zen codec adapters (zencodec dyn dispatch)
+#[cfg(feature = "zen-codecs")]
+pub(crate) mod zen_decoder;
+#[cfg(feature = "zen-codecs")]
+pub(crate) mod zen_encoder;
+
 use crate::graphics::bitmaps::BitmapKey;
 
 pub trait DecoderFactory {
@@ -88,6 +94,20 @@ pub enum NamedDecoders {
     GifRsDecoder,
     #[cfg(feature = "c-codecs")]
     WebPDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenJpegDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenWebPDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenGifDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenPngDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenAvifDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenJxlDecoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenBmpDecoder,
 }
 impl NamedDecoders {
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
@@ -108,8 +128,37 @@ impl NamedDecoders {
             }
             #[cfg(feature = "c-codecs")]
             NamedDecoders::WebPDecoder => {
-                bytes.starts_with(b"RIFF") && bytes[8..12].starts_with(b"WEBP")
+                bytes.starts_with(b"RIFF") && bytes.len() >= 12 && bytes[8..12].starts_with(b"WEBP")
             }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder => bytes.starts_with(b"\xFF\xD8\xFF"),
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenWebPDecoder => {
+                bytes.starts_with(b"RIFF") && bytes.len() >= 12 && bytes[8..12].starts_with(b"WEBP")
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => {
+                bytes.starts_with(b"GIF89a") || bytes.starts_with(b"GIF87a")
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenPngDecoder => bytes.starts_with(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"),
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenAvifDecoder => {
+                bytes.len() >= 12
+                    && &bytes[4..8] == b"ftyp"
+                    && (bytes[8..12].starts_with(b"avif")
+                        || bytes[8..12].starts_with(b"avis")
+                        || bytes[8..12].starts_with(b"mif1"))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => {
+                // JXL bare codestream: FF 0A; container: 00 00 00 0C 4A 58 4C 20 0D 0A 87 0A
+                bytes.starts_with(&[0xFF, 0x0A])
+                    || (bytes.len() >= 12
+                        && bytes.starts_with(&[0x00, 0x00, 0x00, 0x0C, 0x4A, 0x58, 0x4C, 0x20]))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenBmpDecoder => bytes.starts_with(b"BM"),
         }
     }
 
@@ -134,10 +183,38 @@ impl NamedDecoders {
             }
             #[cfg(feature = "c-codecs")]
             NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder => {
+                Ok(Box::new(zen_decoder::ZenDecoder::create_jpeg(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenWebPDecoder => {
+                Ok(Box::new(zen_decoder::ZenDecoder::create_webp(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => {
+                Ok(Box::new(zen_decoder::ZenDecoder::create_gif(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenPngDecoder => {
+                Ok(Box::new(zen_decoder::ZenDecoder::create_png(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenAvifDecoder => {
+                Ok(Box::new(zen_decoder::ZenDecoder::create_avif(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => {
+                Ok(Box::new(zen_decoder::ZenDecoder::create_jxl(c, io, io_id)?))
+            }
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenBmpDecoder => {
+                Ok(Box::new(zen_decoder::ZenDecoder::create_bmp(c, io, io_id)?))
+            }
         }
     }
 }
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum NamedEncoders {
     GifEncoder,
@@ -149,7 +226,67 @@ pub enum NamedEncoders {
     WebPEncoder,
     #[cfg(feature = "c-codecs")]
     LibPngRsEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenJpegEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenWebPEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenGifEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenPngEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenAvifEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenJxlEncoder,
+    #[cfg(feature = "zen-codecs")]
+    ZenBmpEncoder,
+    #[cfg(feature = "zen-codecs")]
+    MozjpegRsEncoder,
 }
+
+impl NamedEncoders {
+    /// Returns true if this encoder writes JPEG.
+    pub fn is_jpeg(&self) -> bool {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            NamedEncoders::MozJpegEncoder => true,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenJpegEncoder | NamedEncoders::MozjpegRsEncoder => true,
+            _ => false,
+        }
+    }
+    /// Returns true if this encoder writes PNG.
+    pub fn is_png(&self) -> bool {
+        match self {
+            NamedEncoders::PngQuantEncoder | NamedEncoders::LodePngEncoder => true,
+            #[cfg(feature = "c-codecs")]
+            NamedEncoders::LibPngRsEncoder => true,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenPngEncoder => true,
+            _ => false,
+        }
+    }
+    /// Returns true if this encoder writes WebP.
+    pub fn is_webp(&self) -> bool {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            NamedEncoders::WebPEncoder => true,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenWebPEncoder => true,
+            _ => false,
+        }
+    }
+    /// Returns true if this encoder writes GIF.
+    pub fn is_gif(&self) -> bool {
+        match self {
+            NamedEncoders::GifEncoder => true,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenGifEncoder => true,
+            _ => false,
+        }
+    }
+}
+
 pub struct EnabledCodecs {
     pub decoders: ::smallvec::SmallVec<[NamedDecoders; 4]>,
     pub encoders: ::smallvec::SmallVec<[NamedEncoders; 8]>,
@@ -158,26 +295,66 @@ impl Default for EnabledCodecs {
     fn default() -> Self {
         EnabledCodecs {
             decoders: smallvec::SmallVec::from_slice(&[
+                // JPEG: C mozjpeg preferred when available (stable baseline)
                 #[cfg(feature = "c-codecs")]
                 NamedDecoders::MozJpegRsDecoder,
-                #[cfg(not(feature = "c-codecs"))]
-                NamedDecoders::ImageRsPngDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenJpegDecoder,
+                // PNG: libpng (C) first, else zenpng, else image-rs
                 #[cfg(feature = "c-codecs")]
                 NamedDecoders::LibPngRsDecoder,
-                NamedDecoders::GifRsDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenPngDecoder,
+                #[cfg(all(not(feature = "zen-codecs"), not(feature = "c-codecs")))]
+                NamedDecoders::ImageRsPngDecoder,
+                // WebP: libwebp (C) first, else zenwebp
                 #[cfg(feature = "c-codecs")]
                 NamedDecoders::WebPDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenWebPDecoder,
+                // GIF: gif-rs baseline, zen as alternative
+                NamedDecoders::GifRsDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenGifDecoder,
+                // Zen-only formats
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenAvifDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenJxlDecoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedDecoders::ZenBmpDecoder,
             ]),
             encoders: smallvec::SmallVec::from_slice(&[
+                // GIF: use built-in gif crate first (zen as alternative)
                 NamedEncoders::GifEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenGifEncoder,
+                // JPEG: C mozjpeg preferred when available (stable output)
                 #[cfg(feature = "c-codecs")]
                 NamedEncoders::MozJpegEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenJpegEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::MozjpegRsEncoder,
+                // WebP: C libwebp preferred when available
+                #[cfg(feature = "c-codecs")]
+                NamedEncoders::WebPEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenWebPEncoder,
+                // PNG: pngquant/lodepng baseline, libpng (C) or zenpng as alternatives
                 NamedEncoders::PngQuantEncoder,
                 NamedEncoders::LodePngEncoder,
                 #[cfg(feature = "c-codecs")]
-                NamedEncoders::WebPEncoder,
-                #[cfg(feature = "c-codecs")]
                 NamedEncoders::LibPngRsEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenPngEncoder,
+                // Zen-only formats
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenAvifEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenJxlEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenBmpEncoder,
             ]),
         }
     }
@@ -190,6 +367,33 @@ impl EnabledCodecs {
     }
     pub fn disable_decoder(&mut self, decoder: NamedDecoders) {
         self.decoders.retain(|item| item != &decoder);
+    }
+    pub fn prefer_encoder(&mut self, encoder: NamedEncoders) {
+        self.encoders.retain(|item| item != &encoder);
+        self.encoders.insert(0, encoder);
+    }
+    pub fn disable_encoder(&mut self, encoder: NamedEncoders) {
+        self.encoders.retain(|item| item != &encoder);
+    }
+    /// Find the first enabled encoder matching a predicate on NamedEncoders.
+    pub fn first_encoder<F>(&self, pred: F) -> Option<NamedEncoders>
+    where
+        F: Fn(NamedEncoders) -> bool,
+    {
+        self.encoders.iter().copied().find(|&e| pred(e))
+    }
+
+    /// Find a preferred encoder if enabled, else fall back to the first
+    /// enabled encoder matching a predicate.
+    pub fn preferred_or_first<F>(&self, preferred: NamedEncoders, pred: F) -> Option<NamedEncoders>
+    where
+        F: Fn(NamedEncoders) -> bool,
+    {
+        if self.encoders.contains(&preferred) {
+            Some(preferred)
+        } else {
+            self.first_encoder(pred)
+        }
     }
     pub fn create_decoder_for_magic_bytes(
         &self,

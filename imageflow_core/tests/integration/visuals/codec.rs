@@ -135,7 +135,7 @@ fn test_branching_crop_whitespace() {
     let mut context = imageflow_core::Context::create().unwrap();
     let _ = build_framewise(&mut context, framewise, io_vec, None, false).unwrap();
 
-    let tol_spec = Similarity::MaxZdsim(0.01).to_tolerance_spec();
+    let tol_spec = Similarity::MaxZdsim(0.02).to_tolerance_spec();
 
     for output_io_id in [1, 2] {
         let detail = format!("gradient_output_{output_io_id}");

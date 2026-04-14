@@ -57,6 +57,17 @@ pub struct IoProxy {
     backend: IoBackend,
 }
 
+impl IoBackend {
+    /// Returns the full backing slice for memory-backed read backends.
+    fn peek_all(&self) -> Option<&[u8]> {
+        match self {
+            IoBackend::ReadSlice(cursor) => Some(cursor.get_ref()),
+            IoBackend::ReadVec(cursor) => Some(cursor.get_ref().as_slice()),
+            _ => None,
+        }
+    }
+}
+
 impl io::Read for IoProxy {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.backend.get_read().expect("cannot read from writer").read(buf)
@@ -100,6 +111,24 @@ impl IoProxy {
     pub fn io_id(&self) -> i32 {
         self.io_id
     }
+
+    /// Returns the full backing byte slice for memory-backed inputs.
+    pub fn try_peek_all(&self) -> Option<&[u8]> {
+        self.backend.peek_all()
+    }
+
+    /// Returns true if `swap_output_vec` will succeed.
+    pub fn can_swap_output(&self) -> bool {
+        matches!(&self.backend, IoBackend::WriteVec(c) if c.position() == 0 && c.get_ref().is_empty())
+    }
+
+    /// Install an owned `Vec<u8>` as the output buffer, avoiding a copy.
+    /// Only call when `can_swap_output()` returns true.
+    pub fn swap_output_vec(&mut self, data: Vec<u8>) {
+        debug_assert!(self.can_swap_output());
+        self.backend = IoBackend::WriteVec(Cursor::new(data));
+    }
+
     pub fn try_get_length(&mut self) -> Option<u64> {
         match &self.backend {
             IoBackend::ReadVec(v) => Some(v.get_ref().len() as u64),

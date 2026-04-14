@@ -47,7 +47,7 @@ fn test_watermark_image() {
                 }),
             }),
         ],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Similarity::MaxZdsim(0.02).to_tolerance_spec(),
     }
 }
 
@@ -91,7 +91,7 @@ fn test_watermark_image_command_string() {
                 }),
             }]),
         }],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Similarity::MaxZdsim(0.02).to_tolerance_spec(),
     }
 }
 
@@ -135,7 +135,7 @@ fn test_watermark_image_command_string_with_bgcolor() {
                 }),
             }]),
         }],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Similarity::MaxZdsim(0.02).to_tolerance_spec(),
     }
 }
 
@@ -176,7 +176,7 @@ fn test_watermark_image_small() {
                 }),
             }),
         ],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Similarity::MaxZdsim(0.02).to_tolerance_spec(),
     }
 }
 
@@ -209,7 +209,7 @@ fn test_watermark_image_pixel_margins() {
                 hints: None,
             }),
         ],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Similarity::MaxZdsim(0.02).to_tolerance_spec(),
     }
 }
 

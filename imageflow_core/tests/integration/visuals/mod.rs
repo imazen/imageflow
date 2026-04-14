@@ -2,6 +2,7 @@ mod animation;
 mod canvas;
 mod codec;
 mod color;
+mod grayscale;
 mod composition;
 mod icc;
 mod idct;

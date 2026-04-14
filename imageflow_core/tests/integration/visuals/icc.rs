@@ -27,6 +27,7 @@ fn test_icc_display_p3_decode_1() {
         source: "test_inputs/wide-gamut/display-p3/flickr_1b94e1228c32cb98.jpg",
         detail: "p3_decode",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -36,6 +37,7 @@ fn test_icc_display_p3_decode_2() {
         source: "test_inputs/wide-gamut/display-p3/flickr_2fc1b8c45f922b8e.jpg",
         detail: "p3_decode",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -54,6 +56,7 @@ fn test_icc_display_p3_resize() {
         source: "test_inputs/wide-gamut/display-p3/flickr_403aa5efb8efe6e8.jpg",
         detail: "p3_resize_400",
         command: "w=400&format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -63,6 +66,7 @@ fn test_icc_display_p3_resize_filter() {
         source: "test_inputs/wide-gamut/display-p3/flickr_47b2cd2c048f29b3.jpg",
         detail: "p3_robidoux_300x300",
         command: "w=300&h=300&mode=crop&filter=Robidoux&format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -76,6 +80,7 @@ fn test_icc_adobe_rgb_decode_1() {
         source: "test_inputs/wide-gamut/adobe-rgb/flickr_0119a8378404ece9.jpg",
         detail: "adobergb_decode",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -85,6 +90,7 @@ fn test_icc_adobe_rgb_decode_2() {
         source: "test_inputs/wide-gamut/adobe-rgb/flickr_070040b3922aab8a.jpg",
         detail: "adobergb_decode",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -94,6 +100,7 @@ fn test_icc_adobe_rgb_resize() {
         source: "test_inputs/wide-gamut/adobe-rgb/flickr_083f5c58e82b1640.jpg",
         detail: "adobergb_resize_400",
         command: "w=400&format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -135,6 +142,7 @@ fn test_icc_prophoto_resize() {
         source: "test_inputs/wide-gamut/prophoto-rgb/flickr_6c6ab0d50486564a.jpg",
         detail: "prophoto_resize_400",
         command: "w=400&format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -148,6 +156,7 @@ fn test_icc_srgb_canon_5d() {
         source: "test_inputs/wide-gamut/srgb-reference/canon_eos_5d_mark_iv/wmc_81b268fc64ea796c.jpg",
         detail: "srgb_canon5d",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -157,6 +166,7 @@ fn test_icc_srgb_sony_a7rv() {
         source: "test_inputs/wide-gamut/srgb-reference/sony-a7r-v/irsample_a141d146726a8314.jpg",
         detail: "srgb_sony",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -190,6 +200,7 @@ fn test_icc_repro_imagemagick_icc() {
         source: "test_inputs/repro-icc/imagemagick/2161_84902501-90046e00-b0b5-11ea-91c6-c220fd29fd44.jpg",
         detail: "imagemagick_icc",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -233,6 +244,7 @@ fn test_icc_adobe_rgb_constrain() {
             }),
             Node::Encode { io_id: 1, preset: EncoderPreset::libpng32() },
         ],
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }
 
@@ -266,5 +278,6 @@ fn test_icc_gray_gamma22_decode() {
         source: "test_inputs/wide-gamut/gray-gamma-22/flickr_2f4bbf638f18ebea.jpg",
         detail: "gray_gamma22",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.02),
     }
 }

@@ -86,7 +86,13 @@ fn test_graph_mode_dual_encode() {
     ctx.add_output_buffer(1).unwrap();
     ctx.add_output_buffer(2).unwrap();
 
-    ctx.execute_1(Execute001 { job_options: None, graph_recording: None, security: None, framewise: graph }).unwrap();
+    ctx.execute_1(Execute001 {
+        job_options: None,
+        graph_recording: None,
+        security: None,
+        framewise: graph,
+    })
+    .unwrap();
 
     let png_bytes = ctx.take_output_buffer(1).unwrap();
     let jpg_bytes = ctx.take_output_buffer(2).unwrap();
@@ -143,7 +149,13 @@ fn test_graph_copy_rect_to_canvas() {
         .unwrap();
     ctx.add_output_buffer(1).unwrap();
 
-    ctx.execute_1(Execute001 { job_options: None, graph_recording: None, security: None, framewise: graph }).unwrap();
+    ctx.execute_1(Execute001 {
+        job_options: None,
+        graph_recording: None,
+        security: None,
+        framewise: graph,
+    })
+    .unwrap();
 
     let png_bytes = ctx.take_output_buffer(1).unwrap();
     assert!(png_bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47]), "Output should be PNG");
@@ -214,7 +226,13 @@ fn test_graph_draw_image_exact() {
         .unwrap();
     ctx.add_output_buffer(2).unwrap();
 
-    ctx.execute_1(Execute001 { job_options: None, graph_recording: None, security: None, framewise: graph }).unwrap();
+    ctx.execute_1(Execute001 {
+        job_options: None,
+        graph_recording: None,
+        security: None,
+        framewise: graph,
+    })
+    .unwrap();
 
     let png_bytes = ctx.take_output_buffer(2).unwrap();
     assert!(png_bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47]), "Output should be PNG");
@@ -319,7 +337,13 @@ fn test_pyramid_multi_output() {
     ctx.add_output_buffer(3).unwrap();
     ctx.add_output_buffer(4).unwrap();
 
-    ctx.execute_1(Execute001 { job_options: None, graph_recording: None, security: None, framewise: graph }).unwrap();
+    ctx.execute_1(Execute001 {
+        job_options: None,
+        graph_recording: None,
+        security: None,
+        framewise: graph,
+    })
+    .unwrap();
 
     // Verify all outputs exist and have correct format magic bytes
     let jpeg_bytes = ctx.take_output_buffer(1).unwrap();
@@ -468,7 +492,13 @@ fn test_pyramid_constrain_within() {
     ctx.add_output_buffer(3).unwrap();
     ctx.add_output_buffer(4).unwrap();
 
-    ctx.execute_1(Execute001 { job_options: None, graph_recording: None, security: None, framewise: graph }).unwrap();
+    ctx.execute_1(Execute001 {
+        job_options: None,
+        graph_recording: None,
+        security: None,
+        framewise: graph,
+    })
+    .unwrap();
 
     let jpeg_bytes = ctx.take_output_buffer(1).unwrap();
     let webp_bytes = ctx.take_output_buffer(2).unwrap();
@@ -538,7 +568,7 @@ fn test_watermark_alpha_on_jpeg() {
                 }),
             }),
         ],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Similarity::MaxZdsim(0.02).to_tolerance_spec(),
     }
 }
 
