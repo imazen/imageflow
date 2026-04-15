@@ -455,7 +455,6 @@ impl Encoder for ZenEncoder {
         let mut window = bitmap.get_window_u8().unwrap();
         let (w, h) = (window.w(), window.h());
         let stride = window.info().t_stride() as usize;
-        let fmt = window.pixel_format();
         let slice = window.slice_mut();
 
         // Create frame encoder on first call for animation-capable formats
@@ -491,20 +490,48 @@ impl Encoder for ZenEncoder {
             self.frame_enc = Some(frame_enc);
         }
 
-        // Animation frame path — swizzle to RGBA for frame encoder
+        // Animation frame path.
+        //
+        // Pick the encoder's preferred 4bpp layout: BGRA if the encoder lists
+        // it (zenpng/zenwebp/zengif/zenjxl/zenavif all do), else RGBA with a
+        // one-pass in-place swizzle (mozjpeg-rs only lists RGB8/RGBA8/Gray8).
+        //
+        // Alpha handling when make_opaque is set:
+        //   - native_alpha codecs (PNG/WebP/GIF/JXL/AVIF) compress whatever
+        //     alpha bytes we pass into the output alpha channel. Garbage
+        //     bytes = garbage output. Fill to 0xFF so the encoded alpha is
+        //     valid and highly compressible.
+        //   - !native_alpha codecs (JPEG) discard alpha entirely; filling is
+        //     wasted work.
+        // We don't set AlphaMode::Undefined/Opaque because zen codecs use
+        // exact-descriptor equality (desc == BGRA8_SRGB) and reject variants.
         if let Some(frame_enc) = self.frame_enc.as_mut() {
-            // Swizzle BGRA→RGBA in-place for frame encoder
-            match fmt {
-                PixelFormat::Bgra32 | PixelFormat::Bgr32 => {
-                    let _ = garb::bytes::bgra_to_rgba_inplace_strided(
+            let config = match &self.mode {
+                EncodeMode::Zencodec(config) => config,
+                _ => unreachable!(),
+            };
+            let use_bgra = config
+                .supported_descriptors()
+                .contains(&zenpixels::PixelDescriptor::BGRA8_SRGB);
+            let needs_alpha_fill = make_opaque && config.capabilities().native_alpha();
+            let desc = if use_bgra {
+                if needs_alpha_fill {
+                    let _ = garb::bytes::fill_alpha_bgra_strided(
                         slice, w as usize, h as usize, stride,
                     );
                 }
-                PixelFormat::Bgr24 | PixelFormat::Gray8 => {}
-            }
-            if make_opaque {
-                let _ = garb::bytes::fill_alpha_rgba_strided(slice, w as usize, h as usize, stride);
-            }
+                zenpixels::PixelDescriptor::BGRA8_SRGB
+            } else {
+                let _ = garb::bytes::bgra_to_rgba_inplace_strided(
+                    slice, w as usize, h as usize, stride,
+                );
+                if needs_alpha_fill {
+                    let _ = garb::bytes::fill_alpha_rgba_strided(
+                        slice, w as usize, h as usize, stride,
+                    );
+                }
+                zenpixels::PixelDescriptor::RGBA8_SRGB
+            };
 
             let mut delay_ms = 100u32;
             for io_id in decoder_io_ids {
@@ -519,7 +546,6 @@ impl Encoder for ZenEncoder {
                 }
             }
 
-            let desc = zenpixels::PixelDescriptor::RGBA8_SRGB;
             let ps = zenpixels::PixelSlice::new(slice, w, h, stride, desc)
                 .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "pixel slice error: {}", e))?;
 
@@ -542,36 +568,44 @@ impl Encoder for ZenEncoder {
             });
         }
 
-        // Single-frame encode — swizzle BGRA→RGBA in-place for zencodec.
-        // Always present RGBA (never BGR*) to zen encoders.
-        match fmt {
-            PixelFormat::Bgra32 | PixelFormat::Bgr32 => {
-                let _ = garb::bytes::bgra_to_rgba_inplace_strided(
+        // Single-frame encode. Same descriptor negotiation and alpha rules as
+        // the animation path above.
+        let config = match &self.mode {
+            EncodeMode::Zencodec(config) => config,
+            EncodeMode::NativeJpeg { .. } => unreachable!(),
+        };
+        let use_bgra = config
+            .supported_descriptors()
+            .contains(&zenpixels::PixelDescriptor::BGRA8_SRGB);
+        let needs_alpha_fill = make_opaque && config.capabilities().native_alpha();
+        let desc = if use_bgra {
+            if needs_alpha_fill {
+                let _ = garb::bytes::fill_alpha_bgra_strided(
                     slice, w as usize, h as usize, stride,
                 );
             }
-            PixelFormat::Bgr24 | PixelFormat::Gray8 => {}
-        }
-        if make_opaque {
-            let _ = garb::bytes::fill_alpha_rgba_strided(slice, w as usize, h as usize, stride);
-        }
-
-        let encoder = match &self.mode {
-            EncodeMode::Zencodec(config) => {
-                let job = config.dyn_job();
-                job.into_encoder().map_err(|e| {
-                    nerror!(
-                        ErrorKind::ImageEncodingError,
-                        "{} encoder create error: {}",
-                        self.preferred_extension,
-                        e
-                    )
-                })?
+            zenpixels::PixelDescriptor::BGRA8_SRGB
+        } else {
+            let _ = garb::bytes::bgra_to_rgba_inplace_strided(
+                slice, w as usize, h as usize, stride,
+            );
+            if needs_alpha_fill {
+                let _ = garb::bytes::fill_alpha_rgba_strided(
+                    slice, w as usize, h as usize, stride,
+                );
             }
-            EncodeMode::NativeJpeg { .. } => unreachable!(),
+            zenpixels::PixelDescriptor::RGBA8_SRGB
         };
 
-        let desc = zenpixels::PixelDescriptor::RGBA8_SRGB;
+        let encoder = config.dyn_job().into_encoder().map_err(|e| {
+            nerror!(
+                ErrorKind::ImageEncodingError,
+                "{} encoder create error: {}",
+                self.preferred_extension,
+                e
+            )
+        })?;
+
         let ps = zenpixels::PixelSlice::new(slice, w, h, stride, desc)
             .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "pixel slice error: {}", e))?;
         let output = encoder.encode(ps).map_err(|e| {

@@ -66,26 +66,29 @@ fn jpeg_fixture(w: u32, h: u32) -> Vec<u8> {
     ctx.take_output_buffer(1).unwrap()
 }
 
-/// 1. mozjpeg-sys direct FFI, output RGBA via the `mozjpeg` safe crate
-/// (which imageflow already depends on for version 0.10). This is
-/// libjpeg-turbo + mozjpeg extensions, no imageflow wrapping.
+/// 1. mozjpeg-sys direct FFI, output BGRA via the `mozjpeg` safe crate
+/// (which imageflow already depends on for version 0.10). Requests
+/// JCS_EXT_BGRA directly so no post-decode swizzle is needed — this is
+/// what imageflow's `mozjpeg_decoder` does internally.
 fn decode_mozjpeg_ffi(data: &[u8]) -> (u32, u32, Vec<u8>) {
-    use mozjpeg::Decompress;
+    use mozjpeg::{ColorSpace, Decompress};
     let d = Decompress::new_mem(data).unwrap();
     let w = d.width();
     let h = d.height();
-    let mut dec = d.rgba().unwrap();
+    let mut dec = d.to_colorspace(ColorSpace::JCS_EXT_BGRA).unwrap();
     let bytes = dec.read_scanlines::<u8>().unwrap();
     assert!(dec.finish().is_ok());
     (w as u32, h as u32, bytes)
 }
 
-/// 2. zenjpeg native Decoder API, no zencodec involvement. Decodes to packed RGBA.
+/// 2. zenjpeg native Decoder API, no zencodec involvement. Decodes
+/// directly to packed BGRA — matches imageflow's internal bitmap layout
+/// so no post-decode swizzle is needed.
 fn decode_zenjpeg_native(data: &[u8]) -> (u32, u32, Vec<u8>) {
     use enough::Unstoppable;
     use zenjpeg::decoder::{Decoder, PixelFormat};
     let result = Decoder::new()
-        .output_format(PixelFormat::Rgba)
+        .output_format(PixelFormat::Bgra)
         .decode(data, Unstoppable)
         .expect("zenjpeg native decode failed");
     let w = result.width();

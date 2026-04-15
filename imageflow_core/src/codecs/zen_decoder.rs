@@ -582,12 +582,14 @@ impl Decoder for ZenDecoder {
         let info = self.cached_info.as_ref().unwrap().clone();
         let source_profile = self.source_profile_from_info(&info);
         let has_alpha = info.has_alpha;
-        let preferred = [
-            zenpixels::PixelDescriptor::BGRA8_SRGB,
-            zenpixels::PixelDescriptor::RGBA8_SRGB,
-            zenpixels::PixelDescriptor::RGB8_SRGB,
-            zenpixels::PixelDescriptor::GRAY8_SRGB,
-        ];
+        // Request BGRA8_SRGB only — every zen codec supports it natively, so
+        // the codec does the (possibly vectorized) swizzle internally and
+        // writes straight into the imageflow BGRA bitmap. No RGBA/RGB/Gray
+        // fallback path: if a codec ever drops BGRA support that's a bug
+        // upstream, not something to silently paper over here.
+        // (CMYK JPEGs with CmykHandling::Passthrough still emit CMYK8 and
+        // bypass this negotiation — handled as a special case downstream.)
+        let preferred = [zenpixels::PixelDescriptor::BGRA8_SRGB];
 
         // Animation path: use persistent full-frame decoder
         let is_animated = matches!(info.sequence, zc::ImageSequence::Animation { .. });
