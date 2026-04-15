@@ -398,20 +398,34 @@ fn create_encoder_auto(
             }
             #[cfg(all(not(feature = "c-codecs"), feature = "zen-codecs"))]
             {
-                let quality = details
+                // Mirror create_jpeg_auto: honor encoder_hints.jpeg.{quality,progressive}
+                // and details.matte. Previously this branch ignored all of them and
+                // hardcoded quality from quality_profile (defaulting to 85 vs c's 90),
+                // progressive=true, matte=None — diverging from c-codecs output.
+                let manual_and_default_hints =
+                    details.encoder_hints.and_then(|hints| hints.jpeg);
+                let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
+                let mut progressive = manual_and_default_hints
+                    .and_then(|hints| hints.progressive)
+                    .unwrap_or(true);
+                if details.allow.jpeg_progressive != Some(true) {
+                    progressive = false;
+                }
+                let profile_hints = details
                     .quality_profile
-                    .map(|qp| {
-                        let hints = get_quality_hints(&qp);
-                        hints.moz as u8
-                    })
-                    .unwrap_or(85);
+                    .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
+                let moz_quality = profile_hints
+                    .map(|hints: QualityProfileHints| hints.moz)
+                    .or(manual_quality)
+                    .unwrap_or(90.0)
+                    .clamp(0.0, 100.0) as u8;
                 Box::new(
                     crate::codecs::zen_encoder::ZenEncoder::create_jpeg(
                         ctx,
                         io,
-                        Some(quality),
-                        Some(true),
-                        None,
+                        Some(moz_quality),
+                        Some(progressive),
+                        details.matte.clone(),
                     )
                     .map_err(|e| e.at(here!()))?,
                 )
@@ -451,13 +465,21 @@ fn create_encoder_auto(
                         None => None,
                     };
                 let lossless = details.needs_lossless.or(manual_lossless).unwrap_or(false);
-                let quality = details
+                // Mirror create_webp_auto: encoder_hints.webp.quality > quality_profile > 80.
+                let manual_quality =
+                    manual_and_default_hints.and_then(|hints| hints.quality);
+                let profile_hints = details
                     .quality_profile
-                    .map(|qp| {
-                        let hints = get_quality_hints(&qp);
-                        hints.webp
-                    })
-                    .unwrap_or(80.0);
+                    .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
+                let quality = if !lossless {
+                    profile_hints
+                        .map(|hints: QualityProfileHints| hints.webp)
+                        .or(manual_quality)
+                        .unwrap_or(80.0)
+                        .clamp(0.0, 100.0)
+                } else {
+                    80.0 // ignored by lossless encoder
+                };
                 Box::new(
                     crate::codecs::zen_encoder::ZenEncoder::create_webp(
                         ctx,
