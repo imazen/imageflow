@@ -17,11 +17,17 @@ use moxcms::{
 /// - `BarycentricWeightScale::High` — reduces LUT interpolation divergence vs
 ///   lcms2 from max≤14 to max≤2 for standard ICC LUT profiles, at no measurable
 ///   performance cost on modern hardware.
+/// - `rendering_intent: RelativeColorimetric` — explicit. moxcms's default is
+///   Perceptual, which is a different LUT (when present) and applies gamut
+///   compression. For display output (JPEG/PNG/WebP → sRGB on a display),
+///   RelativeColorimetric is the convention used by browsers, Skia, and
+///   zenpixels-convert. Aligns imageflow with that convention.
 fn lut_transform_opts() -> TransformOptions {
     TransformOptions {
         allow_use_cicp_transfer: false,
         barycentric_weight_scale: BarycentricWeightScale::High,
         interpolation_method: InterpolationMethod::Tetrahedral,
+        rendering_intent: moxcms::RenderingIntent::RelativeColorimetric,
         ..Default::default()
     }
 }
@@ -250,6 +256,14 @@ impl MoxcmsTransformCache {
     ///
     /// mozjpeg outputs CMYK as 4 bytes/pixel with inverted values (255-C, 255-M, 255-Y, 255-K).
     /// We un-invert, apply the ICC CMYK→RGB transform, and write BGRA output.
+    ///
+    /// Overrides `rendering_intent` from the default (RelativeColorimetric, set in
+    /// `lut_transform_opts`) back to Perceptual for CMYK sources. moxcms does not yet
+    /// implement Black Point Compensation (field commented out in moxcms
+    /// `transform.rs`); without BPC, Relative Colorimetric clips dark shadow detail
+    /// on CMYK→RGB. Photoshop's standard CMYK→RGB intent is "Relative + BPC"; without
+    /// BPC support, Perceptual is the safer fallback since it has its own implicit
+    /// gamut/shadow handling. Revisit when moxcms adds BPC.
     fn transform_cmyk_to_srgb(frame: &mut BitmapWindowMut<u8>, icc_bytes: &[u8]) -> Result<()> {
         let hash = Self::hash_icc_bytes(icc_bytes, false);
         let transform = if let Some(cached) = CMYK_TRANSFORMS.get(hash) {
@@ -258,10 +272,12 @@ impl MoxcmsTransformCache {
             let src = ColorProfile::new_from_slice(icc_bytes)
                 .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
             let dst = ColorProfile::new_srgb();
+            let mut opts = lut_transform_opts();
+            opts.rendering_intent = moxcms::RenderingIntent::Perceptual;
             // CMYK ICC profiles use Layout::Rgba (4 channels) — moxcms maps channel
             // semantics from the ICC profile's color space, not the Layout enum.
             let t = src
-                .create_transform_8bit(Layout::Rgba, &dst, Layout::Rgba, lut_transform_opts())
+                .create_transform_8bit(Layout::Rgba, &dst, Layout::Rgba, opts)
                 .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
             CMYK_TRANSFORMS.get_or_create(hash, || t)
         };
