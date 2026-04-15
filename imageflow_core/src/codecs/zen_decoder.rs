@@ -89,11 +89,23 @@ impl ZenDecoder {
     }
 
     pub fn create_jpeg(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
-        // cmyk_output_raw(true) makes zenjpeg emit raw CMYK bytes (PixelDescriptor::CMYK8)
-        // for 4-component JPEGs instead of applying its internal CMYK→RGB matrix. The CMS
-        // stage then applies the source ICC profile (or a fallback CMYK profile) for an
-        // accurate conversion. No effect on 3-component (YCbCr/RGB) JPEGs.
-        let config = zenjpeg::JpegDecoderConfig::new().cmyk_output_raw(true);
+        // cmyk_output_raw(true) — emit raw CMYK bytes (PixelDescriptor::CMYK8) for
+        // 4-component JPEGs instead of applying zenjpeg's internal CMYK→RGB matrix.
+        // The CMS stage then applies the source ICC profile (or the bundled fallback
+        // CMYK profile) for an accurate conversion. No effect on 3-component JPEGs.
+        //
+        // idct_method(Libjpeg) — pick the 13-bit Loeffler IDCT for pixel-exact
+        // compatibility with libjpeg-turbo/mozjpeg output (imageflow's historical
+        // reference). zenjpeg's default `Jpegli` IDCT drifts 2-3 levels per channel
+        // which cascades through resize/crop/CMS into larger deltas. Paired with
+        // imazen/zenjpeg#86 proposing a default flip. JpegDecoderConfig doesn't
+        // chain .idct_method() yet, so reach through inner_mut().
+        use zenjpeg::decoder::IdctMethod;
+        let mut config = zenjpeg::JpegDecoderConfig::new().cmyk_output_raw(true);
+        {
+            let inner = config.inner_mut();
+            *inner = core::mem::take(inner).idct_method(IdctMethod::Libjpeg);
+        }
         Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Jpeg))
     }
 
