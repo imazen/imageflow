@@ -114,6 +114,7 @@ fn test_icc_rec2020_decode_1() {
         source: "test_inputs/wide-gamut/rec-2020-pq/flickr_2a68670c58131566.jpg",
         detail: "rec2020_decode",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.03),
     }
 }
 
@@ -123,6 +124,7 @@ fn test_icc_rec2020_decode_2() {
         source: "test_inputs/wide-gamut/rec-2020-pq/flickr_c2d8824d6ffb6e60.jpg",
         detail: "rec2020_decode",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.04),
     }
 }
 

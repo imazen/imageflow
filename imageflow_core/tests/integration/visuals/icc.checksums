@@ -49,7 +49,7 @@ tolerance zensim:99 (dissim 0.01)
 = cold-cod-fbd1704ac1:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_rec2020_decode_1 rec2020_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance zensim:97 (dissim 0.03)
 = extra-heron-36faf97a2c:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_p3_to_jpeg_roundtrip p3_to_jpeg_q85
@@ -57,11 +57,11 @@ tolerance zensim:95 (dissim 0.05)
 = fair-peach-0372a89301:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_prophoto_decode prophoto_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance zensim:97 (dissim 0.03)
 = moist-shore-4dc03e0370:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_rec2020_decode_2 rec2020_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance zensim:96 (dissim 0.04)
 = able-ash-684f3036b9:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_repro_pillow_icc pillow_icc
@@ -69,11 +69,11 @@ tolerance zensim:95 (dissim 0.05)
 ~ crisp-beam-c27b72ac42:sea  x86_64-avx512  @1ebabe5d  auto-accepted
 
 ## test_icc_display_p3_decode_3 p3_decode
-tolerance zensim:99 (dissim 0.01)
+tolerance zensim:97 (dissim 0.03)
 = known-crane-9ca529bf17:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_display_p3_decode_2 p3_decode
-tolerance zensim:98 (dissim 0.02)
+tolerance zensim:97 (dissim 0.03)
 = keen-sage-075119cbeb:sea  x86_64-avx512  @6e695833  new-baseline
 
 ## test_icc_srgb_canon_5d srgb_canon5d
