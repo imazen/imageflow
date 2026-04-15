@@ -113,9 +113,6 @@ fn handle_check_result(result: &Result<CheckResult, zensim_regress::RegressError
         Err(e) => {
             panic!("comparison error: {e}");
         }
-        Ok(other) => {
-            panic!("unexpected check result: {other}");
-        }
     }
 }
 

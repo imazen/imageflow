@@ -244,7 +244,7 @@ fn benchmark_scale_2d(ctx: &mut Criterion) {
     }
 }
 //
-extern "C" {
+unsafe extern "C" {
     pub fn flow_scale_spatial_srgb_7x7(
         input: *const u8,
         output_rows: *const *mut u8,
