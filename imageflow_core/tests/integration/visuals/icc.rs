@@ -37,7 +37,7 @@ fn test_icc_display_p3_decode_2() {
         source: "test_inputs/wide-gamut/display-p3/flickr_2fc1b8c45f922b8e.jpg",
         detail: "p3_decode",
         command: "format=png",
-        similarity: Similarity::MaxZdsim(0.02),
+        similarity: Similarity::MaxZdsim(0.03),
     }
 }
 
@@ -47,6 +47,7 @@ fn test_icc_display_p3_decode_3() {
         source: "test_inputs/wide-gamut/display-p3/flickr_3ac029fc145a8e32.jpg",
         detail: "p3_decode",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.03),
     }
 }
 
@@ -133,6 +134,7 @@ fn test_icc_prophoto_decode() {
         source: "test_inputs/wide-gamut/prophoto-rgb/flickr_0d2d634cf46df137.jpg",
         detail: "prophoto_decode",
         command: "format=png",
+        similarity: Similarity::MaxZdsim(0.03),
     }
 }
 

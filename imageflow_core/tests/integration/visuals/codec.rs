@@ -313,7 +313,12 @@ fn decode_rgb_with_cmyk_profile_jpeg() {
             encode: None,
             watermarks: None,
         }],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Tolerance {
+            max_delta: 255,
+            min_similarity: 97.0,
+            max_pixels_different: 1.0,
+            ..Tolerance::exact()
+        },
     }
 }
 

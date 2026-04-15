@@ -124,7 +124,12 @@ impl ZenEncoder {
             Box::new(config),
             io,
             matte,
-            false, // Single-frame path by default; animation support would need multi-frame signaling
+            // zenwebp ≥0.4.3 downgrades a 1-frame animation container to a
+            // static WebP in AnimationEncoder::finalize(), so routing every
+            // WebP through the animation path is safe for single-frame
+            // inputs too. This lets multi-frame inputs (e.g. animated GIF →
+            // WebP) preserve animation without per-call frame-count signaling.
+            true,
             "webp",
             "image/webp",
         ))

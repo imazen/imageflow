@@ -4021,7 +4021,7 @@ dependencies = [
  "yuv",
  "zencodec",
  "zenpixels",
- "zenyuv",
+ "zenyuv 0.1.0",
 ]
 
 [[package]]
@@ -4231,8 +4231,6 @@ dependencies = [
 [[package]]
 name = "zenwebp"
 version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eee7eb0836128a5d0dc77e11d8a3c16008300b97b46c7f41edf3314672acd15d"
 dependencies = [
  "archmage",
  "bytemuck",
@@ -4247,14 +4245,27 @@ dependencies = [
  "self_cell",
  "thiserror",
  "whereat",
- "yuv",
  "zencodec",
  "zenpixels",
+ "zenyuv 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "zenyuv"
 version = "0.1.0"
+dependencies = [
+ "archmage",
+ "libm",
+ "linear-srgb",
+ "magetypes",
+ "safe_unaligned_simd",
+]
+
+[[package]]
+name = "zenyuv"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "313985b41811e10894b23dbd4e836753d60e1f857fb0635c3a620173f904c089"
 dependencies = [
  "archmage",
  "libm",
