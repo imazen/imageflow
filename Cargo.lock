@@ -4021,7 +4021,7 @@ dependencies = [
  "yuv",
  "zencodec",
  "zenpixels",
- "zenyuv 0.1.0",
+ "zenyuv 0.1.1",
 ]
 
 [[package]]
@@ -4087,7 +4087,7 @@ dependencies = [
 
 [[package]]
 name = "zenpixels"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "bytemuck",
  "imgref",
@@ -4247,12 +4247,12 @@ dependencies = [
  "whereat",
  "zencodec",
  "zenpixels",
- "zenyuv 0.1.1",
+ "zenyuv 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "zenyuv"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "archmage",
  "libm",

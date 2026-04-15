@@ -31,8 +31,8 @@ opt-level = 2
 libpng-sys = { git = "https://github.com/imazen/rust-libpng-sys" }
 lcms2-sys = { git = "https://github.com/imazen/rust-lcms2-sys", branch = "update-lcms2-2.18" }
 # CMYK plumbing: local paths until zenpixels 0.2.7 / zenjpeg CMYK8 are published.
-zenpixels = { path = "../zenpixels-cmyk/zenpixels" }
-zenjpeg = { path = "../zenjpeg-cmyk/zenjpeg" }
+zenpixels = { path = "../zen/zenpixels/zenpixels" }
+zenjpeg = { path = "../zen/zenjpeg/zenjpeg" }
 # Local zenwebp with push_frame stride fix for strided input (imageflow
 # bitmaps are SIMD-aligned with stride > width*bpp).
 zenwebp = { path = "../zen/zenwebp" }

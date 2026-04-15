@@ -89,11 +89,14 @@ impl ZenDecoder {
     }
 
     pub fn create_jpeg(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
-        // cmyk_output_raw(true) — emit raw CMYK bytes (PixelDescriptor::CMYK8) for
-        // 4-component JPEGs instead of applying zenjpeg's internal CMYK→RGB matrix.
-        // The CMS stage then applies the source ICC profile (or the bundled fallback
-        // CMYK profile) for an accurate conversion. No effect on 3-component JPEGs.
-        let config = zenjpeg::JpegDecoderConfig::new().cmyk_output_raw(true);
+        // CmykHandling::Passthrough — emit raw CMYK bytes (PixelDescriptor::CMYK8)
+        // for 4-component JPEGs instead of applying zenjpeg's internal CMYK→RGB
+        // matrix. The CMS stage then applies the source ICC profile (or the
+        // bundled fallback CMYK profile) for an accurate conversion. No effect
+        // on 3-component JPEGs. (Passthrough is the default in zenjpeg post-
+        // ebb0e24f, but set explicitly so the intent survives any default flip.)
+        let config = zenjpeg::JpegDecoderConfig::new()
+            .cmyk_handling(zenjpeg::CmykHandling::Passthrough);
         Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Jpeg))
     }
 
