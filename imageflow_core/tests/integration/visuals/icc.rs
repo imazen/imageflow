@@ -226,8 +226,8 @@ fn test_icc_repro_libvips_icc() {
 fn test_icc_p3_crop_and_resize() {
     visual_check! {
         source: "test_inputs/wide-gamut/display-p3/flickr_769c664daf96b5d5.jpg",
-        detail: "p3_crop_200x200",
-        command: "w=200&h=200&mode=crop&format=png",
+        detail: "p3_crop_500x500",
+        command: "w=500&h=500&mode=crop&format=png",
     }
 }
 

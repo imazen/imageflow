@@ -91,3 +91,7 @@ tolerance zensim:98 (dissim 0.02)
 ## test_icc_display_p3_decode_1 p3_decode
 tolerance zensim:98 (dissim 0.02)
 = silly-coal-233b8b0277:sea  x86_64-avx512  @6e695833  new-baseline
+
+## test_icc_p3_crop_and_resize p3_crop_500x500
+tolerance zensim:99 (dissim 0.01)
+~ brisk-ledge-85bb133ea6:sea  x86_64-avx512  @a142ff97  new-baseline

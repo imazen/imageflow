@@ -88,3 +88,15 @@ tolerance off-by-one
 ## test_jpeg_simple_rot_90 landscape_70x70
 tolerance off-by-one
 = bone-drum-452a7c1706:sea  x86_64-avx512  @8ca16e2d  new-baseline
+
+## test_crop_with_preshrink 680x880_crop
+tolerance off-by-one
+~ oily-den-a70a691157:sea  x86_64-avx512  @a142ff97  new-baseline
+
+## test_transparent_webp_to_webp lossless_native
+tolerance max-delta:1 zensim:99 (dissim 0.01) pixels-changed:1.0%
+~ stark-forge-3182a292c5:sea  x86_64-avx512  @a142ff97  new-baseline
+
+## test_jpeg_crop waterhouse_500x1000
+tolerance zensim:97 (dissim 0.03)
+~ spare-palm-70a12bbda7:sea  x86_64-avx512  @a142ff97  new-baseline
