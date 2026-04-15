@@ -224,10 +224,14 @@ fn test_icc_repro_libvips_icc() {
 
 #[test]
 fn test_icc_p3_crop_and_resize() {
+    // 0.03 tolerance absorbs zenjpeg's default Jpegli IDCT rounding cascading
+    // through resize + ICC. Tighten when zenjpeg#86 ships and the IDCT default
+    // flips to Libjpeg.
     visual_check! {
         source: "test_inputs/wide-gamut/display-p3/flickr_769c664daf96b5d5.jpg",
         detail: "p3_crop_500x500",
         command: "w=500&h=500&mode=crop&format=png",
+        similarity: Similarity::MaxZdsim(0.03),
     }
 }
 

@@ -93,19 +93,7 @@ impl ZenDecoder {
         // 4-component JPEGs instead of applying zenjpeg's internal CMYK→RGB matrix.
         // The CMS stage then applies the source ICC profile (or the bundled fallback
         // CMYK profile) for an accurate conversion. No effect on 3-component JPEGs.
-        //
-        // idct_method(Libjpeg) — pick the 13-bit Loeffler IDCT for pixel-exact
-        // compatibility with libjpeg-turbo/mozjpeg output (imageflow's historical
-        // reference). zenjpeg's default `Jpegli` IDCT drifts 2-3 levels per channel
-        // which cascades through resize/crop/CMS into larger deltas. Paired with
-        // imazen/zenjpeg#86 proposing a default flip. JpegDecoderConfig doesn't
-        // chain .idct_method() yet, so reach through inner_mut().
-        use zenjpeg::decoder::IdctMethod;
-        let mut config = zenjpeg::JpegDecoderConfig::new().cmyk_output_raw(true);
-        {
-            let inner = config.inner_mut();
-            *inner = core::mem::take(inner).idct_method(IdctMethod::Libjpeg);
-        }
+        let config = zenjpeg::JpegDecoderConfig::new().cmyk_output_raw(true);
         Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Jpeg))
     }
 

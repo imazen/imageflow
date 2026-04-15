@@ -49,7 +49,11 @@ fn test_jpeg_rotation_cropped() {
                 encode: None,
                 watermarks: None,
             }],
-            tolerance: Similarity::MaxZdsim(0.02).to_tolerance_spec(),
+            // 0.03 (was 0.02) absorbs zenjpeg's default Jpegli IDCT rounding
+            // (max ~4 levels per channel vs mozjpeg, perceptually identical).
+            // Tighten back to 0.02 if zenjpeg#86 lands and the default flips
+            // to Libjpeg IDCT.
+            tolerance: Similarity::MaxZdsim(0.03).to_tolerance_spec(),
         }
     }
 }

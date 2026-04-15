@@ -350,6 +350,10 @@ fn decode_rgb_with_cmyk_profile_jpeg() {
 
 #[test]
 fn test_crop_with_preshrink() {
+    // off_by_one (max_delta=1) is too tight for zenjpeg's default Jpegli IDCT
+    // which drifts ~2-4 levels per channel from mozjpeg/libjpeg-turbo.
+    // Loosened to allow up to 5 levels with high-similarity gate. Re-tighten
+    // when zenjpeg#86 lands and the IDCT default flips to Libjpeg.
     visual_check_bitmap! {
         source: "https://resizer-images.s3.amazonaws.com/private/cropissue.jpg",
         detail: "680x880_crop",
@@ -360,7 +364,12 @@ fn test_crop_with_preshrink() {
             encode: None,
             watermarks: None,
         }],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Tolerance {
+            max_delta: 5,
+            min_similarity: 97.0,
+            max_pixels_different: 1.0,
+            ..Tolerance::exact()
+        },
     }
 }
 
