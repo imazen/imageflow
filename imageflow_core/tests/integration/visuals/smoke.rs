@@ -141,6 +141,13 @@ fn smoke_test_png_ir4() {
 }
 
 #[test]
+#[cfg_attr(
+    not(feature = "c-codecs"),
+    ignore = "zenjpeg is more tolerant of truncated input than mozjpeg — this \
+              particular corrupt.jpg decodes successfully on zen-only, so \
+              the test's decoder-must-reject assertion only holds with c-codecs. \
+              The no-crash guarantee still holds on zen-only via other smoke tests."
+)]
 fn smoke_test_corrupt_jpeg() {
     let steps = vec![Node::CommandString {
         kind: CommandStringKind::ImageResizer4,
@@ -164,6 +171,12 @@ fn smoke_test_corrupt_jpeg() {
 }
 
 #[test]
+#[cfg_attr(
+    not(feature = "c-codecs"),
+    ignore = "LibjpegTurbo encoder preset requires c-codecs; the zen-only \
+              JPEG encode smoke path is covered by tests using format=jpg \
+              via CommandString (mozjpeg-rs or zenjpeg selected automatically)"
+)]
 fn test_encode_jpeg_smoke() {
     let steps = vec![
         Node::Decode { io_id: 0, commands: None },
