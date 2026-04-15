@@ -1,0 +1,409 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.45
+   Compiling libc v0.2.185
+   Compiling cfg-if v1.0.4
+   Compiling shlex v1.3.0
+   Compiling find-msvc-tools v0.1.9
+   Compiling autocfg v1.5.0
+   Compiling crossbeam-utils v0.8.21
+   Compiling libm v0.2.16
+   Compiling rayon-core v1.13.0
+   Compiling stable_deref_trait v1.2.1
+   Compiling memchr v2.8.0
+   Compiling pkg-config v0.3.33
+   Compiling zerocopy v0.8.48
+   Compiling simd-adler32 v0.3.9
+   Compiling either v1.15.0
+   Compiling smallvec v1.15.1
+   Compiling adler2 v2.0.1
+   Compiling vcpkg v0.2.15
+   Compiling serde_core v1.0.228
+   Compiling dunce v1.0.5
+   Compiling typenum v1.19.0
+   Compiling serde v1.0.228
+   Compiling getrandom v0.3.4
+   Compiling zmij v1.0.21
+   Compiling itoa v1.0.18
+   Compiling arrayvec v0.7.6
+   Compiling serde_json v1.0.149
+   Compiling imgref v1.12.0
+   Compiling litemap v0.8.2
+   Compiling writeable v0.6.3
+   Compiling rand_core v0.10.1
+   Compiling getrandom v0.4.2
+   Compiling crc32fast v1.5.0
+   Compiling cpufeatures v0.3.0
+   Compiling utf8_iter v1.0.4
+   Compiling miniz_oxide v0.8.9
+   Compiling log v0.4.29
+   Compiling icu_normalizer_data v2.2.0
+   Compiling icu_properties_data v2.2.0
+   Compiling anyhow v1.0.102
+   Compiling bitflags v2.11.1
+   Compiling object v0.37.3
+   Compiling thiserror v2.0.18
+   Compiling arrayvec v0.4.12
+   Compiling const-oid v0.10.2
+   Compiling zlib-rs v0.6.3
+   Compiling glob v0.3.3
+   Compiling nodrop v0.1.14
+   Compiling gimli v0.32.3
+   Compiling powerfmt v0.2.0
+   Compiling target-features v0.1.6
+   Compiling num-traits v0.2.19
+   Compiling safe_unaligned_simd v0.2.5
+   Compiling chacha20 v0.10.0
+   Compiling as-slice v0.2.1
+   Compiling paste v1.0.15
+   Compiling rustc-demangle v0.1.27
+   Compiling deranged v0.5.8
+   Compiling iana-time-zone v0.1.65
+   Compiling utf8parse v0.2.2
+   Compiling constant_time_eq v0.1.5
+   Compiling num-conv v0.2.1
+   Compiling base64 v0.22.1
+   Compiling time-core v0.1.8
+   Compiling built v0.8.0
+   Compiling crossbeam-epoch v0.9.18
+   Compiling av-scenechange v0.14.1
+   Compiling sha1_smol v1.0.1
+   Compiling anstyle-parse v1.0.0
+   Compiling nom v8.0.0
+   Compiling no_std_io2 v0.9.3
+   Compiling aligned v0.4.3
+   Compiling itertools v0.14.0
+   Compiling pastey v0.1.1
+   Compiling regex-lite v0.1.9
+   Compiling weezl v0.1.12
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling crossbeam-deque v0.8.6
+   Compiling blake2-rfc v0.2.18
+   Compiling anstyle-query v1.1.5
+   Compiling colorchoice v1.0.5
+   Compiling rustix v1.1.4
+   Compiling quick-error v2.0.1
+   Compiling unicase v2.9.0
+   Compiling y4m v0.8.0
+   Compiling anstyle v1.0.14
+   Compiling lazy_static v1.5.0
+   Compiling syn v2.0.117
+   Compiling fnv v1.0.7
+   Compiling bitstream-io v4.10.0
+   Compiling simd_helpers v0.1.0
+   Compiling fdeflate v0.3.7
+   Compiling rav1e v0.8.1
+   Compiling new_debug_unreachable v1.0.6
+   Compiling zune-core v0.5.1
+   Compiling anstream v1.0.0
+   Compiling equivalent v1.0.2
+   Compiling strsim v0.11.1
+   Compiling parking_lot_core v0.9.12
+   Compiling linux-raw-sys v0.12.1
+   Compiling pxfm v0.1.28
+   Compiling color_quant v1.1.0
+   Compiling hybrid-array v0.4.10
+   Compiling clap_lex v1.1.0
+   Compiling noop_proc_macro v0.3.0
+   Compiling percent-encoding v2.3.2
+   Compiling jobserver v0.1.34
+   Compiling rayon v1.12.0
+   Compiling chrono v0.4.44
+   Compiling foldhash v0.1.5
+   Compiling heck v0.5.0
+   Compiling hashbrown v0.17.0
+   Compiling version_check v0.9.5
+   Compiling form_urlencoded v1.2.2
+   Compiling clap_builder v4.6.0
+   Compiling rand_core v0.9.5
+   Compiling cc v1.2.60
+   Compiling nasm-rs v0.3.2
+   Compiling rand v0.10.1
+   Compiling uuid v1.23.0
+   Compiling hashbrown v0.15.5
+   Compiling zune-jpeg v0.5.15
+   Compiling gif v0.14.2
+   Compiling crypto-common v0.2.1
+   Compiling block-buffer v0.12.0
+   Compiling time v0.3.47
+   Compiling slotmap v1.1.1
+   Compiling avif-serialize v0.8.8
+   Compiling loop9 v0.1.5
+   Compiling zune-inflate v0.2.54
+   Compiling num-integer v0.1.46
+   Compiling byteorder-lite v0.1.0
+   Compiling regex-syntax v0.8.10
+   Compiling append_only_set v0.1.0 (/home/lilith/work/imageflow-zen-v3/append_only_set)
+   Compiling once_cell v1.21.4
+   Compiling fixedbitset v0.5.7
+   Compiling num-bigint v0.4.6
+   Compiling indexmap v2.14.0
+   Compiling ciborium-io v0.2.2
+   Compiling lebe v0.5.3
+   Compiling plotters-backend v0.3.7
+   Compiling scopeguard v1.2.0
+   Compiling digest v0.11.2
+   Compiling foreign-types-shared v0.3.1
+   Compiling bit_field v0.10.3
+   Compiling lock_api v0.4.14
+   Compiling image-webp v0.2.4
+   Compiling sha2 v0.11.0
+   Compiling plotters-svg v0.3.7
+   Compiling itertools v0.13.0
+   Compiling thread_local v1.1.9
+   Compiling same-file v1.0.6
+   Compiling ieee754 v0.2.6
+   Compiling macro-attr v0.2.1 (https://github.com/DanielKeep/rust-custom-derive.git#1252f258)
+   Compiling option-filter v1.0.2
+   Compiling enum_derive v0.1.7 (https://github.com/DanielKeep/rust-custom-derive.git#1252f258)
+   Compiling cast v0.3.0
+   Compiling hashbrown v0.14.5
+   Compiling plotters v0.3.7
+   Compiling walkdir v2.5.0
+   Compiling erydanos v0.2.18
+   Compiling addr2line v0.25.1
+   Compiling sysinfo v0.36.1
+   Compiling page_size v0.6.0
+   Compiling fs2 v0.4.3
+   Compiling include_dir_macros v0.7.4
+   Compiling csv-core v0.1.13
+   Compiling anes v0.1.6
+   Compiling seahash v4.1.0
+   Compiling petgraph v0.8.3
+   Compiling ryu v1.0.23
+   Compiling hex v0.4.3
+   Compiling enough v0.4.4
+   Compiling oorandom v11.1.5
+   Compiling libz-sys v1.1.28
+   Compiling lcms2-sys v4.0.7 (https://github.com/imazen/rust-lcms2-sys?branch=update-lcms2-2.18#4594ea86)
+   Compiling mozjpeg-sys v2.2.3
+   Compiling libpng-sys v1.1.11 (https://github.com/imazen/rust-libpng-sys#31ea420b)
+   Compiling imageflow_c_components v0.1.0 (/home/lilith/work/imageflow-zen-v3/c_components)
+   Compiling alloca v0.4.0
+   Compiling libwebp-sys v0.14.2
+   Compiling dashmap v6.1.0
+   Compiling csv v1.4.0
+   Compiling include_dir v0.7.4
+   Compiling regex-automata v0.4.14
+   Compiling num-rational v0.4.2
+   Compiling imageflow_types v0.1.0 (/home/lilith/work/imageflow-zen-v3/imageflow_types)
+   Compiling fs4 v0.13.1
+   Compiling terminal_size v0.4.4
+   Compiling maybe-rayon v0.1.1
+   Compiling jpeg-decoder v0.3.2
+   Compiling moxcms v0.8.1
+   Compiling criterion-plot v0.8.2
+   Compiling backtrace v0.3.76
+   Compiling synstructure v0.13.2
+   Compiling zerocopy-derive v0.8.48
+   Compiling bytemuck_derive v1.10.2
+   Compiling zerofrom-derive v0.1.7
+   Compiling yoke-derive v0.8.2
+   Compiling zerovec-derive v0.11.3
+   Compiling displaydoc v0.2.5
+   Compiling serde_derive v1.0.228
+   Compiling equator-macro v0.4.2
+   Compiling archmage-macros v0.9.19
+   Compiling thiserror-impl v2.0.18
+   Compiling arg_enum_proc_macro v0.3.4
+   Compiling profiling-procmacros v1.0.17
+   Compiling fax_derive v0.2.0
+   Compiling num-derive v0.4.2
+   Compiling clap_derive v4.6.0
+   Compiling profiling v1.0.17
+   Compiling foreign-types-macros v0.2.3
+   Compiling multiversion-macros v0.8.0
+   Compiling daggy v0.9.0
+   Compiling fax v0.2.6
+   Compiling regex v1.12.3
+   Compiling equator v0.4.2
+   Compiling aligned-vec v0.6.4
+   Compiling foreign-types v0.5.0
+   Compiling zerofrom v0.1.7
+   Compiling v_frame v0.3.9
+   Compiling bytemuck v1.25.0
+   Compiling yoke v0.8.2
+   Compiling zerovec v0.11.6
+   Compiling zerotrie v0.2.4
+   Compiling av1-grain v0.2.5
+   Compiling rgb v0.8.53
+   Compiling qoi v0.4.1
+   Compiling archmage v0.9.19
+   Compiling multiversion v0.8.0
+   Compiling magetypes v0.9.19
+   Compiling garb v0.2.5
+   Compiling evalchroma v1.0.3
+   Compiling imagequant v4.4.1
+   Compiling flate2 v1.1.9
+   Compiling tinystr v0.8.3
+   Compiling potential_utf v0.1.5
+   Compiling clap v4.6.0
+   Compiling icu_collections v2.2.0
+   Compiling icu_locale_core v2.2.0
+   Compiling png v0.18.1
+   Compiling lodepng v3.12.2
+   Compiling icu_provider v2.2.0
+   Compiling tinytemplate v1.2.1
+   Compiling zenbench v0.1.7
+   Compiling icu_properties v2.2.0
+   Compiling icu_normalizer v2.2.0
+   Compiling idna_adapter v1.2.1
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling lcms2 v6.1.1
+   Compiling half v2.7.1
+   Compiling ppv-lite86 v0.2.21
+   Compiling exr v1.74.0
+   Compiling tiff v0.11.3
+   Compiling ciborium-ll v0.2.2
+   Compiling colorutils-rs v0.7.6
+   Compiling linear-srgb v0.6.10
+   Compiling rand_chacha v0.9.0
+   Compiling ciborium v0.2.2
+   Compiling rand v0.9.4
+   Compiling zensim v0.2.6
+   Compiling criterion v0.8.2
+   Compiling twox-hash v2.1.2
+   Compiling imageflow_helpers v0.1.0 (/home/lilith/work/imageflow-zen-v3/imageflow_helpers)
+   Compiling ravif v0.13.0
+   Compiling imageflow_http_helpers v0.1.0 (/home/lilith/work/imageflow-zen-v3/imageflow_http_helpers)
+   Compiling mozjpeg v0.10.13
+   Compiling image v0.25.10
+   Compiling imageflow_riapi v0.1.0 (/home/lilith/work/imageflow-zen-v3/imageflow_riapi)
+   Compiling imageflow_core v0.1.0 (/home/lilith/work/imageflow-zen-v3/imageflow_core)
+   Compiling zensim-regress v0.3.1
+    Finished `bench` profile [optimized + debuginfo] target(s) in 1m 13s
+     Running benches/bench_codecs.rs (target/release/deps/bench_codecs-1c9ac37cdb343757)
+[zenbench] calibration: int=0.25ns/iter mem_bw=111.5GiB/s mem_lat=9.9ns
+[zenbench] timer resolution: 10ns, loop overhead: 0.19ns/iter, TSC: 4.489 ticks/ns (invariant)
+[zenbench] results → /tmp/zenbench/zenbench-1776246954-2b4377.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1776246954-2b4377
+  git: bd545d112251055d5fdad073694a74561f3d5a76
+═══════════════════════════════════════════════════════════════
+
+  jpeg_decode  30 rounds × 1 calls
+                                mean ±mad µs  95% CI vs base           ops/s
+  ├─ mozjpeg_256x256          345.3 ±22.9µs  [336.1–354.4]µs          48.6G
+  ├─ mozjpeg_1024x1024      4446.4 ±341.2µs  [+1127.8%–+1189.6%]      3.77G
+  ╰─ mozjpeg_4096x4096   241935.5 ±8379.9µs  [+68895.9%–+70599.1%]    69.3M
+
+  mozjpeg_256x256    ███████████████████████████████████████████████ 48.6 Gops/s
+  mozjpeg_1024x1024  ████ 3.77 Gops/s
+  mozjpeg_4096x4096  █ 69.3 Mops/s
+
+  png_decode  16 rounds × 1 calls
+                                  mean ±mad µs  95% CI vs base           ops/s
+  ├─ libpng_256x256            488.1 ±114.8µs  [413.0–582.7]µs          34.4G [1]
+  ├─ image_rs_256x256           317.1 ±45.9µs  [-49.9%–-21.7%]          52.9G [2]
+  ├─ libpng_1024x1024         7817.7 ±654.4µs  [+1290.0%–+1759.3%]      2.15G [3] [4]
+  ├─ image_rs_1024x1024       5035.8 ±798.4µs  [+883.9%–+1025.8%]       3.33G [5] [6]
+  ├─ libpng_4096x4096     306802.2 ±16067.5µs  [+62995.9%–+69346.4%]    54.7M
+  ╰─ image_rs_4096x4096   328780.1 ±12190.6µs  [+62769.3%–+72532.1%]    51.0M [7]
+
+  image_rs_256x256    ██████████████████████████████████████████████ 52.9 Gops/s
+  libpng_256x256      ██████████████████████████████ 34.4 Gops/s
+  image_rs_1024x1024  ███ 3.33 Gops/s
+  libpng_1024x1024    ██ 2.15 Gops/s
+  libpng_4096x4096    █ 54.7 Mops/s
+  image_rs_4096x4096  █ 51.0 Mops/s
+  [1] CV=37%
+  [2] drift r=0.57 — later rounds slower
+  [3] drift r=-0.57 — later rounds faster
+  [4] CV=32%
+  [5] drift r=-0.62 — later rounds faster
+  [6] CV=26%
+  [7] drift r=-0.64 — later rounds faster
+
+  webp_decode  30 rounds × 1 calls
+                                mean ±mad µs  95% CI vs base           ops/s
+  ├─ libwebp_256x256          350.6 ±33.9µs  [340.7–361.1]µs          47.8G
+  ├─ libwebp_1024x1024      4938.3 ±328.8µs  [+1259.8%–+1315.1%]      3.40G
+  ╰─ libwebp_4096x4096   266598.9 ±7076.4µs  [+75265.9%–+76615.5%]    62.9M
+
+  libwebp_256x256    ███████████████████████████████████████████████ 47.8 Gops/s
+  libwebp_1024x1024  ███ 3.40 Gops/s
+  libwebp_4096x4096  █ 62.9 Mops/s
+
+  gif_decode  30 rounds × 1 calls
+                              mean ±mad µs  95% CI vs base           ops/s
+  ├─ gifrs_256x256          423.3 ±35.8µs  [409.6–439.2]µs          39.6G
+  ├─ gifrs_1024x1024      6532.5 ±229.5µs  [+1413.3%–+1447.2%]      2.57G
+  ╰─ gifrs_4096x4096   321610.1 ±7068.5µs  [+75039.3%–+76776.8%]    52.2M
+
+  gifrs_256x256    █████████████████████████████████████████████████ 39.6 Gops/s
+  gifrs_1024x1024  ███ 2.57 Gops/s
+  gifrs_4096x4096  █ 52.2 Mops/s
+
+  jpeg_encode  30 rounds × 1 calls
+                                         mean ±mad µs  95% CI vs base           ops/s
+  ├─ libjpegturbo_q85_256x256          388.9 ±24.4µs  [377.8–400.2]µs          43.1G
+  ├─ libjpegturbo_q85_1024x1024      4891.2 ±439.9µs  [+1130.4%–+1186.8%]      3.43G
+  ╰─ libjpegturbo_q85_4096x4096   120690.3 ±5272.2µs  [+30530.5%–+31341.5%]     139M
+
+  libjpegturbo_q85_256x256    ██████████████████████████████████████ 43.1 Gops/s
+  libjpegturbo_q85_1024x1024  ███ 3.43 Gops/s
+  libjpegturbo_q85_4096x4096  █ 139 Mops/s
+
+  jpeg_encode_mozjpegrs  18 rounds × 1 calls
+                                   mean ±mad ms  95% CI vs base           ops/s
+  ├─ mozjpeg_preset_q85_256x256      3.3 ±0.2ms  [3.1–3.6]ms              5.01G
+  ├─ mozjpeg_preset_q85_1024x1…     38.5 ±3.6ms  [+972.4%–+1052.1%]        435M [1] [2]
+  ╰─ mozjpeg_preset_q85_4096x4…   537.9 ±39.3ms  [+15012.2%–+16318.4%]    31.2M [3]
+
+  mozjpeg_preset_q85_256x256  ██████████████████████████████████████ 5.01 Gops/s
+  mozjpeg_preset_q85_1024x1…  ███ 435 Mops/s
+  mozjpeg_preset_q85_4096x4…  █ 31.2 Mops/s
+  [1] drift r=-0.67 — later rounds faster
+  [2] CV=20%
+  [3] drift r=-0.78 — later rounds faster
+
+  png_encode  14 rounds × 1 calls
+                            mean ±mad ms  95% CI vs base           ops/s
+  ├─ libpng_z3_256x256        1.3 ±0.1ms  [1.2–1.3]ms              13.4G
+  ├─ lodepng_256x256          1.3 ±0.0ms  [+2.7%–+7.6%]            13.0G
+  ├─ libpng_z3_1024x1024     19.1 ±0.4ms  [+1407.3%–+1449.9%]       877M [1]
+  ├─ lodepng_1024x1024       19.7 ±0.6ms  [+1445.3%–+1496.5%]       853M [2]
+  ├─ libpng_z3_4096x4096   351.9 ±12.9ms  [+27562.5%–+28451.8%]    47.7M [3]
+  ╰─ lodepng_4096x4096      363.7 ±5.9ms  [+28609.5%–+29169.6%]    46.1M [4]
+
+  libpng_z3_256x256    █████████████████████████████████████████████ 13.4 Gops/s
+  lodepng_256x256      ████████████████████████████████████████████ 13.0 Gops/s
+  libpng_z3_1024x1024  ███ 877 Mops/s
+  lodepng_1024x1024    ███ 853 Mops/s
+  libpng_z3_4096x4096  █ 47.7 Mops/s
+  lodepng_4096x4096    █ 46.1 Mops/s
+  [1] drift r=-0.56 — later rounds faster
+  [2] drift r=-0.50 — later rounds faster
+  [3] drift r=-0.78 — later rounds faster
+  [4] drift r=-0.63 — later rounds faster
+
+  webp_encode  17 rounds × 1 calls
+                           mean ±mad ms  95% CI vs base           ops/s
+  ├─ lossy_q80_256x256       1.3 ±0.1ms  [1.3–1.4]ms              12.4G
+  ├─ lossless_256x256        0.5 ±0.1ms  [-62.2%–-58.2%]          31.3G
+  ├─ lossy_q80_1024x1024    20.8 ±0.4ms  [+1423.3%–+1466.8%]       806M
+  ├─ lossless_1024x1024      5.1 ±0.2ms  [+267.0%–+287.2%]        3.28G
+  ├─ lossy_q80_4096x4096   393.2 ±4.6ms  [+28729.6%–+29056.9%]    42.7M
+  ╰─ lossless_4096x4096    193.2 ±6.8ms  [+14032.0%–+14455.3%]    86.8M [1]
+
+  lossless_256x256     █████████████████████████████████████████████ 31.3 Gops/s
+  lossy_q80_256x256    ██████████████████ 12.4 Gops/s
+  lossless_1024x1024   █████ 3.28 Gops/s
+  lossy_q80_1024x1024  █ 806 Mops/s
+  lossless_4096x4096   █ 86.8 Mops/s
+  lossy_q80_4096x4096  █ 42.7 Mops/s
+  [1] drift r=0.51 — later rounds slower
+
+  gif_encode  30 rounds × 1 calls
+                    mean ±mad ms  95% CI vs base         ops/s
+  ├─ gif_256x256      1.2 ±0.0ms  [1.1–1.2]ms             904M
+  ╰─ gif_1024x1024   17.8 ±0.6ms  [+1415.0%–+1446.7%]    59.0M
+
+  gif_256x256    ███████████████████████████████████████████████████ 904 Mops/s
+  gif_1024x1024  ███ 59.0 Mops/s
+
+  total: 108.9s  (189 noisy rounds)
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json

@@ -1,0 +1,9 @@
+date: 2026-04-15 04:04 MDT
+git: bd545d112251055d5fdad073694a74561f3d5a76 (feat/zen-codecs-minimal)
+hardware: water-cooled AMD Ryzen 9 7950X, 128 GB RAM
+build: --no-default-features --features {c-codecs|zen-codecs}, no -C target-cpu=native
+harness: zenbench (interleaved, paired statistics)
+fixtures: synthetic checkerboard, sizes 256², 1024², 4096²
+commands:
+  cargo bench -p imageflow_core --no-default-features --features c-codecs --bench bench_codecs
+  cargo bench -p imageflow_core --no-default-features --features zen-codecs --bench bench_codecs

@@ -1,0 +1,2439 @@
+   Compiling whereat v0.1.5
+   Compiling cc v1.2.60
+   Compiling almost-enough v0.4.4
+   Compiling libc v0.2.185
+   Compiling bytemuck v1.25.0
+   Compiling archmage v0.9.19
+   Compiling proc-macro-error-attr2 v2.0.0
+   Compiling zenrav1e v0.1.2
+   Compiling byteorder v1.5.0
+   Compiling foldhash v0.2.0
+   Compiling atomig-macro v0.4.0
+   Compiling strum_macros v0.28.0
+   Compiling rav1d-disjoint-mut v0.3.0
+   Compiling yuv v0.8.13
+   Compiling bitreader v0.3.11
+   Compiling raw-cpuid v11.6.0
+   Compiling zenavif-serialize v0.1.3
+   Compiling tinyvec_macros v0.1.1
+   Compiling to_method v1.1.0
+   Compiling fallible_collections v0.5.1
+   Compiling array-init v2.1.0
+   Compiling atomic_refcell v0.1.13
+   Compiling assert_matches v1.5.0
+   Compiling leb128 v0.2.5
+   Compiling self_cell v1.2.2
+   Compiling tinyvec v1.11.0
+   Compiling hashbrown v0.16.1
+   Compiling rgb v0.8.53
+   Compiling magetypes v0.9.19
+   Compiling garb v0.2.5
+   Compiling safe_arch v1.0.0
+   Compiling zenjxl-decoder-simd v0.3.7
+   Compiling zenflate v0.3.6
+   Compiling qoi v0.4.1
+   Compiling proc-macro-error2 v2.0.1
+   Compiling atomig v0.4.3
+   Compiling zenjxl-decoder-macros v0.3.7
+   Compiling zenpixels v0.2.7 (/home/lilith/work/zenpixels-cmyk/zenpixels)
+   Compiling imagequant v4.4.1
+   Compiling evalchroma v1.0.3
+   Compiling wide v1.3.0
+   Compiling libz-sys v1.1.28
+   Compiling rav1d-safe v0.5.4
+   Compiling alloca v0.4.0
+   Compiling zenjxl-decoder v0.3.7
+   Compiling getrandom v0.3.4
+   Compiling getrandom v0.4.2
+   Compiling backtrace v0.3.76
+   Compiling parking_lot_core v0.9.12
+   Compiling rav1e v0.8.1
+   Compiling page_size v0.6.0
+   Compiling fs2 v0.4.3
+   Compiling sysinfo v0.36.1
+   Compiling zencodec v0.1.16
+   Compiling rand_core v0.9.5
+   Compiling rand v0.10.1
+   Compiling uuid v1.23.0
+   Compiling parking_lot v0.12.5
+   Compiling dashmap v6.1.0
+   Compiling rand_chacha v0.9.0
+   Compiling flate2 v1.1.9
+   Compiling rand v0.9.4
+   Compiling criterion v0.8.2
+   Compiling strum v0.28.0
+   Compiling zenavif-parse v0.6.1
+   Compiling zenbitmaps v0.1.4
+   Compiling png v0.18.1
+   Compiling tiff v0.11.3
+   Compiling lodepng v3.12.2
+   Compiling zenbench v0.1.7
+   Compiling twox-hash v2.1.2
+   Compiling imageflow_helpers v0.1.0 (/home/lilith/work/imageflow-zen-v3/imageflow_helpers)
+   Compiling imageflow_types v0.1.0 (/home/lilith/work/imageflow-zen-v3/imageflow_types)
+   Compiling imageflow_http_helpers v0.1.0 (/home/lilith/work/imageflow-zen-v3/imageflow_http_helpers)
+   Compiling ultrahdr-core v0.4.1
+   Compiling mozjpeg-rs v0.9.1
+   Compiling linear-srgb v0.6.10
+   Compiling jxl-encoder-simd v0.2.0
+   Compiling zenquant v0.1.3
+   Compiling zenpixels-convert v0.2.7
+   Compiling zenyuv v0.1.1
+   Compiling zenyuv v0.1.0 (/home/lilith/work/zenjpeg-cmyk/zenyuv)
+   Compiling zensim v0.2.6
+   Compiling jxl-encoder v0.2.0
+   Compiling zenwebp v0.4.3 (/home/lilith/work/zen/zenwebp)
+   Compiling zenjpeg v0.8.4 (/home/lilith/work/zenjpeg-cmyk/zenjpeg)
+   Compiling imageflow_riapi v0.1.0 (/home/lilith/work/imageflow-zen-v3/imageflow_riapi)
+   Compiling zenpng v0.1.3
+   Compiling zengif v0.7.2
+   Compiling ravif v0.13.0
+   Compiling zenravif v0.1.1
+warning: use of deprecated unit variant `zencodec::helpers::IccMatchTolerance::Intent`: zenpixels::icc::identify_common uses Intent tolerance; sub-Intent variants are placebo
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/codec.rs:2076:47
+     |
+2076 |         zencodec::helpers::IccMatchTolerance::Intent,
+     |                                               ^^^^^^
+     |
+     = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated unit variant `zencodec::helpers::IccMatchTolerance::Intent`: zenpixels::icc::identify_common uses Intent tolerance; sub-Intent variants are placebo
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/codec.rs:1759:67
+     |
+1759 | ...                   zencodec::helpers::IccMatchTolerance::Intent,
+     |                                                             ^^^^^^
+
+warning: use of deprecated unit variant `zencodec::helpers::IccMatchTolerance::Intent`: zenpixels::icc::identify_common uses Intent tolerance; sub-Intent variants are placebo
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/codec.rs:1776:71
+     |
+1776 | ...                   zencodec::helpers::IccMatchTolerance::Intent,
+     |                                                             ^^^^^^
+
+warning: use of deprecated unit variant `zencodec::helpers::IccMatchTolerance::Intent`: zenpixels::icc::identify_common uses Intent tolerance; sub-Intent variants are placebo
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/codec.rs:1787:71
+     |
+1787 | ...                   zencodec::helpers::IccMatchTolerance::Intent,
+     |                                                             ^^^^^^
+
+warning: use of deprecated unit variant `zencodec::helpers::IccMatchTolerance::Intent`: zenpixels::icc::identify_common uses Intent tolerance; sub-Intent variants are placebo
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/codec.rs:1828:59
+     |
+1828 |                     zencodec::helpers::IccMatchTolerance::Intent,
+     |                                                           ^^^^^^
+
+   Compiling image v0.25.10
+   Compiling zenjxl v0.1.1
+warning: function `get_bpp` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/chroma.rs:325:4
+    |
+325 | fn get_bpp(pixel_format: PixelFormat) -> Result<usize> {
+    |    ^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `convert_gamma_aware_420` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/chroma.rs:336:8
+    |
+336 | pub fn convert_gamma_aware_420(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `convert_gamma_aware_iterative_420` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/chroma.rs:366:8
+    |
+366 | pub fn convert_gamma_aware_iterative_420(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `convert_gamma_aware_422` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/chroma.rs:396:8
+    |
+396 | pub fn convert_gamma_aware_422(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `convert_gamma_aware_iterative_422` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/chroma.rs:422:8
+    |
+422 | pub fn convert_gamma_aware_iterative_422(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `convert_gamma_aware_440` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/chroma.rs:448:8
+    |
+448 | pub fn convert_gamma_aware_440(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `convert_gamma_aware_iterative_440` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/chroma.rs:474:8
+    |
+474 | pub fn convert_gamma_aware_iterative_440(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `forward_dct_8x8_u8` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/dct.rs:738:8
+    |
+738 | pub fn forward_dct_8x8_u8(input: &[u8; DCT_BLOCK_SIZE]) -> [f32; DCT_BLOCK_SIZE] {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `forward_dct_blocks` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/dct.rs:749:8
+    |
+749 | pub fn forward_dct_blocks(blocks: &[[f32; DCT_BLOCK_SIZE]]) -> Vec<[f32; DCT_BLOCK_SIZE]> {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `aan_dct_1d` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/dct.rs:763:4
+    |
+763 | fn aan_dct_1d(d: &mut [f32; 8]) {
+    |    ^^^^^^^^^^
+
+warning: function `aan_forward_dct_8x8` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/dct.rs:830:8
+    |
+830 | pub fn aan_forward_dct_8x8(input: &[f32; DCT_BLOCK_SIZE]) -> [f32; DCT_BLOCK_SIZE] {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: constant `C4` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/dct.rs:53:15
+   |
+53 |     pub const C4: f32 = 0.707106781;
+   |               ^^
+
+warning: constant `C6` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/dct.rs:55:15
+   |
+55 |     pub const C6: f32 = 0.382683433;
+   |               ^^
+
+warning: constant `C2_M_C6` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/dct.rs:57:15
+   |
+57 |     pub const C2_M_C6: f32 = 0.541196100;
+   |               ^^^^^^^
+
+warning: constant `C2_P_C6` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/dct.rs:59:15
+   |
+59 |     pub const C2_P_C6: f32 = 1.306562965;
+   |               ^^^^^^^
+
+warning: constant `INV_SCALES` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/dct.rs:78:15
+   |
+78 |     pub const INV_SCALES: [f32; 8] = [
+   |               ^^^^^^^^^^
+
+warning: struct `ScanInfo` is never constructed
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/scan_script.rs:11:12
+   |
+11 | pub struct ScanInfo {
+   |            ^^^^^^^^
+
+warning: associated items `new`, `is_dc_scan`, `is_ac_scan`, `is_first_pass`, and `is_refinement` are never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/scan_script.rs:28:12
+   |
+26 | impl ScanInfo {
+   | ------------- associated items in this implementation
+27 |     /// Create a new scan info.
+28 |     pub fn new(
+   |            ^^^
+...
+48 |     pub fn is_dc_scan(&self) -> bool {
+   |            ^^^^^^^^^^
+...
+54 |     pub fn is_ac_scan(&self) -> bool {
+   |            ^^^^^^^^^^
+...
+60 |     pub fn is_first_pass(&self) -> bool {
+   |            ^^^^^^^^^^^^^
+...
+66 |     pub fn is_refinement(&self) -> bool {
+   |            ^^^^^^^^^^^^^
+
+warning: function `validate_scan_script` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/scan_script.rs:94:8
+   |
+94 | pub fn validate_scan_script(scans: &[ScanInfo], num_components: u8) -> Result<()> {
+   |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `parse_scan_script_text` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/scan_script.rs:288:8
+    |
+288 | pub fn parse_scan_script_text(text: &str) -> Result<Vec<ScanInfo>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: fields `chroma_downsampling`, `edge_padding`, and `allow_16bit_quant_tables` are never read
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/config.rs:72:9
+    |
+ 42 | pub struct ComputedConfig {
+    |            -------------- fields in this struct
+...
+ 72 |     pub chroma_downsampling: DownsamplingMethod,
+    |         ^^^^^^^^^^^^^^^^^^^
+...
+ 94 |     pub edge_padding: EdgePaddingConfig,
+    |         ^^^^^^^^^^^^
+...
+118 |     pub allow_16bit_quant_tables: bool,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `ComputedConfig` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: constant `K_INPUT_SCALING` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:913:7
+    |
+913 | const K_INPUT_SCALING: f32 = 1.0 / 255.0;
+    |       ^^^^^^^^^^^^^^^
+
+warning: constant `K_EPSILON_RATIO` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:914:7
+    |
+914 | const K_EPSILON_RATIO: f32 = 1e-2;
+    |       ^^^^^^^^^^^^^^^
+
+warning: constant `K_NUM_OFFSET_RATIO` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:915:7
+    |
+915 | const K_NUM_OFFSET_RATIO: f32 = K_EPSILON_RATIO / K_INPUT_SCALING / K_INPUT_SCALING;
+    |       ^^^^^^^^^^^^^^^^^^
+
+warning: constant `K_SG_MUL` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:916:7
+    |
+916 | const K_SG_MUL: f32 = 226.0480446705883;
+    |       ^^^^^^^^
+
+warning: constant `K_SG_MUL2` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:917:7
+    |
+917 | const K_SG_MUL2: f32 = 1.0 / 73.377132366608819;
+    |       ^^^^^^^^^
+
+warning: constant `K_INV_LOG2E` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:918:7
+    |
+918 | const K_INV_LOG2E: f32 = 0.6931471805599453;
+    |       ^^^^^^^^^^^
+
+warning: constant `K_SG_RET_MUL` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:919:7
+    |
+919 | const K_SG_RET_MUL: f32 = K_SG_MUL2 * 18.6580932135 * K_INV_LOG2E;
+    |       ^^^^^^^^^^^^
+
+warning: constant `K_NUM_MUL_RATIO` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:920:7
+    |
+920 | const K_NUM_MUL_RATIO: f32 = K_SG_RET_MUL * 3.0 * K_SG_MUL;
+    |       ^^^^^^^^^^^^^^^
+
+warning: constant `K_SG_VOFFSET` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:921:7
+    |
+921 | const K_SG_VOFFSET: f32 = 7.14672470003;
+    |       ^^^^^^^^^^^^
+
+warning: constant `K_VOFFSET_RATIO` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:922:7
+    |
+922 | const K_VOFFSET_RATIO: f32 = (K_SG_VOFFSET * K_INV_LOG2E + K_EPSILON_RATIO) / K_INPUT_SCALING;
+    |       ^^^^^^^^^^^^^^^
+
+warning: constant `K_DEN_MUL_RATIO` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:923:7
+    |
+923 | const K_DEN_MUL_RATIO: f32 = K_INV_LOG2E * K_SG_MUL * K_INPUT_SCALING * K_INPUT_SCALING;
+    |       ^^^^^^^^^^^^^^^
+
+warning: constant `K_MASKING_LOG_OFFSET` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:924:7
+    |
+924 | const K_MASKING_LOG_OFFSET: f32 = 28.0;
+    |       ^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `K_MASKING_MUL` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:925:7
+    |
+925 | const K_MASKING_MUL: f32 = 211.50759899638012;
+    |       ^^^^^^^^^^^^^
+
+warning: constant `K_BIAS_AQ` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:926:7
+    |
+926 | const K_BIAS_AQ: f32 = 0.16 / K_INPUT_SCALING; // 40.8
+    |       ^^^^^^^^^
+
+warning: constant `LIMIT_AQ` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:927:7
+    |
+927 | const LIMIT_AQ: f32 = 0.2;
+    |       ^^^^^^^^
+
+warning: constant `MATCH_GAMMA_OFFSET` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:928:7
+    |
+928 | const MATCH_GAMMA_OFFSET: f32 = 0.019;
+    |       ^^^^^^^^^^^^^^^^^^
+
+warning: constant `GAMMA_OFFSET_AQ` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/mage_simd.rs:929:7
+    |
+929 | const GAMMA_OFFSET_AQ: f32 = MATCH_GAMMA_OFFSET / K_INPUT_SCALING; // ~4.845
+    |       ^^^^^^^^^^^^^^^
+
+warning: function `parallel_dct_chroma_blocks` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/parallel.rs:144:8
+    |
+144 | pub fn parallel_dct_chroma_blocks(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: associated function `standard` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/parallel.rs:228:12
+    |
+226 | impl ParallelEntropyConfig {
+    | -------------------------- associated function in this implementation
+227 |     /// Create config with standard JPEG Huffman tables.
+228 |     pub fn standard() -> Self {
+    |            ^^^^^^^^
+
+warning: function `should_use_parallel` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/parallel.rs:489:8
+    |
+489 | pub fn should_use_parallel(width: u32, height: u32, available_threads: usize) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `recommended_threads` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/parallel.rs:498:8
+    |
+498 | pub fn recommended_threads(width: u32, height: u32, max_threads: usize) -> usize {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: methods `take_blocks`, `simd_token`, and `is_xyb` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/strip/mod.rs:797:12
+    |
+482 | impl StripProcessor {
+    | ------------------- methods in this implementation
+...
+797 |     pub fn take_blocks(&mut self) -> StripProcessorOutput {
+    |            ^^^^^^^^^^^
+...
+817 |     pub fn simd_token(&self) -> Option<crate::encode::mage_simd::Desktop64> {
+    |            ^^^^^^^^^^
+...
+857 |     pub fn is_xyb(&self) -> bool {
+    |            ^^^^^^
+
+warning: fields `aq_strengths`, `stats`, `y_dc_raw`, `cb_dc_raw`, and `cr_dc_raw` are never read
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/strip/mod.rs:1679:9
+     |
+1671 | pub struct StripProcessorOutput {
+     |            -------------------- fields in this struct
+...
+1679 |     pub aq_strengths: Vec<f32>,
+     |         ^^^^^^^^^^^^
+1680 |     /// Allocation statistics from the encoding process
+1681 |     pub stats: EncodeStats,
+     |         ^^^^^
+...
+1684 |     pub y_dc_raw: Vec<i32>,
+     |         ^^^^^^^^
+1685 |     /// Cb channel raw DC coefficients.
+1686 |     pub cb_dc_raw: Vec<i32>,
+     |         ^^^^^^^^^
+1687 |     /// Cr channel raw DC coefficients.
+1688 |     pub cr_dc_raw: Vec<i32>,
+     |         ^^^^^^^^^
+     |
+     = note: `StripProcessorOutput` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: function `freq_distance` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/tuning.rs:591:18
+    |
+591 |     pub const fn freq_distance(k: usize) -> usize {
+    |                  ^^^^^^^^^^^^^
+
+warning: function `row_col` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/tuning.rs:600:18
+    |
+600 |     pub const fn row_col(k: usize) -> (usize, usize) {
+    |                  ^^^^^^^
+
+warning: function `to_zigzag` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/tuning.rs:606:18
+    |
+606 |     pub const fn to_zigzag(k: usize) -> usize {
+    |                  ^^^^^^^^^
+
+warning: function `from_zigzag` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/tuning.rs:612:18
+    |
+612 |     pub const fn from_zigzag(z: usize) -> usize {
+    |                  ^^^^^^^^^^^
+
+warning: constant `IMPORTANCE_ORDER` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/tuning.rs:620:15
+    |
+620 |     pub const IMPORTANCE_ORDER: [usize; 64] = [
+    |               ^^^^^^^^^^^^^^^^
+
+warning: constant `ZIGZAG_ORDER` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/tuning.rs:639:11
+    |
+639 |     const ZIGZAG_ORDER: [usize; 64] = [
+    |           ^^^^^^^^^^^^
+
+warning: constant `INVERSE_ZIGZAG` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/tuning.rs:646:11
+    |
+646 |     const INVERSE_ZIGZAG: [usize; 64] = [
+    |           ^^^^^^^^^^^^^^
+
+warning: method `get_code_length` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/rate.rs:66:12
+   |
+23 | impl RateTable {
+   | -------------- method in this implementation
+...
+66 |     pub fn get_code_length(&self, symbol: u8) -> u8 {
+   |            ^^^^^^^^^^^^^^^
+
+warning: constant `AQ_MEAN_THRESHOLD` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:27:11
+   |
+27 | pub const AQ_MEAN_THRESHOLD: f32 = 0.25;
+   |           ^^^^^^^^^^^^^^^^^
+
+warning: function `should_use_hybrid` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:38:8
+   |
+38 | pub fn should_use_hybrid(aq_mean: f32) -> bool {
+   |        ^^^^^^^^^^^^^^^^^
+
+warning: function `estimate_hybrid_improvement` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:50:8
+   |
+50 | pub fn estimate_hybrid_improvement(aq_mean: f32) -> f32 {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: enum `ImageType` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:64:10
+   |
+64 | pub enum ImageType {
+   |          ^^^^^^^^^
+
+warning: function `detect_image_type` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:118:8
+    |
+118 | pub fn detect_image_type(aq_mean: f32, aq_std: f32) -> ImageType {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `adaptive_config` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:184:8
+    |
+184 | pub fn adaptive_config(aq_mean: f32, aq_std: f32) -> HybridConfig {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `texture_adaptive_coupling` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:220:8
+    |
+220 | pub fn texture_adaptive_coupling(aq_mean: f32) -> f32 {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `SweepConfig` is never constructed
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:552:12
+    |
+552 | pub struct SweepConfig {
+    |            ^^^^^^^^^^^
+
+warning: associated items `quick`, `comprehensive`, `generate_configs`, and `total_combinations` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:579:12
+    |
+577 | impl SweepConfig {
+    | ---------------- associated items in this implementation
+578 |     /// Quick sweep with fewer combinations for fast iteration.
+579 |     pub fn quick() -> Self {
+    |            ^^^^^
+...
+590 |     pub fn comprehensive() -> Self {
+    |            ^^^^^^^^^^^^^
+...
+601 |     pub fn generate_configs(&self) -> Vec<HybridConfig> {
+    |            ^^^^^^^^^^^^^^^^
+...
+625 |     pub fn total_combinations(&self) -> usize {
+    |            ^^^^^^^^^^^^^^^^^^
+
+warning: function `scale_quant_by_aq` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:679:8
+    |
+679 | pub fn scale_quant_by_aq(
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `hybrid_quantize_block_simple` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:752:8
+    |
+752 | pub fn hybrid_quantize_block_simple(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `SCREENSHOT_CV_THRESHOLD` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:85:15
+   |
+85 |     pub const SCREENSHOT_CV_THRESHOLD: f32 = 1.5;
+   |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `PHOTO_MEAN_THRESHOLD` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:89:15
+   |
+89 |     pub const PHOTO_MEAN_THRESHOLD: f32 = 0.06;
+   |               ^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FLAT_MEAN_THRESHOLD` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/trellis/hybrid.rs:92:15
+   |
+92 |     pub const FLAT_MEAN_THRESHOLD: f32 = 0.03;
+   |               ^^^^^^^^^^^^^^^^^^^
+
+warning: associated items `default_ycbcr` and `uses_quality_scaling` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/encode/search.rs:367:12
+    |
+359 | impl ExpertConfig {
+    | ----------------- associated items in this implementation
+...
+367 |     pub fn default_ycbcr(quality: impl Into<Quality>) -> Self {
+    |            ^^^^^^^^^^^^^
+...
+549 |     pub fn uses_quality_scaling(&self) -> bool {
+    |            ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `inverse_dct_8x8_u8` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct.rs:663:8
+    |
+663 | pub fn inverse_dct_8x8_u8(input: &[f32; DCT_BLOCK_SIZE]) -> [u8; DCT_BLOCK_SIZE] {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `inverse_dct_blocks` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct.rs:677:8
+    |
+677 | pub fn inverse_dct_blocks(blocks: &[[f32; DCT_BLOCK_SIZE]]) -> Vec<[f32; DCT_BLOCK_SIZE]> {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `f2f` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:36:10
+   |
+36 | const fn f2f(x: f32) -> i32 {
+   |          ^^^
+
+warning: function `fsh` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:42:10
+   |
+42 | const fn fsh(x: i32) -> i32 {
+   |          ^^^
+
+warning: function `clamp` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:48:4
+   |
+48 | fn clamp(a: i32) -> i16 {
+   |    ^^^^^
+
+warning: function `ws` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:60:10
+   |
+60 | const fn ws(a: i32, b: i32) -> i32 {
+   |          ^^
+
+warning: function `wm` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:66:10
+   |
+66 | const fn wm(a: i32, b: i32) -> i32 {
+   |          ^^
+
+warning: function `idct_int` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:334:8
+    |
+334 | pub fn idct_int(in_vector: &mut [i32; 64], out_vector: &mut [i16], stride: usize) {
+    |        ^^^^^^^^
+
+warning: function `idct_int_4x4` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:460:8
+    |
+460 | pub fn idct_int_4x4(in_vector: &mut [i32; 64], out_vector: &mut [i16], stride: usize) {
+    |        ^^^^^^^^^^^^
+
+warning: function `idct_int_avx2_raw` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:1193:8
+     |
+1193 | pub fn idct_int_avx2_raw(
+     |        ^^^^^^^^^^^^^^^^^
+
+warning: function `coeffs_i32_to_f32` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:1257:8
+     |
+1257 | pub fn coeffs_i32_to_f32(coeffs: &[i32; 64]) -> [f32; 64] {
+     |        ^^^^^^^^^^^^^^^^^
+
+warning: function `pixels_i16_to_f32_centered` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:1268:8
+     |
+1268 | pub fn pixels_i16_to_f32_centered(pixels: &[i16; 64]) -> [f32; 64] {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `idct_int_auto_unclamped` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/decode/idct_int.rs:1505:8
+     |
+1505 | pub fn idct_int_auto_unclamped(coeffs: &mut [i32; 64], output: &mut [i16], stride: usize) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `apply_icc_transform` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/icc.rs:184:8
+    |
+184 | pub fn apply_icc_transform(
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `apply_icc_transform_f32` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/icc.rs:239:8
+    |
+239 | pub fn apply_icc_transform_f32(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `srgb_to_linear` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/icc.rs:280:8
+    |
+280 | pub fn srgb_to_linear(v: f32) -> f32 {
+    |        ^^^^^^^^^^^^^^
+
+warning: function `srgb_to_linear` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:85:8
+   |
+85 | pub fn srgb_to_linear(v: f32) -> f32 {
+   |        ^^^^^^^^^^^^^^
+
+warning: function `srgb_to_linear_fast` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:93:8
+   |
+93 | pub fn srgb_to_linear_fast(v: f32) -> f32 {
+   |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `linear_to_srgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:101:8
+    |
+101 | pub fn linear_to_srgb(v: f32) -> f32 {
+    |        ^^^^^^^^^^^^^^
+
+warning: function `srgb_u8_to_linear_exact` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:123:8
+    |
+123 | pub fn srgb_u8_to_linear_exact(v: u8) -> f32 {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `linear_to_srgb_u8` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:130:8
+    |
+130 | pub fn linear_to_srgb_u8(v: f32) -> u8 {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `linear_to_srgb_u8_fast` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:137:8
+    |
+137 | pub fn linear_to_srgb_u8_fast(v: f32) -> u8 {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `mixed_cube` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:194:4
+    |
+194 | fn mixed_cube(v: f32) -> f32 {
+    |    ^^^^^^^^^^
+
+warning: function `xyb_to_linear_rgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:256:8
+    |
+256 | pub fn xyb_to_linear_rgb(x: f32, y: f32, b: f32) -> (f32, f32, f32) {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `xyb_to_srgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:304:8
+    |
+304 | pub fn xyb_to_srgb(x: f32, y: f32, b: f32) -> (u8, u8, u8) {
+    |        ^^^^^^^^^^^
+
+warning: function `unscale_xyb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:328:8
+    |
+328 | pub fn unscale_xyb(scaled_x: f32, scaled_y: f32, scaled_b: f32) -> (f32, f32, f32) {
+    |        ^^^^^^^^^^^
+
+warning: function `scaled_xyb_to_srgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:344:8
+    |
+344 | pub fn scaled_xyb_to_srgb(scaled_x: f32, scaled_y: f32, scaled_b: f32) -> (u8, u8, u8) {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `rgb_buffer_to_xyb_planes` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:354:8
+    |
+354 | pub fn rgb_buffer_to_xyb_planes(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `rgb_buffer_to_scaled_xyb_planes` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:377:8
+    |
+377 | pub fn rgb_buffer_to_scaled_xyb_planes(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `xyb_planes_to_rgb_buffer` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:400:8
+    |
+400 | pub fn xyb_planes_to_rgb_buffer(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `generic_linear_rgb_to_xyb_inplace` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:509:4
+    |
+509 | fn generic_linear_rgb_to_xyb_inplace<T: magetypes::simd::backends::F32x8Convert>(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `srgb_to_scaled_xyb_planes_simd` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:698:8
+    |
+698 | pub fn srgb_to_scaled_xyb_planes_simd(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `srgb_to_scaled_xyb_planes_simd_rgba` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:771:8
+    |
+771 | pub fn srgb_to_scaled_xyb_planes_simd_rgba(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `srgb_to_scaled_xyb_planes_simd_bgra` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:844:8
+    |
+844 | pub fn srgb_to_scaled_xyb_planes_simd_bgra(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `linear_rgb_to_xyb_simd` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:945:8
+    |
+945 | pub fn linear_rgb_to_xyb_simd(pixels: &mut [[f32; 3]]) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `linear_rgb_to_xyb_simd_impl_scalar` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:951:4
+    |
+951 | fn linear_rgb_to_xyb_simd_impl(token: Token, pixels: &mut [[f32; 3]]) {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `linear_rgb_to_xyb_simd_255` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:965:8
+    |
+965 | pub fn linear_rgb_to_xyb_simd_255(pixels: &mut [[f32; 3]]) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `linear_rgb_to_xyb_simd_255_impl_scalar` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:972:4
+    |
+972 | fn linear_rgb_to_xyb_simd_255_impl(token: Token, pixels: &mut [[f32; 3]]) {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `srgb_to_xyb_batch` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/xyb.rs:983:8
+    |
+983 | pub fn srgb_to_xyb_batch(input: &[[u8; 3]], output: &mut [[f32; 3]]) {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `rgb_to_ycbcr` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:32:8
+   |
+32 | pub fn rgb_to_ycbcr(r: u8, g: u8, b: u8) -> (u8, u8, u8) {
+   |        ^^^^^^^^^^^^
+
+warning: function `convert_rgb_to_ycbcr_buffer` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:113:8
+    |
+113 | pub fn convert_rgb_to_ycbcr_buffer(buffer: &mut [u8]) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `convert_ycbcr_to_rgb_buffer` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:125:8
+    |
+125 | pub fn convert_ycbcr_to_rgb_buffer(buffer: &mut [u8]) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `rgb_to_ycbcr_planes` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:207:8
+    |
+207 | pub fn rgb_to_ycbcr_planes(
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `ycbcr_planes_to_rgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:270:8
+    |
+270 | pub fn ycbcr_planes_to_rgb(
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `bgr_to_rgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:718:8
+    |
+718 | pub fn bgr_to_rgb(bgr: &[u8; 3]) -> [u8; 3] {
+    |        ^^^^^^^^^^
+
+warning: function `bgra_to_rgba` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:724:8
+    |
+724 | pub fn bgra_to_rgba(bgra: &[u8; 4]) -> [u8; 4] {
+    |        ^^^^^^^^^^^^
+
+warning: function `rgb_u8_to_bgrx_u8` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:776:8
+    |
+776 | pub fn rgb_u8_to_bgrx_u8(src: &[u8], dst: &mut [u8]) {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `cmyk_to_rgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:786:8
+    |
+786 | pub fn cmyk_to_rgb(c: u8, m: u8, y: u8, k: u8) -> (u8, u8, u8) {
+    |        ^^^^^^^^^^^
+
+warning: function `rgb_to_cmyk` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:807:8
+    |
+807 | pub fn rgb_to_cmyk(r: u8, g: u8, b: u8) -> (u8, u8, u8, u8) {
+    |        ^^^^^^^^^^^
+
+warning: function `extract_channel` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:1015:8
+     |
+1015 | pub fn extract_channel(data: &[u8], format: PixelFormat, channel: usize) -> Result<Vec<u8>> {
+     |        ^^^^^^^^^^^^^^^
+
+warning: function `ycbcr_to_rgb_i16_x16` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:1048:8
+     |
+1048 | pub fn ycbcr_to_rgb_i16_x16(
+     |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `ycbcr_to_rgb_i16_x8_generic_scalar` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:1112:4
+     |
+1112 | fn ycbcr_to_rgb_i16_x8_generic(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `fused_h2v2_hfancy_ycbcr_to_rgb_u8_generic_scalar` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:1992:4
+     |
+1992 | fn fused_h2v2_hfancy_ycbcr_to_rgb_u8_generic(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `fused_h2v2_hfancy_ycbcr_to_rgb_u8` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:2184:8
+     |
+2184 | pub fn fused_h2v2_hfancy_ycbcr_to_rgb_u8(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `rgb_to_ycbcr_x4` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:143:12
+    |
+143 |     pub fn rgb_to_ycbcr_x4(r: [u8; 4], g: [u8; 4], b: [u8; 4]) -> ([u8; 4], [u8; 4], [u8; 4]) {
+    |            ^^^^^^^^^^^^^^^
+
+warning: function `ycbcr_to_rgb_x4` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/color/ycbcr.rs:175:12
+    |
+175 |     pub fn ycbcr_to_rgb_x4(y: [u8; 4], cb: [u8; 4], cr: [u8; 4]) -> ([u8; 4], [u8; 4], [u8; 4]) {
+    |            ^^^^^^^^^^^^^^^
+
+warning: constant `MAX_DC_DIFF` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/entropy/mod.rs:29:11
+   |
+29 | pub const MAX_DC_DIFF: i16 = 2047;
+   |           ^^^^^^^^^^^
+
+warning: constant `MAX_AC_COEFF` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/entropy/mod.rs:32:11
+   |
+32 | pub const MAX_AC_COEFF: i16 = 1023;
+   |           ^^^^^^^^^^^^
+
+warning: function `category_scalar` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/entropy/mod.rs:77:8
+   |
+77 | pub fn category_scalar(value: i16) -> u8 {
+   |        ^^^^^^^^^^^^^^^
+
+warning: function `additional_bits` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/entropy/mod.rs:88:8
+   |
+88 | pub fn additional_bits(value: i16) -> u16 {
+   |        ^^^^^^^^^^^^^^^
+
+warning: field `coeff_buffer` is never read
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/entropy/decoder.rs:127:5
+    |
+116 | pub struct EntropyDecoder<'data, 'tables> {
+    |            -------------- field in this struct
+...
+127 |     coeff_buffer: [i16; DCT_BLOCK_SIZE],
+    |     ^^^^^^^^^^^^
+
+warning: multiple methods are never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/entropy/decoder.rs:205:12
+     |
+ 147 | impl<'data, 'tables> EntropyDecoder<'data, 'tables> {
+     | --------------------------------------------------- methods in this implementation
+...
+ 205 |     pub fn get_prev_dc(&self) -> [i16; 4] {
+     |            ^^^^^^^^^^^
+...
+ 210 |     pub fn set_prev_dc(&mut self, prev_dc: &[i16; 4]) {
+     |            ^^^^^^^^^^^
+...
+ 297 |     pub fn decode_block(
+     |            ^^^^^^^^^^^^
+...
+ 471 |     pub fn decode_block_with_count(
+     |            ^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 946 |     pub fn decode_block_fast(
+     |            ^^^^^^^^^^^^^^^^^
+...
+1254 |     pub fn decode_ac_first(
+     |            ^^^^^^^^^^^^^^^
+...
+1347 |     pub fn decode_ac_refine(
+     |            ^^^^^^^^^^^^^^^^
+...
+1514 |     pub fn refine_eob_bits(&mut self, coeffs: &mut [i16; DCT_BLOCK_SIZE], nz_bits: u64, al: u8) {
+     |            ^^^^^^^^^^^^^^^
+
+warning: multiple methods are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/entropy/encoder.rs:321:12
+    |
+113 | impl<'a> EntropyEncoder<'a> {
+    | --------------------------- methods in this implementation
+...
+321 |     pub fn write_bits(&mut self, bits: u32, count: u8) {
+    |            ^^^^^^^^^^
+...
+329 |     pub fn encode_dc_progressive(
+    |            ^^^^^^^^^^^^^^^^^^^^^
+...
+376 |     pub fn encode_ac_progressive_first(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+471 |     fn emit_eob_run_by_idx(&mut self, table_idx: usize, eob_run: u16) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^
+...
+514 |     pub fn flush_eob_run(&mut self, table_idx: usize, eob_run: u16) -> Result<()> {
+    |            ^^^^^^^^^^^^^
+...
+525 |     pub fn encode_ac_progressive_refine(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+653 |     pub fn flush_refine_eob(&mut self, table_idx: usize, eob_run: u16) -> Result<()> {
+    |            ^^^^^^^^^^^^^^^^
+...
+882 |     pub fn byte_position(&self) -> usize {
+    |            ^^^^^^^^^^^^^
+...
+887 |     pub fn as_bytes(&self) -> &[u8] {
+    |            ^^^^^^^^
+
+warning: function `try_alloc` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/aligned_alloc.rs:49:8
+   |
+49 | pub fn try_alloc<T: Copy + Default>(count: usize) -> Result<AlignedVec<T>, AllocError> {
+   |        ^^^^^^^^^
+
+warning: function `try_alloc_image` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/aligned_alloc.rs:65:8
+   |
+65 | pub fn try_alloc_image(
+   |        ^^^^^^^^^^^^^^^
+
+warning: struct `MemoryTracker` is never constructed
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:47:12
+   |
+47 | pub struct MemoryTracker {
+   |            ^^^^^^^^^^^^^
+
+warning: multiple associated items are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:57:12
+    |
+ 54 | impl MemoryTracker {
+    | ------------------ associated items in this implementation
+...
+ 57 |     pub fn new(limit: usize) -> Self {
+    |            ^^^
+...
+ 66 |     pub fn with_default_limit() -> Self {
+    |            ^^^^^^^^^^^^^^^^^^
+...
+ 72 |     pub fn unlimited() -> Self {
+    |            ^^^^^^^^^
+...
+ 77 |     pub fn try_alloc(&mut self, bytes: usize, context: &'static str) -> Result<()> {
+    |            ^^^^^^^^^
+...
+ 92 |     pub fn free(&mut self, bytes: usize) {
+    |            ^^^^
+...
+ 98 |     pub fn remaining(&self) -> usize {
+    |            ^^^^^^^^^
+...
+104 |     pub fn current(&self) -> usize {
+    |            ^^^^^^^
+...
+109 |     pub fn reset(&mut self) {
+    |            ^^^^^
+
+warning: function `try_alloc_vec_tracked` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:391:8
+    |
+391 | pub fn try_alloc_vec_tracked<T: Default + Clone>(
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `try_alloc_dct_blocks_tracked` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:459:8
+    |
+459 | pub fn try_alloc_dct_blocks_tracked(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `checked_size` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:481:8
+    |
+481 | pub fn checked_size(width: usize, height: usize, bytes_per_pixel: usize) -> Result<usize> {
+    |        ^^^^^^^^^^^^
+
+warning: function `try_alloc_vec` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:533:8
+    |
+533 | pub fn try_alloc_vec<T: Default + Clone>(count: usize, context: &'static str) -> Result<Vec<T>> {
+    |        ^^^^^^^^^^^^^
+
+warning: function `try_alloc_zeroed` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:547:8
+    |
+547 | pub fn try_alloc_zeroed(count: usize, context: &'static str) -> Result<Vec<u8>> {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: function `try_with_capacity` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:571:8
+    |
+571 | pub fn try_with_capacity<T>(capacity: usize, context: &'static str) -> Result<Vec<T>> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `try_gray_to_rgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:688:8
+    |
+688 | pub fn try_gray_to_rgb(data: &[u8], context: &'static str) -> Result<Vec<u8>> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `try_rgba_to_rgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:709:8
+    |
+709 | pub fn try_rgba_to_rgb(data: &[u8], context: &'static str) -> Result<Vec<u8>> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `try_bgr_to_rgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:730:8
+    |
+730 | pub fn try_bgr_to_rgb(data: &[u8], context: &'static str) -> Result<Vec<u8>> {
+    |        ^^^^^^^^^^^^^^
+
+warning: function `try_bgra_to_rgb` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/alloc.rs:746:8
+    |
+746 | pub fn try_bgra_to_rgb(data: &[u8], context: &'static str) -> Result<Vec<u8>> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: multiple associated items are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/bitstream.rs:177:12
+    |
+ 23 | impl BitWriter {
+    | -------------- associated items in this implementation
+...
+177 |     pub fn write_bytes_raw(&mut self, bytes: &[u8]) {
+    |            ^^^^^^^^^^^^^^^
+...
+183 |     pub fn write_u16_be(&mut self, value: u16) {
+    |            ^^^^^^^^^^^^
+...
+246 |     pub fn as_bytes(&self) -> &[u8] {
+    |            ^^^^^^^^
+...
+252 |     pub fn position(&self) -> usize {
+    |            ^^^^^^^^
+...
+260 |     pub fn flush_without_eoi(&mut self, output: &mut Vec<u8>) -> crate::error::Result<()> {
+    |            ^^^^^^^^^^^^^^^^^
+...
+276 |     pub fn flush_complete_bytes_only(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+311 |     pub fn with_initial_bits(bit_buffer: u64, bits_in_buffer: u8) -> Self {
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: multiple methods are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/bitstream.rs:600:12
+    |
+408 | impl<'a> BitReader<'a> {
+    | ---------------------- methods in this implementation
+...
+600 |     pub fn peek_bits(&mut self, count: u8) -> ScanResult<u32> {
+    |            ^^^^^^^^^
+...
+663 |     pub fn get_bits_rotate(&mut self, n_bits: u8) -> i32 {
+    |            ^^^^^^^^^^^^^^^
+...
+697 |     pub fn skip_bits(&mut self, count: u8) {
+    |            ^^^^^^^^^
+...
+703 |     pub fn read_bit(&mut self) -> ScanResult<bool> {
+    |            ^^^^^^^^
+...
+714 |     pub fn read_signed(&mut self, bits: u8) -> ScanResult<i16> {
+    |            ^^^^^^^^^^^
+...
+857 |     pub fn read_byte_raw(&mut self) -> Result<u8> {
+    |            ^^^^^^^^^^^^^
+...
+867 |     pub fn read_u16_be(&mut self) -> Result<u16> {
+    |            ^^^^^^^^^^^
+...
+887 |     pub fn remaining(&self) -> usize {
+    |            ^^^^^^^^^
+
+warning: constant `MAX_HUFFMAN_CODES` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:22:11
+   |
+22 | pub const MAX_HUFFMAN_CODES: usize = 256;
+   |           ^^^^^^^^^^^^^^^^^
+
+warning: constant `JPEG_PRECISION` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:25:11
+   |
+25 | pub const JPEG_PRECISION: u32 = 8;
+   |           ^^^^^^^^^^^^^^
+
+warning: constant `HUFFMAN_MAX_BIT_LENGTH` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:28:11
+   |
+28 | pub const HUFFMAN_MAX_BIT_LENGTH: usize = 16;
+   |           ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `HUFFMAN_ALPHABET_SIZE` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:31:11
+   |
+31 | pub const HUFFMAN_ALPHABET_SIZE: usize = 256;
+   |           ^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `DC_ALPHABET_SIZE` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:34:11
+   |
+34 | pub const DC_ALPHABET_SIZE: usize = 12;
+   |           ^^^^^^^^^^^^^^^^
+
+warning: constant `MAX_DIM_PIXELS` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:37:11
+   |
+37 | pub const MAX_DIM_PIXELS: u32 = 65535;
+   |           ^^^^^^^^^^^^^^
+
+warning: constant `MARKER_RST0` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:64:11
+   |
+64 | pub const MARKER_RST0: u8 = 0xD0;
+   |           ^^^^^^^^^^^
+
+warning: constant `MARKER_APP1` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:68:11
+   |
+68 | pub const MARKER_APP1: u8 = 0xE1;
+   |           ^^^^^^^^^^^
+
+warning: constant `ICC_PROFILE_TAG` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:90:11
+   |
+90 | pub const ICC_PROFILE_TAG: &[u8; 12] = b"ICC_PROFILE\0";
+   |           ^^^^^^^^^^^^^^^
+
+warning: constant `EXIF_TAG` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:92:11
+   |
+92 | pub const EXIF_TAG: &[u8; 6] = b"Exif\0\0";
+   |           ^^^^^^^^
+
+warning: constant `XMP_NAMESPACE` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:94:11
+   |
+94 | pub const XMP_NAMESPACE: &[u8; 29] = b"http://ns.adobe.com/xap/1.0/\0";
+   |           ^^^^^^^^^^^^^
+
+warning: constant `DIST_NONLINEAR_THRESHOLD` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:163:11
+    |
+163 | pub const DIST_NONLINEAR_THRESHOLD: f32 = 1.5;
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `RESCALE_420` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:261:11
+    |
+261 | pub const RESCALE_420: [f32; 64] = [
+    |           ^^^^^^^^^^^
+
+warning: function `quality_to_distance` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:281:8
+    |
+281 | pub fn quality_to_distance(quality: i32) -> f32 {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `linear_quality_to_distance` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:296:8
+    |
+296 | pub fn linear_quality_to_distance(scale_factor: i32) -> f32 {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `XYB_NEG_OPSIN_ABSORBANCE_BIAS_CBRT` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:465:11
+    |
+465 | pub const XYB_NEG_OPSIN_ABSORBANCE_BIAS_CBRT: [f32; 3] = [
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `M00` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:314:15
+    |
+314 |     pub const M00: f32 = 0.30;
+    |               ^^^
+
+warning: constant `M01` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:315:15
+    |
+315 |     pub const M01: f32 = 0.622; // 1.0 - M00 - M02
+    |               ^^^
+
+warning: constant `M02` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:316:15
+    |
+316 |     pub const M02: f32 = 0.078;
+    |               ^^^
+
+warning: constant `M10` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:319:15
+    |
+319 |     pub const M10: f32 = 0.23;
+    |               ^^^
+
+warning: constant `M11` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:320:15
+    |
+320 |     pub const M11: f32 = 0.692; // 1.0 - M10 - M12
+    |               ^^^
+
+warning: constant `M12` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:321:15
+    |
+321 |     pub const M12: f32 = 0.078;
+    |               ^^^
+
+warning: constant `M20` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:324:15
+    |
+324 |     pub const M20: f32 = 0.243_422_69;
+    |               ^^^
+
+warning: constant `M21` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:325:15
+    |
+325 |     pub const M21: f32 = 0.204_767_44;
+    |               ^^^
+
+warning: constant `M22` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:326:15
+    |
+326 |     pub const M22: f32 = 0.551_809_87; // 1.0 - M20 - M21
+    |               ^^^
+
+warning: constant `OPSIN_ABSORBANCE_MATRIX` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:329:15
+    |
+329 |     pub const OPSIN_ABSORBANCE_MATRIX: [[f32; 3]; 3] =
+    |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `OPSIN_ABSORBANCE_BIAS` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:333:15
+    |
+333 |     pub const OPSIN_ABSORBANCE_BIAS: f32 = 0.003_793_073_3;
+    |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `OPSIN_ABSORBANCE_BIAS_VEC` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:334:15
+    |
+334 |     pub const OPSIN_ABSORBANCE_BIAS_VEC: [f32; 3] = [
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `INVERSE_OPSIN_ABSORBANCE_MATRIX` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:341:15
+    |
+341 |     pub const INVERSE_OPSIN_ABSORBANCE_MATRIX: [[f32; 3]; 3] = [
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `NEG_OPSIN_ABSORBANCE_BIAS_RGB` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:348:15
+    |
+348 |     pub const NEG_OPSIN_ABSORBANCE_BIAS_RGB: [f32; 4] = [
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `ALPHA_DC` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:363:15
+    |
+363 |     pub const ALPHA_DC: f32 = 0.353_553_39; // 1/sqrt(8)
+    |               ^^^^^^^^
+
+warning: constant `ALPHA_AC` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:366:15
+    |
+366 |     pub const ALPHA_AC: f32 = 0.5;
+    |               ^^^^^^^^
+
+warning: function `alpha` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:370:18
+    |
+370 |     pub const fn alpha(k: usize) -> f32 {
+    |                  ^^^^^
+
+warning: constant `C1` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:376:15
+    |
+376 |     pub const C1: f32 = 0.980_785_28; // cos(1 * PI / 16)
+    |               ^^
+
+warning: constant `C2` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:377:15
+    |
+377 |     pub const C2: f32 = 0.923_879_53; // cos(2 * PI / 16)
+    |               ^^
+
+warning: constant `C3` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:378:15
+    |
+378 |     pub const C3: f32 = 0.831_469_61; // cos(3 * PI / 16)
+    |               ^^
+
+warning: constant `C4` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:379:15
+    |
+379 |     pub const C4: f32 = 0.707_106_78; // cos(4 * PI / 16) = 1/sqrt(2)
+    |               ^^
+
+warning: constant `C5` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:380:15
+    |
+380 |     pub const C5: f32 = 0.555_570_23; // cos(5 * PI / 16)
+    |               ^^
+
+warning: constant `C6` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:381:15
+    |
+381 |     pub const C6: f32 = 0.382_683_43; // cos(6 * PI / 16)
+    |               ^^
+
+warning: constant `C7` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:382:15
+    |
+382 |     pub const C7: f32 = 0.195_090_32; // cos(7 * PI / 16)
+    |               ^^
+
+warning: constant `S0` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:385:15
+    |
+385 |     pub const S0: f32 = 0.353_553_39; // 1 / (2 * sqrt(2))
+    |               ^^
+
+warning: constant `S1` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:386:15
+    |
+386 |     pub const S1: f32 = 0.254_897_69;
+    |               ^^
+
+warning: constant `S2` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:387:15
+    |
+387 |     pub const S2: f32 = 0.270_598_05;
+    |               ^^
+
+warning: constant `S3` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:388:15
+    |
+388 |     pub const S3: f32 = 0.300_672_44;
+    |               ^^
+
+warning: constant `S4` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:389:15
+    |
+389 |     pub const S4: f32 = 0.353_553_39;
+    |               ^^
+
+warning: constant `S5` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:390:15
+    |
+390 |     pub const S5: f32 = 0.449_988_11;
+    |               ^^
+
+warning: constant `S6` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:391:15
+    |
+391 |     pub const S6: f32 = 0.653_281_48;
+    |               ^^
+
+warning: constant `S7` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/consts.rs:392:15
+    |
+392 |     pub const S7: f32 = 1.281_457_7;
+    |               ^^
+
+warning: associated function `new_profiled` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/instrumented_vec.rs:43:8
+   |
+38 | pub trait ProfiledVecExt<T> {
+   |           -------------- associated function in this trait
+...
+43 |     fn new_profiled(context: &'static str) -> Self;
+   |        ^^^^^^^^^^^^
+
+warning: associated items `from_array`, `get`, `set`, `scale`, `mul`, and `add` are never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/simd_types.rs:38:12
+   |
+31 | impl Block8x8f {
+   | -------------- associated items in this implementation
+...
+38 |     pub fn from_array(arr: &[f32; 64]) -> Self {
+   |            ^^^^^^^^^^
+...
+59 |     pub fn get(&self, row: usize, col: usize) -> f32 {
+   |            ^^^
+...
+65 |     pub fn set(&mut self, row: usize, col: usize, value: f32) {
+   |            ^^^
+...
+71 |     pub fn scale(&self, factor: f32) -> Self {
+   |            ^^^^^
+...
+83 |     pub fn mul(&self, other: &Self) -> Self {
+   |            ^^^
+...
+95 |     pub fn add(&self, other: &Self) -> Self {
+   |            ^^^
+
+warning: struct `Block8x8i16` is never constructed
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/simd_types.rs:117:12
+    |
+117 | pub struct Block8x8i16 {
+    |            ^^^^^^^^^^^
+
+warning: associated items `ZERO`, `from_array`, `to_array`, and `get` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/simd_types.rs:122:15
+    |
+121 | impl Block8x8i16 {
+    | ---------------- associated items in this implementation
+122 |     pub const ZERO: Self = Self { rows: [[0; 8]; 8] };
+    |               ^^^^
+...
+126 |     pub fn from_array(arr: &[i16; 64]) -> Self {
+    |            ^^^^^^^^^^
+...
+137 |     pub fn to_array(&self) -> [i16; 64] {
+    |            ^^^^^^^^
+...
+147 |     pub fn get(&self, row: usize, col: usize) -> i16 {
+    |            ^^^
+
+warning: associated items `from_f32_values`, `quantize`, `quantize_with_zero_bias`, and `quantize_array_with_zero_bias` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/simd_types.rs:223:12
+    |
+200 | impl QuantTableSimd {
+    | ------------------- associated items in this implementation
+...
+223 |     pub fn from_f32_values(values: &[f32; 64]) -> Self {
+    |            ^^^^^^^^^^^^^^^
+...
+243 |     pub fn quantize(&self, block: &Block8x8f) -> Block8x8i32 {
+    |            ^^^^^^^^
+...
+268 |     pub fn quantize_with_zero_bias(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^
+...
+281 |     pub fn quantize_array_with_zero_bias(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `Block8x8i32` is never constructed
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/simd_types.rs:308:12
+    |
+308 | pub struct Block8x8i32 {
+    |            ^^^^^^^^^^^
+
+warning: associated items `ZERO`, `to_i16`, and `to_i16_array` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/simd_types.rs:313:15
+    |
+312 | impl Block8x8i32 {
+    | ---------------- associated items in this implementation
+313 |     pub const ZERO: Self = Self { rows: [[0; 8]; 8] };
+    |               ^^^^
+...
+317 |     pub fn to_i16(&self) -> Block8x8i16 {
+    |            ^^^^^^
+...
+329 |     pub fn to_i16_array(&self) -> [i16; 64] {
+    |            ^^^^^^^^^^^^
+
+warning: function `mage_quantize_block_scalar` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/simd_types.rs:397:4
+    |
+397 | fn mage_quantize_block(
+    |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `fast_round_i32` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/simd_types.rs:445:4
+    |
+445 | fn fast_round_i32(v: f32) -> i32 {
+    |    ^^^^^^^^^^^^^^
+
+warning: function `quantize_block` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/foundation/simd_types.rs:469:4
+    |
+469 | fn quantize_block(
+    |    ^^^^^^^^^^^^^^
+
+warning: methods `fast_decode`, `fast_decode_ac`, and `fast_ac_slice` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/encode.rs:451:12
+    |
+270 | impl HuffmanDecodeTable {
+    | ----------------------- methods in this implementation
+...
+451 |     pub fn fast_decode(&self, bits: u32) -> Option<(u8, u8)> {
+    |            ^^^^^^^^^^^
+...
+466 |     pub fn fast_decode_ac(&self, idx: usize) -> Option<(i16, u8, u8)> {
+    |            ^^^^^^^^^^^^^^
+...
+482 |     pub fn fast_ac_slice(&self) -> &[i16] {
+    |            ^^^^^^^^^^^^^
+
+warning: method `get_slot` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/optimize/cluster.rs:44:12
+   |
+29 | impl ClusterResult {
+   | ------------------ method in this implementation
+...
+44 |     pub fn get_slot(&self, context: usize) -> usize {
+   |            ^^^^^^^^
+
+warning: associated items `for_sequential`, `num_dc_contexts`, and `num_ac_contexts` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/optimize/cluster.rs:96:12
+    |
+ 90 | impl ContextConfig {
+    | ------------------ associated items in this implementation
+...
+ 96 |     pub fn for_sequential(num_components: usize) -> Self {
+    |            ^^^^^^^^^^^^^^
+...
+157 |     pub fn num_dc_contexts(&self) -> usize {
+    |            ^^^^^^^^^^^^^^^
+...
+163 |     pub fn num_ac_contexts(&self) -> usize {
+    |            ^^^^^^^^^^^^^^^
+
+warning: associated items `with_capacity`, `len`, `is_empty`, `counter`, `generate_luma_chroma_tables`, and `generate_xyb_tables` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/optimize/progressive.rs:59:12
+    |
+ 35 | impl ProgressiveTokenBuffer {
+    | --------------------------- associated items in this implementation
+...
+ 59 |     pub fn with_capacity(num_components: usize, num_scans: usize, estimated_tokens: usize) -> Self {
+    |            ^^^^^^^^^^^^^
+...
+ 66 |     pub fn len(&self) -> usize {
+    |            ^^^
+...
+ 71 |     pub fn is_empty(&self) -> bool {
+    |            ^^^^^^^^
+...
+193 |     pub fn counter(&self, context: usize) -> Option<&FrequencyCounter> {
+    |            ^^^^^^^
+...
+286 |     pub fn generate_luma_chroma_tables(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+365 |     pub fn generate_xyb_tables(&self, num_dc_contexts: usize) -> Result<HuffmanTableSet> {
+    |            ^^^^^^^^^^^^^^^^^^^
+
+warning: associated function `eob` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/optimize/tokens.rs:105:12
+    |
+ 90 | impl RefToken {
+    | ------------- associated function in this implementation
+...
+105 |     pub fn eob(run: u16, refbits: u8) -> Self {
+    |            ^^^
+
+warning: method `is_dc` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/optimize/tokens.rs:222:12
+    |
+154 | impl ScanTokenInfo {
+    | ------------------ method in this implementation
+...
+222 |     pub fn is_dc(&self) -> bool {
+    |            ^^^^^
+
+warning: struct `TokenBuffer` is never constructed
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/optimize/tokens.rs:259:12
+    |
+259 | pub struct TokenBuffer {
+    |            ^^^^^^^^^^^
+
+warning: multiple associated items are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/optimize/tokens.rs:273:12
+    |
+266 | impl TokenBuffer {
+    | ---------------- associated items in this implementation
+...
+273 |     pub fn new(num_contexts: usize) -> Self {
+    |            ^^^
+...
+281 |     pub fn clear(&mut self) {
+    |            ^^^^^
+...
+290 |     pub fn push(&mut self, token: Token) {
+    |            ^^^^
+...
+299 |     pub fn len(&self) -> usize {
+    |            ^^^
+...
+305 |     pub fn is_empty(&self) -> bool {
+    |            ^^^^^^^^
+...
+310 |     pub fn iter(&self) -> impl Iterator<Item = &Token> {
+    |            ^^^^
+...
+316 |     pub fn counter(&self, context: usize) -> Option<&FrequencyCounter> {
+    |            ^^^^^^^
+...
+321 |     pub fn generate_tables(&self) -> Result<Vec<HuffmanEncodeTable>> {
+    |            ^^^^^^^^^^^^^^^
+...
+327 |     pub fn estimate_size(&self, tables: &[HuffmanEncodeTable]) -> u64 {
+    |            ^^^^^^^^^^^^^
+
+warning: function `trained_tables_q0` is never used
+ --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:7:8
+  |
+7 | pub fn trained_tables_q0() -> HuffmanTableSet {
+  |        ^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q5` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:54:8
+   |
+54 | pub fn trained_tables_q5() -> HuffmanTableSet {
+   |        ^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q10` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:101:8
+    |
+101 | pub fn trained_tables_q10() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q15` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:148:8
+    |
+148 | pub fn trained_tables_q15() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q20` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:195:8
+    |
+195 | pub fn trained_tables_q20() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q25` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:241:8
+    |
+241 | pub fn trained_tables_q25() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q30` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:287:8
+    |
+287 | pub fn trained_tables_q30() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q35` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:333:8
+    |
+333 | pub fn trained_tables_q35() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q40` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:379:8
+    |
+379 | pub fn trained_tables_q40() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q45` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:425:8
+    |
+425 | pub fn trained_tables_q45() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q50` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:471:8
+    |
+471 | pub fn trained_tables_q50() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q55` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:517:8
+    |
+517 | pub fn trained_tables_q55() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q60` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:564:8
+    |
+564 | pub fn trained_tables_q60() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q65` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:611:8
+    |
+611 | pub fn trained_tables_q65() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q70` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:658:8
+    |
+658 | pub fn trained_tables_q70() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q75` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:705:8
+    |
+705 | pub fn trained_tables_q75() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q80` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:752:8
+    |
+752 | pub fn trained_tables_q80() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q85` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:799:8
+    |
+799 | pub fn trained_tables_q85() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q89` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:846:8
+    |
+846 | pub fn trained_tables_q89() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q90` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:892:8
+    |
+892 | pub fn trained_tables_q90() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q91` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:938:8
+    |
+938 | pub fn trained_tables_q91() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q92` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:984:8
+    |
+984 | pub fn trained_tables_q92() -> HuffmanTableSet {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q93` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:1031:8
+     |
+1031 | pub fn trained_tables_q93() -> HuffmanTableSet {
+     |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q94` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:1078:8
+     |
+1078 | pub fn trained_tables_q94() -> HuffmanTableSet {
+     |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q95` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:1125:8
+     |
+1125 | pub fn trained_tables_q95() -> HuffmanTableSet {
+     |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q96` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:1172:8
+     |
+1172 | pub fn trained_tables_q96() -> HuffmanTableSet {
+     |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q97` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:1219:8
+     |
+1219 | pub fn trained_tables_q97() -> HuffmanTableSet {
+     |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q98` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:1266:8
+     |
+1266 | pub fn trained_tables_q98() -> HuffmanTableSet {
+     |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q99` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:1313:8
+     |
+1313 | pub fn trained_tables_q99() -> HuffmanTableSet {
+     |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `trained_tables_q100` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/trained/mod.rs:1359:8
+     |
+1359 | pub fn trained_tables_q100() -> HuffmanTableSet {
+     |        ^^^^^^^^^^^^^^^^^^^
+
+warning: struct `SymbolFrequencies` is never constructed
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/types.rs:20:12
+   |
+20 | pub struct SymbolFrequencies {
+   |            ^^^^^^^^^^^^^^^^^
+
+warning: multiple associated items are never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/types.rs:34:12
+   |
+31 | impl SymbolFrequencies {
+   | ---------------------- associated items in this implementation
+...
+34 |     pub fn new() -> Self {
+   |            ^^^
+...
+40 |     pub fn count(&mut self, symbol: u8) {
+   |            ^^^^^
+...
+46 |     pub fn add(&mut self, symbol: u8, count: u64) {
+   |            ^^^
+...
+52 |     pub fn get(&self, symbol: u8) -> u64 {
+   |            ^^^
+...
+58 |     pub fn total(&self) -> u64 {
+   |            ^^^^^
+...
+64 |     pub fn num_symbols(&self) -> usize {
+   |            ^^^^^^^^^^^
+...
+70 |     pub fn is_empty(&self) -> bool {
+   |            ^^^^^^^^
+...
+75 |     pub fn reset(&mut self) {
+   |            ^^^^^
+...
+80 |     pub fn merge(&mut self, other: &SymbolFrequencies) {
+   |            ^^^^^
+...
+88 |     pub fn as_slice(&self) -> &[u64; 256] {
+   |            ^^^^^^^^
+...
+93 |     pub fn from_slice(counts: &[u64]) -> Option<Self> {
+   |            ^^^^^^^^^^
+
+warning: struct `CodeLengths` is never constructed
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/types.rs:108:12
+    |
+108 | pub struct CodeLengths {
+    |            ^^^^^^^^^^^
+
+warning: multiple associated items are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/types.rs:122:12
+    |
+119 | impl CodeLengths {
+    | ---------------- associated items in this implementation
+...
+122 |     pub fn new() -> Self {
+    |            ^^^
+...
+128 |     pub fn from_array(lengths: [u8; 256]) -> Self {
+    |            ^^^^^^^^^^
+...
+134 |     pub fn get(&self, symbol: u8) -> u8 {
+    |            ^^^
+...
+140 |     pub fn as_slice(&self) -> &[u8; 256] {
+    |            ^^^^^^^^
+...
+146 |     pub fn max_length(&self) -> u8 {
+    |            ^^^^^^^^^^
+...
+153 |     pub fn kraft_sum(&self) -> u64 {
+    |            ^^^^^^^^^
+...
+163 |     pub fn is_valid(&self) -> bool {
+    |            ^^^^^^^^
+...
+177 |     pub fn to_bits_values(&self) -> ([u8; 16], Vec<u8>) {
+    |            ^^^^^^^^^^^^^^
+...
+202 |     pub fn estimate_cost(&self, frequencies: &SymbolFrequencies) -> u64 {
+    |            ^^^^^^^^^^^^^
+
+warning: enum `HuffmanAlgorithm` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/types.rs:224:10
+    |
+224 | pub enum HuffmanAlgorithm {
+    |          ^^^^^^^^^^^^^^^^
+
+warning: methods `generate_code_lengths` and `generate_table` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/types.rs:253:12
+    |
+245 | impl HuffmanAlgorithm {
+    | --------------------- methods in this implementation
+...
+253 |     pub fn generate_code_lengths(&self, frequencies: &SymbolFrequencies) -> Result<CodeLengths> {
+    |            ^^^^^^^^^^^^^^^^^^^^^
+...
+261 |     pub fn generate_table(&self, frequencies: &SymbolFrequencies) -> Result<OptimizedTable> {
+    |            ^^^^^^^^^^^^^^
+
+warning: function `generate_lengths_mozjpeg` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/types.rs:269:4
+    |
+269 | fn generate_lengths_mozjpeg(frequencies: &SymbolFrequencies) -> Result<CodeLengths> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `generate_lengths_jpegli` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/types.rs:284:4
+    |
+284 | fn generate_lengths_jpegli(frequencies: &SymbolFrequencies) -> Result<CodeLengths> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `compare_algorithms` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/huffman/types.rs:304:8
+    |
+304 | pub fn compare_algorithms(
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `generate_quant_table` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/mod.rs:583:8
+    |
+583 | pub fn generate_quant_table(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `generate_standard_jpeg_table` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/mod.rs:703:8
+    |
+703 | pub fn generate_standard_jpeg_table(quality: f32, is_chrominance: bool) -> QuantTable {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `generate_standard_jpeg_table_ex` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/mod.rs:716:8
+    |
+716 | pub fn generate_standard_jpeg_table_ex(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `quantize` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/mod.rs:749:8
+    |
+749 | pub fn quantize(coeff: f32, quant: u16) -> i16 {
+    |        ^^^^^^^^
+
+warning: function `dequantize` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/mod.rs:757:8
+    |
+757 | pub fn dequantize(quantized: i16, quant: u16) -> f32 {
+    |        ^^^^^^^^^^
+
+warning: function `quantize_block_with_zero_bias` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/mod.rs:794:8
+    |
+794 | pub fn quantize_block_with_zero_bias(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `quantize_block_compare` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/mod.rs:840:8
+    |
+840 | pub fn quantize_block_compare(
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `dequantize_unzigzag_i32_partial` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/mod.rs:892:8
+    |
+892 | pub fn dequantize_unzigzag_i32_partial(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `height_blocks` is never read
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/mod.rs:121:9
+    |
+117 | pub struct AQStrengthMap {
+    |            ------------- field in this struct
+...
+121 |     pub height_blocks: usize,
+    |         ^^^^^^^^^^^^^
+    |
+    = note: `AQStrengthMap` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: multiple associated items are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/mod.rs:141:12
+    |
+126 | impl AQStrengthMap {
+    | ------------------ associated items in this implementation
+...
+141 |     pub fn with_cpp_mean(width_blocks: usize, height_blocks: usize) -> Self {
+    |            ^^^^^^^^^^^^^
+...
+158 |     pub fn mean(&self) -> f32 {
+    |            ^^^^
+...
+167 |     pub fn std(&self) -> f32 {
+    |            ^^^
+...
+188 |     pub fn stats(&self) -> (f32, f32, f32, f32) {
+    |            ^^^^^
+...
+222 |     pub fn scale(&mut self, factor: f32) {
+    |            ^^^^^
+...
+231 |     pub fn scale_to_mean(&mut self, target_mean: f32) {
+    |            ^^^^^^^^^^^^^
+...
+253 |     pub fn scale_for_size_reduction(&self, size_reduction_pct: f32) -> f32 {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `pre_erosion_row_padded` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/simd.rs:311:8
+    |
+311 | pub fn pre_erosion_row_padded(
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `pre_erosion_row_padded_impl_scalar` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/simd.rs:325:4
+    |
+325 | fn pre_erosion_row_padded_impl(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `cas` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/simd.rs:832:4
+    |
+832 | fn cas<T: F32x8Backend>(
+    |    ^^^
+
+warning: function `weighted_min4_of_9_simd` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/simd.rs:843:4
+    |
+843 | fn weighted_min4_of_9_simd<T: F32x8Backend>(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `fuzzy_erosion_row_simd` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/simd.rs:892:8
+    |
+892 | pub fn fuzzy_erosion_row_simd(
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `fuzzy_erosion_row_simd_impl_scalar` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/simd.rs:910:4
+    |
+910 | fn fuzzy_erosion_row_simd_impl(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `gather_neighbor_circular` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/simd.rs:1044:4
+     |
+1044 | fn gather_neighbor_circular<T: F32x8Backend>(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `compute_fuzzy_erosion_blocks_simd` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/simd.rs:1076:8
+     |
+1076 | pub fn compute_fuzzy_erosion_blocks_simd(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `compute_fuzzy_erosion_blocks_simd_impl_scalar` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/simd.rs:1100:4
+     |
+1100 | fn compute_fuzzy_erosion_blocks_simd_impl(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `TEST_INPUTS_RATIO` is never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/simd.rs:2754:11
+     |
+2754 | pub const TEST_INPUTS_RATIO: [f32; 16] = [
+     |           ^^^^^^^^^^^^^^^^^
+
+warning: function `pre_erosion_row_autovec` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/autovec.rs:95:8
+   |
+95 | pub fn pre_erosion_row_autovec(
+   |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `pre_erosion_row_autovec_iter` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/autovec.rs:147:8
+    |
+147 | pub fn pre_erosion_row_autovec_iter(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `per_block_modulations_row_autovec` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/autovec.rs:343:8
+    |
+343 | pub fn per_block_modulations_row_autovec(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: methods `finalize`, `is_complete`, and `rows_received` are never used
+    --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/aq/streaming.rs:685:12
+     |
+ 162 | impl StreamingAQ {
+     | ---------------- methods in this implementation
+...
+ 685 |     pub fn finalize(mut self) -> Result<Vec<f32>> {
+     |            ^^^^^^^^
+...
+1015 |     pub fn is_complete(&self) -> bool {
+     |            ^^^^^^^^^^^
+...
+1020 |     pub fn rows_received(&self) -> usize {
+     |            ^^^^^^^^^^^^^
+
+warning: enum `QualityComparisonMetric` is never used
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:33:10
+   |
+33 | pub enum QualityComparisonMetric {
+   |          ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `QualityConversion` is never constructed
+  --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:51:12
+   |
+51 | pub struct QualityConversion {
+   |            ^^^^^^^^^^^^^^^^^
+
+warning: associated items `try_mozjpeg_equivalent`, `mozjpeg_equivalent`, and `to_jpegli_quality` are never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:78:12
+    |
+ 62 | impl QualityConversion {
+    | ---------------------- associated items in this implementation
+...
+ 78 |     pub fn try_mozjpeg_equivalent(
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+123 |     pub fn mozjpeg_equivalent(
+    |            ^^^^^^^^^^^^^^^^^^
+...
+164 |     pub fn to_jpegli_quality(self) -> Quality {
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: function `interpolate_quality` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:192:4
+    |
+192 | fn interpolate_quality(moz_q: u8, table: &[(u8, u8)]) -> Quality {
+    |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_mapping_table` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:231:4
+    |
+231 | fn get_mapping_table(
+    |    ^^^^^^^^^^^^^^^^^
+
+warning: static `MOZJPEG_TO_JPEGLI_444_DSSIM` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:271:8
+    |
+271 | static MOZJPEG_TO_JPEGLI_444_DSSIM: [(u8, u8); 10] = [
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: static `MOZJPEG_TO_JPEGLI_420_DSSIM` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:285:8
+    |
+285 | static MOZJPEG_TO_JPEGLI_420_DSSIM: [(u8, u8); 10] = [
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: static `MOZJPEG_TO_JPEGLI_444_SSIMULACRA2` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:299:8
+    |
+299 | static MOZJPEG_TO_JPEGLI_444_SSIMULACRA2: [(u8, u8); 10] = [
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: static `MOZJPEG_TO_JPEGLI_420_SSIMULACRA2` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:313:8
+    |
+313 | static MOZJPEG_TO_JPEGLI_420_SSIMULACRA2: [(u8, u8); 10] = [
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: static `MOZJPEG_TO_JPEGLI_444_BUTTERAUGLI` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:327:8
+    |
+327 | static MOZJPEG_TO_JPEGLI_444_BUTTERAUGLI: [(u8, u8); 10] = [
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: static `MOZJPEG_TO_JPEGLI_420_BUTTERAUGLI` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/quant/quality_conversion.rs:341:8
+    |
+341 | static MOZJPEG_TO_JPEGLI_420_BUTTERAUGLI: [(u8, u8); 10] = [
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: fields `dc_huffman_idx` and `ac_huffman_idx` are never read
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/types.rs:443:9
+    |
+433 | pub struct Component {
+    |            --------- fields in this struct
+...
+443 |     pub dc_huffman_idx: u8,
+    |         ^^^^^^^^^^^^^^
+444 |     /// AC Huffman table index (0-1)
+445 |     pub ac_huffman_idx: u8,
+    |         ^^^^^^^^^^^^^^
+    |
+    = note: `Component` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: struct `HuffmanTable` is never constructed
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/types.rs:529:12
+    |
+529 | pub struct HuffmanTable {
+    |            ^^^^^^^^^^^^
+
+warning: type alias `Coeff` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/types.rs:549:10
+    |
+549 | pub type Coeff = i16;
+    |          ^^^^^
+
+warning: type alias `CoeffBlock` is never used
+   --> /home/lilith/work/zenjpeg-cmyk/zenjpeg/src/types.rs:552:10
+    |
+552 | pub type CoeffBlock = [Coeff; DCT_BLOCK_SIZE];
+    |          ^^^^^^^^^^
+
+   Compiling zensim-regress v0.3.1
+   Compiling zenavif v0.1.4
+   Compiling imageflow_core v0.1.0 (/home/lilith/work/imageflow-zen-v3/imageflow_core)
+warning: `zenjpeg` (lib) generated 295 warnings
+    Finished `bench` profile [optimized + debuginfo] target(s) in 3m 54s
+     Running benches/bench_codecs.rs (target/release/deps/bench_codecs-778b07e0eb947182)
+[zenbench] calibration: int=0.19ns/iter mem_bw=96.2GiB/s mem_lat=9.6ns
+[zenbench] timer resolution: 10ns, loop overhead: 0.19ns/iter, TSC: 4.491 ticks/ns (invariant)
+[zenbench] results → /tmp/zenbench/zenbench-1776247323-2b63b4.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1776247323-2b63b4
+  git: bd545d112251055d5fdad073694a74561f3d5a76
+═══════════════════════════════════════════════════════════════
+
+  jpeg_decode  24 rounds × 1 calls
+                            mean ±mad µs  95% CI vs base           ops/s
+  ├─ zen_256x256          992.3 ±40.0µs  [969.8–1021.1]µs         16.9G
+  ├─ zen_1024x1024     15257.2 ±642.0µs  [+1415.8%–+1461.8%]      1.10G
+  ╰─ zen_4096x4096   407269.0 ±7323.5µs  [+40111.0%–+40991.6%]    41.2M
+
+  zen_256x256    ███████████████████████████████████████████████████ 16.9 Gops/s
+  zen_1024x1024  ███ 1.10 Gops/s
+  zen_4096x4096  █ 41.2 Mops/s
+
+  png_decode  17 rounds × 1 calls
+                                  mean ±mad µs  95% CI vs base           ops/s
+  ├─ zen_256x256                533.4 ±94.8µs  [493.6–580.6]µs          31.5G
+  ├─ image_rs_256x256           295.0 ±40.0µs  [-48.7%–-35.1%]          56.9G
+  ├─ zen_1024x1024            7359.9 ±537.0µs  [+1244.4%–+1314.7%]      2.28G
+  ├─ image_rs_1024x1024       4141.1 ±360.6µs  [+640.2%–+710.8%]        4.05G
+  ├─ zen_4096x4096        331937.1 ±23724.7µs  [+59514.9%–+62664.3%]    50.5M [1]
+  ╰─ image_rs_4096x4096   279349.8 ±12994.2µs  [+51129.5%–+53383.4%]    60.1M
+
+  image_rs_256x256    ██████████████████████████████████████████████ 56.9 Gops/s
+  zen_256x256         █████████████████████████ 31.5 Gops/s
+  image_rs_1024x1024  ███ 4.05 Gops/s
+  zen_1024x1024       ██ 2.28 Gops/s
+  image_rs_4096x4096  █ 60.1 Mops/s
+  zen_4096x4096       █ 50.5 Mops/s
+  [1] drift r=0.64 — later rounds slower
+
+  webp_decode  27 rounds × 1 calls
+                             mean ±mad µs  95% CI vs base           ops/s
+  ├─ zen_256x256          788.7 ±150.9µs  [721.5–859.8]µs          21.3G [1]
+  ├─ zen_1024x1024      15301.1 ±737.0µs  [+1917.4%–+2006.7%]      1.10G [2] [3]
+  ╰─ zen_4096x4096   360700.1 ±12170.3µs  [+45204.9%–+46045.2%]    46.5M
+
+  zen_256x256    ███████████████████████████████████████████████████ 21.3 Gops/s
+  zen_1024x1024  ███ 1.10 Gops/s
+  zen_4096x4096  █ 46.5 Mops/s
+  [1] CV=24%
+  [2] drift r=-0.59 — later rounds faster
+  [3] CV=26%
+
+  gif_decode  13 rounds × 1 calls
+                              mean ±mad µs  95% CI vs base           ops/s
+  ├─ zen_256x256           726.2 ±405.7µs  [567.6–880.1]µs          23.1G [1]
+  ├─ gifrs_256x256         610.4 ±212.3µs  [-45.6%–+13.5%]          27.5G [2] [3] [4]
+  ├─ zen_1024x1024      23492.5 ±6494.4µs  [+2575.8%–+3767.9%]       714M [5]
+  ├─ gifrs_1024x1024    16052.9 ±1026.2µs  [+2067.9%–+2173.7%]      1.05G [6]
+  ├─ zen_4096x4096     466409.7 ±7958.0µs  [+63614.3%–+64661.0%]    36.0M
+  ╰─ gifrs_4096x4096   308572.5 ±2898.3µs  [+42080.8%–+42731.7%]    54.4M
+
+  gifrs_256x256    █████████████████████████████████████████████████ 27.5 Gops/s
+  zen_256x256      █████████████████████████████████████████ 23.1 Gops/s
+  gifrs_1024x1024  ██ 1.05 Gops/s
+  zen_1024x1024    █ 714 Mops/s
+  gifrs_4096x4096  █ 54.4 Mops/s
+  zen_4096x4096    █ 36.0 Mops/s
+  [1] CV=41%
+  [2] CI crosses zero
+  [3] drift r=0.53 — later rounds slower
+  [4] CV=38%
+  [5] CV=35%
+  [6] CV=22%
+
+  jpeg_encode_mozjpegrs  16 rounds × 1 calls
+                                   mean ±mad ms  95% CI vs base           ops/s
+  ├─ mozjpeg_preset_q85_256x256      1.7 ±0.1ms  [1.7–1.9]ms              9.61G
+  ├─ mozjpeg_preset_q85_1024x1…     27.3 ±0.9ms  [+1438.3%–+1495.1%]       614M
+  ╰─ mozjpeg_preset_q85_4096x4…   629.2 ±10.0ms  [+35599.8%–+36267.6%]    26.7M
+
+  mozjpeg_preset_q85_256x256  ██████████████████████████████████████ 9.61 Gops/s
+  mozjpeg_preset_q85_1024x1…  ██ 614 Mops/s
+  mozjpeg_preset_q85_4096x4…  █ 26.7 Mops/s
+
+  png_encode  10 rounds × 1 calls
+                           mean ±mad ms  95% CI vs base           ops/s
+  ├─ libpng_z3_256x256       2.9 ±0.1ms  [2.8–3.0]ms              5.82G
+  ├─ lodepng_256x256         1.3 ±0.0ms  [-57.1%–-50.6%]          13.0G
+  ├─ libpng_z3_1024x1024    35.0 ±1.2ms  [+1088.8%–+1149.2%]       479M
+  ├─ lodepng_1024x1024      19.4 ±1.2ms  [+556.4%–+589.1%]         865M
+  ├─ libpng_z3_4096x4096   601.8 ±6.2ms  [+20653.9%–+20899.5%]    27.9M
+  ╰─ lodepng_4096x4096     359.5 ±4.6ms  [+12291.8%–+12539.7%]    46.7M
+
+  lodepng_256x256      █████████████████████████████████████████████ 13.0 Gops/s
+  libpng_z3_256x256    ████████████████████ 5.82 Gops/s
+  lodepng_1024x1024    ███ 865 Mops/s
+  libpng_z3_1024x1024  ██ 479 Mops/s
+  lodepng_4096x4096    █ 46.7 Mops/s
+  libpng_z3_4096x4096  █ 27.9 Mops/s
+
+  webp_encode  10 rounds × 1 calls
+                           mean ±mad ms  95% CI vs base           ops/s
+  ├─ lossy_q80_256x256       2.2 ±0.0ms  [2.2–2.2]ms              7.64G
+  ├─ lossless_256x256        0.7 ±0.1ms  [-68.4%–-63.8%]          22.5G [1]
+  ├─ lossy_q80_1024x1024    32.9 ±0.9ms  [+1359.5%–+1395.7%]       511M
+  ├─ lossless_1024x1024     10.2 ±0.6ms  [+347.0%–+382.1%]        1.65G
+  ├─ lossy_q80_4096x4096   685.1 ±6.1ms  [+30806.1%–+31421.5%]    24.5M
+  ╰─ lossless_4096x4096    320.6 ±3.9ms  [+14387.4%–+14626.6%]    52.3M
+
+  lossless_256x256     █████████████████████████████████████████████ 22.5 Gops/s
+  lossy_q80_256x256    ███████████████ 7.64 Gops/s
+  lossless_1024x1024   ███ 1.65 Gops/s
+  lossy_q80_1024x1024  █ 511 Mops/s
+  lossless_4096x4096   █ 52.3 Mops/s
+  lossy_q80_4096x4096  █ 24.5 Mops/s
+  [1] drift r=0.62 — later rounds slower
+
+  gif_encode  30 rounds × 1 calls
+                    mean ±mad ms  95% CI vs base         ops/s
+  ├─ gif_256x256      1.1 ±0.0ms  [1.1–1.2]ms             914M
+  ╰─ gif_1024x1024   17.5 ±0.4ms  [+1378.7%–+1417.8%]    60.0M
+
+  gif_256x256    ███████████████████████████████████████████████████ 914 Mops/s
+  gif_1024x1024  ███ 60.0 Mops/s
+
+  total: 108.5s  (122 noisy rounds)
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
