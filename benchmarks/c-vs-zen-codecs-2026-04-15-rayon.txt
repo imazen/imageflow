@@ -1,0 +1,166 @@
+[zenbench] calibration: int=0.27ns/iter mem_bw=92.7GiB/s mem_lat=10.0ns
+[zenbench] timer resolution: 9ns, loop overhead: 0.19ns/iter, TSC: 4.552 ticks/ns (invariant)
+[zenbench] results → /tmp/zenbench/zenbench-1776290104-95809.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1776290104-95809
+  git: cc3cf88c17011351567ee1720b9baf0533221931
+═══════════════════════════════════════════════════════════════
+
+  jpeg_decode  16 rounds × 1 calls
+                                mean ±mad µs  95% CI vs base           ops/s
+  ├─ zen_256x256              422.4 ±67.3µs  [393.4–452.1]µs          39.7G
+  ├─ mozjpeg_256x256          371.7 ±40.3µs  [-18.0%–-5.8%]           45.1G
+  ├─ zen_1024x1024          5720.2 ±639.9µs  [+1189.0%–+1317.2%]      2.93G
+  ├─ mozjpeg_1024x1024      4644.7 ±886.0µs  [+900.3%–+1107.1%]       3.61G [1]
+  ├─ zen_4096x4096       321664.9 ±5591.4µs  [+74571.9%–+76047.9%]    52.2M [2]
+  ╰─ mozjpeg_4096x4096   291991.0 ±8687.1µs  [+68281.4%–+69815.5%]    57.5M [3]
+
+  mozjpeg_256x256    ███████████████████████████████████████████████ 45.1 Gops/s
+  zen_256x256        █████████████████████████████████████████ 39.7 Gops/s
+  mozjpeg_1024x1024  ████ 3.61 Gops/s
+  zen_1024x1024      ███ 2.93 Gops/s
+  mozjpeg_4096x4096  █ 57.5 Mops/s
+  zen_4096x4096      █ 52.2 Mops/s
+  [1] CV=21%
+  [2] drift r=-0.70 — later rounds faster
+  [3] drift r=-0.71 — later rounds faster
+
+  png_decode  13 rounds × 1 calls
+                                 mean ±mad µs  95% CI vs base             ops/s
+  ├─ zen_256x256               284.1 ±51.8µs  [249.4–324.4]µs            59.1G [1]
+  ├─ libpng_256x256            356.3 ±51.3µs  [+8.9%–+39.8%]             47.1G
+  ├─ image_rs_256x256          244.9 ±48.6µs  [-12.9%–+9.2%]             68.5G [2]
+  ├─ zen_1024x1024           4001.4 ±433.7µs  [+1273.5%–+1426.2%]        4.19G
+  ├─ libpng_1024x1024        5410.4 ±610.2µs  [+1697.3%–+1913.0%]        3.10G
+  ├─ image_rs_1024x1024      3838.8 ±247.3µs  [+1244.1%–+1375.0%]        4.37G
+  ├─ zen_4096x4096        246117.8 ±5843.3µs  [+85681.1%–+87432.2%]      68.2M
+  ├─ libpng_4096x4096     275506.8 ±3016.5µs  [+95189.3%–+96015.4%]      60.9M
+  ╰─ image_rs_4096x4096   290976.8 ±3241.6µs  [+101099.1%–+102294.3%]    57.7M [3]
+
+  image_rs_256x256    ██████████████████████████████████████████████ 68.5 Gops/s
+  zen_256x256         ████████████████████████████████████████ 59.1 Gops/s
+  libpng_256x256      ████████████████████████████████ 47.1 Gops/s
+  image_rs_1024x1024  ███ 4.37 Gops/s
+  zen_1024x1024       ███ 4.19 Gops/s
+  libpng_1024x1024    ██ 3.10 Gops/s
+  zen_4096x4096       █ 68.2 Mops/s
+  libpng_4096x4096    █ 60.9 Mops/s
+  image_rs_4096x4096  █ 57.7 Mops/s
+  [1] CV=25%
+  [2] CI crosses zero
+  [3] drift r=0.57 — later rounds slower
+
+  webp_decode  19 rounds × 1 calls
+                                mean ±mad µs  95% CI vs base           ops/s
+  ├─ zen_256x256              372.7 ±75.1µs  [345.8–402.6]µs          45.0G
+  ├─ libwebp_256x256          307.5 ±46.2µs  [-21.7%–-9.2%]           54.6G
+  ├─ zen_1024x1024          4473.6 ±219.5µs  [+1052.1%–+1143.4%]      3.75G
+  ├─ libwebp_1024x1024      3990.1 ±550.0µs  [+929.6%–+1010.7%]       4.20G
+  ├─ zen_4096x4096       260487.9 ±2318.4µs  [+69801.5%–+70398.7%]    64.4M
+  ╰─ libwebp_4096x4096   256732.1 ±1259.7µs  [+68572.0%–+68965.8%]    65.3M
+
+  libwebp_256x256    ███████████████████████████████████████████████ 54.6 Gops/s
+  zen_256x256        ███████████████████████████████████████ 45.0 Gops/s
+  libwebp_1024x1024  ████ 4.20 Gops/s
+  zen_1024x1024      ███ 3.75 Gops/s
+  libwebp_4096x4096  █ 65.3 Mops/s
+  zen_4096x4096      █ 64.4 Mops/s
+
+  gif_decode  14 rounds × 1 calls
+                              mean ±mad µs  95% CI vs base             ops/s
+  ├─ zen_256x256            354.4 ±17.2µs  [330.1–376.9]µs            47.3G
+  ├─ gifrs_256x256          380.1 ±27.7µs  [-3.6%–+9.9%]              44.1G [1]
+  ├─ zen_1024x1024        6848.5 ±259.4µs  [+1681.5%–+1765.0%]        2.45G
+  ├─ gifrs_1024x1024      5819.7 ±294.4µs  [+1501.7%–+1579.9%]        2.88G
+  ├─ zen_4096x4096     434021.8 ±3651.9µs  [+119588.0%–+120616.3%]    38.7M
+  ╰─ gifrs_4096x4096   313082.5 ±2485.5µs  [+87792.0%–+88752.2%]      53.6M
+
+  zen_256x256      █████████████████████████████████████████████████ 47.3 Gops/s
+  gifrs_256x256    ██████████████████████████████████████████████ 44.1 Gops/s
+  gifrs_1024x1024  ███ 2.88 Gops/s
+  zen_1024x1024    ███ 2.45 Gops/s
+  gifrs_4096x4096  █ 53.6 Mops/s
+  zen_4096x4096    █ 38.7 Mops/s
+  [1] CI crosses zero
+
+  jpeg_encode  30 rounds × 1 calls
+                                         mean ±mad µs  95% CI vs base           ops/s
+  ├─ libjpegturbo_q85_256x256          369.5 ±12.3µs  [354.9–386.7]µs          45.4G
+  ├─ libjpegturbo_q85_1024x1024      4633.1 ±125.4µs  [+1135.3%–+1172.7%]      3.62G
+  ╰─ libjpegturbo_q85_4096x4096   116386.1 ±1756.7µs  [+31252.8%–+31543.2%]     144M
+
+  libjpegturbo_q85_256x256    ██████████████████████████████████████ 45.4 Gops/s
+  libjpegturbo_q85_1024x1024  ███ 3.62 Gops/s
+  libjpegturbo_q85_4096x4096  █ 144 Mops/s
+
+  jpeg_encode_mozjpegrs  200 rounds × 1M calls
+                                  mean ±mad ns  95% CI vs base            ops/s
+  ├─ unreachable_both_features…   0.01 ±0.00ns  [0.00–0.01]ns       3183433951G [1]
+  ├─ unreachable_both_features…   0.01 ±0.00ns  [-91.1%–+111.2%]    3132519024G [2] [3]
+  ╰─ unreachable_both_features…   0.00 ±0.00ns  [-90.2%–+73.4%]     3505585393G [4] [5]
+
+  unreachable_both_features…  ████████████████████████████████ 3505585393 Gops/s
+  unreachable_both_features…  █████████████████████████████ 3183433951 Gops/s
+  unreachable_both_features…  █████████████████████████████ 3132519024 Gops/s
+  [1] CV=432%
+  [2] CI crosses zero
+  [3] CV=570%
+  [4] CI crosses zero
+  [5] CV=459%
+
+  png_encode  15 rounds × 1 calls
+                           mean ±mad ms  95% CI vs base           ops/s
+  ├─ libpng_z3_256x256       1.1 ±0.0ms  [1.1–1.2]ms              14.7G
+  ├─ lodepng_256x256         1.2 ±0.0ms  [+1.8%–+7.4%]            14.0G
+  ├─ libpng_z3_1024x1024    17.3 ±0.2ms  [+1393.4%–+1409.2%]       969M
+  ├─ lodepng_1024x1024      18.2 ±0.3ms  [+1475.1%–+1499.5%]       924M
+  ├─ libpng_z3_4096x4096   328.4 ±2.4ms  [+28323.9%–+28573.8%]    51.1M [1]
+  ╰─ lodepng_4096x4096     336.7 ±2.6ms  [+29226.4%–+29412.7%]    49.8M [2]
+
+  libpng_z3_256x256    █████████████████████████████████████████████ 14.7 Gops/s
+  lodepng_256x256      ███████████████████████████████████████████ 14.0 Gops/s
+  libpng_z3_1024x1024  ███ 969 Mops/s
+  lodepng_1024x1024    ███ 924 Mops/s
+  libpng_z3_4096x4096  █ 51.1 Mops/s
+  lodepng_4096x4096    █ 49.8 Mops/s
+  [1] drift r=-0.53 — later rounds faster
+  [2] drift r=-0.55 — later rounds faster
+
+  webp_encode  15 rounds × 1 calls
+                           mean ±mad ms  95% CI vs base           ops/s
+  ├─ lossy_q80_256x256       1.5 ±0.1ms  [1.3–1.7]ms              11.2G [1]
+  ├─ lossless_256x256        0.6 ±0.1ms  [-64.5%–-51.5%]          26.9G [2]
+  ├─ lossy_q80_1024x1024    24.4 ±1.2ms  [+1341.4%–+1740.7%]       686M [3] [4]
+  ├─ lossless_1024x1024      6.0 ±0.8ms  [+254.4%–+354.7%]        2.79G [5] [6]
+  ├─ lossy_q80_4096x4096   440.9 ±9.8ms  [+26248.5%–+32891.4%]    38.1M [7] [8]
+  ╰─ lossless_4096x4096    230.0 ±8.7ms  [+13266.2%–+17416.9%]    72.9M [9] [10]
+
+  lossless_256x256     █████████████████████████████████████████████ 26.9 Gops/s
+  lossy_q80_256x256    ███████████████████ 11.2 Gops/s
+  lossless_1024x1024   █████ 2.79 Gops/s
+  lossy_q80_1024x1024  █ 686 Mops/s
+  lossless_4096x4096   █ 72.9 Mops/s
+  lossy_q80_4096x4096  █ 38.1 Mops/s
+  [1] CV=23%
+  [2] CV=32%
+  [3] drift r=0.74 — later rounds slower
+  [4] CV=26%
+  [5] drift r=0.75 — later rounds slower
+  [6] CV=31%
+  [7] drift r=0.64 — later rounds slower
+  [8] CV=24%
+  [9] drift r=0.56 — later rounds slower
+  [10] CV=27%
+
+  gif_encode  30 rounds × 1 calls
+                    mean ±mad ms  95% CI vs base         ops/s
+  ├─ gif_256x256      1.7 ±0.1ms  [1.6–1.8]ms             626M
+  ╰─ gif_1024x1024   24.5 ±1.0ms  [+1333.7%–+1364.0%]    42.9M
+
+  gif_256x256    ███████████████████████████████████████████████████ 626 Mops/s
+  gif_1024x1024  ███ 42.9 Mops/s
+
+  total: 114.2s  (156 noisy rounds)
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
