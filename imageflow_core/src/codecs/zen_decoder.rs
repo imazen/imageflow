@@ -36,6 +36,16 @@ fn always_use_frame_decoder(fmt: ZenFormat) -> bool {
     matches!(fmt, ZenFormat::Gif)
 }
 
+/// Whether the format's buffered Decode::decode is faster than push_decode.
+/// True for JPEG: zenjpeg's `decode()` triggers `to_pixels_fast_i16_*_parallel`
+/// (rayon-parallel output, threshold ~2 MPx in zenjpeg), while `push_decode`
+/// uses sequential ScanlineReader. Measured 2.5× speedup on 4096² JPEG decode.
+/// Other zen codecs don't have a parallel `decode()` path, so push_decode
+/// remains preferred (lower peak memory, no extra allocation).
+fn prefers_buffered_decode(fmt: ZenFormat) -> bool {
+    matches!(fmt, ZenFormat::Jpeg)
+}
+
 /// Unified decoder for all zen codec formats.
 ///
 /// Uses zencodec dyn dispatch for all formats (JPEG, PNG, WebP, GIF, AVIF
@@ -294,10 +304,16 @@ fn copy_pixel_slice_to_bitmap(dst: &mut [u8], dst_stride: usize, ps: &zenpixels:
         && descriptor.channel_type() == zenpixels::ChannelType::U8;
     let is_rgba = descriptor.layout() == zenpixels::ChannelLayout::Rgba
         && descriptor.channel_type() == zenpixels::ChannelType::U8;
+    // CMYK: pass through bytes verbatim into the BGRA bitmap slot — the
+    // downstream CMS stage (SourceProfile::CmykIcc) interprets the CMYK bytes
+    // and applies the ICC transform to BGRA. Swizzling here would corrupt
+    // the C/M/Y/K channel order that CMS expects.
+    let is_cmyk = descriptor.layout() == zenpixels::ChannelLayout::Cmyk
+        && descriptor.channel_type() == zenpixels::ChannelType::U8;
 
     let row_bytes = w as usize * 4;
 
-    if is_bgra {
+    if is_bgra || is_cmyk {
         for y in 0..h {
             let src_row = ps.row(y);
             let dst_start = y as usize * dst_stride;
@@ -688,21 +704,31 @@ impl Decoder for ZenDecoder {
             )
             .map_err(|e| e.at(here!()))?;
 
-        let push_result = {
-            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
-            let mut window = bitmap.get_window_u8().unwrap();
-            let dst_stride = window.info().t_stride() as usize;
-            let dst = window.slice_mut();
+        // For formats that have a faster buffered decode (currently JPEG, with
+        // rayon-parallel output above ~2 MPx), skip push_decode and use
+        // into_decoder().decode() directly. push_decode still runs row-by-row
+        // sequentially regardless of image size; for JPEG that costs ~2.5× at
+        // 4096² and is only marginally cheaper at smaller sizes.
+        let push_result: std::result::Result<_, zc::decode::SinkError> =
+            if prefers_buffered_decode(self.format) {
+                Err("skip push_decode; format prefers buffered decode".into())
+            } else {
+                let mut bitmap =
+                    bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
+                let mut window = bitmap.get_window_u8().unwrap();
+                let dst_stride = window.info().t_stride() as usize;
+                let dst = window.slice_mut();
 
-            let mut sink = BitmapRowSink::new(dst, dst_stride);
-            let job = self.make_job();
-            job.push_decode(Cow::Borrowed(data), &mut sink, &preferred)
-        };
+                let mut sink = BitmapRowSink::new(dst, dst_stride);
+                let job = self.make_job();
+                job.push_decode(Cow::Borrowed(data), &mut sink, &preferred)
+                    .map_err(|e| -> zc::decode::SinkError { format!("{e}").into() })
+            };
 
         match push_result {
             Ok(_) => { /* sink.finish() was called by codec — swizzle done */ }
             Err(_) => {
-                // Format rejected or codec error — fall back to into_decoder
+                // Format rejected, codec error, or buffered-decode-preferred — use into_decoder.
                 let job = self.make_job();
                 let dec = job.into_decoder(Cow::Borrowed(data), &preferred).map_err(|e| {
                     nerror!(

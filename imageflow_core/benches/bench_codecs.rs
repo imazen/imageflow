@@ -94,20 +94,42 @@ fn png_fixture(w: u32, h: u32) -> Vec<u8> {
     )
 }
 
+/// JPEG fixture with **standard 4:2:0 chroma** (Cb=2,2 / Cr=2,2 — matched).
+///
+/// Uses mozjpeg-rs directly to bypass imageflow's `MozjpegEncoder`, which
+/// runs `evalchroma::adjust_sampling` and can pick mismatched Cb/Cr (e.g.
+/// 2x2,1x1,2x2). zenjpeg's three fast decode paths all require Cb/Cr to
+/// match — mismatched chroma falls through to the f32 generic pipeline
+/// which is 15-30× slower. Keeping the fixture on standard 4:2:0 makes
+/// the bench measure decode performance, not chroma-fallback performance.
+/// (See zenjpeg fast-paths in `output.rs:133` and `output.rs:165` — both
+/// gated on `cb_h == cr_h && cb_v == cr_v`.)
+#[cfg(feature = "c-codecs")]
 fn jpeg_fixture(w: u32, h: u32) -> Vec<u8> {
-    // LibjpegTurbo preset uses `MozjpegEncoder::create_classic`, which
-    // doesn't check `enabled_codecs` — this makes it usable for fixture
-    // generation regardless of the EnabledCodecs defaults in the current
-    // build configuration.
+    let bgra = make_bgra_gradient(w, h);
+    let mut buf = Vec::new();
+    let mut cinfo = mozjpeg::Compress::new(mozjpeg::ColorSpace::JCS_EXT_BGRA);
+    cinfo.set_size(w as usize, h as usize);
+    cinfo.set_quality(85.0);
+    cinfo.set_optimize_coding(false);
+    // Force standard 4:2:0 (matched Cb/Cr) — bypass evalchroma.
+    cinfo.set_chroma_sampling_pixel_sizes((2, 2), (2, 2));
+    let mut compressor = cinfo.start_compress(&mut buf).expect("start_compress");
+    compressor.write_scanlines(&bgra).expect("write_scanlines");
+    compressor.finish().expect("finish");
+    buf
+}
+
+#[cfg(not(feature = "c-codecs"))]
+fn jpeg_fixture(w: u32, h: u32) -> Vec<u8> {
+    // mozjpeg-rs is in zen-codecs deps too, but go through the imageflow
+    // path here since c-codecs isn't compiled. This may produce mismatched
+    // chroma via evalchroma — zen-only bench numbers should be interpreted
+    // with that caveat.
     encode_fixture(
         w,
         h,
-        s::EncoderPreset::LibjpegTurbo {
-            quality: Some(85),
-            progressive: Some(false),
-            optimize_huffman_coding: Some(false),
-            matte: None,
-        },
+        s::EncoderPreset::Mozjpeg { quality: Some(85), progressive: Some(false), matte: None },
     )
 }
 
