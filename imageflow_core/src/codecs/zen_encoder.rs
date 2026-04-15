@@ -71,8 +71,14 @@ impl ZenEncoder {
         }
         use zenjpeg::encoder::{ChromaSubsampling, Quality};
         let q = quality.unwrap_or(75).min(100);
+        // mozjpeg's evalchroma::adjust_sampling stays at 4:2:0 even at q=90 for
+        // typical content; only above ~90 does it adopt 4:4:4. Match that boundary
+        // so default-quality (q=90) JPEG output agrees byte-class with the c-codecs
+        // path. Setting the cutoff strictly > 90 (vs ≥90) covers q=90 specifically;
+        // if a future zenjpeg implements adaptive subsampling we should call into
+        // it directly instead of this static threshold.
         let subsampling =
-            if q >= 90 { ChromaSubsampling::None } else { ChromaSubsampling::Quarter };
+            if q > 90 { ChromaSubsampling::None } else { ChromaSubsampling::Quarter };
 
         // Use the native EncoderConfig directly (not the zencodec JpegEncoderConfig wrapper)
         // to preserve exact backward compatibility with the old ZenJpegEncoder adapter.
