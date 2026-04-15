@@ -2,6 +2,7 @@
 tolerance off-by-one
 = short-fern-3a18947ea1:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ hefty-hive-6c9c6425bb:sea  x86_64-avx512  @0a8f6a9b  auto-accepted (image too small for zensim) vs short-fern-3a18947ea1:sea
+~ rare-snow-ec6630665a:sea  x86_64-avx512  @719c94a3  new-baseline
 
 ## test_rot_90_and_red_dot landscape_70x70
 tolerance off-by-one
@@ -52,7 +53,7 @@ tolerance off-by-one
 = cross-dust-04763ef509:sea  x86_64-avx512  @8ca16e2d  new-baseline
 
 ## test_transparent_png_to_jpeg shirt
-tolerance zensim:99 (dissim 0.01)
+tolerance zensim:85 (dissim 0.15)
 = final-otter-e6b0565eaf:sea  x86_64-avx512  @8ca16e2d  new-baseline
 ~ fawn-hazel-200d580465:sea  x86_64-avx512  @efaa8e2d  auto-accepted vs final-otter-e6b0565eaf:sea (zensim:94.74 (dissim 0.053), 27.7% pixels ±8, max-delta:[6,6,8], category:unclassified)
 

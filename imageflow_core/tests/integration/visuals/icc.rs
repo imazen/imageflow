@@ -255,22 +255,31 @@ fn test_icc_adobe_rgb_constrain() {
 #[test]
 fn test_icc_p3_to_jpeg_roundtrip() {
     // Decode P3 JPEG → sRGB via ICC → re-encode as JPEG
-    // Tests that color management + lossy re-encode produces stable output
+    // Tests that color management + lossy re-encode produces stable output.
+    //
+    // Tolerance 0.30 (was 0.05) accommodates zen-codecs encoder drift vs
+    // mozjpeg: zenjpeg uses Jpegli quant tables + hybrid_config + deringing
+    // while mozjpeg uses its own tuned tables — perceptually equivalent but
+    // byte-class divergent (zdsim ~0.25 on this test). Tracking parity at
+    // imazen/zenjpeg#88; tighten when that lands.
     visual_check! {
         source: "test_inputs/wide-gamut/display-p3/flickr_952bd5d8c41d3e6d.jpg",
         detail: "p3_to_jpeg_q85",
         command: "format=jpg&quality=85",
-        similarity: Similarity::MaxZdsim(0.05),
+        similarity: Similarity::MaxZdsim(0.30),
     }
 }
 
 #[test]
 fn test_icc_p3_to_webp() {
+    // Tolerance 0.25 (was 0.05) accommodates zen-codecs lossy WebP encoder
+    // drift vs libwebp despite identical params (~zdsim 0.20). See
+    // imazen/zenwebp#16; tighten when upstream parity lands.
     visual_check! {
         source: "test_inputs/wide-gamut/display-p3/flickr_c585e5e91ff47e1c.jpg",
         detail: "p3_to_webp_q80",
         command: "format=webp&quality=80",
-        similarity: Similarity::MaxZdsim(0.05),
+        similarity: Similarity::MaxZdsim(0.25),
     }
 }
 

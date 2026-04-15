@@ -55,10 +55,14 @@ fn test_transparent_png_to_png_rounded_corners() {
 
 #[test]
 fn test_transparent_png_to_jpeg() {
+    // Tolerance 0.15 (was default 0.01) accommodates zen-codecs JPEG encoder
+    // drift vs mozjpeg (~zdsim 0.12 even after subsampling and quality alignment).
+    // See imazen/zenjpeg#88; tighten when upstream parity lands.
     visual_check! {
         source: "test_inputs/shirt_transparent.png",
         detail: "shirt",
         command: "format=jpg",
+        similarity: Similarity::MaxZdsim(0.15),
     }
 }
 
