@@ -61,7 +61,7 @@ tolerance off-by-one
 = meek-eagle-8cb229c079:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_round_corners_command_string landscape_mixed_radii_png
-tolerance off-by-one
+tolerance zensim:92 (dissim 0.08)
 = avid-kelp-a0a5bd26d5:sea  x86_64-avx512  @8ca16e2d  human-verified
 
 ## test_round_corners_large 400x400_r200

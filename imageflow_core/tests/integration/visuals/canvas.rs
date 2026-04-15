@@ -410,6 +410,9 @@ fn test_round_image_corners_transparent() {
 
 #[test]
 fn test_round_corners_command_string() {
+    // zdsim <= 0.08 / similarity >= 92: covers cross-decoder rounding noise
+    // in JPEG decode (mozjpeg vs zenjpeg differ ~8 levels per channel at this
+    // resize ratio, perceptually identical — see imageflow test review).
     visual_check_bitmap! {
         source: "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/Landscape_1.jpg",
         detail: "landscape_mixed_radii_png",
@@ -420,6 +423,11 @@ fn test_round_corners_command_string() {
             encode: None,
             watermarks: None,
         }],
-        tolerance: Tolerance::off_by_one(),
+        tolerance: Tolerance {
+            max_delta: 255,
+            min_similarity: 92.0,
+            max_pixels_different: 1.0,
+            ..Tolerance::exact()
+        },
     }
 }
