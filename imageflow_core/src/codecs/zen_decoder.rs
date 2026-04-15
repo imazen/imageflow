@@ -15,13 +15,17 @@ use zc::ImageFormat as ZenFormat;
 use zc::ImageInfo as ZenImageInfo;
 use zc::OwnedAnimationFrame;
 
+/// Fallback CMYK ICC profile used when a CMYK JPEG has no embedded profile.
+/// Same profile used by the mozjpeg (C) decoder path for consistent output.
+static FALLBACK_CMYK_PROFILE: &[u8] = include_bytes!("cmyk.icc");
+
 /// Whether this format supports EXIF orientation metadata.
 fn has_exif_orientation(fmt: ZenFormat) -> bool {
     matches!(fmt, ZenFormat::Jpeg | ZenFormat::Jxl)
 }
 
-/// Whether CMYK source data means we should skip CMS.
-/// (zenjpeg converts CMYK→RGB during decode, so ICC CMYK profile can't be applied after.)
+/// Whether this format can produce CMYK source data (needing ICC-based conversion).
+/// JPEG is the only zen codec today that can decode CMYK.
 fn may_have_cmyk(fmt: ZenFormat) -> bool {
     matches!(fmt, ZenFormat::Jpeg)
 }
@@ -85,7 +89,11 @@ impl ZenDecoder {
     }
 
     pub fn create_jpeg(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
-        let config = zenjpeg::JpegDecoderConfig::new();
+        // cmyk_output_raw(true) makes zenjpeg emit raw CMYK bytes (PixelDescriptor::CMYK8)
+        // for 4-component JPEGs instead of applying its internal CMYK→RGB matrix. The CMS
+        // stage then applies the source ICC profile (or a fallback CMYK profile) for an
+        // accurate conversion. No effect on 3-component (YCbCr/RGB) JPEGs.
+        let config = zenjpeg::JpegDecoderConfig::new().cmyk_output_raw(true);
         Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Jpeg))
     }
 
@@ -194,17 +202,26 @@ impl ZenDecoder {
 
     /// Extract SourceProfile from zencodec-types ImageInfo for CMS.
     fn source_profile_from_info(&self, info: &ZenImageInfo) -> SourceProfile {
-        if self.ignore_color_profile {
-            return SourceProfile::Srgb;
+        // CMYK JPEGs: zenjpeg emits raw CMYK bytes (PixelDescriptor::CMYK8) when
+        // cmyk_output_raw is enabled. Route to CmykIcc so the CMS stage applies
+        // the embedded ICC profile (or a fallback CMYK profile) for accurate
+        // conversion to sRGB. CMYK always needs color management — we apply it
+        // even when ignore_color_profile is set, matching the mozjpeg (C) path.
+        if may_have_cmyk(self.format)
+            && info.source_color.channel_count == Some(4)
+            && !info.has_alpha
+        {
+            let icc = info
+                .source_color
+                .icc_profile
+                .as_ref()
+                .map(|p| p.to_vec())
+                .unwrap_or_else(|| FALLBACK_CMYK_PROFILE.to_vec());
+            return SourceProfile::CmykIcc(icc);
         }
 
-        // CMYK JPEGs: zenjpeg converts to RGB during decode, so ICC CMYK profile
-        // can't be applied after. Skip CMS.
-        if may_have_cmyk(self.format) {
-            // If channel_count is 4 and no alpha, it was CMYK
-            if info.source_color.channel_count == Some(4) && !info.has_alpha {
-                return SourceProfile::Srgb;
-            }
+        if self.ignore_color_profile {
+            return SourceProfile::Srgb;
         }
 
         // Priority: ICC profile > CICP > sRGB
