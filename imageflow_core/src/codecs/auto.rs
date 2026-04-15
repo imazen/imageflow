@@ -434,6 +434,23 @@ fn create_encoder_auto(
             }
             #[cfg(all(not(feature = "c-codecs"), feature = "zen-codecs"))]
             {
+                // Resolve lossless from BOTH the format-level `needs_lossless` AND
+                // the per-format `encoder_hints.webp.lossless`. Mirrors create_webp_auto
+                // (the c-codecs path) so `&webp.lossless=true` works on zen-only too.
+                // The original zen branch only consulted `needs_lossless`, so users
+                // setting only `webp.lossless=true` got a lossy WebP back.
+                let manual_and_default_hints =
+                    details.encoder_hints.and_then(|hints| hints.webp);
+                let manual_lossless =
+                    match manual_and_default_hints.and_then(|hints| hints.lossless) {
+                        Some(s::BoolKeep::Keep) => Some(
+                            details.source_image_info.map(|info| info.lossless).unwrap_or(false),
+                        ),
+                        Some(s::BoolKeep::True) => Some(true),
+                        Some(s::BoolKeep::False) => Some(false),
+                        None => None,
+                    };
+                let lossless = details.needs_lossless.or(manual_lossless).unwrap_or(false);
                 let quality = details
                     .quality_profile
                     .map(|qp| {
@@ -441,7 +458,6 @@ fn create_encoder_auto(
                         hints.webp
                     })
                     .unwrap_or(80.0);
-                let lossless = details.needs_lossless.unwrap_or(false);
                 Box::new(
                     crate::codecs::zen_encoder::ZenEncoder::create_webp(
                         ctx,

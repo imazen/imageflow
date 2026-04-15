@@ -145,14 +145,6 @@ fn test_branching_crop_whitespace() {
 }
 
 #[test]
-#[cfg_attr(
-    not(feature = "c-codecs"),
-    ignore = "zenwebp lossless RGBA encoder diverges from libwebp on the alpha \
-              fringe (zdsim ~0.17 at native 400×301; maxΔ up to 97 on B channel \
-              at semi-transparent edges). Partially fixed by imazen/zenwebp#15 \
-              (zero RGB under α=0 by default), but α>0 fringe pixels still drift. \
-              Re-enable when zenwebp alpha-fringe parity with libwebp lands."
-)]
 fn test_transparent_webp_to_webp() {
     // Source is 400×301; encode lossless at native resolution so zdsim gets
     // ~120k pixels to work with (zdsim inflates heavily below ~256×256).
