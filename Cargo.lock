@@ -4247,7 +4247,7 @@ dependencies = [
  "whereat",
  "zencodec",
  "zenpixels",
- "zenyuv 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zenyuv 0.1.1",
 ]
 
 [[package]]
@@ -4263,9 +4263,9 @@ dependencies = [
 
 [[package]]
 name = "zenyuv"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "313985b41811e10894b23dbd4e836753d60e1f857fb0635c3a620173f904c089"
+checksum = "889cc4d95b87392c0f01bce6815abd7648bf16b081f60e1122a30416c626b4f0"
 dependencies = [
  "archmage",
  "libm",

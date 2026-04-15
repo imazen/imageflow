@@ -100,6 +100,60 @@ impl ZenEncoder {
         })
     }
 
+    /// Zen JPEG encoder configured for libjpeg-turbo-compatible semantics.
+    ///
+    /// Differs from `create_jpeg` (the Mozjpeg-style default) in three ways:
+    /// - No adaptive quantization (`auto_optimize(false)`), matching classic libjpeg.
+    /// - Optional Huffman optimization — default off, matching libjpeg-turbo's
+    ///   single-pass Annex K behavior. mozjpeg-rs always optimizes, so we route
+    ///   `LibjpegTurbo { optimize_huffman_coding: Some(false) }` through zenjpeg
+    ///   specifically to honor the disable toggle.
+    /// - Baseline (non-progressive) default, matching libjpeg-turbo.
+    ///
+    /// Quality scale is `Quality::ApproxMozjpeg` since libjpeg-turbo and mozjpeg
+    /// share the same ~0–100 quality scale at the quantization-table level.
+    pub(crate) fn create_jpeg_libjpeg_turbo_style(
+        c: &Context,
+        io: IoProxy,
+        quality: Option<i32>,
+        progressive: Option<bool>,
+        optimize_huffman_coding: Option<bool>,
+        matte: Option<imageflow_types::Color>,
+    ) -> Result<Self> {
+        if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::ZenJpegEncoder) {
+            return Err(nerror!(
+                ErrorKind::CodecDisabledError,
+                "The ZenJpeg encoder has been disabled"
+            ));
+        }
+        use zenjpeg::encoder::{ChromaSubsampling, Quality};
+        let q = quality.unwrap_or(100).clamp(0, 100) as u8;
+        let subsampling =
+            if q >= 90 { ChromaSubsampling::None } else { ChromaSubsampling::Quarter };
+
+        let mut config =
+            zenjpeg::encoder::EncoderConfig::ycbcr(Quality::ApproxMozjpeg(q), subsampling)
+                .auto_optimize(false)
+                .optimize_huffman(optimize_huffman_coding.unwrap_or(false))
+                .progressive(progressive.unwrap_or(false));
+
+        config = config.parallel(zenjpeg::encoder::ParallelEncoding::Auto);
+
+        let matte = Some(matte.unwrap_or(imageflow_types::Color::Srgb(
+            imageflow_types::ColorSrgb::Hex("FFFFFFFF".to_owned()),
+        )));
+
+        Ok(ZenEncoder {
+            mode: EncodeMode::NativeJpeg { config },
+            io,
+            matte,
+            frame_enc: None,
+            supports_animation: false,
+            preferred_extension: "jpg",
+            preferred_mime_type: "image/jpeg",
+        })
+    }
+
     pub(crate) fn create_webp(
         c: &Context,
         io: IoProxy,

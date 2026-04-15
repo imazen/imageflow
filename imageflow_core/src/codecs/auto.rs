@@ -170,9 +170,30 @@ pub(crate) fn create_encoder(
             optimize_huffman_coding,
             ref matte,
         } => {
+            // libjpeg-turbo semantics: baseline JPEG, Annex K Huffman tables
+            // (unless optimize_huffman_coding is true), no adaptive quantization.
+            // c-codecs path: mozjpeg in LibJPEGv6 defaults mode. Zen fallback: zenjpeg
+            // with auto_optimize(false) and optimize_huffman honoring the toggle —
+            // zenjpeg is the only zen-side JPEG encoder that exposes huffman-coding
+            // as a separate switch (mozjpeg-rs always optimizes).
             #[cfg(feature = "c-codecs")]
-            {
-                Box::new(
+            let preferred = crate::codecs::NamedEncoders::MozJpegEncoder;
+            #[cfg(all(not(feature = "c-codecs"), feature = "zen-codecs"))]
+            let preferred = crate::codecs::NamedEncoders::ZenJpegEncoder;
+            #[cfg(all(not(feature = "c-codecs"), not(feature = "zen-codecs")))]
+            let preferred = {
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "LibjpegTurbo encoder requires 'c-codecs' or 'zen-codecs'"
+                ));
+            };
+            let picked =
+                c.enabled_codecs.preferred_or_first(preferred, |e| e.is_jpeg()).ok_or_else(
+                    || nerror!(ErrorKind::CodecDisabledError, "No JPEG encoder is enabled"),
+                )?;
+            let inner: Box<dyn Encoder> = match picked {
+                #[cfg(feature = "c-codecs")]
+                crate::codecs::NamedEncoders::MozJpegEncoder => Box::new(
                     crate::codecs::mozjpeg::MozjpegEncoder::create_classic(
                         c,
                         quality.map(|q| q as u8),
@@ -182,15 +203,35 @@ pub(crate) fn create_encoder(
                         io,
                     )
                     .map_err(|e| e.at(here!()))?,
-                )
-            }
-            #[cfg(not(feature = "c-codecs"))]
-            {
-                return Err(nerror!(
-                    ErrorKind::CodecDisabledError,
-                    "LibjpegTurbo encoder requires the 'c-codecs' feature"
-                ));
-            }
+                ),
+                #[cfg(feature = "zen-codecs")]
+                crate::codecs::NamedEncoders::ZenJpegEncoder => Box::new(
+                    crate::codecs::zen_encoder::ZenEncoder::create_jpeg_libjpeg_turbo_style(
+                        c,
+                        io,
+                        quality,
+                        progressive,
+                        optimize_huffman_coding,
+                        matte.clone(),
+                    )
+                    .map_err(|e| e.at(here!()))?,
+                ),
+                // Intentionally no MozjpegRsEncoder arm — mozjpeg-rs always
+                // optimizes Huffman tables and can't honor the disable toggle.
+                // Disable ZenJpegEncoder in enabled_codecs if you need to force
+                // the other JPEG encoder; LibjpegTurbo semantics will then fail
+                // loudly rather than silently producing optimized output.
+                _ => {
+                    return Err(nerror!(
+                        ErrorKind::CodecDisabledError,
+                        "LibjpegTurbo preset requires MozJpeg (c-codecs) or \
+                         ZenJpeg (zen-codecs) to honor its Huffman-coding \
+                         toggle; got {:?}",
+                        picked
+                    ));
+                }
+            };
+            inner
         }
         s::EncoderPreset::Lodepng { maximum_deflate } => Box::new(
             crate::codecs::lode::LodepngEncoder::create(c, io, maximum_deflate, None)

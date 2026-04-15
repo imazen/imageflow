@@ -171,12 +171,6 @@ fn smoke_test_corrupt_jpeg() {
 }
 
 #[test]
-#[cfg_attr(
-    not(feature = "c-codecs"),
-    ignore = "LibjpegTurbo encoder preset requires c-codecs; the zen-only \
-              JPEG encode smoke path is covered by tests using format=jpg \
-              via CommandString (mozjpeg-rs or zenjpeg selected automatically)"
-)]
 fn test_encode_jpeg_smoke() {
     let steps = vec![
         Node::Decode { io_id: 0, commands: None },
