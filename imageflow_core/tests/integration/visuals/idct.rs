@@ -80,6 +80,11 @@ fn run_idct_test(
 }
 
 #[test]
+#[cfg_attr(
+    not(feature = "c-codecs"),
+    ignore = "Requires JpegDownscaleHints during decode; zenjpeg does not (and \
+              will not) support the IDCT-scale decode hint. c-codecs only."
+)]
 fn test_idct_linear() {
     let identity = test_identity!();
     let source_url =
@@ -88,6 +93,11 @@ fn test_idct_linear() {
 }
 
 #[test]
+#[cfg_attr(
+    not(feature = "c-codecs"),
+    ignore = "Requires JpegDownscaleHints during decode; zenjpeg does not (and \
+              will not) support the IDCT-scale decode hint. c-codecs only."
+)]
 fn test_idct_spatial_no_gamma() {
     let identity = test_identity!();
     let source_url =
