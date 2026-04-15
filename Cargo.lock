@@ -502,9 +502,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.6.0"
+version = "4.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b193af5b67834b676abd72466a96c1024e6a6ad978a1f484bd90b85c94041351"
+checksum = "1ddb117e43bbf7dacf0a4190fef4d345b9bad68dfc649cb349e7d17d28428e51"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -524,9 +524,9 @@ dependencies = [
 
 [[package]]
 name = "clap_derive"
-version = "4.6.0"
+version = "4.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1110bd8a634a1ab8cb04345d8d878267d57c3cf1b38d91b71af6686408bbca6a"
+checksum = "f2ce8604710f6733aa641a2b3731eaa1e8b3d9973d5e3565da11800813f997a9"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -3959,9 +3959,9 @@ dependencies = [
 
 [[package]]
 name = "zencodec"
-version = "0.1.16"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b86a563becc403bb3e98225c5715711b87cd1c32222659b7d84282c4f5800fe3"
+checksum = "02518f90bd09bc6afc6a9efa5aa83328ac21798b73a2ec6a397af05d7e0f4b89"
 dependencies = [
  "almost-enough",
  "enough",
@@ -4002,6 +4002,7 @@ dependencies = [
 [[package]]
 name = "zenjpeg"
 version = "0.8.4"
+source = "git+https://github.com/imazen/zenjpeg?branch=main#25c4ee4ac5093fe7d39e97bb394c176a19ee6b4d"
 dependencies = [
  "aligned-vec",
  "archmage",
@@ -4021,7 +4022,7 @@ dependencies = [
  "yuv",
  "zencodec",
  "zenpixels",
- "zenyuv 0.1.1",
+ "zenyuv 0.1.1 (git+https://github.com/imazen/zenjpeg?branch=main)",
 ]
 
 [[package]]
@@ -4088,6 +4089,7 @@ dependencies = [
 [[package]]
 name = "zenpixels"
 version = "0.2.8"
+source = "git+https://github.com/imazen/zenpixels?branch=main#01b8855bf4be992a9429df0d1f36759b6f1435be"
 dependencies = [
  "bytemuck",
  "imgref",
@@ -4097,14 +4099,17 @@ dependencies = [
 
 [[package]]
 name = "zenpixels-convert"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6008b9c56f8377ba7a973f53bb498c3137aec51da56897ee5fa18c210f1be13"
+checksum = "cc9c1286063343e903beba2842cf621d31a754b462843d9bb042b558a90536b1"
 dependencies = [
  "archmage",
  "bytemuck",
  "garb",
  "linear-srgb",
+ "magetypes",
+ "once_cell",
+ "paste",
  "rgb",
  "whereat",
  "zenpixels",
@@ -4231,6 +4236,7 @@ dependencies = [
 [[package]]
 name = "zenwebp"
 version = "0.4.3"
+source = "git+https://github.com/imazen/zenwebp?branch=main#f5744d1dd0d95277a072e97df510d946f8ec3004"
 dependencies = [
  "archmage",
  "bytemuck",
@@ -4253,6 +4259,8 @@ dependencies = [
 [[package]]
 name = "zenyuv"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "889cc4d95b87392c0f01bce6815abd7648bf16b081f60e1122a30416c626b4f0"
 dependencies = [
  "archmage",
  "libm",
@@ -4264,8 +4272,7 @@ dependencies = [
 [[package]]
 name = "zenyuv"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "889cc4d95b87392c0f01bce6815abd7648bf16b081f60e1122a30416c626b4f0"
+source = "git+https://github.com/imazen/zenjpeg?branch=main#25c4ee4ac5093fe7d39e97bb394c176a19ee6b4d"
 dependencies = [
  "archmage",
  "libm",
