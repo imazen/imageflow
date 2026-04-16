@@ -21,7 +21,7 @@ mod io;
 pub mod json;
 
 pub use crate::codecs::cms::CmsBackend;
-pub use crate::codecs::NamedDecoders;
+pub use crate::codecs::{NamedDecoders, NamedEncoders};
 pub use crate::context::Context;
 pub use crate::context::ThreadSafeContext;
 pub use crate::flow::definitions::Graph;

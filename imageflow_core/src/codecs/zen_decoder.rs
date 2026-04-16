@@ -464,11 +464,7 @@ impl DecodeRowSink for BitmapRowSink<'_> {
             // stride * height, not the tighter (height-1)*stride + row_bytes) can
             // wrap the buffer without panicking.
             let row_start = y as usize * self.stride;
-            let needed = if height > 0 {
-                height as usize * self.stride
-            } else {
-                0
-            };
+            let needed = if height > 0 { height as usize * self.stride } else { 0 };
             // Clamp to available bitmap — the last strip may extend past the
             // bitmap's allocation when stride > row_bytes. Provide as much as
             // we have; PixelSliceMut accepts the tighter bound.
