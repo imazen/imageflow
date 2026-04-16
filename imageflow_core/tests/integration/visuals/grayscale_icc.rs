@@ -512,14 +512,25 @@ fn test_gray_icc_profiles_differ() {
 // Real-world ICC profile fixtures (JPEG, from zenpixels-icc corpus)
 // ============================================================================
 
-/// Directory containing 256x1 grayscale JPEG gradients with embedded ICC profiles.
-/// Each JPEG has pixel[x] = x (0..255) before CMS transform.
+/// Directory containing CC0-licensed 256x1 grayscale JPEG gradients.
+/// Copyrighted ICC profile fixtures are on S3 and downloaded on demand.
 const FIXTURE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/grayscale_icc/");
 
+/// S3 base URL for copyrighted grayscale ICC test fixtures.
+const S3_FIXTURE_URL: &str =
+    "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/grayscale_icc";
+
 /// Load a JPEG fixture by name (without .jpg extension).
+/// Tries local file first, falls back to S3 download with caching.
 fn load_fixture(name: &str) -> Vec<u8> {
-    let path = format!("{}{}.jpg", FIXTURE_DIR, name);
-    std::fs::read(&path).unwrap_or_else(|e| panic!("Failed to read fixture {path}: {e}"))
+    let local_path = format!("{}{}.jpg", FIXTURE_DIR, name);
+    if let Ok(data) = std::fs::read(&local_path) {
+        return data;
+    }
+    // Not in git (copyrighted ICC profile) — fetch from S3
+    let url = format!("{}/{}.jpg", S3_FIXTURE_URL, name);
+    crate::common::get_url_bytes_with_retry(&url)
+        .unwrap_or_else(|e| panic!("Fixture {name} not local and S3 fetch failed: {e}"))
 }
 
 /// Decode a JPEG fixture and return BGRA pixels.
