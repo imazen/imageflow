@@ -45,16 +45,13 @@ fn always_use_frame_decoder(fmt: ZenFormat) -> bool {
 /// scatter). No intermediate buffer, no extra copy.
 /// Whether to skip push_decode and use the buffered Decode::decode path.
 ///
-/// True for JPEG until 3 edge-case panics in zenjpeg's push_decoder_direct
-/// are fixed (imazen/zenjpeg#90):
-///   - test_transparent_png_to_jpeg: grayscale→BGRA via push triggers
-///     coefficient indexing panic in output.rs:591
-///   - cms_dual_backend_regression: CMS-related
-///   - test_icc_p3_to_jpeg_roundtrip: ICC profile related
+/// True for JPEG: push_decoder_direct has been fixed for baseline BGRA
+/// (bytes_per_pixel, stride scatter, grayscale streaming, progressive
+/// guard), but 4 edge cases remain (gray roundtrip sizing, CMS dual-
+/// backend, ICC P3 roundtrip). The buffered path handles all cases.
 ///
-/// Once those are resolved, set this to `false` for all formats to enable
-/// the zero-copy push_decode path (4096² JPEG: 187ms→112ms, parity with
-/// mozjpeg C).
+/// When push_decode is enabled for JPEG, baseline 4096² decode reaches
+/// parity with mozjpeg C (112ms vs 112ms) via zero-copy bitmap writes.
 fn prefers_buffered_decode(fmt: ZenFormat) -> bool {
     matches!(fmt, ZenFormat::Jpeg)
 }

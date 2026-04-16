@@ -4001,7 +4001,7 @@ dependencies = [
 [[package]]
 name = "zenjpeg"
 version = "0.8.4"
-source = "git+https://github.com/imazen/zenjpeg?branch=main#811d824d4e11effb8c1bd43684bc73f8e94e2c78"
+source = "git+https://github.com/imazen/zenjpeg?branch=main#001a42189aa823abce7fc83e356417ece23b65c1"
 dependencies = [
  "aligned-vec",
  "archmage",
@@ -4272,7 +4272,7 @@ dependencies = [
 [[package]]
 name = "zenyuv"
 version = "0.1.1"
-source = "git+https://github.com/imazen/zenjpeg?branch=main#811d824d4e11effb8c1bd43684bc73f8e94e2c78"
+source = "git+https://github.com/imazen/zenjpeg?branch=main#001a42189aa823abce7fc83e356417ece23b65c1"
 dependencies = [
  "archmage",
  "libm",
