@@ -509,6 +509,601 @@ fn test_gray_icc_profiles_differ() {
 }
 
 // ============================================================================
+// Real-world ICC profile fixtures (JPEG, from zenpixels-icc corpus)
+// ============================================================================
+
+/// Directory containing 256x1 grayscale JPEG gradients with embedded ICC profiles.
+/// Each JPEG has pixel[x] = x (0..255) before CMS transform.
+const FIXTURE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/grayscale_icc/");
+
+/// Load a JPEG fixture by name (without .jpg extension).
+fn load_fixture(name: &str) -> Vec<u8> {
+    let path = format!("{}{}.jpg", FIXTURE_DIR, name);
+    std::fs::read(&path).unwrap_or_else(|e| panic!("Failed to read fixture {path}: {e}"))
+}
+
+/// Decode a JPEG fixture and return BGRA pixels.
+fn decode_fixture(name: &str) -> (usize, usize, Vec<u8>) {
+    let bytes = load_fixture(name);
+    decode_to_bitmap_bgra(&bytes)
+}
+
+/// Full validation suite for a grayscale ICC JPEG fixture.
+///
+/// Checks: dimensions, neutral gray, opaque alpha, monotonic gradient,
+/// and delta vs no-ICC baseline.
+struct GrayIccFixtureTest {
+    name: &'static str,
+    /// Maximum allowed channel spread (R vs G vs B) per pixel.
+    max_channel_spread: u8,
+    /// Expected delta range vs no-ICC baseline [min, max].
+    /// If None, no delta check is performed.
+    delta_vs_baseline: Option<(u8, u8)>,
+    /// Expected mid-gray (pixel 128) brightness range [min, max].
+    /// Only checked if Some.
+    mid_gray_range: Option<(u8, u8)>,
+    /// If true, expect decode to fail (unsupported profile). The test verifies
+    /// a graceful error message rather than pixel correctness.
+    expect_unsupported: bool,
+}
+
+impl GrayIccFixtureTest {
+    fn run(&self) {
+        test_init();
+
+        if self.expect_unsupported {
+            // Verify this profile produces a graceful error, not a panic or corruption
+            let bytes = load_fixture(self.name);
+            let mut ctx = Context::create().unwrap();
+            ctx.add_input_vector(0, bytes).unwrap();
+            let result = ctx.execute_1(Execute001 {
+                job_options: None,
+                graph_recording: default_graph_recording(false),
+                security: None,
+                framewise: Framewise::Steps(vec![
+                    Node::Decode { io_id: 0, commands: None },
+                    Node::CaptureBitmapKey { capture_id: 0 },
+                ]),
+            });
+            assert!(
+                result.is_err(),
+                "{}: expected decode to fail for unsupported ICC profile, but it succeeded",
+                self.name
+            );
+            let err_msg = format!("{:?}", result.unwrap_err());
+            eprintln!(
+                "{}: correctly rejected unsupported profile: {}",
+                self.name,
+                &err_msg[..err_msg.len().min(120)]
+            );
+            return;
+        }
+
+        let (w, _h, bgra) = decode_fixture(self.name);
+
+        // JPEG may round 256x1 up to 256x8 (MCU alignment), so just check width
+        assert_eq!(w, 256, "{}: expected 256px wide, got {w}", self.name);
+
+        // Use first row only (all rows should be identical for gradient)
+        let row0 = &bgra[..w * 4];
+
+        assert_neutral_gray(row0, self.name, self.max_channel_spread);
+        assert_alpha_opaque(row0, self.name);
+        assert_monotonic_gray(row0, w, self.name);
+
+        if let Some((min_delta, max_delta)) = self.delta_vs_baseline {
+            let baseline = load_fixture("no_icc_baseline");
+            let (_bw, _bh, baseline_bgra) = decode_to_bitmap_bgra(&baseline);
+            let baseline_row0 = &baseline_bgra[..256 * 4];
+            let delta = max_rgb_delta(row0, baseline_row0);
+            assert!(
+                delta >= min_delta,
+                "{}: delta vs baseline too small: {delta} < {min_delta}",
+                self.name
+            );
+            assert!(
+                delta <= max_delta,
+                "{}: delta vs baseline too large: {delta} > {max_delta}",
+                self.name
+            );
+            eprintln!(
+                "{}: max delta vs no-ICC baseline = {delta} (expected {min_delta}..{max_delta})",
+                self.name
+            );
+        }
+
+        if let Some((min_val, max_val)) = self.mid_gray_range {
+            let mid_b = row0[128 * 4]; // B channel at pixel 128
+            assert!(
+                mid_b >= min_val && mid_b <= max_val,
+                "{}: mid-gray pixel 128 = {mid_b}, expected {min_val}..{max_val}",
+                self.name
+            );
+            eprintln!("{}: mid-gray pixel 128 = {mid_b}", self.name);
+        }
+    }
+}
+
+// --- Gamma 1.8 profiles (the deferred ones — most important to validate) ---
+
+#[test]
+fn test_fixture_gray_gamma_1_8() {
+    // Gamma 1.8 → sRGB: 128/255 in gamma 1.8 = 0.502^1.8 ≈ 0.268 linear
+    // → sRGB OETF ≈ 0.558 → pixel ≈ 142. Mid-gray gets brighter because
+    // gamma 1.8 is less aggressive than sRGB's ~2.2 effective gamma.
+    GrayIccFixtureTest {
+        name: "gray_gamma_1_8",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((3, 30)),
+        mid_gray_range: Some((140, 155)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_epson_gray_gamma_1_8() {
+    GrayIccFixtureTest {
+        name: "epson_gray_gamma_1_8",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((3, 30)),
+        mid_gray_range: Some((140, 155)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_generic_gray_profile_macos() {
+    GrayIccFixtureTest {
+        name: "generic_gray_profile_macOS",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((3, 30)),
+        mid_gray_range: Some((140, 155)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_generic_gray_profile_0faa32c0() {
+    GrayIccFixtureTest {
+        name: "generic_gray_profile_0faa32c0",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((3, 30)),
+        mid_gray_range: Some((140, 155)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_generic_gray_profile_10233312() {
+    GrayIccFixtureTest {
+        name: "generic_gray_profile_10233312",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((3, 30)),
+        mid_gray_range: Some((140, 155)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_generic_gray_profile_94722fe2() {
+    GrayIccFixtureTest {
+        name: "generic_gray_profile_94722fe2",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((3, 30)),
+        mid_gray_range: Some((140, 155)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_sgray_artifex_gamma_1_8() {
+    GrayIccFixtureTest {
+        name: "sgray_artifex_gamma_1_8",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((3, 30)),
+        mid_gray_range: Some((140, 155)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_windows_blackwhite() {
+    GrayIccFixtureTest {
+        name: "windows_blackwhite",
+        max_channel_spread: 1,
+        // para(g=1.8) — same gamma 1.8 transform
+        delta_vs_baseline: Some((3, 30)),
+        mid_gray_range: Some((140, 155)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+// --- Gamma 2.2 profiles (near-identity with sRGB) ---
+
+#[test]
+fn test_fixture_gray_gamma_2_2_simple() {
+    GrayIccFixtureTest {
+        name: "gray_gamma_2_2_simple",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((0, 12)),
+        mid_gray_range: Some((120, 140)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_gray_gamma_2_2_curv1024() {
+    GrayIccFixtureTest {
+        name: "gray_gamma_2_2_curv1024",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((0, 12)),
+        mid_gray_range: Some((120, 140)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_gray_gamma_2_2_curv1024_v2() {
+    GrayIccFixtureTest {
+        name: "gray_gamma_2_2_curv1024_v2",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((0, 12)),
+        mid_gray_range: Some((120, 140)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_gray_gamma_2_2_expanded() {
+    GrayIccFixtureTest {
+        name: "gray_gamma_2_2_expanded",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((0, 12)),
+        mid_gray_range: Some((120, 140)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_calibrated_gray() {
+    GrayIccFixtureTest {
+        name: "calibrated_gray",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((0, 12)),
+        mid_gray_range: Some((120, 140)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+// --- sRGB TRC on gray (should be near-identity) ---
+
+#[test]
+fn test_fixture_with_srgb_trc() {
+    GrayIccFixtureTest {
+        name: "with_srgb_trc",
+        max_channel_spread: 1,
+        // sRGB TRC on gray → sRGB output: should be identity or very close
+        delta_vs_baseline: Some((0, 5)),
+        mid_gray_range: Some((125, 132)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_sgrey_v4() {
+    GrayIccFixtureTest {
+        name: "sgrey_v4",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((0, 5)),
+        mid_gray_range: Some((125, 132)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_sgrey_v2_nano() {
+    GrayIccFixtureTest {
+        name: "sgrey_v2_nano",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((0, 5)),
+        mid_gray_range: Some((125, 132)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_sgrey_v2_micro() {
+    GrayIccFixtureTest {
+        name: "sgrey_v2_micro",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((0, 5)),
+        mid_gray_range: Some((125, 132)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_sgrey_v2_magic() {
+    GrayIccFixtureTest {
+        name: "sgrey_v2_magic",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((0, 5)),
+        mid_gray_range: Some((125, 132)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_default_gray_artifex() {
+    GrayIccFixtureTest {
+        name: "default_gray_artifex",
+        max_channel_spread: 1,
+        // Artifex default_gray has a 1024-point sRGB-like curve
+        delta_vs_baseline: Some((0, 5)),
+        mid_gray_range: Some((125, 132)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+// --- Linear (gamma 1.0) profiles ---
+
+#[test]
+fn test_fixture_ps_gray_linear() {
+    GrayIccFixtureTest {
+        name: "ps_gray_linear",
+        max_channel_spread: 1,
+        // Linear → sRGB: large transform, mid-gray brightens significantly
+        delta_vs_baseline: Some((30, 80)),
+        mid_gray_range: Some((170, 200)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_gray_linear() {
+    GrayIccFixtureTest {
+        name: "gray_linear",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((30, 80)),
+        mid_gray_range: Some((170, 200)),
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_gray_cie_l() {
+    // Gray CIE*L uses Lab PCS instead of XYZ PCS. moxcms does not support
+    // Lab-PCS grayscale profiles, so this profile is rejected during decode.
+    // This is a known limitation — CIE L* is a perceptual lightness scale
+    // that requires Lab↔XYZ conversion moxcms hasn't implemented for gray.
+    GrayIccFixtureTest {
+        name: "gray_cie_l",
+        max_channel_spread: 0,
+        delta_vs_baseline: None,
+        mid_gray_range: None,
+        expect_unsupported: true,
+    }
+    .run();
+}
+
+// --- Dot Gain profiles ---
+
+#[test]
+fn test_fixture_dot_gain_10() {
+    GrayIccFixtureTest {
+        name: "dot_gain_10",
+        max_channel_spread: 1,
+        // Dot gain compensates for ink spread in printing. Even 10% dot gain
+        // produces significant lightening of darks — the curv lookup table
+        // maps encoded values to lighter linear values to counteract gain.
+        delta_vs_baseline: Some((1, 55)),
+        mid_gray_range: None,
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_dot_gain_15() {
+    GrayIccFixtureTest {
+        name: "dot_gain_15",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((1, 60)),
+        mid_gray_range: None,
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_dot_gain_20() {
+    GrayIccFixtureTest {
+        name: "dot_gain_20",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((1, 70)),
+        mid_gray_range: None,
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_dot_gain_20_variant() {
+    GrayIccFixtureTest {
+        name: "dot_gain_20_variant",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((1, 70)),
+        mid_gray_range: None,
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_dot_gain_20_curv256() {
+    GrayIccFixtureTest {
+        name: "dot_gain_20_curv256",
+        max_channel_spread: 1,
+        delta_vs_baseline: Some((1, 70)),
+        mid_gray_range: None,
+        expect_unsupported: false,
+    }
+    .run();
+}
+
+// --- Newspaper profiles ---
+
+#[test]
+fn test_fixture_iso_newspaper26v4() {
+    // ISOnewspaper26v4_gr uses Lab PCS and 'prtr' (printer/output) device class.
+    // moxcms does not support Lab-PCS grayscale profiles. These are printing
+    // industry profiles designed for newsprint dot gain compensation.
+    GrayIccFixtureTest {
+        name: "iso_newspaper26v4",
+        max_channel_spread: 0,
+        delta_vs_baseline: None,
+        mid_gray_range: None,
+        expect_unsupported: true,
+    }
+    .run();
+}
+
+#[test]
+fn test_fixture_wan_ifra_newspaper26v5() {
+    // WAN-IFRAnewspaper26v5_gr — same Lab PCS issue as ISOnewspaper26v4.
+    GrayIccFixtureTest {
+        name: "wan_ifra_newspaper26v5",
+        max_channel_spread: 0,
+        delta_vs_baseline: None,
+        mid_gray_range: None,
+        expect_unsupported: true,
+    }
+    .run();
+}
+
+// --- No-ICC baseline JPEG ---
+
+#[test]
+fn test_fixture_no_icc_baseline_jpeg() {
+    test_init();
+    let (w, _h, bgra) = decode_fixture("no_icc_baseline");
+    assert_eq!(w, 256);
+    let row0 = &bgra[..w * 4];
+    // JPEG Q100 should be near-lossless for gradients
+    assert_neutral_gray(row0, "no_icc_baseline_jpeg", 1);
+    assert_alpha_opaque(row0, "no_icc_baseline_jpeg");
+    assert_monotonic_gray(row0, w, "no_icc_baseline_jpeg");
+
+    // Verify JPEG Q100 is close to identity (allow ±1 for JPEG rounding)
+    for x in 0..256usize {
+        let b = row0[x * 4];
+        let expected = x as u8;
+        assert!(
+            b.abs_diff(expected) <= 1,
+            "no_icc_baseline_jpeg: pixel[{x}] gray={b}, expected ~{expected} (JPEG rounding)"
+        );
+    }
+}
+
+// --- Cross-profile consistency: all gamma 1.8 fixtures should agree ---
+
+#[test]
+fn test_fixture_gamma_1_8_cross_consistency() {
+    test_init();
+    let gamma_1_8_fixtures = [
+        "gray_gamma_1_8",
+        "epson_gray_gamma_1_8",
+        "generic_gray_profile_macOS",
+        "generic_gray_profile_0faa32c0",
+        "generic_gray_profile_10233312",
+        "generic_gray_profile_94722fe2",
+        "sgray_artifex_gamma_1_8",
+        "windows_blackwhite",
+    ];
+
+    // Decode all gamma 1.8 fixtures
+    let decoded: Vec<(String, Vec<u8>)> = gamma_1_8_fixtures
+        .iter()
+        .map(|name| {
+            let (_w, _h, bgra) = decode_fixture(name);
+            let row0 = bgra[..256 * 4].to_vec();
+            (name.to_string(), row0)
+        })
+        .collect();
+
+    // All gamma 1.8 profiles should produce similar output (within tolerance
+    // for different TRC representations: simple gamma vs para vs curv table)
+    let reference = &decoded[0].1;
+    for (name, row) in &decoded[1..] {
+        let delta = max_rgb_delta(reference, row);
+        assert!(
+            delta <= 3,
+            "gamma 1.8 cross-check: {} vs {} delta={delta} (expected ≤3, \
+             all gamma 1.8 profiles should produce nearly identical output)",
+            decoded[0].0,
+            name
+        );
+    }
+    eprintln!(
+        "gamma 1.8 cross-consistency: all {} profiles agree within tolerance",
+        gamma_1_8_fixtures.len()
+    );
+}
+
+// --- Cross-profile consistency: gamma 1.8 vs gamma 2.2 should differ ---
+
+#[test]
+fn test_fixture_gamma_1_8_vs_2_2_differ() {
+    test_init();
+    let (_w, _h, bgra_18) = decode_fixture("gray_gamma_1_8");
+    let (_w, _h, bgra_22) = decode_fixture("gray_gamma_2_2_simple");
+
+    let row_18 = &bgra_18[..256 * 4];
+    let row_22 = &bgra_22[..256 * 4];
+    let delta = max_rgb_delta(row_18, row_22);
+
+    assert!(delta >= 3, "gamma 1.8 vs 2.2 should differ visibly (delta={delta})");
+    eprintln!("gamma 1.8 vs 2.2: max delta = {delta}");
+}
+
+// --- Verify dot gain profiles differ from gamma profiles ---
+
+#[test]
+fn test_fixture_dot_gain_vs_gamma_differ() {
+    test_init();
+    let (_w, _h, bgra_dg) = decode_fixture("dot_gain_20");
+    let (_w, _h, bgra_g22) = decode_fixture("gray_gamma_2_2_simple");
+
+    let row_dg = &bgra_dg[..256 * 4];
+    let row_g22 = &bgra_g22[..256 * 4];
+    let delta = max_rgb_delta(row_dg, row_g22);
+
+    assert!(delta >= 5, "dot gain 20% vs gamma 2.2 should differ (delta={delta})");
+    eprintln!("dot_gain_20 vs gamma_2.2: max delta = {delta}");
+}
+
+// ============================================================================
 // Tests: Grayscale JPEG encode→decode roundtrip with ICC
 // ============================================================================
 
