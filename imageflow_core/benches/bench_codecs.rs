@@ -164,21 +164,16 @@ fn configure_decoders(ctx: &mut Context, preferred: NamedDecoders, disable: &[Na
     }
 }
 
-/// Run a decode-only job: Decode(io_id=0) → no-op → (implicitly terminate).
-/// We use CommandString to produce a bitmap and then throw it away;
-/// cheaper than a full encode.
+/// Run a decode-only job: Decode(io_id=0) as terminal node.
 fn decode_only_job(fixture: &[u8]) {
     let mut ctx = Context::create().unwrap();
     ctx.add_input_vector(0, fixture.to_vec()).unwrap();
-    // A decode node alone isn't a valid graph terminus, so pair it with
-    // a tiny resample to 1x1 to force full decode + read of the frame.
     let execute = s::Execute001 {
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
         job_options: None,
         framewise: s::Framewise::Steps(vec![
             s::Node::Decode { io_id: 0, commands: None },
-            s::Node::Resample2D { w: 1, h: 1, hints: None },
         ]),
     };
     ctx.execute_1(execute).unwrap();
@@ -194,7 +189,6 @@ fn decode_with_config(fixture: &[u8], preferred: NamedDecoders, disable: &[Named
         job_options: None,
         framewise: s::Framewise::Steps(vec![
             s::Node::Decode { io_id: 0, commands: None },
-            s::Node::Resample2D { w: 1, h: 1, hints: None },
         ]),
     };
     ctx.execute_1(execute).unwrap();

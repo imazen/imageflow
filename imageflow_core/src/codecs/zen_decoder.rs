@@ -37,11 +37,24 @@ fn always_use_frame_decoder(fmt: ZenFormat) -> bool {
 }
 
 /// Whether the format's buffered Decode::decode is faster than push_decode.
-/// True for JPEG: zenjpeg's `decode()` triggers `to_pixels_fast_i16_*_parallel`
-/// (rayon-parallel output, threshold ~2 MPx in zenjpeg), while `push_decode`
-/// uses sequential ScanlineReader. Measured 2.5× speedup on 4096² JPEG decode.
-/// Other zen codecs don't have a parallel `decode()` path, so push_decode
-/// remains preferred (lower peak memory, no extra allocation).
+///
+/// Previously true for JPEG because push_decode used sequential ScanlineReader.
+/// Now false: zenjpeg's push_decode routes through `push_decoder_direct` →
+/// `decode_into()` which uses the fused streaming BGRA path and writes
+/// directly into the bitmap sink — zero intermediate buffer, zero extra copy.
+/// The old `into_decoder().decode()` path allocated its own output buffer then
+/// memcpy'd into the bitmap, costing an extra 64 MB at 4096².
+/// Whether the format's buffered Decode::decode is faster than push_decode.
+///
+/// True for JPEG: push_decoder_direct has stride/output issues that cause
+/// visual corruption when writing into SIMD-aligned bitmaps (159 test
+/// failures). Until zenjpeg's push_decode path fully supports strided
+/// output and matches the buffered path's metadata/orientation handling,
+/// JPEG stays on the buffered path. The fused BGRA streaming kernel is
+/// still active via Decoder::decode() → streaming_output_format.
+///
+/// TODO: investigate push_decoder_direct failures and switch JPEG to
+/// push_decode for zero-copy bitmap writes.
 fn prefers_buffered_decode(fmt: ZenFormat) -> bool {
     matches!(fmt, ZenFormat::Jpeg)
 }
@@ -446,8 +459,8 @@ impl DecodeRowSink for BitmapRowSink<'_> {
 
         if self.is_4bpp {
             // 4bpp (BGRA/RGBA): write directly into bitmap at the correct row offset.
-            let row_start = y as usize * self.stride;
             let row_bytes = width as usize * 4;
+            let row_start = y as usize * self.stride;
             let needed =
                 if height > 0 { (height as usize - 1) * self.stride + row_bytes } else { 0 };
             if row_start + needed > self.data.len() {
