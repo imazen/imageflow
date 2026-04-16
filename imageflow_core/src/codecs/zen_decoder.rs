@@ -52,8 +52,12 @@ fn always_use_frame_decoder(fmt: ZenFormat) -> bool {
 ///
 /// When push_decode is enabled for JPEG, baseline 4096² decode reaches
 /// parity with mozjpeg C (112ms vs 112ms) via zero-copy bitmap writes.
-fn prefers_buffered_decode(fmt: ZenFormat) -> bool {
-    matches!(fmt, ZenFormat::Jpeg)
+/// All formats use push_decode (zero-copy bitmap writes).
+/// Baseline JPEG routes through push_decoder_direct → fused BGRA streaming.
+/// Progressive/arithmetic JPEG, grayscale, and edge cases use the safe
+/// cfg.decode() fallback inside push_decoder_direct.
+fn prefers_buffered_decode(_fmt: ZenFormat) -> bool {
+    false
 }
 
 /// Unified decoder for all zen codec formats.
@@ -456,19 +460,29 @@ impl DecodeRowSink for BitmapRowSink<'_> {
 
         if self.is_4bpp {
             // 4bpp (BGRA/RGBA): write directly into bitmap at the correct row offset.
-            let row_bytes = width as usize * 4;
+            // Provide stride * height bytes so imgref's ImgRefMut (which requires
+            // stride * height, not the tighter (height-1)*stride + row_bytes) can
+            // wrap the buffer without panicking.
             let row_start = y as usize * self.stride;
-            let needed =
-                if height > 0 { (height as usize - 1) * self.stride + row_bytes } else { 0 };
-            if row_start + needed > self.data.len() {
+            let needed = if height > 0 {
+                height as usize * self.stride
+            } else {
+                0
+            };
+            // Clamp to available bitmap — the last strip may extend past the
+            // bitmap's allocation when stride > row_bytes. Provide as much as
+            // we have; PixelSliceMut accepts the tighter bound.
+            let available = self.data.len().saturating_sub(row_start);
+            let slice_len = needed.min(available);
+            if slice_len == 0 && height > 0 {
                 return Err(format!(
                     "strip at y={y} needs {} bytes but bitmap has {}",
-                    row_start + needed,
+                    needed,
                     self.data.len()
                 )
                 .into());
             }
-            let slice = &mut self.data[row_start..row_start + needed];
+            let slice = &mut self.data[row_start..row_start + slice_len];
             PixelSliceMut::new(slice, width, height, self.stride, descriptor)
                 .map_err(|e| -> SinkError { format!("{e}").into() })
         } else {
