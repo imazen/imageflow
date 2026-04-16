@@ -3983,8 +3983,7 @@ dependencies = [
 [[package]]
 name = "zengif"
 version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4c69ebfd7062f47382bd85c1048e64689753f238d1607c191a521634ffcddba"
+source = "git+https://github.com/imazen/zengif?branch=main#d3d1e89418781a35abb479104d75625f6f67f878"
 dependencies = [
  "bytemuck",
  "color_quant",
@@ -4002,12 +4001,13 @@ dependencies = [
 [[package]]
 name = "zenjpeg"
 version = "0.8.4"
-source = "git+https://github.com/imazen/zenjpeg?branch=main#25c4ee4ac5093fe7d39e97bb394c176a19ee6b4d"
+source = "git+https://github.com/imazen/zenjpeg?branch=main#097db57ea80e1c06a430c501ca514e94ceaea6a5"
 dependencies = [
  "aligned-vec",
  "archmage",
  "bytemuck",
  "enough",
+ "garb",
  "imgref",
  "linear-srgb",
  "magetypes",
@@ -4272,7 +4272,7 @@ dependencies = [
 [[package]]
 name = "zenyuv"
 version = "0.1.1"
-source = "git+https://github.com/imazen/zenjpeg?branch=main#25c4ee4ac5093fe7d39e97bb394c176a19ee6b4d"
+source = "git+https://github.com/imazen/zenjpeg?branch=main#097db57ea80e1c06a430c501ca514e94ceaea6a5"
 dependencies = [
  "archmage",
  "libm",
