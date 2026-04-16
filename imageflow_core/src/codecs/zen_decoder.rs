@@ -38,23 +38,23 @@ fn always_use_frame_decoder(fmt: ZenFormat) -> bool {
 
 /// Whether the format's buffered Decode::decode is faster than push_decode.
 ///
-/// Previously true for JPEG because push_decode used sequential ScanlineReader.
-/// Now false: zenjpeg's push_decode routes through `push_decoder_direct` →
-/// `decode_into()` which uses the fused streaming BGRA path and writes
-/// directly into the bitmap sink — zero intermediate buffer, zero extra copy.
-/// The old `into_decoder().decode()` path allocated its own output buffer then
-/// memcpy'd into the bitmap, costing an extra 64 MB at 4096².
-/// Whether the format's buffered Decode::decode is faster than push_decode.
+/// False for all formats: zenjpeg's push_decode routes through
+/// `push_decoder_direct` → `decode_into()` with the fused streaming BGRA
+/// path, writing directly into the bitmap sink with stride support
+/// (811d824d fixed the bytes_per_pixel vs num_channels bug + added stride
+/// scatter). No intermediate buffer, no extra copy.
+/// Whether to skip push_decode and use the buffered Decode::decode path.
 ///
-/// True for JPEG: push_decoder_direct has stride/output issues that cause
-/// visual corruption when writing into SIMD-aligned bitmaps (159 test
-/// failures). Until zenjpeg's push_decode path fully supports strided
-/// output and matches the buffered path's metadata/orientation handling,
-/// JPEG stays on the buffered path. The fused BGRA streaming kernel is
-/// still active via Decoder::decode() → streaming_output_format.
+/// True for JPEG until 3 edge-case panics in zenjpeg's push_decoder_direct
+/// are fixed (imazen/zenjpeg#90):
+///   - test_transparent_png_to_jpeg: grayscale→BGRA via push triggers
+///     coefficient indexing panic in output.rs:591
+///   - cms_dual_backend_regression: CMS-related
+///   - test_icc_p3_to_jpeg_roundtrip: ICC profile related
 ///
-/// TODO: investigate push_decoder_direct failures and switch JPEG to
-/// push_decode for zero-copy bitmap writes.
+/// Once those are resolved, set this to `false` for all formats to enable
+/// the zero-copy push_decode path (4096² JPEG: 187ms→112ms, parity with
+/// mozjpeg C).
 fn prefers_buffered_decode(fmt: ZenFormat) -> bool {
     matches!(fmt, ZenFormat::Jpeg)
 }
