@@ -106,7 +106,17 @@ fn main() {
     // Use montage to create side-by-side
     let montage_path = format!("{out_dir}/montage.png");
     let status = std::process::Command::new("montage")
-        .args([&zen_path, &moz_path, "-tile", "2x1", "-geometry", "+4+4", "-label", "%f", &montage_path])
+        .args([
+            &zen_path,
+            &moz_path,
+            "-tile",
+            "2x1",
+            "-geometry",
+            "+4+4",
+            "-label",
+            "%f",
+            &montage_path,
+        ])
         .status();
     match status {
         Ok(s) if s.success() => eprintln!("Montage: {montage_path}"),
@@ -116,13 +126,20 @@ fn main() {
     eprintln!("\nOpen montage: {montage_path}");
     // Open in Chrome
     let win_montage = std::process::Command::new("wslpath")
-        .arg("-w").arg(&montage_path)
-        .output().ok().and_then(|o| String::from_utf8(o.stdout).ok())
-        .unwrap_or_default().trim().to_string();
+        .arg("-w")
+        .arg(&montage_path)
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .unwrap_or_default()
+        .trim()
+        .to_string();
     if !win_montage.is_empty() {
         let url = format!("file:///{}", win_montage.replace('\\', "/"));
-        let _ = std::process::Command::new("/mnt/c/Program Files/Google/Chrome/Application/chrome.exe")
-            .arg(&url).spawn();
+        let _ =
+            std::process::Command::new("/mnt/c/Program Files/Google/Chrome/Application/chrome.exe")
+                .arg(&url)
+                .spawn();
         eprintln!("Opened in Chrome: {url}");
     }
 }

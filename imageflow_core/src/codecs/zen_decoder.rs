@@ -118,8 +118,8 @@ impl ZenDecoder {
         // bundled fallback CMYK profile) for an accurate conversion. No effect
         // on 3-component JPEGs. (Passthrough is the default in zenjpeg post-
         // ebb0e24f, but set explicitly so the intent survives any default flip.)
-        let config = zenjpeg::JpegDecoderConfig::new()
-            .cmyk_handling(zenjpeg::CmykHandling::Passthrough);
+        let config =
+            zenjpeg::JpegDecoderConfig::new().cmyk_handling(zenjpeg::CmykHandling::Passthrough);
         Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Jpeg))
     }
 
@@ -728,8 +728,7 @@ impl Decoder for ZenDecoder {
             if prefers_buffered_decode(self.format) {
                 Err("skip push_decode; format prefers buffered decode".into())
             } else {
-                let mut bitmap =
-                    bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
+                let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
                 let mut window = bitmap.get_window_u8().unwrap();
                 let dst_stride = window.info().t_stride() as usize;
                 let dst = window.slice_mut();

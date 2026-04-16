@@ -402,12 +402,10 @@ fn create_encoder_auto(
                 // and details.matte. Previously this branch ignored all of them and
                 // hardcoded quality from quality_profile (defaulting to 85 vs c's 90),
                 // progressive=true, matte=None — diverging from c-codecs output.
-                let manual_and_default_hints =
-                    details.encoder_hints.and_then(|hints| hints.jpeg);
+                let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.jpeg);
                 let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
-                let mut progressive = manual_and_default_hints
-                    .and_then(|hints| hints.progressive)
-                    .unwrap_or(true);
+                let mut progressive =
+                    manual_and_default_hints.and_then(|hints| hints.progressive).unwrap_or(true);
                 if details.allow.jpeg_progressive != Some(true) {
                     progressive = false;
                 }
@@ -453,8 +451,7 @@ fn create_encoder_auto(
                 // (the c-codecs path) so `&webp.lossless=true` works on zen-only too.
                 // The original zen branch only consulted `needs_lossless`, so users
                 // setting only `webp.lossless=true` got a lossy WebP back.
-                let manual_and_default_hints =
-                    details.encoder_hints.and_then(|hints| hints.webp);
+                let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.webp);
                 let manual_lossless =
                     match manual_and_default_hints.and_then(|hints| hints.lossless) {
                         Some(s::BoolKeep::Keep) => Some(
@@ -466,8 +463,7 @@ fn create_encoder_auto(
                     };
                 let lossless = details.needs_lossless.or(manual_lossless).unwrap_or(false);
                 // Mirror create_webp_auto: encoder_hints.webp.quality > quality_profile > 80.
-                let manual_quality =
-                    manual_and_default_hints.and_then(|hints| hints.quality);
+                let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
                 let profile_hints = details
                     .quality_profile
                     .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
