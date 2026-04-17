@@ -4001,7 +4001,7 @@ dependencies = [
 [[package]]
 name = "zenjpeg"
 version = "0.8.4"
-source = "git+https://github.com/imazen/zenjpeg?branch=main#78b1551823305b210af9a508850eb736c0033665"
+source = "git+https://github.com/imazen/zenjpeg?branch=main#30c3d2808da0880320799d9c35fc8c5908f282bc"
 dependencies = [
  "aligned-vec",
  "archmage",
@@ -4022,7 +4022,7 @@ dependencies = [
  "yuv",
  "zencodec",
  "zenpixels",
- "zenyuv 0.1.1 (git+https://github.com/imazen/zenjpeg?branch=main)",
+ "zenyuv 0.1.2",
 ]
 
 [[package]]
@@ -4253,7 +4253,7 @@ dependencies = [
  "whereat",
  "zencodec",
  "zenpixels",
- "zenyuv 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zenyuv 0.1.1",
 ]
 
 [[package]]
@@ -4271,8 +4271,8 @@ dependencies = [
 
 [[package]]
 name = "zenyuv"
-version = "0.1.1"
-source = "git+https://github.com/imazen/zenjpeg?branch=main#78b1551823305b210af9a508850eb736c0033665"
+version = "0.1.2"
+source = "git+https://github.com/imazen/zenjpeg?branch=main#30c3d2808da0880320799d9c35fc8c5908f282bc"
 dependencies = [
  "archmage",
  "libm",
