@@ -101,8 +101,8 @@ fn decode_zenjpeg_native(data: &[u8]) -> (u32, u32, Vec<u8>) {
 fn decode_zenjpeg_zc_buffered(data: &[u8]) -> (u32, u32, Vec<u8>) {
     use zc::decode::DynDecoderConfig;
     use zenpixels::PixelDescriptor;
-    let config =
-        zenjpeg::JpegDecoderConfig::new().cmyk_handling(zenjpeg::CmykHandling::Passthrough);
+    let config = zenjpeg::JpegDecoderConfig::new()
+        .cmyk_handling(zenjpeg::CmykHandling::Passthrough);
     let cfg_box: Box<dyn DynDecoderConfig> = Box::new(config);
     let job = cfg_box.dyn_job();
     let preferred = [
@@ -157,16 +157,19 @@ fn decode_zenjpeg_zc_push(data: &[u8]) -> (u32, u32, Vec<u8>) {
         ) -> Result<PixelSliceMut<'_>, SinkError> {
             let row_start = y as usize * self.stride;
             let row_bytes = width as usize * 4;
-            let needed =
-                if height > 0 { (height as usize - 1) * self.stride + row_bytes } else { 0 };
+            let needed = if height > 0 {
+                (height as usize - 1) * self.stride + row_bytes
+            } else {
+                0
+            };
             let slice = &mut self.data[row_start..row_start + needed];
             PixelSliceMut::new(slice, width, height, self.stride, descriptor)
                 .map_err(|e| -> SinkError { format!("{e}").into() })
         }
     }
 
-    let config =
-        zenjpeg::JpegDecoderConfig::new().cmyk_handling(zenjpeg::CmykHandling::Passthrough);
+    let config = zenjpeg::JpegDecoderConfig::new()
+        .cmyk_handling(zenjpeg::CmykHandling::Passthrough);
     let cfg_box: Box<dyn DynDecoderConfig> = Box::new(config);
     let job = cfg_box.dyn_job();
     let preferred = [
@@ -201,62 +204,25 @@ fn time<F: FnMut()>(mut f: F, rounds: usize) -> f64 {
 
 fn bench_size(w: u32, h: u32, rounds: usize) {
     let fixture = jpeg_fixture(w, h);
-    println!("\n=== {w}x{h}   fixture={} bytes   rounds={rounds} ===", fixture.len());
+    println!(
+        "\n=== {w}x{h}   fixture={} bytes   rounds={rounds} ===",
+        fixture.len()
+    );
     let pixels = (w as u64) * (h as u64);
 
-    let t_moz = time(
-        || {
-            let r = decode_mozjpeg_ffi(&fixture);
-            black_box(r);
-        },
-        rounds,
-    );
-    let t_zn = time(
-        || {
-            let r = decode_zenjpeg_native(&fixture);
-            black_box(r);
-        },
-        rounds,
-    );
-    let t_zcb = time(
-        || {
-            let r = decode_zenjpeg_zc_buffered(&fixture);
-            black_box(r);
-        },
-        rounds,
-    );
-    let t_zcp = time(
-        || {
-            let r = decode_zenjpeg_zc_push(&fixture);
-            black_box(r);
-        },
-        rounds,
-    );
+    let t_moz = time(|| { let r = decode_mozjpeg_ffi(&fixture); black_box(r); }, rounds);
+    let t_zn  = time(|| { let r = decode_zenjpeg_native(&fixture); black_box(r); }, rounds);
+    let t_zcb = time(|| { let r = decode_zenjpeg_zc_buffered(&fixture); black_box(r); }, rounds);
+    let t_zcp = time(|| { let r = decode_zenjpeg_zc_push(&fixture); black_box(r); }, rounds);
 
     let ops = |s: f64| (pixels as f64) / s / 1e9;
-    println!(
-        "  mozjpeg-sys (rgba)           : {:8.2} ms/op  {:6.2} Gpix/s",
-        t_moz * 1e3,
-        ops(t_moz)
-    );
-    println!(
-        "  zenjpeg native (rgba)        : {:8.2} ms/op  {:6.2} Gpix/s  ({:.2}x mozjpeg)",
-        t_zn * 1e3,
-        ops(t_zn),
-        t_moz / t_zn
-    );
-    println!(
-        "  zenjpeg zc Decode::decode    : {:8.2} ms/op  {:6.2} Gpix/s  ({:.2}x mozjpeg)",
-        t_zcb * 1e3,
-        ops(t_zcb),
-        t_moz / t_zcb
-    );
-    println!(
-        "  zenjpeg zc push_decode(sink) : {:8.2} ms/op  {:6.2} Gpix/s  ({:.2}x mozjpeg)",
-        t_zcp * 1e3,
-        ops(t_zcp),
-        t_moz / t_zcp
-    );
+    println!("  mozjpeg-sys (rgba)           : {:8.2} ms/op  {:6.2} Gpix/s", t_moz*1e3, ops(t_moz));
+    println!("  zenjpeg native (rgba)        : {:8.2} ms/op  {:6.2} Gpix/s  ({:.2}x mozjpeg)",
+             t_zn*1e3, ops(t_zn), t_moz/t_zn);
+    println!("  zenjpeg zc Decode::decode    : {:8.2} ms/op  {:6.2} Gpix/s  ({:.2}x mozjpeg)",
+             t_zcb*1e3, ops(t_zcb), t_moz/t_zcb);
+    println!("  zenjpeg zc push_decode(sink) : {:8.2} ms/op  {:6.2} Gpix/s  ({:.2}x mozjpeg)",
+             t_zcp*1e3, ops(t_zcp), t_moz/t_zcp);
 }
 
 fn main() {

@@ -77,7 +77,8 @@ impl ZenEncoder {
         // path. Setting the cutoff strictly > 90 (vs ≥90) covers q=90 specifically;
         // if a future zenjpeg implements adaptive subsampling we should call into
         // it directly instead of this static threshold.
-        let subsampling = if q > 90 { ChromaSubsampling::None } else { ChromaSubsampling::Quarter };
+        let subsampling =
+            if q > 90 { ChromaSubsampling::None } else { ChromaSubsampling::Quarter };
 
         // Use the native EncoderConfig directly (not the zencodec JpegEncoderConfig wrapper)
         // to preserve exact backward compatibility with the old ZenJpegEncoder adapter.
@@ -509,13 +510,15 @@ impl Encoder for ZenEncoder {
                 EncodeMode::Zencodec(config) => config,
                 _ => unreachable!(),
             };
-            let use_bgra =
-                config.supported_descriptors().contains(&zenpixels::PixelDescriptor::BGRA8_SRGB);
+            let use_bgra = config
+                .supported_descriptors()
+                .contains(&zenpixels::PixelDescriptor::BGRA8_SRGB);
             let needs_alpha_fill = make_opaque && config.capabilities().native_alpha();
             let desc = if use_bgra {
                 if needs_alpha_fill {
-                    let _ =
-                        garb::bytes::fill_alpha_bgra_strided(slice, w as usize, h as usize, stride);
+                    let _ = garb::bytes::fill_alpha_bgra_strided(
+                        slice, w as usize, h as usize, stride,
+                    );
                 }
                 zenpixels::PixelDescriptor::BGRA8_SRGB
             } else {
@@ -523,8 +526,9 @@ impl Encoder for ZenEncoder {
                     slice, w as usize, h as usize, stride,
                 );
                 if needs_alpha_fill {
-                    let _ =
-                        garb::bytes::fill_alpha_rgba_strided(slice, w as usize, h as usize, stride);
+                    let _ = garb::bytes::fill_alpha_rgba_strided(
+                        slice, w as usize, h as usize, stride,
+                    );
                 }
                 zenpixels::PixelDescriptor::RGBA8_SRGB
             };
@@ -570,19 +574,25 @@ impl Encoder for ZenEncoder {
             EncodeMode::Zencodec(config) => config,
             EncodeMode::NativeJpeg { .. } => unreachable!(),
         };
-        let use_bgra =
-            config.supported_descriptors().contains(&zenpixels::PixelDescriptor::BGRA8_SRGB);
+        let use_bgra = config
+            .supported_descriptors()
+            .contains(&zenpixels::PixelDescriptor::BGRA8_SRGB);
         let needs_alpha_fill = make_opaque && config.capabilities().native_alpha();
         let desc = if use_bgra {
             if needs_alpha_fill {
-                let _ = garb::bytes::fill_alpha_bgra_strided(slice, w as usize, h as usize, stride);
+                let _ = garb::bytes::fill_alpha_bgra_strided(
+                    slice, w as usize, h as usize, stride,
+                );
             }
             zenpixels::PixelDescriptor::BGRA8_SRGB
         } else {
-            let _ =
-                garb::bytes::bgra_to_rgba_inplace_strided(slice, w as usize, h as usize, stride);
+            let _ = garb::bytes::bgra_to_rgba_inplace_strided(
+                slice, w as usize, h as usize, stride,
+            );
             if needs_alpha_fill {
-                let _ = garb::bytes::fill_alpha_rgba_strided(slice, w as usize, h as usize, stride);
+                let _ = garb::bytes::fill_alpha_rgba_strided(
+                    slice, w as usize, h as usize, stride,
+                );
             }
             zenpixels::PixelDescriptor::RGBA8_SRGB
         };

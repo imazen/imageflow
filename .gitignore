@@ -1,6 +1,5 @@
 # Claude Code
 .claude/
-.workongoing
 
 # Reference image cache (downloaded/generated test baselines)
 .image-cache/

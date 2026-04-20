@@ -38,26 +38,25 @@ fn always_use_frame_decoder(fmt: ZenFormat) -> bool {
 
 /// Whether the format's buffered Decode::decode is faster than push_decode.
 ///
-/// False for all formats: zenjpeg's push_decode routes through
-/// `push_decoder_direct` → `decode_into()` with the fused streaming BGRA
-/// path, writing directly into the bitmap sink with stride support
-/// (811d824d fixed the bytes_per_pixel vs num_channels bug + added stride
-/// scatter). No intermediate buffer, no extra copy.
-/// Whether to skip push_decode and use the buffered Decode::decode path.
+/// Previously true for JPEG because push_decode used sequential ScanlineReader.
+/// Now false: zenjpeg's push_decode routes through `push_decoder_direct` →
+/// `decode_into()` which uses the fused streaming BGRA path and writes
+/// directly into the bitmap sink — zero intermediate buffer, zero extra copy.
+/// The old `into_decoder().decode()` path allocated its own output buffer then
+/// memcpy'd into the bitmap, costing an extra 64 MB at 4096².
+/// Whether the format's buffered Decode::decode is faster than push_decode.
 ///
-/// True for JPEG: push_decoder_direct has been fixed for baseline BGRA
-/// (bytes_per_pixel, stride scatter, grayscale streaming, progressive
-/// guard), but 4 edge cases remain (gray roundtrip sizing, CMS dual-
-/// backend, ICC P3 roundtrip). The buffered path handles all cases.
+/// True for JPEG: push_decoder_direct has stride/output issues that cause
+/// visual corruption when writing into SIMD-aligned bitmaps (159 test
+/// failures). Until zenjpeg's push_decode path fully supports strided
+/// output and matches the buffered path's metadata/orientation handling,
+/// JPEG stays on the buffered path. The fused BGRA streaming kernel is
+/// still active via Decoder::decode() → streaming_output_format.
 ///
-/// When push_decode is enabled for JPEG, baseline 4096² decode reaches
-/// parity with mozjpeg C (112ms vs 112ms) via zero-copy bitmap writes.
-/// All formats use push_decode (zero-copy bitmap writes).
-/// Baseline JPEG routes through push_decoder_direct → fused BGRA streaming.
-/// Progressive/arithmetic JPEG, grayscale, and edge cases use the safe
-/// cfg.decode() fallback inside push_decoder_direct.
-fn prefers_buffered_decode(_fmt: ZenFormat) -> bool {
-    false
+/// TODO: investigate push_decoder_direct failures and switch JPEG to
+/// push_decode for zero-copy bitmap writes.
+fn prefers_buffered_decode(fmt: ZenFormat) -> bool {
+    matches!(fmt, ZenFormat::Jpeg)
 }
 
 /// Unified decoder for all zen codec formats.
@@ -119,8 +118,8 @@ impl ZenDecoder {
         // bundled fallback CMYK profile) for an accurate conversion. No effect
         // on 3-component JPEGs. (Passthrough is the default in zenjpeg post-
         // ebb0e24f, but set explicitly so the intent survives any default flip.)
-        let config =
-            zenjpeg::JpegDecoderConfig::new().cmyk_handling(zenjpeg::CmykHandling::Passthrough);
+        let config = zenjpeg::JpegDecoderConfig::new()
+            .cmyk_handling(zenjpeg::CmykHandling::Passthrough);
         Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Jpeg))
     }
 
@@ -460,25 +459,19 @@ impl DecodeRowSink for BitmapRowSink<'_> {
 
         if self.is_4bpp {
             // 4bpp (BGRA/RGBA): write directly into bitmap at the correct row offset.
-            // Provide stride * height bytes so imgref's ImgRefMut (which requires
-            // stride * height, not the tighter (height-1)*stride + row_bytes) can
-            // wrap the buffer without panicking.
+            let row_bytes = width as usize * 4;
             let row_start = y as usize * self.stride;
-            let needed = if height > 0 { height as usize * self.stride } else { 0 };
-            // Clamp to available bitmap — the last strip may extend past the
-            // bitmap's allocation when stride > row_bytes. Provide as much as
-            // we have; PixelSliceMut accepts the tighter bound.
-            let available = self.data.len().saturating_sub(row_start);
-            let slice_len = needed.min(available);
-            if slice_len == 0 && height > 0 {
+            let needed =
+                if height > 0 { (height as usize - 1) * self.stride + row_bytes } else { 0 };
+            if row_start + needed > self.data.len() {
                 return Err(format!(
                     "strip at y={y} needs {} bytes but bitmap has {}",
-                    needed,
+                    row_start + needed,
                     self.data.len()
                 )
                 .into());
             }
-            let slice = &mut self.data[row_start..row_start + slice_len];
+            let slice = &mut self.data[row_start..row_start + needed];
             PixelSliceMut::new(slice, width, height, self.stride, descriptor)
                 .map_err(|e| -> SinkError { format!("{e}").into() })
         } else {
@@ -735,7 +728,8 @@ impl Decoder for ZenDecoder {
             if prefers_buffered_decode(self.format) {
                 Err("skip push_decode; format prefers buffered decode".into())
             } else {
-                let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
+                let mut bitmap =
+                    bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
                 let mut window = bitmap.get_window_u8().unwrap();
                 let dst_stride = window.info().t_stride() as usize;
                 let dst = window.slice_mut();

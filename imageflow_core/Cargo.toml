@@ -60,6 +60,7 @@ imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 multiversion = "0.8"
 archmage = { version = "0.9.15", features = ["macros"] }
 safe_unaligned_simd = "0.2"
+zenresize = { version = "0.3.0", features = ["std"] }
 
 evalchroma = "1"
 enough = { version = "0.4", features = ["std"] }
@@ -150,6 +151,11 @@ json-schema = ["dep:schemars", "imageflow_types/json-schema"]
 name = "jpeg_decode_bench"
 path = "examples/jpeg_decode_bench.rs"
 required-features = ["c-codecs", "zen-codecs"]
+
+[[example]]
+name = "profile_imageflow_decode"
+path = "examples/profile_imageflow_decode.rs"
+required-features = ["zen-codecs"]
 
 [[bench]]
 name="bench_graphics"

@@ -26,7 +26,6 @@ mod prelude {
     pub(crate) use crate::graphics::color::{
         flow_colorcontext_floatspace_to_srgb, uchar_clamp_ff, ColorContext, WorkingFloatspace,
     };
-    pub(crate) use crate::graphics::weights::{PixelRowWeights, PixelWeightIndexes};
 
     pub(crate) use imageflow_types::PixelFormat;
 

@@ -1,6 +1,8 @@
 use crate::common::*;
 use imageflow_core::Context;
-use imageflow_types::{EncoderPreset, Execute001, Framewise, Node};
+use imageflow_types::{
+    EncoderPreset, Execute001, Framewise, Node,
+};
 
 /// Build a minimal 8-bit grayscale PNG (no ICC, no gamma) in memory.
 /// Gradient from 0 (black) to 255 (white) across `w` columns, `h` rows identical.
@@ -80,7 +82,10 @@ fn assert_grayscale_bitmap(input: Vec<u8>, label: &str) {
         security: None,
         framewise: Framewise::Steps(vec![
             Node::Decode { io_id: 0, commands: None },
-            Node::Encode { io_id: 1, preset: EncoderPreset::Lodepng { maximum_deflate: None } },
+            Node::Encode {
+                io_id: 1,
+                preset: EncoderPreset::Lodepng { maximum_deflate: None },
+            },
         ]),
     })
     .unwrap();
@@ -139,7 +144,10 @@ fn test_gray_png_to_jpeg_roundtrip() {
         security: None,
         framewise: Framewise::Steps(vec![
             Node::Decode { io_id: 0, commands: None },
-            Node::Encode { io_id: 1, preset: EncoderPreset::Lodepng { maximum_deflate: None } },
+            Node::Encode {
+                io_id: 1,
+                preset: EncoderPreset::Lodepng { maximum_deflate: None },
+            },
         ]),
     })
     .unwrap();
@@ -181,7 +189,10 @@ fn test_gray_png_to_gif_roundtrip() {
     test_init();
     let png = build_gray_png(64, 64);
     let gif = transcode(png, "format=gif");
-    assert!(gif.starts_with(b"GIF89a") || gif.starts_with(b"GIF87a"), "output should be GIF");
+    assert!(
+        gif.starts_with(b"GIF89a") || gif.starts_with(b"GIF87a"),
+        "output should be GIF"
+    );
     assert_grayscale_bitmap(gif, "gray_png→gif roundtrip");
 }
 
@@ -286,7 +297,11 @@ fn test_gray_source_to_all_formats() {
             let spread = px.r.abs_diff(px.g).max(px.r.abs_diff(px.b));
             max_spread = max_spread.max(spread);
         }
-        let tolerance = if name.contains("lossy") || name.contains("jpg") { 5 } else { 1 };
+        let tolerance = if name.contains("lossy") || name.contains("jpg") {
+            5
+        } else {
+            1
+        };
         assert!(
             max_spread <= tolerance,
             "gray→{name}: channel spread={max_spread} exceeds tolerance={tolerance}"

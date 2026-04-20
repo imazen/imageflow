@@ -12,7 +12,7 @@
 //! reachable via a build without `c-codecs` — this bench exercises the
 //! reachable encoders in the current build (c-codecs when available).
 
-use imageflow_core::{Context, NamedDecoders, NamedEncoders};
+use imageflow_core::{Context, NamedDecoders};
 use imageflow_types as s;
 use zenbench::prelude::*;
 
@@ -172,7 +172,9 @@ fn decode_only_job(fixture: &[u8]) {
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
         job_options: None,
-        framewise: s::Framewise::Steps(vec![s::Node::Decode { io_id: 0, commands: None }]),
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+        ]),
     };
     ctx.execute_1(execute).unwrap();
 }
@@ -185,7 +187,9 @@ fn decode_with_config(fixture: &[u8], preferred: NamedDecoders, disable: &[Named
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
         job_options: None,
-        framewise: s::Framewise::Steps(vec![s::Node::Decode { io_id: 0, commands: None }]),
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+        ]),
     };
     ctx.execute_1(execute).unwrap();
 }
@@ -197,59 +201,6 @@ fn _unused_warning_suppress() {
 /// Encode a synthetic canvas with `preset` and drop the output.
 fn encode_job(w: u32, h: u32, preset: s::EncoderPreset) {
     let _bytes = encode_fixture(w, h, preset);
-}
-
-/// Encode a synthetic canvas, preferring `preferred` encoder and disabling
-/// the encoders listed in `disable`. Returns the encoded byte size for
-/// file-size reporting.
-fn encode_with_encoder(
-    w: u32,
-    h: u32,
-    preset: s::EncoderPreset,
-    preferred: NamedEncoders,
-    disable: &[NamedEncoders],
-) -> usize {
-    let mut ctx = Context::create().unwrap();
-    ctx.enabled_codecs.prefer_encoder(preferred);
-    for d in disable {
-        ctx.enabled_codecs.disable_encoder(*d);
-    }
-    ctx.add_output_buffer(1).unwrap();
-
-    let mut steps = vec![s::Node::CreateCanvas {
-        w: w as usize,
-        h: h as usize,
-        format: s::PixelFormat::Bgra32,
-        color: s::Color::Srgb(s::ColorSrgb::Hex("FF8040FF".to_string())),
-    }];
-    for ty in 0..8u32 {
-        for tx in 0..8u32 {
-            if (tx + ty) % 2 == 0 {
-                continue;
-            }
-            let x1 = (w * tx) / 8;
-            let y1 = (h * ty) / 8;
-            let x2 = (w * (tx + 1)) / 8;
-            let y2 = (h * (ty + 1)) / 8;
-            steps.push(s::Node::FillRect {
-                x1,
-                y1,
-                x2,
-                y2,
-                color: s::Color::Srgb(s::ColorSrgb::Hex("204080FF".to_string())),
-            });
-        }
-    }
-    steps.push(s::Node::Encode { io_id: 1, preset });
-
-    ctx.execute_1(s::Execute001 {
-        graph_recording: Some(s::Build001GraphRecording::off()),
-        security: None,
-        job_options: None,
-        framewise: s::Framewise::Steps(steps),
-    })
-    .unwrap();
-    ctx.take_output_buffer(1).unwrap().len()
 }
 
 // ---------------------------------------------------------------------------
@@ -464,103 +415,81 @@ fn bench_gif_decode(suite: &mut Suite) {
 //                                   WebPLossy = zenwebp
 //   * Always pure-Rust: Lodepng, Pngquant, Gif
 
-/// JPEG encode benches: three-way comparison per mode.
-///
-/// The three JPEG encoders in imageflow:
-///   1. `MozJpegEncoder`   (c-codecs)  — mozjpeg-sys / libjpeg-turbo (C + NASM SIMD)
-///   2. `ZenJpegEncoder`   (zen-codecs) — zenjpeg native (pure Rust + archmage SIMD)
-///   3. `MozjpegRsEncoder` (zen-codecs) — mozjpeg-rs (pure-Rust port of mozjpeg)
-///
-/// Each group uses `prefer_encoder` + `disable_encoder` on the other two
-/// to force a specific encoder through the `Mozjpeg` preset (which goes
-/// through `preferred_or_first` with `is_jpeg` filter — honoring runtime
-/// `enabled_codecs` choices).
-///
-/// First iteration's encoded byte count is printed as file-size context.
 fn bench_jpeg_encode(suite: &mut Suite) {
-    const JPEG_CONFIGS: &[(&str, Option<u8>, Option<bool>)] = &[
-        ("baseline_q85", Some(85), Some(false)),
-        ("baseline_q95", Some(95), Some(false)),
-        ("progressive_q85", Some(85), Some(true)),
-    ];
+    suite.group("jpeg_encode", |g| {
+        for &(w, h) in SIZES {
+            let pixels = (w as u64) * (h as u64);
+            g.throughput(Throughput::Elements(pixels));
 
-    for &(label, quality, progressive) in JPEG_CONFIGS {
-        let group_name = format!("jpeg_encode_{label}");
-        suite.group(group_name, |g| {
-            for &(w, h) in SIZES {
-                let pixels = (w as u64) * (h as u64);
-                g.throughput(Throughput::Elements(pixels));
-
-                let preset =
-                    move || s::EncoderPreset::Mozjpeg { quality, progressive, matte: None };
-
-                // C libjpeg-turbo / mozjpeg-sys
-                #[cfg(feature = "c-codecs")]
-                g.bench(format!("mozjpeg_c_{w}x{h}"), {
-                    move |b| {
-                        let disabled: &[NamedEncoders] = &[];
-                        #[cfg(feature = "zen-codecs")]
-                        let disabled: &[NamedEncoders] =
-                            &[NamedEncoders::ZenJpegEncoder, NamedEncoders::MozjpegRsEncoder];
-                        b.iter(|| {
-                            encode_with_encoder(
-                                w,
-                                h,
-                                preset(),
-                                NamedEncoders::MozJpegEncoder,
-                                disabled,
-                            )
-                        })
-                    }
-                });
-
-                // zenjpeg native encoder (pure Rust + archmage SIMD)
-                #[cfg(feature = "zen-codecs")]
-                g.bench(format!("zenjpeg_{w}x{h}"), {
-                    move |b| {
-                        let disabled: &[NamedEncoders] = &[NamedEncoders::MozjpegRsEncoder];
-                        #[cfg(feature = "c-codecs")]
-                        let disabled: &[NamedEncoders] =
-                            &[NamedEncoders::MozJpegEncoder, NamedEncoders::MozjpegRsEncoder];
-                        b.iter(|| {
-                            encode_with_encoder(
-                                w,
-                                h,
-                                preset(),
-                                NamedEncoders::ZenJpegEncoder,
-                                disabled,
-                            )
-                        })
-                    }
-                });
-
-                // mozjpeg-rs (pure-Rust port of mozjpeg)
-                #[cfg(feature = "zen-codecs")]
-                g.bench(format!("mozjpegrs_{w}x{h}"), {
-                    move |b| {
-                        let disabled: &[NamedEncoders] = &[NamedEncoders::ZenJpegEncoder];
-                        #[cfg(feature = "c-codecs")]
-                        let disabled: &[NamedEncoders] =
-                            &[NamedEncoders::MozJpegEncoder, NamedEncoders::ZenJpegEncoder];
-                        b.iter(|| {
-                            encode_with_encoder(
-                                w,
-                                h,
-                                preset(),
-                                NamedEncoders::MozjpegRsEncoder,
-                                disabled,
-                            )
-                        })
-                    }
-                });
-            }
-        });
-    }
+            // LibjpegTurbo preset uses `MozjpegEncoder::create_classic`,
+            // bypassing the `enabled_codecs` gate. Resolves to the
+            // mozjpeg C encoder when c-codecs is on; fails otherwise.
+            #[cfg(feature = "c-codecs")]
+            g.bench(format!("libjpegturbo_q85_{w}x{h}"), move |b| {
+                b.iter(|| {
+                    encode_job(
+                        w,
+                        h,
+                        s::EncoderPreset::LibjpegTurbo {
+                            quality: Some(85),
+                            progressive: Some(false),
+                            optimize_huffman_coding: None,
+                            matte: None,
+                        },
+                    )
+                })
+            });
+        }
+    });
 }
 
-/// Deprecated placeholder — kept so the main! list below still compiles.
-/// The three-way comparison is now in `bench_jpeg_encode`.
-fn bench_jpeg_encode_mozjpegrs(_suite: &mut Suite) {}
+/// JPEG via the `Mozjpeg` preset. When both features are compiled in,
+/// `codecs/auto.rs` routes this to the C mozjpeg crate AND the gate
+/// `enabled_codecs.encoders.contains(MozJpegEncoder)` must be satisfied.
+/// The default `EnabledCodecs` only lists `MozJpegEncoder` when c-codecs
+/// is enabled without zen-codecs — so with both features on this path
+/// fails at runtime. The bench is registered anyway so the group is
+/// visible; each iteration is a no-op when the encoder is unreachable.
+fn bench_jpeg_encode_mozjpegrs(suite: &mut Suite) {
+    suite.group("jpeg_encode_mozjpegrs", |g| {
+        for &(w, h) in SIZES {
+            let pixels = (w as u64) * (h as u64);
+            g.throughput(Throughput::Elements(pixels));
+
+            // Only register when the encoder is actually reachable
+            // (either c-codecs+no-zen → C mozjpeg, or
+            //  zen-codecs+no-c → mozjpeg-rs).
+            #[cfg(any(
+                all(feature = "c-codecs", not(feature = "zen-codecs")),
+                all(feature = "zen-codecs", not(feature = "c-codecs")),
+            ))]
+            g.bench(format!("mozjpeg_preset_q85_{w}x{h}"), move |b| {
+                b.iter(|| {
+                    encode_job(
+                        w,
+                        h,
+                        s::EncoderPreset::Mozjpeg {
+                            quality: Some(85),
+                            progressive: Some(true),
+                            matte: None,
+                        },
+                    )
+                })
+            });
+
+            // When both features are enabled, the preset fails — register
+            // a stub so the group appears in the report.
+            #[cfg(all(feature = "c-codecs", feature = "zen-codecs"))]
+            g.bench(format!("unreachable_both_features_{w}x{h}"), move |b| {
+                b.iter(|| {
+                    // No-op: neither path reachable via public preset API
+                    // when both features are compiled together.
+                    let _ = (w, h);
+                })
+            });
+        }
+    });
+}
 
 fn bench_png_encode(suite: &mut Suite) {
     suite.group("png_encode", |g| {

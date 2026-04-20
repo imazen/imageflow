@@ -6,27 +6,15 @@ fn main() {
     let jpeg = {
         ctx.execute_1(s::Execute001 {
             graph_recording: Some(s::Build001GraphRecording::off()),
-            security: None,
-            job_options: None,
+            security: None, job_options: None,
             framewise: s::Framewise::Steps(vec![
-                s::Node::CreateCanvas {
-                    w: 64,
-                    h: 64,
-                    format: s::PixelFormat::Bgra32,
-                    color: s::Color::Srgb(s::ColorSrgb::Hex("FF0000FF".into())),
-                },
-                s::Node::Encode {
-                    io_id: 1,
-                    preset: s::EncoderPreset::LibjpegTurbo {
-                        quality: Some(85),
-                        progressive: Some(false),
-                        optimize_huffman_coding: None,
-                        matte: None,
-                    },
-                },
+                s::Node::CreateCanvas { w: 64, h: 64, format: s::PixelFormat::Bgra32,
+                    color: s::Color::Srgb(s::ColorSrgb::Hex("FF0000FF".into())) },
+                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {
+                    quality: Some(85), progressive: Some(false),
+                    optimize_huffman_coding: None, matte: None } },
             ]),
-        })
-        .unwrap();
+        }).unwrap();
         ctx.take_output_buffer(1).unwrap()
     };
     // Try decode-only with no terminal
@@ -34,9 +22,10 @@ fn main() {
     ctx2.add_input_vector(0, jpeg).unwrap();
     match ctx2.execute_1(s::Execute001 {
         graph_recording: Some(s::Build001GraphRecording::off()),
-        security: None,
-        job_options: None,
-        framewise: s::Framewise::Steps(vec![s::Node::Decode { io_id: 0, commands: None }]),
+        security: None, job_options: None,
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+        ]),
     }) {
         Ok(_) => eprintln!("OK: Decode-only works as terminal"),
         Err(e) => eprintln!("ERR: {e}"),

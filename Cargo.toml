@@ -36,7 +36,7 @@ zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
 # Local zenwebp with push_frame stride fix for strided input (imageflow
 # bitmaps are SIMD-aligned with stride > width*bpp).
 zenwebp = { git = "https://github.com/imazen/zenwebp", branch = "main" }
-zengif = { git = "https://github.com/imazen/zengif", branch = "main" }
+# zenresize 0.3.0 published to crates.io (fused decode+premultiply, linear-srgb 0.6.11 threshold fix)
 # load_image.git = "https://gitlab.com/lilith6/load_image.git"
 # TODO(rgb-0.8.91): Uncomment when rgb 0.8.91+ is published to crates.io
 # This enables: root-level BGR8/BGRA8/RGB8/RGBA8 exports, Gray_v09 compat type,

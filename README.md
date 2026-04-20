@@ -5,7 +5,6 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/imazen/imageflow_tool.svg)](https://hub.docker.com/r/imazen/imageflow_tool/)
 [![view releases](https://img.shields.io/badge/-download%20binaries%20for%20windows,%20mac,%20or%20linux-green.svg)](https://github.com/imazen/imageflow/releases) [![license: Choose AGPLv3 or Commercial](https://img.shields.io/badge/license-Choose%20AGPLv3%20or%20Commercial-green.svg)](https://imageresizing.net/pricing)
 
-**Coming next:** see the [Roadmap](ROADMAP.md) for Imageflow 3 (pure-Rust codecs, multicore) and 4 (HDR, wide gamut, streaming pipeline).
 
 [Download](https://github.com/imazen/imageflow/releases) blazing fast and [safer](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=imagemagick) tools for a modern image workflow.
 
@@ -18,27 +17,6 @@ or when you want process isolation. Up to 17x faster than ImageMagick. Also prod
 HTML. Source images can reside in blob storage, on another server, or on the filesystem. It's a production ready server with excellent hybrid disk caching, support for Azure and Amazon blob storage, and can be easily customized. You can deploy it easily via Docker, on a VM, or via any cloud host. It's also backwards compatible with the ImageResizer API - which is useful, as ImageResizer as been integrated into more than a thousand different CMSes and applications in the last decade.
 
 **[Open an issue](https://github.com/imazen/imageflow/issues/new) to share ideas, feedback, or ask questions. We believe in feedback-driven design, and streamlining real-world usage is the fastest way to a great product.**
-
-## Roadmap: Imageflow 3 and 4
-
-See [ROADMAP.md](ROADMAP.md) for details.
-
-**Imageflow 3** is in active development. It brings:
-
-- A new pipeline engine with substantially faster decode, resize, and encode paths.
-- Multicore encoding and decoding.
-- A full set of `#![forbid(unsafe)]` pure-Rust native codecs replacing the C dependencies — JPEG, PNG, WebP, GIF, AVIF, JXL, BMP, TIFF, and more — with better compression and speed than the equivalent C libraries on most workloads.
-- Backwards-compatible API: existing v1 querystrings and JSON jobs run unchanged.
-
-Output remains sRGB in v3.
-
-**Imageflow 4** is the color and HDR release:
-
-- A new streaming pipeline that keeps peak memory bounded regardless of image dimensions.
-- End-to-end HDR and wide-gamut color, preserved through every operation rather than collapsed to sRGB.
-- Output to any color space or ICC profile, not just sRGB.
-- UltraHDR gain map round-trip and tone-mapping for SDR fallback.
-- A set of professional photographer-focused tuning filters — exposure, contrast, clarity, saturation, white balance — operating in perceptually uniform color space.
 
 [Querystring API Documentation](https://docs.imageflow.io/querystring/introduction.html)
 
