@@ -19,6 +19,7 @@ mod flow;
 pub mod graphics;
 mod io;
 pub mod json;
+pub mod killbits;
 
 pub use crate::codecs::cms::CmsBackend;
 pub use crate::codecs::NamedDecoders;

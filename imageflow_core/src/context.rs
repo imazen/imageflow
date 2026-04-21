@@ -52,14 +52,47 @@ pub struct Context {
     /// Per-job effective security, set for the duration of a single
     /// `build`/`execute` call and cleared when the job finishes.
     ///
-    /// Computed by `effective_security()` = default_job_security ∩
-    /// inline-job-security. Read by the decode/encode dispatch paths and
-    /// by the per-node limit checks so job intent never leaks across jobs
-    /// on the same Context.
+    /// Computed by `effective_security()` = trusted_policy ∩
+    /// default_job_security ∩ inline-job-security. Read by the
+    /// decode/encode dispatch paths and by the per-node limit checks so
+    /// job intent never leaks across jobs on the same Context.
     ///
     /// Boxed to keep the idle-Context footprint small — only a pointer
     /// is inline; the `ExecutionSecurity` is allocated on first job.
     pub active_job_security: Option<Box<imageflow_types::ExecutionSecurity>>,
+
+    /// Optional trusted policy (layer 2 of the killbits system).
+    ///
+    /// Boxed to keep `Context` small — the policy is set at most once per
+    /// Context and is only read on the security-check path.
+    ///
+    /// When set, every subsequent `v1/build`/`v1/execute` call computes the
+    /// effective security as `intersect(trusted_policy, request.security)`.
+    /// Job-level requests may only narrow — never widen — what's set here.
+    ///
+    /// Set via `Context::set_trusted_policy` (wired to the
+    /// `v1/context/set_policy` endpoint). Once set, calling again with
+    /// `require_unlocked: true` errors; calling again without that flag is
+    /// accepted only if the new policy narrows (never widens) the existing
+    /// one.
+    pub trusted_policy: Option<Box<imageflow_types::ExecutionSecurity>>,
+
+    /// Process-wide-independent cache of the net-support format grid that
+    /// `compute_net_support(None)` would produce given the current
+    /// `trusted_policy` and the compile-time ceiling. The compile ceiling
+    /// is `&'static` (see [`crate::killbits::compile_ceiling`]), so the
+    /// only inputs that vary per Context are `trusted_policy` and the
+    /// registered `enabled_codecs` — both stable between
+    /// `v1/context/set_policy` calls. Invalidated in `set_trusted_policy`.
+    ///
+    /// `Arc` lets read paths (decode/encode dispatch, error-message
+    /// generation) clone a cheap handle without copying the grid. Wrapped
+    /// in `RefCell` because `net_support()` takes `&self`.
+    ///
+    /// Per-job calls (`net_support(Some(inline))`) bypass this cache —
+    /// the narrow layer changes per call.
+    pub(crate) net_support_cache:
+        RefCell<Option<Arc<imageflow_types::FormatGrid>>>,
 
     pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>,
 
@@ -319,6 +352,8 @@ impl Context {
             ),
             default_job_security: imageflow_types::ExecutionSecurity::sane_defaults(),
             active_job_security: None,
+            trusted_policy: None,
+            net_support_cache: RefCell::new(None),
             allocations: RefCell::new(AllocationContainer::new()),
 
             captured_bitmap_keys: None,
@@ -343,6 +378,8 @@ impl Context {
             ),
             default_job_security: imageflow_types::ExecutionSecurity::sane_defaults(),
             active_job_security: None,
+            trusted_policy: None,
+            net_support_cache: RefCell::new(None),
             allocations: RefCell::new(AllocationContainer::new()),
 
             captured_bitmap_keys: None,
@@ -366,6 +403,8 @@ impl Context {
             ),
             default_job_security: imageflow_types::ExecutionSecurity::sane_defaults(),
             active_job_security: None,
+            trusted_policy: None,
+            net_support_cache: RefCell::new(None),
             allocations: RefCell::new(AllocationContainer::new()),
 
             captured_bitmap_keys: None,
@@ -695,22 +734,118 @@ impl Context {
     /// Compute the effective security for a single job.
     ///
     /// Pure — does not mutate `self`. Result is
-    /// `default_job_security ∩ inline`. Fields that were `None` on the
-    /// narrower layer fall through to the wider layer.
+    /// `trusted_policy ∩ default_job_security ∩ inline`. Fields that were
+    /// `None` on the narrower layer fall through to the wider layer.
     ///
     /// Callers that need the value for the duration of a job should also
-    /// store it into `active_job_security` via [`JobSecuritySnapshot::install`]
-    /// so decode/encode dispatch and per-node checks can read it through
-    /// [`Self::current_security`].
+    /// store it into `active_job_security` via
+    /// [`Self::with_job_security`] so decode/encode dispatch and per-node
+    /// checks can read it.
     pub fn effective_security(
         &self,
         inline: Option<&s::ExecutionSecurity>,
     ) -> s::ExecutionSecurity {
         let mut effective = self.default_job_security.clone();
+        if let Some(trusted) = self.trusted_policy.as_deref() {
+            effective = crate::killbits::intersect_security(trusted, &effective);
+        }
         if let Some(request) = inline {
-            effective = intersect_job_security(&effective, request);
+            effective = crate::killbits::intersect_security(&effective, request);
         }
         effective
+    }
+
+    /// Install a trusted policy as the Context-scoped default.
+    ///
+    /// Used only by the `v1/context/set_policy` endpoint (via
+    /// `set_trusted_policy`). Updates `default_job_security` so
+    /// policy-narrowed scalar limits take effect; it is **not** a
+    /// substitute for the per-job `effective_security` computation.
+    fn apply_trusted_policy(&mut self, s: s::ExecutionSecurity) {
+        if let Some(decode) = s.max_decode_size {
+            self.default_job_security.max_decode_size = Some(decode);
+        }
+        if let Some(frame) = s.max_frame_size {
+            self.default_job_security.max_frame_size = Some(frame);
+        }
+        if let Some(encode) = s.max_encode_size {
+            self.default_job_security.max_encode_size = Some(encode);
+        }
+        if s.max_input_file_bytes.is_some() {
+            self.default_job_security.max_input_file_bytes = s.max_input_file_bytes;
+        }
+        if s.max_json_bytes.is_some() {
+            self.default_job_security.max_json_bytes = s.max_json_bytes;
+        }
+        if s.max_total_file_pixels.is_some() {
+            self.default_job_security.max_total_file_pixels = s.max_total_file_pixels;
+        }
+        if s.formats.is_some() {
+            self.default_job_security.formats = s.formats;
+        }
+        if s.codecs.is_some() {
+            self.default_job_security.codecs = s.codecs;
+        }
+    }
+
+    /// Set (or re-narrow) the trusted policy for this Context.
+    ///
+    /// - If `require_unlocked` is true and a policy is already set, errors.
+    /// - If a policy is already set and the new one would *widen* the grid
+    ///   or loosen a scalar limit, errors.
+    /// - On success, stores the new policy and returns the resulting
+    ///   net_support grid for the caller to echo back.
+    pub fn set_trusted_policy(
+        &mut self,
+        new_policy: s::ExecutionSecurity,
+        require_unlocked: bool,
+    ) -> Result<crate::killbits::LockedPolicyReport> {
+        // Validate structure (mutual exclusion across the shape variants).
+        if let Some(formats) = &new_policy.formats {
+            formats.validate().map_err(|e| {
+                nerror!(ErrorKind::InvalidArgument, "invalid killbits: {}", e)
+            })?;
+            // Trusted policy can `allow_*` but must not name formats denied
+            // at build time or missing their feature.
+            crate::killbits::validate_trusted_policy(formats)?;
+        }
+        if let Some(codecs) = &new_policy.codecs {
+            codecs.validate().map_err(|e| {
+                nerror!(ErrorKind::InvalidArgument, "invalid codec killbits: {}", e)
+            })?;
+            crate::killbits::validate_trusted_codec_killbits(codecs)?;
+        }
+
+        if let Some(existing) = &self.trusted_policy {
+            if require_unlocked {
+                return Err(nerror!(
+                    ErrorKind::InvalidArgument,
+                    "trusted policy is already set (require_unlocked=true)"
+                ));
+            }
+            // Narrow-only: refuse to widen any dimension.
+            crate::killbits::ensure_narrowing(existing, &new_policy)?;
+        }
+
+        self.trusted_policy = Some(Box::new(new_policy.clone()));
+        // Trusted policy just changed — the cached no-job-narrowing grid
+        // (keyed on `trusted_policy`) is stale. Drop it; the next
+        // `net_support(None)` caller will repopulate.
+        self.net_support_cache.borrow_mut().take();
+        // Also apply the policy's scalar limits to `default_job_security` so
+        // the pre-job limit reads (e.g. `max_json_bytes` bounding the JSON
+        // parse) pick them up. Per-job enforcement goes through
+        // `effective_security` and does not rely on this copy.
+        self.apply_trusted_policy(new_policy);
+
+        // Serve the fresh grid out of the cache so this report shares the
+        // identity every dispatch path will see next.
+        let grid = (*self.cached_net_support_arc()).clone();
+        Ok(crate::killbits::LockedPolicyReport {
+            ok: true,
+            locked: true,
+            net_support: grid,
+        })
     }
 
     /// Return the effective security currently in force for the job, or
@@ -720,9 +855,76 @@ impl Context {
     /// `max_input_file_bytes`).
     ///
     /// The returned reference is valid until the job exits (which drops
-    /// `active_job_security`).
+    /// `active_job_security`) or until a new trusted policy is installed
+    /// (which updates `default_job_security`).
     pub fn current_security(&self) -> &s::ExecutionSecurity {
         self.active_job_security.as_deref().unwrap_or(&self.default_job_security)
+    }
+
+    /// Compute the current net-support grid (layer 1 ∩ layer 2 ∩ layer 3).
+    ///
+    /// `job_request` is an optional job-level `security` block. When an
+    /// `active_job_security` is installed on the Context (i.e. we are
+    /// mid-job), the already-intersected effective value is used in
+    /// preference so all per-job enforcement reads the same grid.
+    ///
+    /// When neither an `active_job_security` nor a `job_request` narrows
+    /// the computation, the grid is served from
+    /// [`Context::net_support_cache`] — populated on first call and
+    /// invalidated by [`Context::set_trusted_policy`]. Per-job narrowing
+    /// (inline `ExecutionSecurity`) always recomputes because the narrow
+    /// layer changes per call.
+    pub fn net_support(&self, job_request: Option<&s::ExecutionSecurity>) -> crate::killbits::FormatGridView {
+        let effective = self.active_job_security.as_deref().or(job_request);
+        if effective.is_none() {
+            // Cacheable path: no per-job narrowing, only trusted_policy ∩
+            // compile ceiling (both stable between `set_policy` calls).
+            let arc = self.cached_net_support_arc();
+            return crate::killbits::FormatGridView { grid: (*arc).clone() };
+        }
+        let grid = crate::killbits::compute_net_support_with_codecs(
+            self.trusted_policy.as_deref(),
+            effective,
+            &self.enabled_codecs,
+        );
+        crate::killbits::FormatGridView { grid }
+    }
+
+    /// Return a cloned `Arc` handle to the cached no-job-narrowing grid,
+    /// recomputing once on the first call after construction or
+    /// `set_trusted_policy`. Callers that need a `FormatGrid` by value
+    /// should use [`Context::net_support`] with `None`.
+    pub(crate) fn cached_net_support_arc(&self) -> Arc<imageflow_types::FormatGrid> {
+        if let Some(cached) = self.net_support_cache.borrow().as_ref() {
+            return Arc::clone(cached);
+        }
+        let grid = crate::killbits::compute_net_support_with_codecs(
+            self.trusted_policy.as_deref(),
+            None,
+            &self.enabled_codecs,
+        );
+        let arc = Arc::new(grid);
+        *self.net_support_cache.borrow_mut() = Some(Arc::clone(&arc));
+        arc
+    }
+
+    /// Full codec-level availability grid for `v1/context/get_net_support`.
+    ///
+    /// Reports one entry per codec registered in `enabled_codecs`, with
+    /// the per-codec `available` flag and the reasons a codec may be
+    /// denied (format-level kill, explicit codec-level kill, feature
+    /// missing, etc.). Unlike the format grid, this enumerates the
+    /// backend names directly (mozjpeg_encoder, zen_jpeg_encoder, ...).
+    pub fn codec_support(
+        &self,
+        job_request: Option<&s::ExecutionSecurity>,
+    ) -> crate::killbits::CodecSupportGrid {
+        let effective = self.active_job_security.as_deref().or(job_request);
+        crate::killbits::CodecSupportGrid::compute(
+            self.trusted_policy.as_deref(),
+            effective,
+            &self.enabled_codecs,
+        )
     }
 
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
@@ -827,77 +1029,6 @@ impl Context {
         num_allocations += 1;
 
         (total_bytes, num_allocations)
-    }
-}
-
-/// Intersect two job-level security blocks: pick the more restrictive of
-/// each scalar limit; combine the `formats` / `codecs` killbits lists.
-///
-/// Pure function, private to this module. Used by
-/// [`Context::effective_security`]. Trusted-policy intersection is layered
-/// on top of this by a later commit.
-fn intersect_job_security(
-    default: &s::ExecutionSecurity,
-    job: &s::ExecutionSecurity,
-) -> s::ExecutionSecurity {
-    let max_decode_size = min_optional_frame(&default.max_decode_size, &job.max_decode_size);
-    let max_frame_size = min_optional_frame(&default.max_frame_size, &job.max_frame_size);
-    let max_encode_size = min_optional_frame(&default.max_encode_size, &job.max_encode_size);
-    let max_input_file_bytes =
-        min_optional(default.max_input_file_bytes, job.max_input_file_bytes);
-    let max_json_bytes = min_optional(default.max_json_bytes, job.max_json_bytes);
-    let max_total_file_pixels =
-        min_optional(default.max_total_file_pixels, job.max_total_file_pixels);
-
-    // Job-level may only `deny_*`; intersection of two lists is the union
-    // of their denies.
-    let formats = match (&default.formats, &job.formats) {
-        (None, None) => None,
-        (Some(t), None) => Some(t.clone()),
-        (None, Some(j)) => Some(j.clone()),
-        (Some(t), Some(j)) => Some(Box::new(imageflow_types::FormatKillbits::intersect(t, j))),
-    };
-    let codecs = match (&default.codecs, &job.codecs) {
-        (None, None) => None,
-        (Some(t), None) => Some(t.clone()),
-        (None, Some(j)) => Some(j.clone()),
-        (Some(t), Some(j)) => Some(Box::new(imageflow_types::CodecKillbits::intersect(t, j))),
-    };
-
-    let mut out = s::ExecutionSecurity::unspecified();
-    out.max_decode_size = max_decode_size;
-    out.max_frame_size = max_frame_size;
-    out.max_encode_size = max_encode_size;
-    out.max_input_file_bytes = max_input_file_bytes;
-    out.max_json_bytes = max_json_bytes;
-    out.max_total_file_pixels = max_total_file_pixels;
-    out.formats = formats;
-    out.codecs = codecs;
-    out
-}
-
-fn min_optional<T: Ord + Copy>(a: Option<T>, b: Option<T>) -> Option<T> {
-    match (a, b) {
-        (Some(x), Some(y)) => Some(x.min(y)),
-        (Some(x), None) => Some(x),
-        (None, Some(y)) => Some(y),
-        (None, None) => None,
-    }
-}
-
-fn min_optional_frame(
-    a: &Option<s::FrameSizeLimit>,
-    b: &Option<s::FrameSizeLimit>,
-) -> Option<s::FrameSizeLimit> {
-    match (a, b) {
-        (Some(x), Some(y)) => Some(s::FrameSizeLimit {
-            w: x.w.min(y.w),
-            h: x.h.min(y.h),
-            megapixels: x.megapixels.min(y.megapixels),
-        }),
-        (Some(x), None) => Some(x.clone()),
-        (None, Some(y)) => Some(y.clone()),
-        (None, None) => None,
     }
 }
 
@@ -1023,6 +1154,86 @@ fn test_get_ptr_after_take_returns_invalid_state() {
 }
 
 #[test]
+fn net_support_cache_hands_out_same_arc_when_policy_unchanged() {
+    // After a set_policy call (and implicitly from Context creation),
+    // repeated `net_support(None)` calls must serve out of the cache —
+    // i.e. the cached `Arc<FormatGrid>` is the same instance every call.
+    let mut ctx = Context::create().unwrap();
+
+    // Install a trusted policy so we exercise the post-set_policy path.
+    let mut policy = s::ExecutionSecurity::unspecified();
+    let mut kb = imageflow_types::FormatKillbits::default();
+    kb.deny_encode = Some(vec![imageflow_types::ImageFormat::Tiff]);
+    policy.formats = Some(Box::new(kb));
+    let _ = ctx.set_trusted_policy(policy, false).unwrap();
+
+    // First call populates the cache; subsequent calls must hand back
+    // the same Arc.
+    let a1 = ctx.cached_net_support_arc();
+    let a2 = ctx.cached_net_support_arc();
+    let a3 = ctx.cached_net_support_arc();
+    assert!(Arc::ptr_eq(&a1, &a2), "cache should return same Arc instance");
+    assert!(Arc::ptr_eq(&a2, &a3), "cache should return same Arc instance");
+}
+
+#[test]
+fn net_support_cache_is_invalidated_by_set_policy() {
+    let mut ctx = Context::create().unwrap();
+    // Populate the cache with the baseline (no trusted policy yet).
+    let before = ctx.cached_net_support_arc();
+
+    // Installing a trusted policy must invalidate the cache; the next
+    // call returns a fresh `Arc` (different identity).
+    let mut policy = s::ExecutionSecurity::unspecified();
+    let mut kb = imageflow_types::FormatKillbits::default();
+    kb.deny_encode = Some(vec![imageflow_types::ImageFormat::Tiff]);
+    policy.formats = Some(Box::new(kb));
+    let _ = ctx.set_trusted_policy(policy, false).unwrap();
+
+    let after = ctx.cached_net_support_arc();
+    assert!(
+        !Arc::ptr_eq(&before, &after),
+        "cache must be dropped and repopulated after set_trusted_policy"
+    );
+
+    // And subsequent calls now share the *new* Arc.
+    let after2 = ctx.cached_net_support_arc();
+    assert!(Arc::ptr_eq(&after, &after2));
+}
+
+#[test]
+fn net_support_per_job_inline_security_bypasses_cache() {
+    // `net_support(Some(inline))` must recompute — the narrow layer
+    // changes per call, so caching would be incorrect.
+    let ctx = Context::create().unwrap();
+    // Warm the cache.
+    let _cached = ctx.cached_net_support_arc();
+    // Even with identical inline security, this path does not consult
+    // the cache. We can't compare `Arc` identity here because
+    // `net_support()` returns a `FormatGridView { grid: FormatGrid }`
+    // by value — but reaching it must not disturb the cache.
+    let mut inline = s::ExecutionSecurity::unspecified();
+    let mut kb = imageflow_types::FormatKillbits::default();
+    kb.deny_decode = Some(vec![imageflow_types::ImageFormat::Tiff]);
+    inline.formats = Some(Box::new(kb));
+    let _v = ctx.net_support(Some(&inline));
+
+    // The cached no-job-narrowing Arc is still the same instance.
+    let after = ctx.cached_net_support_arc();
+    let baseline = ctx.cached_net_support_arc();
+    assert!(Arc::ptr_eq(&after, &baseline));
+}
+
+#[test]
+fn compile_ceiling_is_process_static() {
+    // Repeated `compile_ceiling()` calls return the same `&'static`
+    // pointer (same OnceLock slot).
+    let c1: *const _ = crate::killbits::compile_ceiling();
+    let c2: *const _ = crate::killbits::compile_ceiling();
+    assert_eq!(c1, c2);
+}
+
+#[test]
 fn test_take_on_nonexistent_io_id() {
     let mut context = Context::create().unwrap();
     let err = context.take_output_buffer(42).err().unwrap();
@@ -1132,16 +1343,17 @@ fn test_context_size() {
     //   - trusted_policy:       Option<Box<ExecutionSecurity>> (layer 2)
     //   - default_job_security: ExecutionSecurity              (layer 2 scalar fold)
     //   - active_job_security:  Option<Box<ExecutionSecurity>> (per-job effective)
+    //   - net_support_cache:    RefCell<Option<Arc<FormatGrid>>> (set_policy-invalidated)
     // The two boxes keep the idle stack footprint small; the inline
     // `default_job_security` carries the Context's scalar limit baseline.
-    assert!(std::mem::size_of::<Context>() < 424);
+    assert!(std::mem::size_of::<Context>() <= 432);
 }
 
 #[test]
 fn test_thread_safe_context_size() {
     println!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
     eprintln!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
-    assert!(std::mem::size_of::<ThreadSafeContext>() <= 592);
+    assert!(std::mem::size_of::<ThreadSafeContext>() <= 616);
 }
 
 #[test]

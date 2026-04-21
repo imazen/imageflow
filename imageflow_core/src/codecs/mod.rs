@@ -110,6 +110,69 @@ pub enum NamedDecoders {
     ZenBmpDecoder,
 }
 impl NamedDecoders {
+    /// Wire-side `NamedDecoderName` (used by the codec killbits grid).
+    /// Symmetric counterpart to `NamedDecoderName::image_format()`.
+    pub fn wire_name(&self) -> imageflow_types::NamedDecoderName {
+        use imageflow_types::NamedDecoderName as N;
+        match self {
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::MozJpegRsDecoder => N::MozjpegRsDecoder,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::ImageRsJpegDecoder => N::ImageRsJpegDecoder,
+            NamedDecoders::ImageRsPngDecoder => N::ImageRsPngDecoder,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::LibPngRsDecoder => N::LibpngDecoder,
+            NamedDecoders::GifRsDecoder => N::GifRsDecoder,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::WebPDecoder => N::WebpDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder => N::ZenJpegDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenWebPDecoder => N::ZenWebpDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => N::ZenGifDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenPngDecoder => N::ZenPngDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenAvifDecoder => N::ZenAvifDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => N::ZenJxlDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenBmpDecoder => N::ZenBmpDecoder,
+        }
+    }
+
+    /// The killbits `ImageFormat` this decoder handles.
+    pub fn image_format(&self) -> imageflow_types::ImageFormat {
+        use imageflow_types::ImageFormat;
+        match self {
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::MozJpegRsDecoder => ImageFormat::Jpeg,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::ImageRsJpegDecoder => ImageFormat::Jpeg,
+            NamedDecoders::ImageRsPngDecoder => ImageFormat::Png,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::LibPngRsDecoder => ImageFormat::Png,
+            NamedDecoders::GifRsDecoder => ImageFormat::Gif,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::WebPDecoder => ImageFormat::Webp,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder => ImageFormat::Jpeg,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenWebPDecoder => ImageFormat::Webp,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => ImageFormat::Gif,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenPngDecoder => ImageFormat::Png,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenAvifDecoder => ImageFormat::Avif,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => ImageFormat::Jxl,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenBmpDecoder => ImageFormat::Bmp,
+        }
+    }
+
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
         match self {
             #[cfg(feature = "c-codecs")]
@@ -245,6 +308,38 @@ pub enum NamedEncoders {
 }
 
 impl NamedEncoders {
+    /// Wire-side `NamedEncoderName` (used by the codec killbits grid).
+    pub fn wire_name(&self) -> imageflow_types::NamedEncoderName {
+        use imageflow_types::NamedEncoderName as N;
+        match self {
+            NamedEncoders::GifEncoder => N::GifEncoder,
+            #[cfg(feature = "c-codecs")]
+            NamedEncoders::MozJpegEncoder => N::MozjpegEncoder,
+            NamedEncoders::PngQuantEncoder => N::PngquantEncoder,
+            NamedEncoders::LodePngEncoder => N::LodepngEncoder,
+            #[cfg(feature = "c-codecs")]
+            NamedEncoders::WebPEncoder => N::WebpEncoder,
+            #[cfg(feature = "c-codecs")]
+            NamedEncoders::LibPngRsEncoder => N::LibpngEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenJpegEncoder => N::ZenJpegEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenWebPEncoder => N::ZenWebpEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenGifEncoder => N::ZenGifEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenPngEncoder => N::ZenPngEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenAvifEncoder => N::ZenAvifEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenJxlEncoder => N::ZenJxlEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenBmpEncoder => N::ZenBmpEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::MozjpegRsEncoder => N::MozjpegRsEncoder,
+        }
+    }
+
     /// Returns true if this encoder writes JPEG.
     pub fn is_jpeg(&self) -> bool {
         match self {
