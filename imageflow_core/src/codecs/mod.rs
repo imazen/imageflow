@@ -19,6 +19,7 @@ pub(crate) mod cms;
 mod image_png_decoder;
 pub(crate) mod moxcms_transform;
 pub(crate) mod source_profile;
+pub(crate) mod substitution_measurements;
 mod tiny_lru;
 
 // C codec modules — require c-codecs feature
@@ -110,6 +111,69 @@ pub enum NamedDecoders {
     ZenBmpDecoder,
 }
 impl NamedDecoders {
+    /// Wire-side `NamedDecoderName` (used by the codec killbits grid).
+    /// Symmetric counterpart to `NamedDecoderName::image_format()`.
+    pub fn wire_name(&self) -> imageflow_types::NamedDecoderName {
+        use imageflow_types::NamedDecoderName as N;
+        match self {
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::MozJpegRsDecoder => N::MozjpegRsDecoder,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::ImageRsJpegDecoder => N::ImageRsJpegDecoder,
+            NamedDecoders::ImageRsPngDecoder => N::ImageRsPngDecoder,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::LibPngRsDecoder => N::LibpngDecoder,
+            NamedDecoders::GifRsDecoder => N::GifRsDecoder,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::WebPDecoder => N::WebpDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder => N::ZenJpegDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenWebPDecoder => N::ZenWebpDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => N::ZenGifDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenPngDecoder => N::ZenPngDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenAvifDecoder => N::ZenAvifDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => N::ZenJxlDecoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenBmpDecoder => N::ZenBmpDecoder,
+        }
+    }
+
+    /// The killbits `ImageFormat` this decoder handles.
+    pub fn image_format(&self) -> imageflow_types::ImageFormat {
+        use imageflow_types::ImageFormat;
+        match self {
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::MozJpegRsDecoder => ImageFormat::Jpeg,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::ImageRsJpegDecoder => ImageFormat::Jpeg,
+            NamedDecoders::ImageRsPngDecoder => ImageFormat::Png,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::LibPngRsDecoder => ImageFormat::Png,
+            NamedDecoders::GifRsDecoder => ImageFormat::Gif,
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::WebPDecoder => ImageFormat::Webp,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder => ImageFormat::Jpeg,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenWebPDecoder => ImageFormat::Webp,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => ImageFormat::Gif,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenPngDecoder => ImageFormat::Png,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenAvifDecoder => ImageFormat::Avif,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => ImageFormat::Jxl,
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenBmpDecoder => ImageFormat::Bmp,
+        }
+    }
+
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool {
         match self {
             #[cfg(feature = "c-codecs")]
@@ -234,6 +298,22 @@ pub enum NamedEncoders {
     ZenGifEncoder,
     #[cfg(feature = "zen-codecs")]
     ZenPngEncoder,
+    /// ZenPng + zenquant (the default zenpng quantizer). Distinct from
+    /// [`ZenPngEncoder`] so the substitution table can order this
+    /// palette-reducing variant explicitly ahead of imagequant and
+    /// pngquant. Gated on `zen-codecs` (zenpng's default `quantize`
+    /// feature is enabled via the zenpng dep in Cargo.toml).
+    #[cfg(feature = "zen-codecs")]
+    ZenPngZenquantEncoder,
+    /// ZenPng + imagequant. Shares the pngquant quantization kernel
+    /// with `PngQuantEncoder` but routes through zenpng's encoder
+    /// pipeline. Requires zenpng's `imagequant` feature; not enabled in
+    /// the default imageflow build. Variant exists so the
+    /// substitution-priority table is complete; `create_png_imagequant`
+    /// returns a "not yet plumbed" error until the zenpng feature is
+    /// turned on in imageflow's Cargo.toml.
+    #[cfg(feature = "zen-codecs")]
+    ZenPngImagequantEncoder,
     #[cfg(feature = "zen-codecs")]
     ZenAvifEncoder,
     #[cfg(feature = "zen-codecs")]
@@ -245,6 +325,42 @@ pub enum NamedEncoders {
 }
 
 impl NamedEncoders {
+    /// Wire-side `NamedEncoderName` (used by the codec killbits grid).
+    pub fn wire_name(&self) -> imageflow_types::NamedEncoderName {
+        use imageflow_types::NamedEncoderName as N;
+        match self {
+            NamedEncoders::GifEncoder => N::GifEncoder,
+            #[cfg(feature = "c-codecs")]
+            NamedEncoders::MozJpegEncoder => N::MozjpegEncoder,
+            NamedEncoders::PngQuantEncoder => N::PngquantEncoder,
+            NamedEncoders::LodePngEncoder => N::LodepngEncoder,
+            #[cfg(feature = "c-codecs")]
+            NamedEncoders::WebPEncoder => N::WebpEncoder,
+            #[cfg(feature = "c-codecs")]
+            NamedEncoders::LibPngRsEncoder => N::LibpngEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenJpegEncoder => N::ZenJpegEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenWebPEncoder => N::ZenWebpEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenGifEncoder => N::ZenGifEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenPngEncoder => N::ZenPngEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenPngZenquantEncoder => N::ZenPngZenquantEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenPngImagequantEncoder => N::ZenPngImagequantEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenAvifEncoder => N::ZenAvifEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenJxlEncoder => N::ZenJxlEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::ZenBmpEncoder => N::ZenBmpEncoder,
+            #[cfg(feature = "zen-codecs")]
+            NamedEncoders::MozjpegRsEncoder => N::MozjpegRsEncoder,
+        }
+    }
+
     /// Returns true if this encoder writes JPEG.
     pub fn is_jpeg(&self) -> bool {
         match self {
@@ -262,7 +378,9 @@ impl NamedEncoders {
             #[cfg(feature = "c-codecs")]
             NamedEncoders::LibPngRsEncoder => true,
             #[cfg(feature = "zen-codecs")]
-            NamedEncoders::ZenPngEncoder => true,
+            NamedEncoders::ZenPngEncoder
+            | NamedEncoders::ZenPngZenquantEncoder
+            | NamedEncoders::ZenPngImagequantEncoder => true,
             _ => false,
         }
     }
@@ -348,6 +466,15 @@ impl Default for EnabledCodecs {
                 NamedEncoders::LibPngRsEncoder,
                 #[cfg(feature = "zen-codecs")]
                 NamedEncoders::ZenPngEncoder,
+                // ZenPng palette-reducing variants: zenquant (default)
+                // preferred over imagequant (requires zenpng feature
+                // toggle). Ordered after the truecolor ZenPngEncoder so
+                // the priority-indexed table leads with whichever the
+                // requested preset actually needs.
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenPngZenquantEncoder,
+                #[cfg(feature = "zen-codecs")]
+                NamedEncoders::ZenPngImagequantEncoder,
                 // Zen-only formats
                 #[cfg(feature = "zen-codecs")]
                 NamedEncoders::ZenAvifEncoder,
@@ -402,9 +529,39 @@ impl EnabledCodecs {
         io: IoProxy,
         io_id: i32,
     ) -> Result<Box<dyn Decoder>> {
+        let trusted = c.trusted_policy.as_deref();
+        let active = c.active_job_security.as_deref();
         for &decoder in self.decoders.iter() {
             if decoder.works_for_magic_bytes(bytes) {
+                let format = decoder.image_format();
+                let grid = c.net_support(None);
+                crate::killbits::enforce(
+                    grid.grid(),
+                    imageflow_types::KillbitsOp::Decode,
+                    format,
+                )?;
+                // Codec-level kill: if this particular decoder is
+                // denied, skip it and try the next one matching the
+                // magic bytes. Only error out with
+                // `codec_not_available` when no live decoder remains.
+                let wire = decoder.wire_name();
+                if !crate::killbits::codec_decoder_allowed(wire, trusted, active) {
+                    continue;
+                }
                 return decoder.create(c, io, io_id);
+            }
+        }
+        // Distinguish "no decoder handled magic bytes" from "every
+        // matching decoder was killed by codec killbits".
+        for &decoder in self.decoders.iter() {
+            if decoder.works_for_magic_bytes(bytes) {
+                let format = decoder.image_format();
+                // All matching decoders for this format were denied.
+                return Err(nerror!(
+                    ErrorKind::CodecDisabledError,
+                    "{{\"error\": \"codec_not_available\", \"format\": \"{}\", \"reasons\": [\"no_available_decoder\"]}}",
+                    format.as_snake()
+                ));
             }
         }
         Err(nerror!(
@@ -412,6 +569,34 @@ impl EnabledCodecs {
             "No ENABLED decoder found for file starting in {:X?}",
             bytes
         ))
+    }
+}
+
+/// Merge a pending [`s::EncodeAnnotations`] into an `Option` slot,
+/// prioritizing whatever is already set on the result. Used by
+/// `CodecInstanceContainer::write_frame` to attach substitution
+/// notices without clobbering annotations the encoder itself produced
+/// (today none do, but the merge keeps future annotation channels
+/// compositional).
+fn merge_annotations(
+    target: &mut Option<s::EncodeAnnotations>,
+    incoming: s::EncodeAnnotations,
+) {
+    match target {
+        Some(existing) => {
+            // Per-encoder substitution wins over any pre-existing
+            // substitution on the encoder-produced slot — the incoming
+            // annotation comes from the dispatcher, which has the
+            // authoritative view of which codec actually ran.
+            if incoming.codec_substitution.is_some() {
+                existing.codec_substitution = incoming.codec_substitution;
+            }
+        }
+        None => {
+            if !incoming.is_empty() {
+                *target = Some(incoming);
+            }
+        }
     }
 }
 
@@ -441,6 +626,17 @@ pub struct CodecInstanceContainer {
     pub io_id: i32,
     codec: CodecKind,
     output_state: OutputBufferState,
+    /// Annotation captured at encoder-creation time when the dispatcher
+    /// substituted a different codec than the preset asked for. Merged
+    /// into the [`s::EncodeResult`] returned by the first
+    /// `write_frame` call so the response carries the substitution
+    /// notice. Cleared (`take`d) after attachment.
+    ///
+    /// Boxed so the idle container footprint is `Option<Box>` (8 bytes
+    /// on 64-bit) rather than a full annotation struct. The
+    /// `calculate_heap_allocations` counter treats the box allocation
+    /// as a lazy-init rather than a fixed cost.
+    pending_encode_annotation: Option<Box<s::EncodeAnnotations>>,
 }
 
 impl CodecInstanceContainer {
@@ -463,6 +659,7 @@ impl CodecInstanceContainer {
                 io_id,
                 codec: CodecKind::EncoderPlaceholder,
                 output_state: OutputBufferState::Ready(io),
+                pending_encode_annotation: None,
             })
         } else {
             let mut buffer = [0u8; 12];
@@ -477,6 +674,7 @@ impl CodecInstanceContainer {
                     c.enabled_codecs.create_decoder_for_magic_bytes(&buffer, c, io, io_id)?,
                 ),
                 output_state: OutputBufferState::None,
+                pending_encode_annotation: None,
             })
         }
     }
@@ -502,10 +700,13 @@ impl CodecInstanceContainer {
                     ))
                 }
             };
-            let encoder = auto::create_encoder(c, io, preset, bitmap_key, decoder_io_ids)
+            let created = auto::create_encoder(c, io, preset, bitmap_key, decoder_io_ids)
                 .map_err(|e| e.at(here!()))?;
 
-            self.codec = CodecKind::Encoder(encoder);
+            // Stash any substitution annotation so the first successful
+            // write_frame can merge it into the EncodeResult.
+            self.pending_encode_annotation = created.annotation.map(Box::new);
+            self.codec = CodecKind::Encoder(created.inner);
         };
 
         match self.codec {
@@ -515,8 +716,18 @@ impl CodecInstanceContainer {
                     .map_err(|e| e.at(here!()))
                 {
                     Err(e) => Err(e),
-                    Ok(result) => match result.bytes {
-                        s::ResultBytes::Elsewhere => Ok(result),
+                    Ok(mut result) => match result.bytes {
+                        s::ResultBytes::Elsewhere => {
+                            // Merge the substitution annotation into the
+                            // first frame's result. Subsequent frames
+                            // (animation) carry no annotation — the
+                            // substitution is a per-encoder property,
+                            // not per-frame.
+                            if let Some(pending) = self.pending_encode_annotation.take() {
+                                merge_annotations(&mut result.annotations, *pending);
+                            }
+                            Ok(result)
+                        }
                         other => Err(nerror!(
                             ErrorKind::InternalError,
                             "Encoders must return s::ResultBytes::Elsewhere and write to their owned IO. Found {:?}",
