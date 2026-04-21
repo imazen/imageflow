@@ -414,6 +414,47 @@ fn codec_grid_to_json(grid: &CodecSupportGrid) -> String {
     s
 }
 
+/// Structured error returned when a specific-codec `EncoderPreset`
+/// asks for a format that has no available encoder after all killbits,
+/// features, and codec-level rejections are applied.
+///
+/// Shape:
+/// ```json
+/// { "error": "format_not_available",
+///   "format": "jpeg",
+///   "requested_codec": "mozjpeg_encoder",
+///   "reasons": ["all_jpeg_encoders_denied"],
+///   "net_support": { ... } }
+/// ```
+///
+/// This is the unified fall-through shape used when graceful codec
+/// substitution can't save the request — every codec for the requested
+/// wire format is unavailable. It matches the error path fired by
+/// `EncoderPreset::Format { format }` when the format itself is off.
+pub fn format_not_available_error(
+    requested_codec: NamedEncoderName,
+    format: ImageFormat,
+    reasons: Vec<String>,
+    trusted: Option<&s::ExecutionSecurity>,
+    job_request: Option<&s::ExecutionSecurity>,
+    enabled: &EnabledCodecs,
+) -> FlowError {
+    let grid = CodecSupportGrid::compute(trusted, job_request, enabled);
+    let grid_json = codec_grid_to_json(&grid);
+    let reasons_json = serde_json::to_string(&reasons).unwrap_or_else(|_| "[]".to_string());
+    let msg = format!(
+        "{{\"error\": \"format_not_available\", \"format\": \"{fmt}\", \"requested_codec\": \"{codec}\", \"reasons\": {reasons_json}, \"net_support\": {grid_json}}}",
+        fmt = format.as_snake(),
+        codec = requested_codec.as_snake(),
+    );
+    FlowError {
+        kind: ErrorKind::CodecDisabledError,
+        message: msg,
+        at: ::smallvec::SmallVec::new(),
+        node: None,
+    }
+}
+
 /// Error kind produced when a decode/encode operation is rejected by
 /// the killbits grid. Encoded into `FlowError::message` as JSON that
 /// callers can parse.

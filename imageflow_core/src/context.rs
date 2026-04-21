@@ -1381,13 +1381,15 @@ fn test_calculate_context_heap_size() {
     // Fail if this grows so we can notice it
     // Windows has larger RwLock/Mutex, so allow a few extra bytes.
     // Codec-level killbits added `Option<Box<CodecKillbits>>` to the
-    // embedded `ExecutionSecurity`s on Context; account for the extra
-    // 16 bytes here.
+    // embedded `ExecutionSecurity`s on Context; codec substitution
+    // added `Option<Box<EncodeAnnotations>>` to each
+    // `CodecInstanceContainer` in the preallocated 4-slot AddRemoveSet.
+    // Account for both here.
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 1088);
+    assert!(context_bytes <= 1096);
 
     assert!(context_allocs <= 6);
-    assert!(thread_safe_bytes <= 1280);
+    assert!(thread_safe_bytes <= 1288);
 }
 
 #[test]
