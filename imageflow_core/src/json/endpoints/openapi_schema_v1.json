@@ -495,6 +495,45 @@
         }
       }
     },
+    "/v1/static/info": {
+      "post": {
+        "tags": [],
+        "summary": "Build the JSON response for `v1/static/info`. Uses a process-wide\ncache so the hot path is a `Cow::Borrowed` over a static byte slice\n— no serde work after the first call.",
+        "operationId": "static_info_response",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Static build info + capabilities + RIAPI schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_StaticInfoV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to build static info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/tell_decoder": {
       "post": {
         "tags": [],
@@ -751,6 +790,43 @@
           }
         }
       },
+      "BuildInfo": {
+        "type": "object",
+        "description": "Build-time facts about this binary.",
+        "required": [
+          "features",
+          "compile_deny_decode",
+          "compile_deny_encode",
+          "codec_priority_default"
+        ],
+        "properties": {
+          "codec_priority_default": {
+            "type": "string",
+            "description": "Snake-case codec-priority preset this build defaults to\n(`CODEC_PRIORITY_DEFAULT`)."
+          },
+          "compile_deny_decode": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Formats the build-ceiling permanently denies for decode\n(`COMPILE_DENY_DECODE`). Snake-case format names."
+          },
+          "compile_deny_encode": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Formats the build-ceiling permanently denies for encode\n(`COMPILE_DENY_ENCODE`). Snake-case format names."
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Feature flags active in this build (e.g. `\"c-codecs\"`, `\"zen-codecs\"`)."
+          }
+        }
+      },
       "BuildPerformance": {
         "type": "object",
         "required": [
@@ -773,6 +849,123 @@
         "properties": {
           "job_result": {
             "$ref": "#/components/schemas/JobResult"
+          }
+        }
+      },
+      "CapsSummary": {
+        "type": "object",
+        "description": "Union of the capability flags / ranges across every codec (for a\ngiven role) that backs a format in the current build. Booleans are\nOR-merged; ranges take the widest span.\n\nFields match the zencodec capability surface 1:1 where sensible, so\nclients can reason about codec behaviour without calling into\ncodec-specific types.",
+        "required": [
+          "icc",
+          "exif",
+          "xmp",
+          "cicp",
+          "lossy",
+          "lossless",
+          "hdr",
+          "gain_map",
+          "native_alpha",
+          "native_gray",
+          "native_16bit",
+          "native_f32",
+          "animation",
+          "push_rows",
+          "threads_supported_range"
+        ],
+        "properties": {
+          "animation": {
+            "type": "boolean",
+            "description": "Encode-only: whether the codec supports animation emission.\nDecode-only: whether the codec supports animation parsing."
+          },
+          "cicp": {
+            "type": "boolean"
+          },
+          "effort_range": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "`None` if the codec has no effort knob."
+          },
+          "exif": {
+            "type": "boolean"
+          },
+          "gain_map": {
+            "type": "boolean"
+          },
+          "hdr": {
+            "type": "boolean"
+          },
+          "icc": {
+            "type": "boolean"
+          },
+          "lossless": {
+            "type": "boolean"
+          },
+          "lossy": {
+            "type": "boolean"
+          },
+          "native_16bit": {
+            "type": "boolean"
+          },
+          "native_alpha": {
+            "type": "boolean"
+          },
+          "native_f32": {
+            "type": "boolean"
+          },
+          "native_gray": {
+            "type": "boolean"
+          },
+          "push_rows": {
+            "type": "boolean",
+            "description": "Encode-only: whether the codec supports row-level push encoding.\nDecode-only: whether the codec supports row-level streaming decode."
+          },
+          "quality_range": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "number",
+              "format": "float"
+            },
+            "description": "`None` if the codec is lossless-only / has no quality knob."
+          },
+          "threads_supported_range": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          "xmp": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CodecAvailability": {
+        "type": "object",
+        "description": "Per-codec row of the static info response.",
+        "required": [
+          "format",
+          "role",
+          "caps"
+        ],
+        "properties": {
+          "caps": {
+            "$ref": "#/components/schemas/CapsSummary"
+          },
+          "format": {
+            "$ref": "#/components/schemas/ImageFormat"
+          },
+          "role": {
+            "$ref": "#/components/schemas/CodecRole"
           }
         }
       },
@@ -821,6 +1014,14 @@
             "description": "Deny these encoders. Mutually exclusive with `allow_encoders`.\nAllowed at any layer."
           }
         }
+      },
+      "CodecRole": {
+        "type": "string",
+        "description": "Role a codec plays. Mirrors `NamedEncoderName` / `NamedDecoderName`\nas a single axis.",
+        "enum": [
+          "encode",
+          "decode"
+        ]
       },
       "CodecSubstitutionAnnotation": {
         "type": "object",
@@ -1980,6 +2181,92 @@
           "n_cubic_sharp"
         ]
       },
+      "FormatAvailability": {
+        "type": "object",
+        "description": "Per-format availability + metadata + capability union across this\nbuild's enabled encoders and decoders.",
+        "required": [
+          "decode",
+          "encode",
+          "display_name",
+          "preferred_mime_type",
+          "mime_types",
+          "preferred_extension",
+          "extensions",
+          "supports_alpha",
+          "supports_animation",
+          "supports_lossless",
+          "supports_lossy",
+          "magic_bytes_needed"
+        ],
+        "properties": {
+          "decode": {
+            "type": "boolean"
+          },
+          "decode_union": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CapsSummary",
+                "description": "Union of all enabled-decoder capabilities for this format.\n`None` when no decoder backs the format."
+              }
+            ]
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "encode": {
+            "type": "boolean"
+          },
+          "encode_union": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CapsSummary",
+                "description": "Union of all enabled-encoder capabilities for this format in\nthis build. `None` when no encoder backs the format."
+              }
+            ]
+          },
+          "extensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "magic_bytes_needed": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "mime_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "preferred_extension": {
+            "type": "string"
+          },
+          "preferred_mime_type": {
+            "type": "string"
+          },
+          "supports_alpha": {
+            "type": "boolean"
+          },
+          "supports_animation": {
+            "type": "boolean"
+          },
+          "supports_lossless": {
+            "type": "boolean"
+          },
+          "supports_lossy": {
+            "type": "boolean"
+          }
+        }
+      },
       "FormatKillbits": {
         "type": "object",
         "description": "Killbits for decode/encode on a per-format basis.\n\nThree mutually exclusive request shapes:\n\n- `allow_decode` / `allow_encode`: the listed formats are the *only* ones\n  permitted. Anything else is denied. (Trusted-policy layer only — rejected\n  at job level.)\n- `deny_decode` / `deny_encode`: the listed formats are denied. Everything\n  else carries over from the layer above.\n- `formats`: an explicit table of `{format: {decode, encode}}` pairs.\n  (Trusted-policy layer only — job level may set fields to `false` only.)\n\nValidation at deserialize time rejects mixing forms (e.g., `allow_decode`\ntogether with `deny_decode`, or a list form together with `formats`).",
@@ -2951,6 +3238,43 @@
               },
               "ok": {
                 "type": "boolean"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "JsonAnswer_StaticInfoV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "description": "Response body for `v1/static/info`.",
+            "required": [
+              "static_info"
+            ],
+            "properties": {
+              "static_info": {
+                "$ref": "#/components/schemas/StaticInfoResponse"
               }
             }
           },
@@ -4712,6 +5036,91 @@
           }
         ]
       },
+      "RiapiCategory": {
+        "type": "string",
+        "description": "Coarse grouping used to drive the server-side cache-key inclusion\nrules (see [`ServerRecommendations`]).",
+        "enum": [
+          "resize",
+          "crop",
+          "output",
+          "negotiation",
+          "filter",
+          "source",
+          "composition",
+          "debug",
+          "other"
+        ]
+      },
+      "RiapiKeyInfo": {
+        "type": "object",
+        "description": "Annotated RIAPI key.",
+        "required": [
+          "name",
+          "category",
+          "cache_relevant",
+          "accepts"
+        ],
+        "properties": {
+          "accept_header_origin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For `accept.*` keys, the HTTP `Accept` header media type that the\nserver should translate into this knob at the edge."
+          },
+          "accepts": {
+            "$ref": "#/components/schemas/RiapiValueKind"
+          },
+          "cache_relevant": {
+            "type": "boolean",
+            "description": "Whether the key participates in the cached representation the\nserver should vary on. `false` for trace/debug knobs."
+          },
+          "category": {
+            "$ref": "#/components/schemas/RiapiCategory"
+          },
+          "enum_values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Populated when `accepts == Enum`."
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "RiapiSchema": {
+        "type": "object",
+        "description": "RIAPI schema bundle for this build.",
+        "required": [
+          "keys",
+          "ignores_unknown_keys"
+        ],
+        "properties": {
+          "ignores_unknown_keys": {
+            "type": "boolean",
+            "description": "Whether the parser silently drops unknown keys. Useful for clients\nthat want to probe behaviour."
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RiapiKeyInfo"
+            }
+          }
+        }
+      },
+      "RiapiValueKind": {
+        "type": "string",
+        "description": "Kind of value a RIAPI key accepts. Present to help clients offer\ninline validation.",
+        "enum": [
+          "integer",
+          "float",
+          "boolean",
+          "enum",
+          "string"
+        ]
+      },
       "RoundCornersMode": {
         "oneOf": [
           {
@@ -4824,6 +5233,54 @@
           "linear"
         ]
       },
+      "ServerRecommendations": {
+        "type": "object",
+        "description": "Opinionated deployment recommendations. These are suggestions only —\nthe server chooses how to apply them.",
+        "required": [
+          "accept_header_translation",
+          "strip_from_cache_key",
+          "include_in_cache_key_prefix",
+          "vary_header",
+          "notes"
+        ],
+        "properties": {
+          "accept_header_translation": {
+            "type": "object",
+            "description": "Map of `Accept` header media type → RIAPI key expression that the\nedge should synthesize. Example: `\"image/webp\"` → `\"accept.webp=1\"`.",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "include_in_cache_key_prefix": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Key patterns the edge should include in the cache key prefix\n(wildcards allowed, e.g. `\"accept.*\"`)."
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Freeform guidance clarifying subtle points (e.g. why we prefer\n`accept.*` in the cache key to `Vary: Accept`)."
+          },
+          "strip_from_cache_key": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "RIAPI keys the edge should strip before hashing the cache key."
+          },
+          "vary_header": {
+            "type": "string",
+            "description": "Recommended HTTP `Vary` header value."
+          }
+        }
+      },
       "SetPolicyRequest": {
         "type": "object",
         "description": "Request body for `v1/context/set_policy`. Sets the trusted policy\nlayer (layer 2 of the killbits system). Idempotent once set;\ncalling again without `require_unlocked` is accepted only if the\nnew policy narrows (never widens) the existing one.",
@@ -4867,6 +5324,64 @@
           "size_differs",
           "always"
         ]
+      },
+      "StaticInfoResponse": {
+        "type": "object",
+        "description": "Top-level response for `v1/static/info`.",
+        "required": [
+          "imageflow_version",
+          "build",
+          "formats_available",
+          "codecs",
+          "riapi",
+          "server_recommendations"
+        ],
+        "properties": {
+          "build": {
+            "$ref": "#/components/schemas/BuildInfo"
+          },
+          "codecs": {
+            "type": "object",
+            "description": "Keyed by snake-case codec name (matches\n`NamedEncoderName`/`NamedDecoderName`).",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CodecAvailability"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "formats_available": {
+            "type": "object",
+            "description": "Keyed by snake-case `ImageFormat` name.",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FormatAvailability"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "imageflow_version": {
+            "type": "string"
+          },
+          "riapi": {
+            "$ref": "#/components/schemas/RiapiSchema"
+          },
+          "server_recommendations": {
+            "$ref": "#/components/schemas/ServerRecommendations"
+          }
+        }
+      },
+      "StaticInfoV1Response": {
+        "type": "object",
+        "description": "Response body for `v1/static/info`.",
+        "required": [
+          "static_info"
+        ],
+        "properties": {
+          "static_info": {
+            "$ref": "#/components/schemas/StaticInfoResponse"
+          }
+        }
       },
       "SubstitutionReason": {
         "type": "string",
