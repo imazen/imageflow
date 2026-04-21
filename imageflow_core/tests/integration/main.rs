@@ -9,6 +9,7 @@ mod killbits;
 mod png_color_management;
 mod robustness;
 mod schema;
+mod static_info;
 mod sync;
 mod variation;
 mod visuals;
