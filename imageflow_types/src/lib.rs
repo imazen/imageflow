@@ -30,7 +30,13 @@
 pub mod build_env_info;
 pub mod build_killbits;
 pub mod killbits;
+pub mod static_info;
 pub mod version;
+
+pub use static_info::{
+    BuildInfo, CapsSummary, CodecAvailability, CodecRole, FormatAvailability, RiapiCategory,
+    RiapiKeyInfo, RiapiSchema, RiapiValueKind, ServerRecommendations, StaticInfoResponse,
+};
 
 pub use killbits::{
     CodecKillbits, CodecKillbitsJobLevelError, CodecKillbitsValidationError,
