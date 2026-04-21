@@ -59,6 +59,82 @@
         }
       }
     },
+    "/v1/context/get_net_support": {
+      "post": {
+        "tags": [],
+        "operationId": "get_net_support",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Net format support grid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_GetNetSupportV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to compute grid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/context/set_policy": {
+      "post": {
+        "tags": [],
+        "operationId": "set_policy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPolicyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Trusted policy set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_SetPolicyV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Setting policy failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/execute": {
       "post": {
         "tags": [],
@@ -700,6 +776,119 @@
           }
         }
       },
+      "CodecKillbits": {
+        "type": "object",
+        "description": "Codec-level killbits: allow/deny individual named encoders and\ndecoders.\n\nSits alongside `FormatKillbits` on `ExecutionSecurity`. Resolution\norder:\n\n1. Build-time ceiling (compile gates) picks which named codecs exist.\n2. Trusted policy may `allow_*` (positive list — this is the only way\n   to *allow* a compiled codec that was absent from the ambient grid,\n   though today any compiled-in codec is available by default) or\n   `deny_*`.\n3. Job-level requests may only `deny_*` — no `allow_*`, same rule as\n   `FormatKillbits`.\n\nWhen the grid denies every encoder for a format, the format itself\nflips to \"encode: false\" in `v1/context/get_net_support`, with\n`reasons: [\"no_available_encoder\"]` on the format entry.",
+        "properties": {
+          "allow_decoders": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NamedDecoderName"
+            },
+            "description": "Allow only these decoders; all other decoders are denied.\nMutually exclusive with `deny_decoders`. Trusted-policy-only."
+          },
+          "allow_encoders": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NamedEncoderName"
+            },
+            "description": "Allow only these encoders; all other encoders are denied.\nMutually exclusive with `deny_encoders`. Trusted-policy-only."
+          },
+          "deny_decoders": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NamedDecoderName"
+            },
+            "description": "Deny these decoders. Mutually exclusive with `allow_decoders`.\nAllowed at any layer."
+          },
+          "deny_encoders": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NamedEncoderName"
+            },
+            "description": "Deny these encoders. Mutually exclusive with `allow_encoders`.\nAllowed at any layer."
+          }
+        }
+      },
+      "CodecSubstitutionAnnotation": {
+        "type": "object",
+        "description": "Annotation attached to a per-encode-step response when the dispatcher\nserved a specific-codec `EncoderPreset` by routing to a different\ncodec for the same wire format.\n\nSurfaces on [`crate::EncodeResult::annotations`] — one per encoded\nimage — and never represents an error. The output bytes are valid for\nthe advertised format; this annotation only tells the caller *which*\nbackend produced them and why the requested one was skipped.",
+        "required": [
+          "requested",
+          "actual",
+          "reason"
+        ],
+        "properties": {
+          "actual": {
+            "$ref": "#/components/schemas/NamedEncoderName",
+            "description": "Wire name of the codec that actually produced output\n(e.g. `zen_jpeg_encoder`)."
+          },
+          "codec_priority": {
+            "type": "string",
+            "description": "Build-time codec-priority flavor that selected the substitute\norder. `\"v3_zen_first\"` on upstream / V3 forks,\n`\"v2_classic_first\"` on V2 forks. The field is informational —\ncallers can log it to distinguish an unexpected pick driven by\npriority from one driven by killbits."
+          },
+          "dropped_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Field values from the request that were dropped because the\nsubstitute codec doesn't support them\n(e.g. `\"preset.zlib_compression\"` on the lodepng fallback path)."
+          },
+          "field_translations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Human-readable translation notes, one per field the preset carried\nthat was remapped onto the substitute codec's configuration\n(e.g. `\"preset.quality → zen.quality\"`)."
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SubstitutionReason",
+            "description": "Why the dispatcher skipped the requested codec."
+          },
+          "requested": {
+            "$ref": "#/components/schemas/NamedEncoderName",
+            "description": "Wire name of the codec the `EncoderPreset` named\n(e.g. `mozjpeg_encoder`)."
+          }
+        }
+      },
+      "CodecSupportEntry": {
+        "type": "object",
+        "description": "Per-codec availability reported by `v1/context/get_net_support`.",
+        "required": [
+          "available",
+          "format",
+          "role"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "format": {
+            "type": "string"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "role": {
+            "type": "string"
+          }
+        }
+      },
       "Color": {
         "oneOf": [
           {
@@ -840,6 +1029,37 @@
           "ir4"
         ]
       },
+      "CompileCeiling": {
+        "type": "object",
+        "required": [
+          "denied_decode",
+          "denied_encode",
+          "features_missing"
+        ],
+        "properties": {
+          "denied_decode": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Formats explicitly denied by `COMPILE_DENY_DECODE`."
+          },
+          "denied_encode": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Formats explicitly denied by `COMPILE_DENY_ENCODE`."
+          },
+          "features_missing": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Formats with no compiled-in backend (missing `c-codecs`/`zen-codecs`)."
+          }
+        }
+      },
       "CompositingMode": {
         "type": "string",
         "description": "Blend pixels (if transparent) or replace?",
@@ -954,6 +1174,22 @@
           "fit_pad"
         ]
       },
+      "DecodeAnnotations": {
+        "type": "object",
+        "description": "Decode-side companion to [`EncodeAnnotations`].",
+        "properties": {
+          "codec_substitution": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DecoderSubstitutionAnnotation"
+              }
+            ]
+          }
+        }
+      },
       "DecodeResult": {
         "type": "object",
         "required": [
@@ -964,6 +1200,17 @@
           "h"
         ],
         "properties": {
+          "annotations": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DecodeAnnotations",
+                "description": "Forward-extensible annotation bag. Mirror of\n[`EncodeResult::annotations`] for the decode side."
+              }
+            ]
+          },
           "h": {
             "type": "integer",
             "format": "int32"
@@ -1034,6 +1281,26 @@
           }
         ]
       },
+      "DecoderSubstitutionAnnotation": {
+        "type": "object",
+        "description": "Mirror of [`CodecSubstitutionAnnotation`] for the decode side.\n\nSurfaces on [`crate::DecodeResult::annotations`] when a decoder\nsubstitution happened (e.g. `zen_jpeg_decoder` was denied, so the\ndispatcher used `mozjpeg_decoder` instead). Shape mirrors the encoder\nannotation for UI consistency.",
+        "required": [
+          "requested",
+          "actual",
+          "reason"
+        ],
+        "properties": {
+          "actual": {
+            "$ref": "#/components/schemas/NamedDecoderName"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SubstitutionReason"
+          },
+          "requested": {
+            "$ref": "#/components/schemas/NamedDecoderName"
+          }
+        }
+      },
       "Edge": {
         "type": "object",
         "description": "Operation nodes are connected by edges. JSON only.",
@@ -1067,6 +1334,23 @@
       "EmptyRequest": {
         "type": "object"
       },
+      "EncodeAnnotations": {
+        "type": "object",
+        "description": "Bag of forward-extensible annotations attached to a single encoded\nimage in [`crate::EncodeResult`].\n\nEach field is optional; new annotation kinds can be added without\nbreaking callers that deserialize older messages. Callers should\ntreat unknown fields as ignorable.",
+        "properties": {
+          "codec_substitution": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CodecSubstitutionAnnotation",
+                "description": "Set iff the dispatcher substituted the requested codec with a\ndifferent one that produces the same wire format."
+              }
+            ]
+          }
+        }
+      },
       "EncodeResult": {
         "type": "object",
         "required": [
@@ -1078,6 +1362,17 @@
           "bytes"
         ],
         "properties": {
+          "annotations": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EncodeAnnotations",
+                "description": "Forward-extensible annotation bag. Populated when the dispatcher\nsubstituted the requested codec, surfaced unit-warning output,\nor otherwise has non-error information about how this particular\nencode step was served. Omitted from the wire when empty."
+              }
+            ]
+          },
           "bytes": {
             "$ref": "#/components/schemas/ResultBytes"
           },
@@ -1578,6 +1873,28 @@
       "ExecutionSecurity": {
         "type": "object",
         "properties": {
+          "codecs": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CodecKillbits",
+                "description": "Per-codec decode/encode killbits. Complements `formats` by\nletting operators allow/deny individual named backends within a\nformat (e.g. forbid mozjpeg while keeping zen_jpeg_encoder). See\n`CodecKillbits` for the full description.\n\nSame layering rules as `formats`:\n- Trusted policy may use any shape (`allow_*`, `deny_*`).\n- Job-level `security` may only `deny_*`.\n\nAbsent = no change at this layer.\n\nBoxed to keep `ExecutionSecurity` small — `CodecKillbits` carries\n~160 bytes of inline list capacity when fully populated."
+              }
+            ]
+          },
+          "formats": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FormatKillbits",
+                "description": "Per-format decode/encode killbits. Part of the three-layer codec\ngating system:\n\n- Trusted policy (via `v1/context/set_policy`) may use any form\n  (`allow_decode`, `deny_decode`, `allow_encode`, `deny_encode`, or\n  `formats` table).\n- Job-level `security` on `Build001`/`Execute001` may only *deny*\n  (no `allow_*`, no table entries with `decode: true`/`encode: true`).\n\nBoxed to keep `ExecutionSecurity` small on the stack — killbits carry\n~120 bytes of inline capacity for the per-format lists and table.\n\nAbsent = no change at this layer."
+              }
+            ]
+          },
           "max_decode_size": {
             "oneOf": [
               {
@@ -1662,6 +1979,118 @@
           "n_cubic",
           "n_cubic_sharp"
         ]
+      },
+      "FormatKillbits": {
+        "type": "object",
+        "description": "Killbits for decode/encode on a per-format basis.\n\nThree mutually exclusive request shapes:\n\n- `allow_decode` / `allow_encode`: the listed formats are the *only* ones\n  permitted. Anything else is denied. (Trusted-policy layer only — rejected\n  at job level.)\n- `deny_decode` / `deny_encode`: the listed formats are denied. Everything\n  else carries over from the layer above.\n- `formats`: an explicit table of `{format: {decode, encode}}` pairs.\n  (Trusted-policy layer only — job level may set fields to `false` only.)\n\nValidation at deserialize time rejects mixing forms (e.g., `allow_decode`\ntogether with `deny_decode`, or a list form together with `formats`).",
+        "properties": {
+          "allow_decode": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImageFormat"
+            },
+            "description": "Allow only these for decode (rejects any format not listed).\nMutually exclusive with `deny_decode` and with `formats`."
+          },
+          "allow_encode": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImageFormat"
+            },
+            "description": "Allow only these for encode. Mutually exclusive with `deny_encode` and\nwith `formats`."
+          },
+          "deny_decode": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImageFormat"
+            },
+            "description": "Deny these for decode. Mutually exclusive with `allow_decode`."
+          },
+          "deny_encode": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImageFormat"
+            },
+            "description": "Deny these for encode. Mutually exclusive with `allow_encode`."
+          },
+          "formats": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Per-format table form. Mutually exclusive with the list forms above.",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FormatPermissions"
+            },
+            "propertyNames": {
+              "type": "string",
+              "description": "The set of image formats that can be referenced by killbits.\n\n`#[non_exhaustive]` so new formats can be added without semver breakage to\ndownstream matches. Serialized as `snake_case` strings.",
+              "enum": [
+                "jpeg",
+                "png",
+                "gif",
+                "webp",
+                "avif",
+                "jxl",
+                "heic",
+                "bmp",
+                "tiff",
+                "pnm"
+              ]
+            }
+          }
+        }
+      },
+      "FormatPermissions": {
+        "type": "object",
+        "description": "Per-format decode/encode permissions.\n\nUsed inside `FormatKillbits::formats` to express a full allow/deny grid in\none request body.",
+        "properties": {
+          "decode": {
+            "type": "boolean"
+          },
+          "encode": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FormatSupport": {
+        "type": "object",
+        "required": [
+          "decode",
+          "encode"
+        ],
+        "properties": {
+          "decode": {
+            "type": "boolean"
+          },
+          "decode_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Machine-readable reasons a cell ended up denied. Present on\nformats whose decode/encode was turned off by the codec-level\nfold (e.g. every mapped encoder killed) or explicit codec\nkillbits."
+          },
+          "encode": {
+            "type": "boolean"
+          },
+          "encode_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
       },
       "FramePerformance": {
         "type": "object",
@@ -1776,6 +2205,29 @@
           }
         }
       },
+      "GetNetSupportV1Response": {
+        "type": "object",
+        "required": [
+          "ok",
+          "net_support",
+          "trusted_policy_set",
+          "compile_ceiling"
+        ],
+        "properties": {
+          "compile_ceiling": {
+            "$ref": "#/components/schemas/CompileCeiling"
+          },
+          "net_support": {
+            "$ref": "#/components/schemas/NetSupport"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "trusted_policy_set": {
+            "type": "boolean"
+          }
+        }
+      },
       "GetRiapiSchemaV1Response": {
         "type": "object",
         "required": [
@@ -1836,6 +2288,22 @@
             }
           }
         }
+      },
+      "ImageFormat": {
+        "type": "string",
+        "description": "The set of image formats that can be referenced by killbits.\n\n`#[non_exhaustive]` so new formats can be added without semver breakage to\ndownstream matches. Serialized as `snake_case` strings.",
+        "enum": [
+          "jpeg",
+          "png",
+          "gif",
+          "webp",
+          "avif",
+          "jxl",
+          "heic",
+          "bmp",
+          "tiff",
+          "pnm"
+        ]
       },
       "ImageInfo": {
         "type": "object",
@@ -2223,6 +2691,54 @@
           }
         }
       },
+      "JsonAnswer_GetNetSupportV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "ok",
+              "net_support",
+              "trusted_policy_set",
+              "compile_ceiling"
+            ],
+            "properties": {
+              "compile_ceiling": {
+                "$ref": "#/components/schemas/CompileCeiling"
+              },
+              "net_support": {
+                "$ref": "#/components/schemas/NetSupport"
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "trusted_policy_set": {
+                "type": "boolean"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
       "JsonAnswer_GetRiapiSchemaV1Response": {
         "type": "object",
         "required": [
@@ -2406,6 +2922,50 @@
           }
         }
       },
+      "JsonAnswer_SetPolicyV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "ok",
+              "locked",
+              "net_support"
+            ],
+            "properties": {
+              "locked": {
+                "type": "boolean"
+              },
+              "net_support": {
+                "$ref": "#/components/schemas/NetSupport"
+              },
+              "ok": {
+                "type": "boolean"
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
       "JsonAnswer_TellDecoderV1Response": {
         "type": "object",
         "required": [
@@ -2522,6 +3082,76 @@
           "endpoints": {
             "type": "array",
             "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "NamedDecoderName": {
+        "type": "string",
+        "description": "Named decoders that can be individually allowed/denied via the\ncodec-level killbits grid. See `NamedEncoderName` for the design\nrationale (nominal enum, feature gating handled at the core layer).",
+        "enum": [
+          "mozjpeg_rs_decoder",
+          "image_rs_jpeg_decoder",
+          "zen_jpeg_decoder",
+          "libpng_decoder",
+          "image_rs_png_decoder",
+          "zen_png_decoder",
+          "gif_rs_decoder",
+          "zen_gif_decoder",
+          "webp_decoder",
+          "zen_webp_decoder",
+          "zen_avif_decoder",
+          "zen_jxl_decoder",
+          "zen_bmp_decoder"
+        ]
+      },
+      "NamedEncoderName": {
+        "type": "string",
+        "description": "Named encoders that can be individually allowed/denied via the\ncodec-level killbits grid.\n\nThese are the wire-side names of the specific `NamedEncoders` variants\nimplemented by `imageflow_core`. This type intentionally lists every\nknown encoder — feature gating is handled at the core layer, so the\nenum stays \"purely nominal\" on the types side. An encoder being\nlisted here doesn't mean the current build provides it; that question\nis answered by the runtime net_support grid.\n\n`#[non_exhaustive]` so new backends can be added without semver breakage.",
+        "enum": [
+          "mozjpeg_encoder",
+          "zen_jpeg_encoder",
+          "mozjpeg_rs_encoder",
+          "libpng_encoder",
+          "lodepng_encoder",
+          "pngquant_encoder",
+          "zen_png_encoder",
+          "zen_png_zenquant_encoder",
+          "zen_png_imagequant_encoder",
+          "webp_encoder",
+          "zen_webp_encoder",
+          "gif_encoder",
+          "zen_gif_encoder",
+          "zen_avif_encoder",
+          "zen_jxl_encoder",
+          "zen_bmp_encoder"
+        ]
+      },
+      "NetSupport": {
+        "type": "object",
+        "required": [
+          "formats",
+          "codecs"
+        ],
+        "properties": {
+          "codecs": {
+            "type": "object",
+            "description": "Per-codec availability, keyed by snake_case codec name.",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CodecSupportEntry"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "formats": {
+            "type": "object",
+            "description": "Per-format decode/encode availability under the combined grid\n(layer 1 ∩ layer 2 ∩ layer 3, with the codec-availability fold-in).",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FormatSupport"
+            },
+            "propertyNames": {
               "type": "string"
             }
           }
@@ -4194,6 +4824,41 @@
           "linear"
         ]
       },
+      "SetPolicyRequest": {
+        "type": "object",
+        "description": "Request body for `v1/context/set_policy`. Sets the trusted policy\nlayer (layer 2 of the killbits system). Idempotent once set;\ncalling again without `require_unlocked` is accepted only if the\nnew policy narrows (never widens) the existing one.",
+        "required": [
+          "policy"
+        ],
+        "properties": {
+          "policy": {
+            "$ref": "#/components/schemas/ExecutionSecurity"
+          },
+          "require_unlocked": {
+            "type": "boolean",
+            "description": "If true, error when a trusted policy is already set. Default: false."
+          }
+        }
+      },
+      "SetPolicyV1Response": {
+        "type": "object",
+        "required": [
+          "ok",
+          "locked",
+          "net_support"
+        ],
+        "properties": {
+          "locked": {
+            "type": "boolean"
+          },
+          "net_support": {
+            "$ref": "#/components/schemas/NetSupport"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
       "SharpenWhen": {
         "type": "string",
         "enum": [
@@ -4201,6 +4866,17 @@
           "upscaling",
           "size_differs",
           "always"
+        ]
+      },
+      "SubstitutionReason": {
+        "type": "string",
+        "description": "Reason a specific-codec `EncoderPreset` was served by a different\ncodec than the one the caller named.\n\nAppears in [`CodecSubstitutionAnnotation::reason`]. The enum is\n`#[non_exhaustive]` so new reasons can be added without a semver\nbreak. Serialized as `snake_case` strings.",
+        "enum": [
+          "codec_killbits_deny_encoders",
+          "codec_killbits_allow_encoders_excludes",
+          "compile_feature_missing",
+          "compile_codec_const_denied",
+          "not_registered"
         ]
       },
       "TellDecoder001": {
