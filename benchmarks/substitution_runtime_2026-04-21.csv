@@ -1,0 +1,172 @@
+group,sample,legacy_codec,legacy_knob,substitute_codec,substitute_knob,legacy_ns,substitute_ns,ratio,cap_status
+png_compression_mapping,1_webp_a.sm.png,libpng_encoder,zlib=0,zen_png_encoder,None,1492294,127826,0.086,pass
+png_compression_mapping,1_webp_a.sm.png,libpng_encoder,zlib=1,zen_png_encoder,Fastest,2527914,695391,0.275,pass
+png_compression_mapping,1_webp_a.sm.png,libpng_encoder,zlib=2,zen_png_encoder,Fastest,2645910,1030996,0.390,pass
+png_compression_mapping,1_webp_a.sm.png,libpng_encoder,zlib=3,zen_png_encoder,Fastest,4205647,832513,0.198,pass
+png_compression_mapping,1_webp_a.sm.png,libpng_encoder,zlib=4,zen_png_encoder,Fastest,4041790,740884,0.183,pass
+png_compression_mapping,1_webp_a.sm.png,libpng_encoder,zlib=5,zen_png_encoder,Fastest,5144159,743010,0.144,pass
+png_compression_mapping,1_webp_a.sm.png,libpng_encoder,zlib=6,zen_png_encoder,Fastest,7914425,816431,0.103,pass
+png_compression_mapping,1_webp_a.sm.png,libpng_encoder,zlib=7,zen_png_encoder,Fastest,9745059,727240,0.075,pass
+png_compression_mapping,1_webp_a.sm.png,libpng_encoder,zlib=8,zen_png_encoder,Fastest,15054795,735970,0.049,pass
+png_compression_mapping,1_webp_a.sm.png,libpng_encoder,zlib=9,zen_png_encoder,Turbo,22057062,3353091,0.152,pass
+png_compression_mapping,dice.png,libpng_encoder,zlib=0,zen_png_encoder,None,14994368,1453152,0.097,pass
+png_compression_mapping,dice.png,libpng_encoder,zlib=1,zen_png_encoder,Fastest,21772863,5584431,0.256,pass
+png_compression_mapping,dice.png,libpng_encoder,zlib=2,zen_png_encoder,Fastest,22533440,5627011,0.250,pass
+png_compression_mapping,dice.png,libpng_encoder,zlib=3,zen_png_encoder,Fastest,24955922,5612976,0.225,pass
+png_compression_mapping,dice.png,libpng_encoder,zlib=4,zen_png_encoder,Fastest,28488537,5356755,0.188,pass
+png_compression_mapping,dice.png,libpng_encoder,zlib=5,zen_png_encoder,Fastest,33107178,5276458,0.159,pass
+png_compression_mapping,dice.png,libpng_encoder,zlib=6,zen_png_encoder,Fastest,43443874,5371451,0.124,pass
+png_compression_mapping,dice.png,libpng_encoder,zlib=7,zen_png_encoder,Fastest,50839842,5221508,0.103,pass
+png_compression_mapping,dice.png,libpng_encoder,zlib=8,zen_png_encoder,Fastest,79175933,5392856,0.068,pass
+png_compression_mapping,dice.png,libpng_encoder,zlib=9,zen_png_encoder,Turbo,153668056,22275127,0.145,pass
+png_compression_mapping,frymire.png,libpng_encoder,zlib=0,zen_png_encoder,None,26207033,4691285,0.179,pass
+png_compression_mapping,frymire.png,libpng_encoder,zlib=1,zen_png_encoder,Fastest,38090606,11427447,0.300,pass
+png_compression_mapping,frymire.png,libpng_encoder,zlib=2,zen_png_encoder,Fastest,40495245,12471247,0.308,pass
+png_compression_mapping,frymire.png,libpng_encoder,zlib=3,zen_png_encoder,Fastest,42618261,12381072,0.291,pass
+png_compression_mapping,frymire.png,libpng_encoder,zlib=4,zen_png_encoder,Fastest,44766792,11467276,0.256,pass
+png_compression_mapping,frymire.png,libpng_encoder,zlib=5,zen_png_encoder,Fastest,51396000,12238575,0.238,pass
+png_compression_mapping,frymire.png,libpng_encoder,zlib=6,zen_png_encoder,Fastest,64205330,12346808,0.192,pass
+png_compression_mapping,frymire.png,libpng_encoder,zlib=7,zen_png_encoder,Fastest,77975352,11724901,0.150,pass
+png_compression_mapping,frymire.png,libpng_encoder,zlib=8,zen_png_encoder,Fastest,158303309,11703371,0.074,pass
+png_compression_mapping,frymire.png,libpng_encoder,zlib=9,zen_png_encoder,Turbo,444051936,76389001,0.172,pass
+png_compression_mapping,gradients.png,libpng_encoder,zlib=0,zen_png_encoder,None,1154606,69878,0.061,pass
+png_compression_mapping,gradients.png,libpng_encoder,zlib=1,zen_png_encoder,Fastest,2048826,636409,0.311,pass
+png_compression_mapping,gradients.png,libpng_encoder,zlib=2,zen_png_encoder,Fastest,2332042,595656,0.255,pass
+png_compression_mapping,gradients.png,libpng_encoder,zlib=3,zen_png_encoder,Fastest,3235060,637490,0.197,pass
+png_compression_mapping,gradients.png,libpng_encoder,zlib=4,zen_png_encoder,Fastest,3059659,633702,0.207,pass
+png_compression_mapping,gradients.png,libpng_encoder,zlib=5,zen_png_encoder,Fastest,4598267,655857,0.143,pass
+png_compression_mapping,gradients.png,libpng_encoder,zlib=6,zen_png_encoder,Fastest,9001990,643355,0.071,pass
+png_compression_mapping,gradients.png,libpng_encoder,zlib=7,zen_png_encoder,Fastest,13808462,645650,0.047,pass
+png_compression_mapping,gradients.png,libpng_encoder,zlib=8,zen_png_encoder,Fastest,46077952,635446,0.014,pass
+png_compression_mapping,gradients.png,libpng_encoder,zlib=9,zen_png_encoder,Turbo,96372832,2926068,0.030,pass
+png_compression_mapping,png_turns_empty_2.png,libpng_encoder,zlib=0,zen_png_encoder,None,3308632,640980,0.194,pass
+png_compression_mapping,png_turns_empty_2.png,libpng_encoder,zlib=1,zen_png_encoder,Fastest,3861921,968657,0.251,pass
+png_compression_mapping,png_turns_empty_2.png,libpng_encoder,zlib=2,zen_png_encoder,Fastest,3734420,962152,0.258,pass
+png_compression_mapping,png_turns_empty_2.png,libpng_encoder,zlib=3,zen_png_encoder,Fastest,3693630,940216,0.255,pass
+png_compression_mapping,png_turns_empty_2.png,libpng_encoder,zlib=4,zen_png_encoder,Fastest,4215128,940628,0.223,pass
+png_compression_mapping,png_turns_empty_2.png,libpng_encoder,zlib=5,zen_png_encoder,Fastest,4322041,942639,0.218,pass
+png_compression_mapping,png_turns_empty_2.png,libpng_encoder,zlib=6,zen_png_encoder,Fastest,4599552,937546,0.204,pass
+png_compression_mapping,png_turns_empty_2.png,libpng_encoder,zlib=7,zen_png_encoder,Fastest,4775910,945791,0.198,pass
+png_compression_mapping,png_turns_empty_2.png,libpng_encoder,zlib=8,zen_png_encoder,Fastest,7047467,938624,0.133,pass
+png_compression_mapping,png_turns_empty_2.png,libpng_encoder,zlib=9,zen_png_encoder,Turbo,15318507,3612955,0.236,pass
+png_compression_mapping,red-night.png,libpng_encoder,zlib=0,zen_png_encoder,None,3400732,317229,0.093,pass
+png_compression_mapping,red-night.png,libpng_encoder,zlib=1,zen_png_encoder,Fastest,6496960,1805661,0.278,pass
+png_compression_mapping,red-night.png,libpng_encoder,zlib=2,zen_png_encoder,Fastest,6571361,1659038,0.252,pass
+png_compression_mapping,red-night.png,libpng_encoder,zlib=3,zen_png_encoder,Fastest,9459220,1655298,0.175,pass
+png_compression_mapping,red-night.png,libpng_encoder,zlib=4,zen_png_encoder,Fastest,10531166,1703984,0.162,pass
+png_compression_mapping,red-night.png,libpng_encoder,zlib=5,zen_png_encoder,Fastest,15444501,1648871,0.107,pass
+png_compression_mapping,red-night.png,libpng_encoder,zlib=6,zen_png_encoder,Fastest,29726767,1829751,0.062,pass
+png_compression_mapping,red-night.png,libpng_encoder,zlib=7,zen_png_encoder,Fastest,43708856,1816520,0.042,pass
+png_compression_mapping,red-night.png,libpng_encoder,zlib=8,zen_png_encoder,Fastest,114970851,1793937,0.016,pass
+png_compression_mapping,red-night.png,libpng_encoder,zlib=9,zen_png_encoder,Turbo,195975553,7283085,0.037,pass
+png_compression_mapping,rings2.png,libpng_encoder,zlib=0,zen_png_encoder,None,21726767,28206222,1.298,pass
+png_compression_mapping,rings2.png,libpng_encoder,zlib=1,zen_png_encoder,Fastest,34308846,32530785,0.948,pass
+png_compression_mapping,rings2.png,libpng_encoder,zlib=2,zen_png_encoder,Fastest,35903802,33340260,0.929,pass
+png_compression_mapping,rings2.png,libpng_encoder,zlib=3,zen_png_encoder,Fastest,42839052,33832943,0.790,pass
+png_compression_mapping,rings2.png,libpng_encoder,zlib=4,zen_png_encoder,Fastest,48022491,32527217,0.677,pass
+png_compression_mapping,rings2.png,libpng_encoder,zlib=5,zen_png_encoder,Fastest,55512760,32516881,0.586,pass
+png_compression_mapping,rings2.png,libpng_encoder,zlib=6,zen_png_encoder,Fastest,82148632,32934468,0.401,pass
+png_compression_mapping,rings2.png,libpng_encoder,zlib=7,zen_png_encoder,Fastest,102912724,32352847,0.314,pass
+png_compression_mapping,rings2.png,libpng_encoder,zlib=8,zen_png_encoder,Fastest,162613963,32514697,0.200,pass
+png_compression_mapping,rings2.png,libpng_encoder,zlib=9,zen_png_encoder,Turbo,229852541,47326667,0.206,pass
+png_compression_mapping,shirt_transparent.png,libpng_encoder,zlib=0,zen_png_encoder,None,8332316,659199,0.079,pass
+png_compression_mapping,shirt_transparent.png,libpng_encoder,zlib=1,zen_png_encoder,Fastest,13371981,3814874,0.285,pass
+png_compression_mapping,shirt_transparent.png,libpng_encoder,zlib=2,zen_png_encoder,Fastest,14478172,3828024,0.264,pass
+png_compression_mapping,shirt_transparent.png,libpng_encoder,zlib=3,zen_png_encoder,Fastest,18420966,3910229,0.212,pass
+png_compression_mapping,shirt_transparent.png,libpng_encoder,zlib=4,zen_png_encoder,Fastest,21861861,3870986,0.177,pass
+png_compression_mapping,shirt_transparent.png,libpng_encoder,zlib=5,zen_png_encoder,Fastest,28720269,3836427,0.134,pass
+png_compression_mapping,shirt_transparent.png,libpng_encoder,zlib=6,zen_png_encoder,Fastest,46082676,3912168,0.085,pass
+png_compression_mapping,shirt_transparent.png,libpng_encoder,zlib=7,zen_png_encoder,Fastest,55737519,3714531,0.067,pass
+png_compression_mapping,shirt_transparent.png,libpng_encoder,zlib=8,zen_png_encoder,Fastest,65043157,3700788,0.057,pass
+png_compression_mapping,shirt_transparent.png,libpng_encoder,zlib=9,zen_png_encoder,Turbo,86401700,15300165,0.177,pass
+png_compression_mapping,fallback_checker_256x256.bgra,libpng_encoder,zlib=0,zen_png_encoder,None,1081972,197254,0.182,pass
+png_compression_mapping,fallback_checker_256x256.bgra,libpng_encoder,zlib=1,zen_png_encoder,Fastest,1306497,322485,0.247,pass
+png_compression_mapping,fallback_checker_256x256.bgra,libpng_encoder,zlib=2,zen_png_encoder,Fastest,1299000,337595,0.260,pass
+png_compression_mapping,fallback_checker_256x256.bgra,libpng_encoder,zlib=3,zen_png_encoder,Fastest,1325787,330895,0.250,pass
+png_compression_mapping,fallback_checker_256x256.bgra,libpng_encoder,zlib=4,zen_png_encoder,Fastest,1508147,339166,0.225,pass
+png_compression_mapping,fallback_checker_256x256.bgra,libpng_encoder,zlib=5,zen_png_encoder,Fastest,1514574,332637,0.220,pass
+png_compression_mapping,fallback_checker_256x256.bgra,libpng_encoder,zlib=6,zen_png_encoder,Fastest,1556141,338404,0.217,pass
+png_compression_mapping,fallback_checker_256x256.bgra,libpng_encoder,zlib=7,zen_png_encoder,Fastest,1542529,320501,0.208,pass
+png_compression_mapping,fallback_checker_256x256.bgra,libpng_encoder,zlib=8,zen_png_encoder,Fastest,1788888,325035,0.182,pass
+png_compression_mapping,fallback_checker_256x256.bgra,libpng_encoder,zlib=9,zen_png_encoder,Turbo,2217026,2763971,1.247,pass
+lodepng_maximum_deflate_mapping,1_webp_a.sm.png,lodepng_encoder(as_libpng_zlib=9),maximum_deflate=true,zen_png_encoder,Fastest,21807398,740977,0.034,pass
+lodepng_maximum_deflate_mapping,dice.png,lodepng_encoder(as_libpng_zlib=9),maximum_deflate=true,zen_png_encoder,Fastest,153466979,5318740,0.035,pass
+lodepng_maximum_deflate_mapping,frymire.png,lodepng_encoder(as_libpng_zlib=9),maximum_deflate=true,zen_png_encoder,Fastest,445134722,11271186,0.025,pass
+lodepng_maximum_deflate_mapping,gradients.png,lodepng_encoder(as_libpng_zlib=9),maximum_deflate=true,zen_png_encoder,Fastest,96355253,631927,0.007,pass
+lodepng_maximum_deflate_mapping,png_turns_empty_2.png,lodepng_encoder(as_libpng_zlib=9),maximum_deflate=true,zen_png_encoder,Fastest,14808824,998053,0.067,pass
+lodepng_maximum_deflate_mapping,red-night.png,lodepng_encoder(as_libpng_zlib=9),maximum_deflate=true,zen_png_encoder,Fastest,195083937,1673476,0.009,pass
+lodepng_maximum_deflate_mapping,rings2.png,lodepng_encoder(as_libpng_zlib=9),maximum_deflate=true,zen_png_encoder,Fastest,230439720,32758188,0.142,pass
+lodepng_maximum_deflate_mapping,shirt_transparent.png,lodepng_encoder(as_libpng_zlib=9),maximum_deflate=true,zen_png_encoder,Fastest,88535798,3705105,0.042,pass
+lodepng_maximum_deflate_mapping,fallback_checker_256x256.bgra,lodepng_encoder(as_libpng_zlib=9),maximum_deflate=true,zen_png_encoder,Fastest,2244152,329503,0.147,pass
+jpeg_substitution_mapping,MarsRGB_tagged.jpg,mozjpeg_encoder,quality=85,mozjpeg_rs_encoder,quality=85,663226,142892,0.215,pass
+jpeg_substitution_mapping,MarsRGB_tagged.jpg,mozjpeg_encoder,quality=85,zen_jpeg_encoder,quality=85,663226,129555,0.195,pass
+jpeg_substitution_mapping,MarsRGB_tagged.jpg,libjpeg_turbo_preset,quality=85,zen_jpeg_encoder,quality=85,70523,129555,1.837,FAIL: jpeg_substitution_mapping/MarsRGB_tagged.jpg/quality=85: ratio=1.837x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,MarsRGB_tagged.jpg,libjpeg_turbo_preset,quality=85,mozjpeg_rs_encoder,quality=85,70523,142892,2.026,FAIL: jpeg_substitution_mapping/MarsRGB_tagged.jpg/quality=85: ratio=2.026x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,MarsRGB_tagged.jpg,mozjpeg_encoder,quality=95,mozjpeg_rs_encoder,quality=95,673914,151697,0.225,pass
+jpeg_substitution_mapping,MarsRGB_tagged.jpg,mozjpeg_encoder,quality=95,zen_jpeg_encoder,quality=95,673914,170915,0.254,pass
+jpeg_substitution_mapping,MarsRGB_tagged.jpg,libjpeg_turbo_preset,quality=95,zen_jpeg_encoder,quality=95,71853,170915,2.379,FAIL: jpeg_substitution_mapping/MarsRGB_tagged.jpg/quality=95: ratio=2.379x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,MarsRGB_tagged.jpg,libjpeg_turbo_preset,quality=95,mozjpeg_rs_encoder,quality=95,71853,151697,2.111,FAIL: jpeg_substitution_mapping/MarsRGB_tagged.jpg/quality=95: ratio=2.111x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,MarsRGB_v4_sYCC_8bit.jpg,mozjpeg_encoder,quality=85,mozjpeg_rs_encoder,quality=85,669340,157958,0.236,pass
+jpeg_substitution_mapping,MarsRGB_v4_sYCC_8bit.jpg,mozjpeg_encoder,quality=85,zen_jpeg_encoder,quality=85,669340,146497,0.219,pass
+jpeg_substitution_mapping,MarsRGB_v4_sYCC_8bit.jpg,libjpeg_turbo_preset,quality=85,zen_jpeg_encoder,quality=85,87734,146497,1.670,FAIL: jpeg_substitution_mapping/MarsRGB_v4_sYCC_8bit.jpg/quality=85: ratio=1.670x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,MarsRGB_v4_sYCC_8bit.jpg,libjpeg_turbo_preset,quality=85,mozjpeg_rs_encoder,quality=85,87734,157958,1.800,FAIL: jpeg_substitution_mapping/MarsRGB_v4_sYCC_8bit.jpg/quality=85: ratio=1.800x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,MarsRGB_v4_sYCC_8bit.jpg,mozjpeg_encoder,quality=95,mozjpeg_rs_encoder,quality=95,711214,162231,0.228,pass
+jpeg_substitution_mapping,MarsRGB_v4_sYCC_8bit.jpg,mozjpeg_encoder,quality=95,zen_jpeg_encoder,quality=95,711214,183618,0.258,pass
+jpeg_substitution_mapping,MarsRGB_v4_sYCC_8bit.jpg,libjpeg_turbo_preset,quality=95,zen_jpeg_encoder,quality=95,83920,183618,2.188,FAIL: jpeg_substitution_mapping/MarsRGB_v4_sYCC_8bit.jpg/quality=95: ratio=2.188x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,MarsRGB_v4_sYCC_8bit.jpg,libjpeg_turbo_preset,quality=95,mozjpeg_rs_encoder,quality=95,83920,162231,1.933,FAIL: jpeg_substitution_mapping/MarsRGB_v4_sYCC_8bit.jpg/quality=95: ratio=1.933x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,cmyk_logo.jpg,mozjpeg_encoder,quality=85,mozjpeg_rs_encoder,quality=85,43757723,49058282,1.121,pass
+jpeg_substitution_mapping,cmyk_logo.jpg,mozjpeg_encoder,quality=85,zen_jpeg_encoder,quality=85,43757723,30558526,0.698,pass
+jpeg_substitution_mapping,cmyk_logo.jpg,libjpeg_turbo_preset,quality=85,zen_jpeg_encoder,quality=85,16565805,30558526,1.845,FAIL: jpeg_substitution_mapping/cmyk_logo.jpg/quality=85: ratio=1.845x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,cmyk_logo.jpg,libjpeg_turbo_preset,quality=85,mozjpeg_rs_encoder,quality=85,16565805,49058282,2.961,FAIL: jpeg_substitution_mapping/cmyk_logo.jpg/quality=85: ratio=2.961x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,cmyk_logo.jpg,mozjpeg_encoder,quality=95,mozjpeg_rs_encoder,quality=95,47559291,47155890,0.992,pass
+jpeg_substitution_mapping,cmyk_logo.jpg,mozjpeg_encoder,quality=95,zen_jpeg_encoder,quality=95,47559291,50505020,1.062,pass
+jpeg_substitution_mapping,cmyk_logo.jpg,libjpeg_turbo_preset,quality=95,zen_jpeg_encoder,quality=95,22151621,50505020,2.280,FAIL: jpeg_substitution_mapping/cmyk_logo.jpg/quality=95: ratio=2.280x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,cmyk_logo.jpg,libjpeg_turbo_preset,quality=95,mozjpeg_rs_encoder,quality=95,22151621,47155890,2.129,FAIL: jpeg_substitution_mapping/cmyk_logo.jpg/quality=95: ratio=2.129x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,color_profile_error.jpg,mozjpeg_encoder,quality=85,mozjpeg_rs_encoder,quality=85,151795669,181539007,1.196,pass
+jpeg_substitution_mapping,color_profile_error.jpg,mozjpeg_encoder,quality=85,zen_jpeg_encoder,quality=85,151795669,69629086,0.459,pass
+jpeg_substitution_mapping,color_profile_error.jpg,libjpeg_turbo_preset,quality=85,zen_jpeg_encoder,quality=85,18874201,69629086,3.689,FAIL: jpeg_substitution_mapping/color_profile_error.jpg/quality=85: ratio=3.689x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,color_profile_error.jpg,libjpeg_turbo_preset,quality=85,mozjpeg_rs_encoder,quality=85,18874201,181539007,9.618,FAIL: jpeg_substitution_mapping/color_profile_error.jpg/quality=85: ratio=9.618x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,color_profile_error.jpg,mozjpeg_encoder,quality=95,mozjpeg_rs_encoder,quality=95,127762353,139176433,1.089,pass
+jpeg_substitution_mapping,color_profile_error.jpg,mozjpeg_encoder,quality=95,zen_jpeg_encoder,quality=95,127762353,108543246,0.850,pass
+jpeg_substitution_mapping,color_profile_error.jpg,libjpeg_turbo_preset,quality=95,zen_jpeg_encoder,quality=95,18947256,108543246,5.729,FAIL: jpeg_substitution_mapping/color_profile_error.jpg/quality=95: ratio=5.729x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,color_profile_error.jpg,libjpeg_turbo_preset,quality=95,mozjpeg_rs_encoder,quality=95,18947256,139176433,7.345,FAIL: jpeg_substitution_mapping/color_profile_error.jpg/quality=95: ratio=7.345x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,gamma_test.jpg,mozjpeg_encoder,quality=85,mozjpeg_rs_encoder,quality=85,6020116,4173521,0.693,pass
+jpeg_substitution_mapping,gamma_test.jpg,mozjpeg_encoder,quality=85,zen_jpeg_encoder,quality=85,6020116,3245698,0.539,pass
+jpeg_substitution_mapping,gamma_test.jpg,libjpeg_turbo_preset,quality=85,zen_jpeg_encoder,quality=85,813848,3245698,3.988,FAIL: jpeg_substitution_mapping/gamma_test.jpg/quality=85: ratio=3.988x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,gamma_test.jpg,libjpeg_turbo_preset,quality=85,mozjpeg_rs_encoder,quality=85,813848,4173521,5.128,FAIL: jpeg_substitution_mapping/gamma_test.jpg/quality=85: ratio=5.128x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,gamma_test.jpg,mozjpeg_encoder,quality=95,mozjpeg_rs_encoder,quality=95,5608507,4230960,0.754,pass
+jpeg_substitution_mapping,gamma_test.jpg,mozjpeg_encoder,quality=95,zen_jpeg_encoder,quality=95,5608507,4879397,0.870,pass
+jpeg_substitution_mapping,gamma_test.jpg,libjpeg_turbo_preset,quality=95,zen_jpeg_encoder,quality=95,831689,4879397,5.867,FAIL: jpeg_substitution_mapping/gamma_test.jpg/quality=95: ratio=5.867x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,gamma_test.jpg,libjpeg_turbo_preset,quality=95,mozjpeg_rs_encoder,quality=95,831689,4230960,5.087,FAIL: jpeg_substitution_mapping/gamma_test.jpg/quality=95: ratio=5.087x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,red-leaf.jpg,mozjpeg_encoder,quality=85,mozjpeg_rs_encoder,quality=85,39139040,27776444,0.710,pass
+jpeg_substitution_mapping,red-leaf.jpg,mozjpeg_encoder,quality=85,zen_jpeg_encoder,quality=85,39139040,22465691,0.574,pass
+jpeg_substitution_mapping,red-leaf.jpg,libjpeg_turbo_preset,quality=85,zen_jpeg_encoder,quality=85,4898692,22465691,4.586,FAIL: jpeg_substitution_mapping/red-leaf.jpg/quality=85: ratio=4.586x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,red-leaf.jpg,libjpeg_turbo_preset,quality=85,mozjpeg_rs_encoder,quality=85,4898692,27776444,5.670,FAIL: jpeg_substitution_mapping/red-leaf.jpg/quality=85: ratio=5.670x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,red-leaf.jpg,mozjpeg_encoder,quality=95,mozjpeg_rs_encoder,quality=95,52967395,34039326,0.643,pass
+jpeg_substitution_mapping,red-leaf.jpg,mozjpeg_encoder,quality=95,zen_jpeg_encoder,quality=95,52967395,33185001,0.627,pass
+jpeg_substitution_mapping,red-leaf.jpg,libjpeg_turbo_preset,quality=95,zen_jpeg_encoder,quality=95,5292923,33185001,6.270,FAIL: jpeg_substitution_mapping/red-leaf.jpg/quality=95: ratio=6.270x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,red-leaf.jpg,libjpeg_turbo_preset,quality=95,mozjpeg_rs_encoder,quality=95,5292923,34039326,6.431,FAIL: jpeg_substitution_mapping/red-leaf.jpg/quality=95: ratio=6.431x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,roof_test_800x600.jpg,mozjpeg_encoder,quality=85,mozjpeg_rs_encoder,quality=85,51899811,38175054,0.736,pass
+jpeg_substitution_mapping,roof_test_800x600.jpg,mozjpeg_encoder,quality=85,zen_jpeg_encoder,quality=85,51899811,33707708,0.649,pass
+jpeg_substitution_mapping,roof_test_800x600.jpg,libjpeg_turbo_preset,quality=85,zen_jpeg_encoder,quality=85,5927824,33707708,5.686,FAIL: jpeg_substitution_mapping/roof_test_800x600.jpg/quality=85: ratio=5.686x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,roof_test_800x600.jpg,libjpeg_turbo_preset,quality=85,mozjpeg_rs_encoder,quality=85,5927824,38175054,6.440,FAIL: jpeg_substitution_mapping/roof_test_800x600.jpg/quality=85: ratio=6.440x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,roof_test_800x600.jpg,mozjpeg_encoder,quality=95,mozjpeg_rs_encoder,quality=95,72073766,50064049,0.695,pass
+jpeg_substitution_mapping,roof_test_800x600.jpg,mozjpeg_encoder,quality=95,zen_jpeg_encoder,quality=95,72073766,51772671,0.718,pass
+jpeg_substitution_mapping,roof_test_800x600.jpg,libjpeg_turbo_preset,quality=95,zen_jpeg_encoder,quality=95,7418385,51772671,6.979,FAIL: jpeg_substitution_mapping/roof_test_800x600.jpg/quality=95: ratio=6.979x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,roof_test_800x600.jpg,libjpeg_turbo_preset,quality=95,mozjpeg_rs_encoder,quality=95,7418385,50064049,6.749,FAIL: jpeg_substitution_mapping/roof_test_800x600.jpg/quality=95: ratio=6.749x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,waterhouse.jpg,mozjpeg_encoder,quality=85,mozjpeg_rs_encoder,quality=85,266526336,178756485,0.671,pass
+jpeg_substitution_mapping,waterhouse.jpg,mozjpeg_encoder,quality=85,zen_jpeg_encoder,quality=85,266526336,142869060,0.536,pass
+jpeg_substitution_mapping,waterhouse.jpg,libjpeg_turbo_preset,quality=85,zen_jpeg_encoder,quality=85,41413280,142869060,3.450,FAIL: jpeg_substitution_mapping/waterhouse.jpg/quality=85: ratio=3.450x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,waterhouse.jpg,libjpeg_turbo_preset,quality=85,mozjpeg_rs_encoder,quality=85,41413280,178756485,4.316,FAIL: jpeg_substitution_mapping/waterhouse.jpg/quality=85: ratio=4.316x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,waterhouse.jpg,mozjpeg_encoder,quality=95,mozjpeg_rs_encoder,quality=95,323702120,216455448,0.669,pass
+jpeg_substitution_mapping,waterhouse.jpg,mozjpeg_encoder,quality=95,zen_jpeg_encoder,quality=95,323702120,204507988,0.632,pass
+jpeg_substitution_mapping,waterhouse.jpg,libjpeg_turbo_preset,quality=95,zen_jpeg_encoder,quality=95,44405700,204507988,4.605,FAIL: jpeg_substitution_mapping/waterhouse.jpg/quality=95: ratio=4.605x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,waterhouse.jpg,libjpeg_turbo_preset,quality=95,mozjpeg_rs_encoder,quality=95,44405700,216455448,4.874,FAIL: jpeg_substitution_mapping/waterhouse.jpg/quality=95: ratio=4.874x exceeds cap 1.35x — step the mapping down
+jpeg_substitution_mapping,wrenches.jpg,mozjpeg_encoder,quality=85,mozjpeg_rs_encoder,quality=85,4146908,4037027,0.974,pass
+jpeg_substitution_mapping,wrenches.jpg,mozjpeg_encoder,quality=85,zen_jpeg_encoder,quality=85,4146908,4409508,1.063,pass
+jpeg_substitution_mapping,wrenches.jpg,libjpeg_turbo_preset,quality=85,zen_jpeg_encoder,quality=85,4368816,4409508,1.009,pass
+jpeg_substitution_mapping,wrenches.jpg,libjpeg_turbo_preset,quality=85,mozjpeg_rs_encoder,quality=85,4368816,4037027,0.924,pass
+jpeg_substitution_mapping,wrenches.jpg,mozjpeg_encoder,quality=95,mozjpeg_rs_encoder,quality=95,4857956,4517032,0.930,pass
+jpeg_substitution_mapping,wrenches.jpg,mozjpeg_encoder,quality=95,zen_jpeg_encoder,quality=95,4857956,4193646,0.863,pass
+jpeg_substitution_mapping,wrenches.jpg,libjpeg_turbo_preset,quality=95,zen_jpeg_encoder,quality=95,4145219,4193646,1.012,pass
+jpeg_substitution_mapping,wrenches.jpg,libjpeg_turbo_preset,quality=95,mozjpeg_rs_encoder,quality=95,4145219,4517032,1.090,pass

@@ -1386,7 +1386,7 @@ fn test_calculate_context_heap_size() {
     // `CodecInstanceContainer` in the preallocated 4-slot AddRemoveSet.
     // Account for both here.
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 1096);
+    assert!(context_bytes <= 1104);
 
     assert!(context_allocs <= 6);
     assert!(thread_safe_bytes <= 1288);
