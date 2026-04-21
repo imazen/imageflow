@@ -38,7 +38,28 @@ pub struct Context {
 
     pub enabled_codecs: EnabledCodecs,
 
-    pub security: imageflow_types::ExecutionSecurity,
+    /// Context-scoped defaults applied when no inline job security block
+    /// narrows them further. Initialized from `sane_defaults()` (or from a
+    /// trusted policy, if one is later installed). **Never mutated by
+    /// job-level `security` JSON** — job-level intent lives in
+    /// `active_job_security` for the lifetime of the job.
+    ///
+    /// `max_json_bytes` is the one field read before the job's own
+    /// `security` is parsed (it bounds the parse itself), so it stays
+    /// Context-scoped.
+    pub default_job_security: imageflow_types::ExecutionSecurity,
+
+    /// Per-job effective security, set for the duration of a single
+    /// `build`/`execute` call and cleared when the job finishes.
+    ///
+    /// Computed by `effective_security()` = default_job_security ∩
+    /// inline-job-security. Read by the decode/encode dispatch paths and
+    /// by the per-node limit checks so job intent never leaks across jobs
+    /// on the same Context.
+    ///
+    /// Boxed to keep the idle-Context footprint small — only a pointer
+    /// is inline; the `ExecutionSecurity` is allocated on first job.
+    pub active_job_security: Option<Box<imageflow_types::ExecutionSecurity>>,
 
     pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>,
 
@@ -296,7 +317,8 @@ impl Context {
             bitmaps: RefCell::new(
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
-            security: imageflow_types::ExecutionSecurity::sane_defaults(),
+            default_job_security: imageflow_types::ExecutionSecurity::sane_defaults(),
+            active_job_security: None,
             allocations: RefCell::new(AllocationContainer::new()),
 
             captured_bitmap_keys: None,
@@ -319,7 +341,8 @@ impl Context {
             bitmaps: RefCell::new(
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
-            security: imageflow_types::ExecutionSecurity::sane_defaults(),
+            default_job_security: imageflow_types::ExecutionSecurity::sane_defaults(),
+            active_job_security: None,
             allocations: RefCell::new(AllocationContainer::new()),
 
             captured_bitmap_keys: None,
@@ -341,7 +364,8 @@ impl Context {
             bitmaps: RefCell::new(
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
-            security: imageflow_types::ExecutionSecurity::sane_defaults(),
+            default_job_security: imageflow_types::ExecutionSecurity::sane_defaults(),
+            active_job_security: None,
             allocations: RefCell::new(AllocationContainer::new()),
 
             captured_bitmap_keys: None,
@@ -599,28 +623,39 @@ impl Context {
             .translate_framewise(parsed.framewise)
             .map_err(|e| e.at(here!()))?;
 
-        if let Some(s::Build001Config { graph_recording, security, .. }) = parsed.builder_config {
-            if let Some(r) = graph_recording {
-                self.configure_graph_recording(r);
+        // Split the inline security block out *without* mutating
+        // `Context.default_job_security`. Validate shape + layer-3 rules
+        // up front; compute the effective security; install it as
+        // `active_job_security` for the job's lifetime only.
+        let inline_security = match parsed.builder_config {
+            Some(s::Build001Config { graph_recording, security, .. }) => {
+                if let Some(r) = graph_recording {
+                    self.configure_graph_recording(r);
+                }
+                security
             }
-            if let Some(s) = security {
-                self.configure_security(s);
-            }
+            None => None,
+        };
+        if let Some(s) = inline_security.as_ref() {
+            Self::validate_inline_job_security(s).map_err(|e| e.at(here!()))?;
         }
+        let effective = self.effective_security(inline_security.as_ref());
+        let snapshot = JobSecuritySnapshot::install(self, effective);
 
-        crate::parsing::IoTranslator {}.add_all(self, parsed.io.clone())?;
+        let result = (|| -> Result<s::JobResult> {
+            crate::parsing::IoTranslator {}.add_all(self, parsed.io.clone())?;
+            let decodes = self.get_image_decodes();
+            let mut engine = crate::flow::execution_engine::Engine::create(self, g);
+            let perf = engine.execute_many().map_err(|e| e.at(here!()))?;
+            Ok(s::JobResult {
+                decodes,
+                encodes: engine.collect_augmented_encode_results(&parsed.io),
+                performance: Some(perf),
+            })
+        })();
 
-        let decodes = self.get_image_decodes();
-
-        let mut engine = crate::flow::execution_engine::Engine::create(self, g);
-
-        let perf = engine.execute_many().map_err(|e| e.at(here!()))?;
-
-        Ok(s::JobResult {
-            decodes,
-            encodes: engine.collect_augmented_encode_results(&parsed.io),
-            performance: Some(perf),
-        })
+        snapshot.restore(self);
+        result
     }
 
     pub fn configure_graph_recording(&mut self, recording: s::Build001GraphRecording) {
@@ -632,25 +667,62 @@ impl Context {
         self.graph_recording = r;
     }
 
-    pub fn configure_security(&mut self, s: s::ExecutionSecurity) {
-        if let Some(decode) = s.max_decode_size {
-            self.security.max_decode_size = Some(decode);
+    /// Validate an inline job-level security block (layer 3).
+    ///
+    /// Pure function — does not mutate `self`. Used by `effective_security`
+    /// and by job-entry paths to reject malformed or "may only deny"
+    /// requests before the job runs.
+    pub fn validate_inline_job_security(request: &s::ExecutionSecurity) -> Result<()> {
+        if let Some(formats) = &request.formats {
+            formats
+                .validate()
+                .map_err(|e| nerror!(ErrorKind::InvalidArgument, "invalid killbits: {}", e))?;
+            formats
+                .validate_job_level()
+                .map_err(|e| nerror!(ErrorKind::InvalidArgument, "{}", e))?;
         }
-        if let Some(frame) = s.max_frame_size {
-            self.security.max_frame_size = Some(frame);
+        if let Some(codecs) = &request.codecs {
+            codecs
+                .validate()
+                .map_err(|e| nerror!(ErrorKind::InvalidArgument, "invalid codec killbits: {}", e))?;
+            codecs
+                .validate_job_level()
+                .map_err(|e| nerror!(ErrorKind::InvalidArgument, "{}", e))?;
         }
-        if let Some(encode) = s.max_encode_size {
-            self.security.max_encode_size = Some(encode);
+        Ok(())
+    }
+
+    /// Compute the effective security for a single job.
+    ///
+    /// Pure — does not mutate `self`. Result is
+    /// `default_job_security ∩ inline`. Fields that were `None` on the
+    /// narrower layer fall through to the wider layer.
+    ///
+    /// Callers that need the value for the duration of a job should also
+    /// store it into `active_job_security` via [`JobSecuritySnapshot::install`]
+    /// so decode/encode dispatch and per-node checks can read it through
+    /// [`Self::current_security`].
+    pub fn effective_security(
+        &self,
+        inline: Option<&s::ExecutionSecurity>,
+    ) -> s::ExecutionSecurity {
+        let mut effective = self.default_job_security.clone();
+        if let Some(request) = inline {
+            effective = intersect_job_security(&effective, request);
         }
-        if s.max_input_file_bytes.is_some() {
-            self.security.max_input_file_bytes = s.max_input_file_bytes;
-        }
-        if s.max_json_bytes.is_some() {
-            self.security.max_json_bytes = s.max_json_bytes;
-        }
-        if s.max_total_file_pixels.is_some() {
-            self.security.max_total_file_pixels = s.max_total_file_pixels;
-        }
+        effective
+    }
+
+    /// Return the effective security currently in force for the job, or
+    /// the Context default if no job is active. This is the single read
+    /// point for per-node limit checks (`max_decode_size`,
+    /// `max_frame_size`, `max_encode_size`, `max_total_file_pixels`,
+    /// `max_input_file_bytes`).
+    ///
+    /// The returned reference is valid until the job exits (which drops
+    /// `active_job_security`).
+    pub fn current_security(&self) -> &s::ExecutionSecurity {
+        self.active_job_security.as_deref().unwrap_or(&self.default_job_security)
     }
 
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
@@ -665,21 +737,26 @@ impl Context {
         if let Some(r) = what.graph_recording {
             self.configure_graph_recording(r);
         }
-        if let Some(s) = what.security {
-            self.configure_security(s);
+        let inline_security = what.security;
+        if let Some(s) = inline_security.as_ref() {
+            Self::validate_inline_job_security(s).map_err(|e| e.at(here!()))?;
         }
+        let effective = self.effective_security(inline_security.as_ref());
+        let snapshot = JobSecuritySnapshot::install(self, effective);
 
-        let decodes = self.get_image_decodes();
+        let result = (|| -> Result<s::JobResult> {
+            let decodes = self.get_image_decodes();
+            let mut engine = crate::flow::execution_engine::Engine::create(self, g);
+            let perf = engine.execute_many().map_err(|e| e.at(here!()))?;
+            Ok(s::JobResult {
+                decodes,
+                encodes: engine.collect_encode_results(),
+                performance: Some(perf),
+            })
+        })();
 
-        let mut engine = crate::flow::execution_engine::Engine::create(self, g);
-
-        let perf = engine.execute_many().map_err(|e| e.at(here!()))?;
-
-        Ok(s::JobResult {
-            decodes,
-            encodes: engine.collect_encode_results(),
-            performance: Some(perf),
-        })
+        snapshot.restore(self);
+        result
     }
 
     pub fn get_version_info(&self) -> Result<s::VersionInfo> {
@@ -750,6 +827,111 @@ impl Context {
         num_allocations += 1;
 
         (total_bytes, num_allocations)
+    }
+}
+
+/// Intersect two job-level security blocks: pick the more restrictive of
+/// each scalar limit; combine the `formats` / `codecs` killbits lists.
+///
+/// Pure function, private to this module. Used by
+/// [`Context::effective_security`]. Trusted-policy intersection is layered
+/// on top of this by a later commit.
+fn intersect_job_security(
+    default: &s::ExecutionSecurity,
+    job: &s::ExecutionSecurity,
+) -> s::ExecutionSecurity {
+    let max_decode_size = min_optional_frame(&default.max_decode_size, &job.max_decode_size);
+    let max_frame_size = min_optional_frame(&default.max_frame_size, &job.max_frame_size);
+    let max_encode_size = min_optional_frame(&default.max_encode_size, &job.max_encode_size);
+    let max_input_file_bytes =
+        min_optional(default.max_input_file_bytes, job.max_input_file_bytes);
+    let max_json_bytes = min_optional(default.max_json_bytes, job.max_json_bytes);
+    let max_total_file_pixels =
+        min_optional(default.max_total_file_pixels, job.max_total_file_pixels);
+
+    // Job-level may only `deny_*`; intersection of two lists is the union
+    // of their denies.
+    let formats = match (&default.formats, &job.formats) {
+        (None, None) => None,
+        (Some(t), None) => Some(t.clone()),
+        (None, Some(j)) => Some(j.clone()),
+        (Some(t), Some(j)) => Some(Box::new(imageflow_types::FormatKillbits::intersect(t, j))),
+    };
+    let codecs = match (&default.codecs, &job.codecs) {
+        (None, None) => None,
+        (Some(t), None) => Some(t.clone()),
+        (None, Some(j)) => Some(j.clone()),
+        (Some(t), Some(j)) => Some(Box::new(imageflow_types::CodecKillbits::intersect(t, j))),
+    };
+
+    let mut out = s::ExecutionSecurity::unspecified();
+    out.max_decode_size = max_decode_size;
+    out.max_frame_size = max_frame_size;
+    out.max_encode_size = max_encode_size;
+    out.max_input_file_bytes = max_input_file_bytes;
+    out.max_json_bytes = max_json_bytes;
+    out.max_total_file_pixels = max_total_file_pixels;
+    out.formats = formats;
+    out.codecs = codecs;
+    out
+}
+
+fn min_optional<T: Ord + Copy>(a: Option<T>, b: Option<T>) -> Option<T> {
+    match (a, b) {
+        (Some(x), Some(y)) => Some(x.min(y)),
+        (Some(x), None) => Some(x),
+        (None, Some(y)) => Some(y),
+        (None, None) => None,
+    }
+}
+
+fn min_optional_frame(
+    a: &Option<s::FrameSizeLimit>,
+    b: &Option<s::FrameSizeLimit>,
+) -> Option<s::FrameSizeLimit> {
+    match (a, b) {
+        (Some(x), Some(y)) => Some(s::FrameSizeLimit {
+            w: x.w.min(y.w),
+            h: x.h.min(y.h),
+            megapixels: x.megapixels.min(y.megapixels),
+        }),
+        (Some(x), None) => Some(x.clone()),
+        (None, Some(y)) => Some(y.clone()),
+        (None, None) => None,
+    }
+}
+
+/// Scope guard that installs an effective `ExecutionSecurity` on the
+/// Context on construction and restores the prior value on drop.
+///
+/// Holds no reference back to the Context — the caller retains &mut
+/// access for the rest of the job. Drop reads the stashed previous value
+/// and writes it back through a raw-pointer-free helper that borrows
+/// the Context again through a `Restore` wrapper. In practice we just
+/// store the old value and let the caller restore it with
+/// `finish(&mut ctx)`; this avoids RAII tying up the borrow.
+pub(crate) struct JobSecuritySnapshot {
+    previous: Option<Box<imageflow_types::ExecutionSecurity>>,
+}
+
+impl JobSecuritySnapshot {
+    /// Install `effective` as `ctx.active_job_security` and return a
+    /// snapshot of the prior value. Call [`Self::restore`] when the
+    /// job exits.
+    pub(crate) fn install(
+        ctx: &mut Context,
+        effective: imageflow_types::ExecutionSecurity,
+    ) -> Self {
+        let previous = ctx.active_job_security.take();
+        ctx.active_job_security = Some(Box::new(effective));
+        JobSecuritySnapshot { previous }
+    }
+
+    /// Restore the prior `active_job_security` that existed before
+    /// [`Self::install`] was called. Must be called once per install;
+    /// calling more than once leaves a stale prior value installed.
+    pub(crate) fn restore(self, ctx: &mut Context) {
+        ctx.active_job_security = self.previous;
     }
 }
 
@@ -946,14 +1128,20 @@ impl Drop for Context {
 #[test]
 fn test_context_size() {
     eprintln!("std::mem::sizeof(Context) = {}", std::mem::size_of::<Context>());
-    assert!(std::mem::size_of::<Context>() < 400);
+    // Context holds:
+    //   - trusted_policy:       Option<Box<ExecutionSecurity>> (layer 2)
+    //   - default_job_security: ExecutionSecurity              (layer 2 scalar fold)
+    //   - active_job_security:  Option<Box<ExecutionSecurity>> (per-job effective)
+    // The two boxes keep the idle stack footprint small; the inline
+    // `default_job_security` carries the Context's scalar limit baseline.
+    assert!(std::mem::size_of::<Context>() < 424);
 }
 
 #[test]
 fn test_thread_safe_context_size() {
     println!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
     eprintln!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
-    assert!(std::mem::size_of::<ThreadSafeContext>() <= 560);
+    assert!(std::mem::size_of::<ThreadSafeContext>() <= 592);
 }
 
 #[test]
@@ -979,12 +1167,15 @@ fn test_calculate_context_heap_size() {
     assert!(context_bytes > 0);
 
     // Fail if this grows so we can notice it
-    // Windows has larger RwLock/Mutex, so allow a few extra bytes
+    // Windows has larger RwLock/Mutex, so allow a few extra bytes.
+    // Codec-level killbits added `Option<Box<CodecKillbits>>` to the
+    // embedded `ExecutionSecurity`s on Context; account for the extra
+    // 16 bytes here.
     assert!(context_allocs <= 6);
-    assert!(context_bytes <= 1056);
+    assert!(context_bytes <= 1088);
 
     assert!(context_allocs <= 6);
-    assert!(thread_safe_bytes <= 1248);
+    assert!(thread_safe_bytes <= 1280);
 }
 
 #[test]

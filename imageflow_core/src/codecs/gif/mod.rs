@@ -55,7 +55,8 @@ impl GifDecoder {
         // Validate dimensions BEFORE allocating Screen buffer to prevent excessive memory use
         let w = reader.width() as i32;
         let h = reader.height() as i32;
-        let limit = c.security.max_decode_size.as_ref().or(c.security.max_frame_size.as_ref());
+        let sec = c.current_security();
+        let limit = sec.max_decode_size.as_ref().or(sec.max_frame_size.as_ref());
         if let Some(limit) = limit {
             if w > limit.w as i32 {
                 return Err(nerror!(
@@ -95,7 +96,7 @@ impl GifDecoder {
             next_frame: None,
             target_frame: None,
             current_frame: 0,
-            max_total_file_pixels: c.security.max_total_file_pixels,
+            max_total_file_pixels: c.current_security().max_total_file_pixels,
             pixels_per_frame,
         })
     }

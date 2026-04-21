@@ -44,7 +44,7 @@ fuzz_target!(|data: &[u8]| {
     };
 
     let Ok(mut ctx) = Context::create_can_panic() else { return; };
-    ctx.configure_security(limits());
+    let _ = ctx.configure_security(limits());
     if ctx.add_copied_input_buffer(0, image_data).is_err() { return; }
     if ctx.add_output_buffer(1).is_err() { return; }
 

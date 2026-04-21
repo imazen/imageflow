@@ -26,7 +26,7 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
     if let Some(response) = try_invoke_static(method, json)? {
         return Ok(response);
     }
-    let max_json = context.security.max_json_bytes;
+    let max_json = context.default_job_security.max_json_bytes;
     match method {
         "v1/build" | "v0.1/build" => {
             let input = parse_json_with_limit::<s::Build001>(json, max_json)?;

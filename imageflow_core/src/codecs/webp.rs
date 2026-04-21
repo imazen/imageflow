@@ -32,7 +32,7 @@ impl WebPDecoder {
             bytes: None,
             config: WebPDecoderConfig::new().expect("Failed to initialize WebPDecoderConfig"),
             features_read: false,
-            max_input_file_bytes: c.security.max_input_file_bytes,
+            max_input_file_bytes: c.current_security().max_input_file_bytes,
         })
     }
 
