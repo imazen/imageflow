@@ -48,7 +48,7 @@ fuzz_target!(|data: &[u8]| {
     // Pre-load io_id 0 with a valid PNG so decode nodes have something
     // to work with. Add output buffer at io_id 1.
     let Ok(mut ctx) = Context::create_can_panic() else { return; };
-    ctx.configure_security(limits());
+    let _ = ctx.configure_security(limits());
     let _ = ctx.add_copied_input_buffer(0, SEED_PNG);
     let _ = ctx.add_output_buffer(1);
 

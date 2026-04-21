@@ -14,6 +14,15 @@ use crate::sizing::prelude::*;
 
 pub use layout::ConstraintResults;
 
+// Re-export the RIAPI-observed codec priority so hosts can log the
+// flavor (V3ZenFirst / V2ClassicFirst) that RIAPI translated against.
+// The value flows through to the encoder dispatcher via the encoder
+// hints this module writes and shows up in the
+// `codec_substitution.codec_priority` field of any substitution
+// annotation — surfacing it here gives callers a zero-allocation way
+// to read the same value at query-translation time.
+pub use encoder::active_codec_priority;
+
 pub fn get_query_string_schema() -> Result<s::json_messages::QueryStringSchema, String> {
     schema::get_query_string_schema()
 }

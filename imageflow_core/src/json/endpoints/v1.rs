@@ -26,7 +26,11 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
     if let Some(response) = try_invoke_static(method, json)? {
         return Ok(response);
     }
-    let max_json = context.security.max_json_bytes;
+    // `max_json_bytes` bounds the JSON parse itself and therefore must be
+    // known before the job's own `security` block is visible. It stays
+    // Context-scoped on `default_job_security`. Per-job narrowing of
+    // other fields happens inside `build_inner`/`execute_inner`.
+    let max_json = context.default_job_security.max_json_bytes;
     match method {
         "v1/build" | "v0.1/build" => {
             let input = parse_json_with_limit::<s::Build001>(json, max_json)?;
@@ -51,6 +55,16 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
         "v1/execute" | "v0.1/execute" => {
             let input = parse_json_with_limit::<s::Execute001>(json, max_json)?;
             let output = execute(context, input)?;
+            Ok(JsonResponse::ok(output))
+        }
+        "v1/context/set_policy" => {
+            let input = parse_json_with_limit::<s::SetPolicyRequest>(json, max_json)?;
+            let output = set_policy(context, input)?;
+            Ok(JsonResponse::ok(output))
+        }
+        "v1/context/get_net_support" => {
+            // No request body for this endpoint.
+            let output = get_net_support(context)?;
             Ok(JsonResponse::ok(output))
         }
         _ => Err(nerror!(ErrorKind::InvalidMessageEndpoint)),
@@ -87,6 +101,10 @@ pub fn try_invoke_static(method: &str, json: &[u8]) -> Result<Option<JsonRespons
             let input = parse_json::<s::EmptyRequest>(json)?;
             let output = list_schema_endpoints()?;
             Ok(Some(JsonResponse::ok(output)))
+        }
+        "v1/static/info" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            Ok(Some(static_info_response()))
         }
         #[cfg(feature = "json-schema")]
         "v1/schema/json/latest/v1/all" => {
@@ -181,8 +199,86 @@ pub struct ExecuteV1Response {
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FormatSupport {
+    pub decode: bool,
+    pub encode: bool,
+    /// Machine-readable reasons a cell ended up denied. Present on
+    /// formats whose decode/encode was turned off by the codec-level
+    /// fold (e.g. every mapped encoder killed) or explicit codec
+    /// killbits.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub decode_reasons: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub encode_reasons: Vec<String>,
+}
+
+/// Per-codec availability reported by `v1/context/get_net_support`.
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CodecSupportEntry {
+    pub available: bool,
+    pub format: String,
+    pub role: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reasons: Vec<String>,
+}
+
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NetSupport {
+    /// Per-format decode/encode availability under the combined grid
+    /// (layer 1 ∩ layer 2 ∩ layer 3, with the codec-availability fold-in).
+    pub formats: std::collections::BTreeMap<String, FormatSupport>,
+    /// Per-codec availability, keyed by snake_case codec name.
+    pub codecs: std::collections::BTreeMap<String, CodecSupportEntry>,
+}
+
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompileCeiling {
+    /// Formats explicitly denied by `COMPILE_DENY_DECODE`.
+    pub denied_decode: Vec<String>,
+    /// Formats explicitly denied by `COMPILE_DENY_ENCODE`.
+    pub denied_encode: Vec<String>,
+    /// Formats with no compiled-in backend (missing `c-codecs`/`zen-codecs`).
+    pub features_missing: Vec<String>,
+}
+
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SetPolicyV1Response {
+    pub ok: bool,
+    pub locked: bool,
+    pub net_support: NetSupport,
+}
+
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GetNetSupportV1Response {
+    pub ok: bool,
+    pub net_support: NetSupport,
+    pub trusted_policy_set: bool,
+    pub compile_ceiling: CompileCeiling,
+}
+
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GetVersionInfoV1Response {
     pub version_info: VersionInfo,
+}
+
+/// Response body for `v1/static/info`.
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StaticInfoV1Response {
+    pub static_info: s::StaticInfoResponse,
 }
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -333,6 +429,105 @@ pub(super) fn execute(context: &mut Context, parsed: Execute001) -> Result<Execu
     Ok(ExecuteV1Response { job_result })
 }
 
+fn net_support_from_core(grid: &crate::killbits::FormatGrid) -> NetSupport {
+    let mut formats = std::collections::BTreeMap::new();
+    for (f, perms) in grid.entries() {
+        formats.insert(
+            f.as_snake().to_string(),
+            FormatSupport {
+                decode: perms.decode,
+                encode: perms.encode,
+                decode_reasons: Vec::new(),
+                encode_reasons: Vec::new(),
+            },
+        );
+    }
+    NetSupport { formats, codecs: std::collections::BTreeMap::new() }
+}
+
+/// Build the full grid (format + codec) for the `v1/context/get_net_support`
+/// response, including per-codec availability and fold-down reasons.
+fn net_support_from_codec_grid(grid: &crate::killbits::CodecSupportGrid) -> NetSupport {
+    let mut formats = std::collections::BTreeMap::new();
+    for (f, perms) in grid.formats.entries() {
+        let reasons = grid.format_reasons.get(f).cloned().unwrap_or_default();
+        formats.insert(
+            f.as_snake().to_string(),
+            FormatSupport {
+                decode: perms.decode,
+                encode: perms.encode,
+                decode_reasons: reasons.decode,
+                encode_reasons: reasons.encode,
+            },
+        );
+    }
+    let mut codecs = std::collections::BTreeMap::new();
+    for (name, entry) in &grid.codecs {
+        codecs.insert(
+            name.clone(),
+            CodecSupportEntry {
+                available: entry.available,
+                format: entry.format.clone(),
+                role: entry.role.clone(),
+                reasons: entry.reasons.clone(),
+            },
+        );
+    }
+    NetSupport { formats, codecs }
+}
+
+#[cfg_attr(feature = "schema-export", utoipa::path(
+    post,
+    path = "/v1/context/set_policy",
+    request_body = SetPolicyRequest,
+    responses(
+        (status = 200, description = "Trusted policy set", body = JsonAnswer<SetPolicyV1Response>),
+        (status = 500, description = "Setting policy failed", body = JsonError)
+    )
+))]
+pub(super) fn set_policy(
+    context: &mut Context,
+    request: s::SetPolicyRequest,
+) -> Result<SetPolicyV1Response> {
+    let report = context
+        .set_trusted_policy(request.policy, request.require_unlocked)
+        .map_err(|e| e.at(here!()))?;
+    // After setting the policy, compute the full codec grid so the
+    // response matches `v1/context/get_net_support` in shape (formats
+    // + codecs).
+    let full = context.codec_support(None);
+    let _ = report.net_support; // Keep the return path simple; formats live in `full`.
+    Ok(SetPolicyV1Response {
+        ok: report.ok,
+        locked: report.locked,
+        net_support: net_support_from_codec_grid(&full),
+    })
+}
+
+#[cfg_attr(feature = "schema-export", utoipa::path(
+    post,
+    path = "/v1/context/get_net_support",
+    request_body = EmptyRequest,
+    responses(
+        (status = 200, description = "Net format support grid", body = JsonAnswer<GetNetSupportV1Response>),
+        (status = 500, description = "Failed to compute grid", body = JsonError)
+    )
+))]
+pub(super) fn get_net_support(context: &Context) -> Result<GetNetSupportV1Response> {
+    let full = context.codec_support(None);
+    let compile = crate::killbits::CompileCeiling::current();
+    Ok(GetNetSupportV1Response {
+        ok: true,
+        net_support: net_support_from_codec_grid(&full),
+        trusted_policy_set: context.trusted_policy.is_some(),
+        compile_ceiling: CompileCeiling {
+            denied_decode: compile.denied_decode,
+            denied_encode: compile.denied_encode,
+            features_missing: compile.features_missing,
+        },
+    })
+}
+
 #[cfg_attr(feature = "schema-export", utoipa::path(
     post,
     path = "/v1/get_version_info",
@@ -345,6 +540,46 @@ pub(super) fn execute(context: &mut Context, parsed: Execute001) -> Result<Execu
 pub(super) fn get_version_info() -> Result<GetVersionInfoV1Response> {
     let version_info = Context::get_version_info_static().map_err(|e| e.at(here!()))?;
     Ok(GetVersionInfoV1Response { version_info })
+}
+
+/// Cached pre-serialized wire bytes for the `v1/static/info` response
+/// (JsonAnswer envelope + StaticInfoV1Response payload). The underlying
+/// data changes only when the binary changes, so we build the envelope
+/// once and hand the bytes back on every call.
+static STATIC_INFO_WIRE_BYTES: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+
+fn static_info_wire_bytes() -> &'static [u8] {
+    STATIC_INFO_WIRE_BYTES.get_or_init(|| {
+        let payload = StaticInfoV1Response {
+            static_info: (*crate::static_info::get_static_info()).clone(),
+        };
+        let r = JsonAnswer {
+            success: true,
+            code: 200,
+            message: Some("OK".to_owned()),
+            data: payload,
+        };
+        serde_json::to_vec_pretty(&r).expect("static info response must serialize")
+    })
+}
+
+/// Build the JSON response for `v1/static/info`. Uses a process-wide
+/// cache so the hot path is a `Cow::Borrowed` over a static byte slice
+/// — no serde work after the first call.
+#[cfg_attr(feature = "schema-export", utoipa::path(
+    post,
+    path = "/v1/static/info",
+    request_body = EmptyRequest,
+    responses(
+        (status = 200, description = "Static build info + capabilities + RIAPI schema", body = JsonAnswer<StaticInfoV1Response>),
+        (status = 500, description = "Failed to build static info", body = JsonError)
+    )
+))]
+pub(super) fn static_info_response() -> JsonResponse {
+    JsonResponse {
+        status_code: 200,
+        response_json: std::borrow::Cow::Borrowed(static_info_wire_bytes()),
+    }
 }
 
 #[cfg_attr(feature = "schema-export", utoipa::path(
@@ -404,7 +639,10 @@ pub(super) fn validate_riapi_query_string(
         get_scaled_image_info,
         tell_decoder,
         execute,
+        set_policy,
+        get_net_support,
         get_version_info,
+        static_info_response,
         get_riapi_schema,
         list_riapi_keys,
         validate_riapi_query_string,
@@ -421,7 +659,14 @@ pub(super) fn validate_riapi_query_string(
             JsonAnswer<GetScaledImageInfoV1Response>, GetScaledImageInfoV1Response,
             JsonAnswer<TellDecoderV1Response>, TellDecoderV1Response,
             JsonAnswer<ExecuteV1Response>, ExecuteV1Response,
+            JsonAnswer<SetPolicyV1Response>, SetPolicyV1Response,
+            JsonAnswer<GetNetSupportV1Response>, GetNetSupportV1Response,
             JsonAnswer<GetVersionInfoV1Response>, GetVersionInfoV1Response,
+            JsonAnswer<StaticInfoV1Response>, StaticInfoV1Response,
+            s::StaticInfoResponse, s::BuildInfo, s::CapsSummary,
+            s::FormatAvailability, s::CodecAvailability, s::CodecRole,
+            s::RiapiSchema, s::RiapiKeyInfo, s::RiapiCategory, s::RiapiValueKind,
+            s::ServerRecommendations,
             JsonAnswer<GetRiapiSchemaV1Response>, GetRiapiSchemaV1Response,
             JsonAnswer<ListRiapiKeysV1Response>, ListRiapiKeysV1Response,
             JsonAnswer<ValidateRiapiQueryStringV1Response>, ValidateRiapiQueryStringV1Response,
@@ -454,6 +699,10 @@ pub(super) fn validate_riapi_query_string(
             GetImageInfo001,
             TellDecoder001, DecoderCommand, JpegIDCTDownscaleHints, WebPDecoderHints,
             Execute001,
+            SetPolicyRequest,
+            ImageFormat, FormatKillbits, FormatPermissions,
+            CodecKillbits, NamedEncoderName, NamedDecoderName,
+            FormatSupport, CodecSupportEntry, NetSupport, CompileCeiling,
             ValidateQueryString,
             EmptyRequest,
         )
@@ -762,6 +1011,9 @@ pub(super) fn list_schema_endpoints() -> Result<ListSchemaEndpointsResponse> {
         "/v1/schema/riapi/latest/validate".to_string(),
         "/v1/schema/openapi/latest/get".to_string(),
         "/v1/schema/list-schema-endpoints".to_string(),
+        "/v1/context/set_policy".to_string(),
+        "/v1/context/get_net_support".to_string(),
+        "/v1/static/info".to_string(),
     ];
     if cfg!(feature = "json-schema") {
         endpoints.push("/v1/schema/json/latest/v1/all".to_string());
