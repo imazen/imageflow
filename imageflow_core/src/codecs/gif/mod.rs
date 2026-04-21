@@ -517,6 +517,7 @@ impl Encoder for GifEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "gif".to_owned(),
             preferred_mime_type: "image/gif".to_owned(),
+            annotations: None,
         })
     }
     fn into_io(self: Box<Self>) -> Result<IoProxy> {

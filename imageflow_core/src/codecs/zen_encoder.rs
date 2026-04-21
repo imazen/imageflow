@@ -430,6 +430,7 @@ impl Encoder for ZenEncoder {
                 bytes: ::imageflow_types::ResultBytes::Elsewhere,
                 preferred_extension: "jpg".to_owned(),
                 preferred_mime_type: "image/jpeg".to_owned(),
+                annotations: None,
             });
         }
 
@@ -565,6 +566,7 @@ impl Encoder for ZenEncoder {
                 bytes: ::imageflow_types::ResultBytes::Elsewhere,
                 preferred_extension: self.preferred_extension.to_owned(),
                 preferred_mime_type: self.preferred_mime_type.to_owned(),
+                annotations: None,
             });
         }
 
@@ -626,6 +628,7 @@ impl Encoder for ZenEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: self.preferred_extension.to_owned(),
             preferred_mime_type: self.preferred_mime_type.to_owned(),
+            annotations: None,
         })
     }
 

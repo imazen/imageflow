@@ -521,6 +521,7 @@ impl Context {
                         preferred_mime_type: info.preferred_mime_type,
                         w: info.image_width,
                         h: info.image_height,
+                        annotations: None,
                     })
                 } else {
                     None

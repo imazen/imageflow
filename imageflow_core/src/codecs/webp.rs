@@ -341,6 +341,7 @@ impl Encoder for WebPEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "webp".to_owned(),
             preferred_mime_type: "image/webp".to_owned(),
+            annotations: None,
         })
     }
 
