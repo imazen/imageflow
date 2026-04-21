@@ -102,6 +102,10 @@ pub fn try_invoke_static(method: &str, json: &[u8]) -> Result<Option<JsonRespons
             let output = list_schema_endpoints()?;
             Ok(Some(JsonResponse::ok(output)))
         }
+        "v1/static/info" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            Ok(Some(static_info_response()))
+        }
         #[cfg(feature = "json-schema")]
         "v1/schema/json/latest/v1/all" => {
             let input = parse_json::<s::EmptyRequest>(json)?;
@@ -267,6 +271,14 @@ pub struct GetNetSupportV1Response {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GetVersionInfoV1Response {
     pub version_info: VersionInfo,
+}
+
+/// Response body for `v1/static/info`.
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StaticInfoV1Response {
+    pub static_info: s::StaticInfoResponse,
 }
 
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -530,6 +542,46 @@ pub(super) fn get_version_info() -> Result<GetVersionInfoV1Response> {
     Ok(GetVersionInfoV1Response { version_info })
 }
 
+/// Cached pre-serialized wire bytes for the `v1/static/info` response
+/// (JsonAnswer envelope + StaticInfoV1Response payload). The underlying
+/// data changes only when the binary changes, so we build the envelope
+/// once and hand the bytes back on every call.
+static STATIC_INFO_WIRE_BYTES: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+
+fn static_info_wire_bytes() -> &'static [u8] {
+    STATIC_INFO_WIRE_BYTES.get_or_init(|| {
+        let payload = StaticInfoV1Response {
+            static_info: (*crate::static_info::get_static_info()).clone(),
+        };
+        let r = JsonAnswer {
+            success: true,
+            code: 200,
+            message: Some("OK".to_owned()),
+            data: payload,
+        };
+        serde_json::to_vec_pretty(&r).expect("static info response must serialize")
+    })
+}
+
+/// Build the JSON response for `v1/static/info`. Uses a process-wide
+/// cache so the hot path is a `Cow::Borrowed` over a static byte slice
+/// — no serde work after the first call.
+#[cfg_attr(feature = "schema-export", utoipa::path(
+    post,
+    path = "/v1/static/info",
+    request_body = EmptyRequest,
+    responses(
+        (status = 200, description = "Static build info + capabilities + RIAPI schema", body = JsonAnswer<StaticInfoV1Response>),
+        (status = 500, description = "Failed to build static info", body = JsonError)
+    )
+))]
+pub(super) fn static_info_response() -> JsonResponse {
+    JsonResponse {
+        status_code: 200,
+        response_json: std::borrow::Cow::Borrowed(static_info_wire_bytes()),
+    }
+}
+
 #[cfg_attr(feature = "schema-export", utoipa::path(
     post,
     path = "/v1/schema/riapi/latest/get",
@@ -590,6 +642,7 @@ pub(super) fn validate_riapi_query_string(
         set_policy,
         get_net_support,
         get_version_info,
+        static_info_response,
         get_riapi_schema,
         list_riapi_keys,
         validate_riapi_query_string,
@@ -609,6 +662,11 @@ pub(super) fn validate_riapi_query_string(
             JsonAnswer<SetPolicyV1Response>, SetPolicyV1Response,
             JsonAnswer<GetNetSupportV1Response>, GetNetSupportV1Response,
             JsonAnswer<GetVersionInfoV1Response>, GetVersionInfoV1Response,
+            JsonAnswer<StaticInfoV1Response>, StaticInfoV1Response,
+            s::StaticInfoResponse, s::BuildInfo, s::CapsSummary,
+            s::FormatAvailability, s::CodecAvailability, s::CodecRole,
+            s::RiapiSchema, s::RiapiKeyInfo, s::RiapiCategory, s::RiapiValueKind,
+            s::ServerRecommendations,
             JsonAnswer<GetRiapiSchemaV1Response>, GetRiapiSchemaV1Response,
             JsonAnswer<ListRiapiKeysV1Response>, ListRiapiKeysV1Response,
             JsonAnswer<ValidateRiapiQueryStringV1Response>, ValidateRiapiQueryStringV1Response,
@@ -955,6 +1013,7 @@ pub(super) fn list_schema_endpoints() -> Result<ListSchemaEndpointsResponse> {
         "/v1/schema/list-schema-endpoints".to_string(),
         "/v1/context/set_policy".to_string(),
         "/v1/context/get_net_support".to_string(),
+        "/v1/static/info".to_string(),
     ];
     if cfg!(feature = "json-schema") {
         endpoints.push("/v1/schema/json/latest/v1/all".to_string());

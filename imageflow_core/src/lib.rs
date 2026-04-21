@@ -20,6 +20,7 @@ pub mod graphics;
 mod io;
 pub mod json;
 pub mod killbits;
+pub mod static_info;
 
 pub use crate::codecs::cms::CmsBackend;
 pub use crate::codecs::NamedDecoders;
