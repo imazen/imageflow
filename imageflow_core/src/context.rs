@@ -603,7 +603,7 @@ impl Context {
                 self.configure_graph_recording(r);
             }
             if let Some(s) = security {
-                self.configure_security(s);
+                self.apply_job_security(s).map_err(|e| e.at(here!()))?;
             }
         }
 
@@ -631,6 +631,15 @@ impl Context {
         self.graph_recording = r;
     }
 
+    /// Apply a security policy at the Context level (trusted caller path:
+    /// CLI / embedded / server frontend at Context creation).
+    ///
+    /// `allow_io_filename` is **monotonic-deny**: once this field has been set
+    /// to `Some(false)`, subsequent calls passing `Some(true)` are silently
+    /// ignored — filesystem IO cannot be re-enabled. Tightening
+    /// (`Some(true)` → `Some(false)`) is always allowed. This protects against
+    /// JSON-job-driven re-enable attempts that route through this path.
+    /// Other fields follow the existing "if specified, override" pattern.
     pub fn configure_security(&mut self, s: s::ExecutionSecurity) {
         if let Some(decode) = s.max_decode_size {
             self.security.max_decode_size = Some(decode);
@@ -650,19 +659,40 @@ impl Context {
         if s.max_total_file_pixels.is_some() {
             self.security.max_total_file_pixels = s.max_total_file_pixels;
         }
-        if s.allow_io_filename.is_some() {
-            // SECURITY: callers should set this explicitly. We follow the same
-            // "if specified, override" pattern as other fields — but unlike
-            // size limits where None means unset, allow_io_filename has a
-            // sticky-deny semantic: once a trusted policy sets `Some(false)`,
-            // a later configure_security call passing `Some(true)` would
-            // re-enable filesystem IO. That's intentional: configure_security
-            // is itself a privileged operation, and reproducing the
-            // intersect_security semantics described in the audit summary is
-            // a follow-up. Server frontends should call configure_security
-            // exactly once at Context creation.
-            self.security.allow_io_filename = s.allow_io_filename;
+        if let Some(new_allow) = s.allow_io_filename {
+            // SECURITY: monotonic-deny. Once disabled, cannot be re-enabled.
+            match (self.security.allow_io_filename, new_allow) {
+                (Some(false), true) => {
+                    // Refuse to widen: a trusted policy already set
+                    // `Some(false)`. Silently keep current value so that any
+                    // accidental call site cannot lift the deny.
+                }
+                _ => {
+                    self.security.allow_io_filename = Some(new_allow);
+                }
+            }
         }
+    }
+
+    /// Apply a security policy supplied by a JSON job (`Build001Config.security`
+    /// or `Execute001.security`). Treated as **untrusted**: this path can only
+    /// narrow security, never widen it. Specifically, if the Context already
+    /// has `allow_io_filename == Some(false)`, a job attempting to set it to
+    /// `Some(true)` is rejected with `InvalidArgument` — closing the bypass
+    /// where a JSON request body could re-enable Filename IO that the server
+    /// disabled at Context creation. Other fields delegate to
+    /// `configure_security`.
+    pub(crate) fn apply_job_security(&mut self, s: s::ExecutionSecurity) -> Result<()> {
+        if self.security.allow_io_filename == Some(false) && s.allow_io_filename == Some(true) {
+            return Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "Job-supplied security policy attempted to enable allow_io_filename, \
+                 but the Context has already disabled filesystem IO. JSON jobs \
+                 cannot widen security policy — only narrow it."
+            ));
+        }
+        self.configure_security(s);
+        Ok(())
     }
 
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
@@ -678,7 +708,7 @@ impl Context {
             self.configure_graph_recording(r);
         }
         if let Some(s) = what.security {
-            self.configure_security(s);
+            self.apply_job_security(s).map_err(|e| e.at(here!()))?;
         }
 
         let decodes = self.get_image_decodes();
@@ -942,6 +972,113 @@ fn test_get_ptr_after_encode_then_take_blocked() {
     let (ptr2, len2) = ctx.get_output_buffer_ptr(1).unwrap();
     assert_eq!(ptr, ptr2);
     assert_eq!(len, len2);
+}
+
+#[test]
+fn test_job_security_cannot_re_enable_filename_io() {
+    // SECURITY REGRESSION (PR #723 review):
+    // A server that creates a Context with `allow_io_filename = Some(false)`
+    // must not allow a JSON job's `builder_config.security.allow_io_filename = true`
+    // to flip filesystem IO back on. The job-supplied policy can only narrow,
+    // never widen.
+    use imageflow_types as s;
+    let png_bytes: Vec<u8> = vec![
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+
+    let mut ctx = Context::create().unwrap();
+    // Trusted server-side policy: deny filesystem IO at Context level.
+    let mut deny = s::ExecutionSecurity::unspecified();
+    deny.allow_io_filename = Some(false);
+    ctx.configure_security(deny);
+    assert_eq!(Some(false), ctx.security.allow_io_filename);
+
+    ctx.add_input_vector(0, png_bytes).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+
+    // Attacker-controlled JSON job tries to flip allow_io_filename back on.
+    let mut widen = s::ExecutionSecurity::unspecified();
+    widen.allow_io_filename = Some(true);
+    let build = s::Build001 {
+        builder_config: Some(s::Build001Config {
+            graph_recording: Some(s::Build001GraphRecording::off()),
+            security: Some(widen),
+            job_options: None,
+        }),
+        io: vec![],
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::Encode {
+                io_id: 1,
+                preset: s::EncoderPreset::Libpng {
+                    depth: None,
+                    matte: None,
+                    zlib_compression: None,
+                },
+            },
+        ]),
+    };
+
+    // Job must be rejected with InvalidArgument before any IO opens.
+    let err = ctx.build_1(build).expect_err("widening allow_io_filename must be rejected");
+    assert_eq!(ErrorKind::InvalidArgument, err.kind);
+    // The deny must remain in place.
+    assert_eq!(Some(false), ctx.security.allow_io_filename);
+}
+
+#[test]
+fn test_job_security_can_narrow_default_context() {
+    // A default Context (allow_io_filename = Some(true) via sane_defaults)
+    // accepts a JSON job that *narrows* policy to Some(false). After the
+    // (failing) job, the field must be Some(false) — narrowing is allowed
+    // and persists. We don't supply `Filename` IO here (the gate's action is
+    // tested in the existing PR), we only assert the state transition path
+    // through the JSON-job entry point works.
+    use imageflow_types as s;
+
+    let mut ctx = Context::create().unwrap();
+    // Default sane policy: allow_io_filename = Some(true)
+    assert_eq!(Some(true), ctx.security.allow_io_filename);
+
+    // Job narrows to Some(false). Must succeed at the security-application
+    // step (apply_job_security returns Ok); we wrap it in a minimal Execute001
+    // that has no work to do, but the security path runs first.
+    let mut narrow = s::ExecutionSecurity::unspecified();
+    narrow.allow_io_filename = Some(false);
+    let exec = s::Execute001 {
+        graph_recording: Some(s::Build001GraphRecording::off()),
+        security: Some(narrow),
+        job_options: None,
+        // Empty step list — execution engine may fail later, but security
+        // application happens first and is what we're testing.
+        framewise: s::Framewise::Steps(vec![]),
+    };
+
+    // The execute_1 call may fail downstream (empty graph etc.), but the
+    // monotonic-deny check must not be the cause; the narrow must be applied.
+    let _ = ctx.execute_1(exec);
+    assert_eq!(
+        Some(false),
+        ctx.security.allow_io_filename,
+        "JSON job narrowing allow_io_filename to Some(false) must persist"
+    );
+
+    // And once narrowed, a subsequent widen must be rejected.
+    let mut widen = s::ExecutionSecurity::unspecified();
+    widen.allow_io_filename = Some(true);
+    let exec2 = s::Execute001 {
+        graph_recording: Some(s::Build001GraphRecording::off()),
+        security: Some(widen),
+        job_options: None,
+        framewise: s::Framewise::Steps(vec![]),
+    };
+    let err = ctx.execute_1(exec2).expect_err("subsequent widen must be rejected");
+    assert_eq!(ErrorKind::InvalidArgument, err.kind);
+    assert_eq!(Some(false), ctx.security.allow_io_filename);
 }
 
 impl Drop for Context {
