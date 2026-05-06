@@ -119,7 +119,26 @@ impl IoTranslator {
             // protection is applied here — this is by design, as the CLI user
             // already has filesystem access and server deployments must validate
             // paths at the HTTP/API layer before constructing IoEnum::Filename.
-            s::IoEnum::Filename(path) => c.add_file(io_id, dir, &path),
+            //
+            // For HTTP/server deployments, the recommended posture is to set
+            // `ExecutionSecurity::allow_io_filename = Some(false)` once at
+            // Context creation. When set, this gate rejects `Filename` entries
+            // before any file is opened — protecting against arbitrary file
+            // read (12-byte magic-byte sniff leak; full read if magic matches
+            // a registered codec) and arbitrary file write (`OpenOptions`
+            // truncate+create on output paths).
+            s::IoEnum::Filename(path) => {
+                // `None` keeps legacy behavior (allow). `Some(false)` denies.
+                if c.security.allow_io_filename == Some(false) {
+                    return Err(nerror!(
+                        ErrorKind::InvalidArgument,
+                        "IoEnum::Filename is disabled by ExecutionSecurity::allow_io_filename. \
+                         Use ByteArray, Base64, or OutputBuffer for io_id={}.",
+                        io_id
+                    ));
+                }
+                c.add_file(io_id, dir, &path)
+            }
 
             s::IoEnum::OutputBuffer | s::IoEnum::OutputBase64 => {
                 c.add_output_buffer(io_id).map_err(|e| e.at(here!()))

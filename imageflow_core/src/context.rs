@@ -650,6 +650,19 @@ impl Context {
         if s.max_total_file_pixels.is_some() {
             self.security.max_total_file_pixels = s.max_total_file_pixels;
         }
+        if s.allow_io_filename.is_some() {
+            // SECURITY: callers should set this explicitly. We follow the same
+            // "if specified, override" pattern as other fields — but unlike
+            // size limits where None means unset, allow_io_filename has a
+            // sticky-deny semantic: once a trusted policy sets `Some(false)`,
+            // a later configure_security call passing `Some(true)` would
+            // re-enable filesystem IO. That's intentional: configure_security
+            // is itself a privileged operation, and reproducing the
+            // intersect_security semantics described in the audit summary is
+            // a follow-up. Server frontends should call configure_security
+            // exactly once at Context creation.
+            self.security.allow_io_filename = s.allow_io_filename;
+        }
     }
 
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)

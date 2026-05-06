@@ -1578,6 +1578,13 @@
       "ExecutionSecurity": {
         "type": "object",
         "properties": {
+          "allow_io_filename": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether `IoEnum::Filename` (filesystem reads/writes from JSON) is permitted.\n\n`IoEnum::Filename` opens any path the imageflow process can read or\nwrite — there is no path-traversal protection by design, since CLI\ncallers and trusted bindings already have filesystem access. Server\nfrontends accepting JSON jobs from untrusted sources MUST set this to\n`Some(false)` at Context creation to block `Filename` entries from\nreaching the IO layer (callers should use `ByteArray`, `Base64`, or\n`OutputBuffer` instead).\n\n`Some(true)` (default in `sane_defaults()` for backward compatibility):\n`Filename` entries are accepted. `Some(false)`: `Filename` entries are\nrejected with an `InvalidArgument` error before any file is opened.\n`None` is treated as `Some(true)` by the core for compatibility, but\n**production HTTP frontends should set this explicitly to `Some(false)`.**"
+          },
           "max_decode_size": {
             "oneOf": [
               {
