@@ -965,7 +965,10 @@ fn test_context_size() {
 fn test_thread_safe_context_size() {
     println!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
     eprintln!("std::mem::sizeof(ThreadSafeContext) = {}", std::mem::size_of::<ThreadSafeContext>());
-    assert!(std::mem::size_of::<ThreadSafeContext>() <= 560);
+    // 568 after H-1 (added `Option<bool> allow_io_filename` to ExecutionSecurity).
+    // The field is required for the Filename IO security gate; rounded up to
+    // the next 8-byte alignment due to surrounding `usize`/`u64` fields.
+    assert!(std::mem::size_of::<ThreadSafeContext>() <= 568);
 }
 
 #[test]
