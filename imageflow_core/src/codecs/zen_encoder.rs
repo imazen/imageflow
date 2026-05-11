@@ -324,14 +324,109 @@ impl ZenEncoder {
         io: IoProxy,
         matte: Option<imageflow_types::Color>,
     ) -> Result<Self> {
+        Self::create_png_with_compression(c, io, matte, None)
+    }
+
+    /// Create a ZenPng encoder with an explicit [`zenpng::Compression`]
+    /// level. Used by the codec-substitution path to honor the
+    /// `zlib_compression` / `maximum_deflate` knobs carried by the
+    /// legacy `EncoderPreset::Libpng` / `EncoderPreset::Lodepng`
+    /// variants — the mapping between the legacy knob and the
+    /// zenpng enum is validated in
+    /// [`crate::codecs::substitution_measurements`].
+    pub(crate) fn create_png_with_compression(
+        c: &Context,
+        io: IoProxy,
+        matte: Option<imageflow_types::Color>,
+        compression: Option<zenpng::Compression>,
+    ) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::ZenPngEncoder) {
             return Err(nerror!(
                 ErrorKind::CodecDisabledError,
                 "The ZenPng encoder has been disabled"
             ));
         }
-        let config = zenpng::PngEncoderConfig::new();
+        let mut config = zenpng::PngEncoderConfig::new();
+        if let Some(c) = compression {
+            config = config.with_compression(c);
+        }
         Ok(Self::new_zencodec(Box::new(config), io, matte, false, "png", "image/png"))
+    }
+
+    /// Create a ZenPng encoder with the zenquant palette-reduction path
+    /// (zenpng's default `quantize` feature). When `quality < 100`,
+    /// zenpng's encoder routes the RGBA8 path through `encode_auto`,
+    /// which tries a quantized PNG and keeps it when the MPE-based
+    /// quality gate passes. Setting `quality >= 100` (or `None`) is
+    /// lossless — no quantization, just a pass-through encode — so the
+    /// caller must pass a `< 100` quality to actually exercise
+    /// zenquant. See `pngquant_speed_to_zenquant_quality` in
+    /// `substitution_measurements` for the speed→quality mapping.
+    pub(crate) fn create_png_zenquant(
+        c: &Context,
+        io: IoProxy,
+        matte: Option<imageflow_types::Color>,
+        quality: Option<f32>,
+    ) -> Result<Self> {
+        if !c
+            .enabled_codecs
+            .encoders
+            .contains(&crate::codecs::NamedEncoders::ZenPngZenquantEncoder)
+        {
+            return Err(nerror!(
+                ErrorKind::CodecDisabledError,
+                "The ZenPng+zenquant encoder has been disabled"
+            ));
+        }
+        use zc::encode::EncoderConfig as _;
+        let q = quality.unwrap_or(90.0).clamp(0.0, 100.0);
+        // `with_generic_quality(q)` with `q < 100` toggles
+        // `lossless = false` inside `PngEncoderConfig`, which is what
+        // flips the RGBA8 path to `encode_auto` (zenquant-backed).
+        let config = zenpng::PngEncoderConfig::new().with_generic_quality(q);
+        Ok(Self::new_zencodec(Box::new(config), io, matte, false, "png", "image/png"))
+    }
+
+    /// Create a ZenPng encoder wired to zenpng's `imagequant` backend.
+    ///
+    /// This variant exists so the substitution-priority table can
+    /// order `ZenPng+imagequant` explicitly between
+    /// `ZenPng+zenquant` and `PngQuant`. Plumbing requires zenpng's
+    /// `imagequant` feature — not enabled in imageflow's default build.
+    /// Until the feature is turned on in the `zenpng` dep line in
+    /// `imageflow_core/Cargo.toml`, this factory returns a
+    /// `CodecDisabledError` with a clear TODO-style message.
+    #[allow(unused_variables)]
+    pub(crate) fn create_png_imagequant(
+        c: &Context,
+        io: IoProxy,
+        matte: Option<imageflow_types::Color>,
+        quality: Option<f32>,
+    ) -> Result<Self> {
+        if !c
+            .enabled_codecs
+            .encoders
+            .contains(&crate::codecs::NamedEncoders::ZenPngImagequantEncoder)
+        {
+            return Err(nerror!(
+                ErrorKind::CodecDisabledError,
+                "The ZenPng+imagequant encoder has been disabled"
+            ));
+        }
+        // TODO: wire zenpng's `imagequant` feature in Cargo.toml and
+        // construct `ImagequantQuantizer` directly, then pass it to
+        // `encode_auto` via a job that overrides the default quantizer.
+        // Today zenpng's `default_quantizer()` picks zenquant when both
+        // backends are available; an explicit-quantizer API or a
+        // `zenpng::PngEncoderConfig::with_quantizer` shim is needed
+        // before this variant can be distinct at runtime.
+        Err(nerror!(
+            ErrorKind::CodecDisabledError,
+            "ZenPng+imagequant is not yet plumbed in this build — \
+             enable zenpng's `imagequant` feature and wire an explicit \
+             quantizer on `PngEncoderConfig`. Falling through to the \
+             next codec in the substitution priority list."
+        ))
     }
 }
 
@@ -430,6 +525,7 @@ impl Encoder for ZenEncoder {
                 bytes: ::imageflow_types::ResultBytes::Elsewhere,
                 preferred_extension: "jpg".to_owned(),
                 preferred_mime_type: "image/jpeg".to_owned(),
+                annotations: None,
             });
         }
 
@@ -565,6 +661,7 @@ impl Encoder for ZenEncoder {
                 bytes: ::imageflow_types::ResultBytes::Elsewhere,
                 preferred_extension: self.preferred_extension.to_owned(),
                 preferred_mime_type: self.preferred_mime_type.to_owned(),
+                annotations: None,
             });
         }
 
@@ -626,6 +723,7 @@ impl Encoder for ZenEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: self.preferred_extension.to_owned(),
             preferred_mime_type: self.preferred_mime_type.to_owned(),
+            annotations: None,
         })
     }
 

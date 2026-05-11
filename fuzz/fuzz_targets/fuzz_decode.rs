@@ -23,7 +23,7 @@ fuzz_target!(|data: &[u8]| {
     }
 
     let Ok(mut ctx) = Context::create_can_panic() else { return; };
-    ctx.configure_security(limits());
+    let _ = ctx.configure_security(limits());
     if ctx.add_copied_input_buffer(0, data).is_err() { return; }
 
     let execute = s::Execute001 {
