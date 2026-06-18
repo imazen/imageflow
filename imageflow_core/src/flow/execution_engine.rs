@@ -342,7 +342,7 @@ impl<'a> Engine<'a> {
         if let Ok(v) = result {
             ctx.weight_mut(node_id).frame_est = v;
 
-            Engine::validate_frame_size(v, &ctx.c.security)?;
+            Engine::validate_frame_size(v, ctx.c.current_security())?;
         }
 
         ctx.weight_mut(node_id).cost.wall_ns += precise_time_ns().saturating_sub(now);

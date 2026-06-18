@@ -188,6 +188,7 @@ impl Encoder for MozjpegEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "jpg".to_owned(),
             preferred_mime_type: "image/jpeg".to_owned(),
+            annotations: None,
         })
     }
 
