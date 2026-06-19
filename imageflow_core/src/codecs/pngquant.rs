@@ -148,6 +148,7 @@ impl Encoder for PngquantEncoder {
             bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "png".to_owned(),
             preferred_mime_type: "image/png".to_owned(),
+            annotations: None,
         })
     }
 

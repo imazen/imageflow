@@ -140,7 +140,8 @@ impl ZenDecoder {
         let mut decoder = Self::new_zencodec(Box::new(config), io, ZenFormat::Gif);
 
         // Store limits info for later use during decode
-        let limit = c.security.max_decode_size.as_ref().or(c.security.max_frame_size.as_ref());
+        let sec = c.current_security();
+        let limit = sec.max_decode_size.as_ref().or(sec.max_frame_size.as_ref());
         if let Some(limit) = limit {
             let max_bytes = (limit.megapixels * 1_000_000.0 * 4.0) as u64;
             let mut limits = zc::ResourceLimits::default();

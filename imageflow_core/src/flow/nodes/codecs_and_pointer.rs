@@ -158,7 +158,11 @@ impl NodeDef for DecoderPrimitiveDef {
 
         let estimate = self.estimate(ctx, ix)?;
 
-        validate_frame_size(estimate, &ctx.c.security.max_decode_size, "max_decode_size")?;
+        validate_frame_size(
+            estimate,
+            &ctx.c.current_security().max_decode_size,
+            "max_decode_size",
+        )?;
 
         let mut codec = ctx.c.get_codec(io_id).map_err(|e| e.at(here!()))?;
         let decoder = codec.get_decoder().map_err(|e| e.at(here!()))?;
@@ -266,7 +270,11 @@ impl NodeDef for EncoderDef {
 
         // Validate max encode size
         let estimate = self.estimate(ctx, ix)?;
-        validate_frame_size(estimate, &ctx.c.security.max_encode_size, "max_encode_size")?;
+        validate_frame_size(
+            estimate,
+            &ctx.c.current_security().max_encode_size,
+            "max_encode_size",
+        )?;
 
         let decoders = ctx
             .get_decoder_io_ids_and_indexes(ix)

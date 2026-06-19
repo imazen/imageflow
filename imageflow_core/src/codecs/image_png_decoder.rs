@@ -31,7 +31,8 @@ impl ImagePngDecoder {
         // Validate dimensions against security limits BEFORE any decode allocation
         let w = info.width;
         let h = info.height;
-        let limit = c.security.max_decode_size.as_ref().or(c.security.max_frame_size.as_ref());
+        let sec = c.current_security();
+        let limit = sec.max_decode_size.as_ref().or(sec.max_frame_size.as_ref());
         if let Some(limit) = limit {
             if w > limit.w {
                 return Err(nerror!(

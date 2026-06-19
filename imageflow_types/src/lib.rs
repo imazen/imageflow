@@ -28,7 +28,17 @@
 //!  3. Delete all underscores from string
 
 pub mod build_env_info;
+pub mod build_killbits;
+pub mod killbits;
 pub mod version;
+
+pub use killbits::{
+    CodecKillbits, CodecKillbitsJobLevelError, CodecKillbitsValidationError,
+    CodecSubstitutionAnnotation, DecodeAnnotations, DecoderSubstitutionAnnotation,
+    EncodeAnnotations, FormatGrid, FormatKillbits, FormatPermissions, ImageFormat,
+    JobLevelKillbitsError, KillbitsValidationError, NamedDecoderName, NamedEncoderName,
+    Op as KillbitsOp, SubstitutionReason,
+};
 
 use serde_derive::{Deserialize, Serialize};
 
@@ -1141,6 +1151,36 @@ pub struct ExecutionSecurity {
     /// Default: 400 megapixels. Set to `None` to disable.
     #[serde(default)]
     pub max_total_file_pixels: Option<u64>,
+    /// Per-format decode/encode killbits. Part of the three-layer codec
+    /// gating system:
+    ///
+    /// - Trusted policy (via `v1/context/set_policy`) may use any form
+    ///   (`allow_decode`, `deny_decode`, `allow_encode`, `deny_encode`, or
+    ///   `formats` table).
+    /// - Job-level `security` on `Build001`/`Execute001` may only *deny*
+    ///   (no `allow_*`, no table entries with `decode: true`/`encode: true`).
+    ///
+    /// Boxed to keep `ExecutionSecurity` small on the stack — killbits carry
+    /// ~120 bytes of inline capacity for the per-format lists and table.
+    ///
+    /// Absent = no change at this layer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub formats: Option<Box<killbits::FormatKillbits>>,
+    /// Per-codec decode/encode killbits. Complements `formats` by
+    /// letting operators allow/deny individual named backends within a
+    /// format (e.g. forbid mozjpeg while keeping zen_jpeg_encoder). See
+    /// `CodecKillbits` for the full description.
+    ///
+    /// Same layering rules as `formats`:
+    /// - Trusted policy may use any shape (`allow_*`, `deny_*`).
+    /// - Job-level `security` may only `deny_*`.
+    ///
+    /// Absent = no change at this layer.
+    ///
+    /// Boxed to keep `ExecutionSecurity` small — `CodecKillbits` carries
+    /// ~160 bytes of inline list capacity when fully populated.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub codecs: Option<Box<killbits::CodecKillbits>>,
 }
 
 impl ExecutionSecurity {
@@ -1154,6 +1194,8 @@ impl ExecutionSecurity {
             max_input_file_bytes: Some(256 * 1024 * 1024),
             max_json_bytes: Some(64 * 1024 * 1024),
             max_total_file_pixels: Some(400_000_000),
+            formats: None,
+            codecs: None,
         }
     }
     pub fn unspecified() -> Self {
@@ -1164,6 +1206,8 @@ impl ExecutionSecurity {
             max_input_file_bytes: None,
             max_json_bytes: None,
             max_total_file_pixels: None,
+            formats: None,
+            codecs: None,
         }
     }
 }
@@ -1750,6 +1794,20 @@ pub struct ValidateQueryString {
     pub query_string: String,
 }
 
+/// Request body for `v1/context/set_policy`. Sets the trusted policy
+/// layer (layer 2 of the killbits system). Idempotent once set;
+/// calling again without `require_unlocked` is accepted only if the
+/// new policy narrows (never widens) the existing one.
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct SetPolicyRequest {
+    pub policy: ExecutionSecurity,
+    /// If true, error when a trusted policy is already set. Default: false.
+    #[serde(default)]
+    pub require_unlocked: bool,
+}
+
 impl GetImageInfo001 {
     pub fn example_get_image_info() -> GetImageInfo001 {
         GetImageInfo001 { io_id: 0 }
@@ -1868,6 +1926,13 @@ pub struct EncodeResult {
     pub h: i32,
 
     pub bytes: ResultBytes,
+
+    /// Forward-extensible annotation bag. Populated when the dispatcher
+    /// substituted the requested codec, surfaced unit-warning output,
+    /// or otherwise has non-error information about how this particular
+    /// encode step was served. Omitted from the wire when empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub annotations: Option<EncodeAnnotations>,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
@@ -1879,6 +1944,11 @@ pub struct DecodeResult {
     pub io_id: i32,
     pub w: i32,
     pub h: i32,
+
+    /// Forward-extensible annotation bag. Mirror of
+    /// [`EncodeResult::annotations`] for the decode side.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub annotations: Option<DecodeAnnotations>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -2154,6 +2224,7 @@ impl Response001 {
                     preferred_mime_type: mime.to_owned(),
                     preferred_extension: ext.to_owned(),
                     bytes: ResultBytes::Elsewhere,
+                    annotations: None,
                 }],
                 performance: Some(BuildPerformance { frames: vec![frame_perf] }),
             }),

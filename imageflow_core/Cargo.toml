@@ -166,3 +166,9 @@ harness = false
 name = "bench_codecs"
 path = "benches/bench_codecs.rs"
 harness = false
+
+[[bench]]
+name = "substitution_runtime"
+path = "benches/substitution_runtime.rs"
+harness = false
+required-features = ["zen-codecs"]

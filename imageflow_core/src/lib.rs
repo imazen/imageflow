@@ -19,6 +19,7 @@ mod flow;
 pub mod graphics;
 mod io;
 pub mod json;
+pub mod killbits;
 
 pub use crate::codecs::cms::CmsBackend;
 pub use crate::codecs::NamedDecoders;
@@ -43,6 +44,13 @@ pub use enough::{Stop, StopReason, Unstoppable};
 
 pub mod helpers {
     pub use crate::codecs::write_png;
+}
+
+/// Validated knob-mapping tables consulted by the codec-substitution
+/// dispatcher. Exposed as a narrow public module so benches, tests,
+/// and downstream tooling can cite the same canonical mappings.
+pub mod substitution_measurements {
+    pub use crate::codecs::substitution_measurements::*;
 }
 #[doc(hidden)]
 mod internal_prelude {
