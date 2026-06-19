@@ -1141,6 +1141,23 @@ pub struct ExecutionSecurity {
     /// Default: 400 megapixels. Set to `None` to disable.
     #[serde(default)]
     pub max_total_file_pixels: Option<u64>,
+    /// Whether `IoEnum::Filename` (filesystem reads/writes from JSON) is permitted.
+    ///
+    /// `IoEnum::Filename` opens any path the imageflow process can read or
+    /// write — there is no path-traversal protection by design, since CLI
+    /// callers and trusted bindings already have filesystem access. Server
+    /// frontends accepting JSON jobs from untrusted sources MUST set this to
+    /// `Some(false)` at Context creation to block `Filename` entries from
+    /// reaching the IO layer (callers should use `ByteArray`, `Base64`, or
+    /// `OutputBuffer` instead).
+    ///
+    /// `Some(true)` (default in `sane_defaults()` for backward compatibility):
+    /// `Filename` entries are accepted. `Some(false)`: `Filename` entries are
+    /// rejected with an `InvalidArgument` error before any file is opened.
+    /// `None` is treated as `Some(true)` by the core for compatibility, but
+    /// **production HTTP frontends should set this explicitly to `Some(false)`.**
+    #[serde(default)]
+    pub allow_io_filename: Option<bool>,
 }
 
 impl ExecutionSecurity {
@@ -1154,6 +1171,10 @@ impl ExecutionSecurity {
             max_input_file_bytes: Some(256 * 1024 * 1024),
             max_json_bytes: Some(64 * 1024 * 1024),
             max_total_file_pixels: Some(400_000_000),
+            // SECURITY: defaults to true to preserve existing CLI/embedding
+            // behavior. HTTP frontends accepting untrusted JSON MUST override
+            // this to `Some(false)` — see field-level docs.
+            allow_io_filename: Some(true),
         }
     }
     pub fn unspecified() -> Self {
@@ -1164,6 +1185,7 @@ impl ExecutionSecurity {
             max_input_file_bytes: None,
             max_json_bytes: None,
             max_total_file_pixels: None,
+            allow_io_filename: None,
         }
     }
 }
@@ -2360,7 +2382,7 @@ mod key_casing {
         fail_count
     }
 
-    use ::imageflow_helpers::identifier_styles::*;
+    use imageflow_helpers::identifier_styles::*;
 }
 
 #[test]

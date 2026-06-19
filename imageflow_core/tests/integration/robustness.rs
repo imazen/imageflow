@@ -685,3 +685,149 @@ fn run_robustness_summary() {
     println!("\nNote: Many issues only manifest under specific conditions");
     println!("(large allocations, memory pressure, specific file contents)");
 }
+
+// =============================================================================
+// IoEnum::Filename security gate (H-1)
+// =============================================================================
+
+/// Build a JSON job that decodes from `IoEnum::Filename(path)` and writes a
+/// PNG to an output buffer. We never execute decode — we only need to know
+/// whether `Filename` is accepted at the IO ingress.
+fn build_filename_input_job(path: &str) -> s::Build001 {
+    s::Build001 {
+        builder_config: Some(s::Build001Config::default()),
+        io: vec![
+            s::IoObject {
+                io_id: 0,
+                direction: s::IoDirection::In,
+                io: s::IoEnum::Filename(path.to_owned()),
+            },
+            s::IoObject { io_id: 1, direction: s::IoDirection::Out, io: s::IoEnum::OutputBuffer },
+        ],
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::Encode { io_id: 1, preset: s::EncoderPreset::libpng32() },
+        ]),
+    }
+}
+
+#[test]
+fn test_io_filename_blocked_when_disabled() {
+    // Server-style configuration: HTTP frontend disables Filename IO at
+    // Context creation. A malicious JSON request requesting
+    // IoEnum::Filename("/etc/passwd") must be rejected before any file
+    // is opened.
+    let mut ctx = create_context();
+
+    let mut sec = s::ExecutionSecurity::sane_defaults();
+    sec.allow_io_filename = Some(false);
+    ctx.configure_security(sec);
+
+    let job = build_filename_input_job("/etc/passwd");
+    let result = ctx.build_1(job);
+
+    match result {
+        Ok(_) => panic!("IoEnum::Filename was accepted with allow_io_filename=Some(false)"),
+        Err(e) => {
+            let msg = format!("{:?}", e);
+            assert!(
+                msg.contains("allow_io_filename") || msg.contains("Filename"),
+                "expected an explicit Filename-disabled error, got: {}",
+                msg
+            );
+        }
+    }
+}
+
+#[test]
+fn test_io_filename_blocked_for_output_when_disabled() {
+    // Same gate must apply to `direction: out` Filename — those paths are
+    // opened with create+truncate, which is the more dangerous case (arbitrary
+    // file write at process privilege level).
+    let mut ctx = create_context();
+
+    let mut sec = s::ExecutionSecurity::sane_defaults();
+    sec.allow_io_filename = Some(false);
+    ctx.configure_security(sec);
+
+    // Use a known-safe path under target/ so a regression that bypasses the
+    // gate doesn't clobber anything important.
+    let out_path = std::env::temp_dir().join("imageflow-h1-must-not-be-written.png");
+    let _ = std::fs::remove_file(&out_path);
+
+    let job = s::Build001 {
+        builder_config: Some(s::Build001Config::default()),
+        io: vec![
+            // input is a tiny valid PNG byte array so the rest of the graph
+            // doesn't bail before the Filename gate runs on the output side.
+            s::IoObject {
+                io_id: 0,
+                direction: s::IoDirection::In,
+                io: s::IoEnum::ByteArray(MINIMAL_PNG.to_vec()),
+            },
+            s::IoObject {
+                io_id: 1,
+                direction: s::IoDirection::Out,
+                io: s::IoEnum::Filename(out_path.to_string_lossy().into_owned()),
+            },
+        ],
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands: None },
+            s::Node::Encode { io_id: 1, preset: s::EncoderPreset::libpng32() },
+        ]),
+    };
+
+    let result = ctx.build_1(job);
+    match result {
+        Ok(_) => panic!("output Filename was accepted with allow_io_filename=Some(false)"),
+        Err(e) => {
+            let msg = format!("{:?}", e);
+            assert!(
+                msg.contains("allow_io_filename") || msg.contains("Filename"),
+                "expected an explicit Filename-disabled error, got: {}",
+                msg
+            );
+        }
+    }
+
+    assert!(!out_path.exists(), "output path {:?} must not exist after a denied request", out_path);
+}
+
+#[test]
+fn test_io_filename_allowed_by_default() {
+    // Backward-compatibility test: with no override and sane_defaults
+    // (allow_io_filename=Some(true)), an unreachable filename must still
+    // pass the gate and only fail at the IO open or decode step.
+    let mut ctx = create_context();
+    // Don't call configure_security — sane_defaults() applies.
+
+    let job = build_filename_input_job(
+        "/this/path/almost/certainly/does/not/exist/imageflow-test-input.png",
+    );
+    let result = ctx.build_1(job);
+
+    match result {
+        Ok(_) => panic!("nonexistent input file accepted as a successful build"),
+        Err(e) => {
+            let msg = format!("{:?}", e);
+            assert!(
+                !msg.contains("allow_io_filename"),
+                "default config must not trip the Filename gate, got: {}",
+                msg
+            );
+        }
+    }
+}
+
+/// Tiny valid 1x1 PNG used to drive a decode that would otherwise reach the
+/// output Filename gate.
+const MINIMAL_PNG: &[u8] = &[
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // signature
+    0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR length+type
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1
+    0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, // depth+color+CRC
+    0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, // IDAT length+type
+    0x78, 0x9C, 0x62, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, // zlib stream
+    0x0D, 0x0A, 0x2D, 0xB4, // IDAT CRC
+    0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82, // IEND
+];

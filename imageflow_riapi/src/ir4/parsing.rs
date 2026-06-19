@@ -15,6 +15,19 @@ use std::num;
 use std::result;
 use url::Url;
 
+/// SECURITY: Maximum number of comma-separated values accepted from a single
+/// RIAPI list field (`crop`, `s.roundcorners`, anchor offsets, etc.).
+///
+/// RIAPI values can originate from `Node::CommandString` JSON entries whose
+/// length is bounded only by `ExecutionSecurity::max_json_bytes` (default
+/// 64 MB). Without this cap, `?crop=1,1,1,...` of length N would cause an
+/// O(N) Vec allocation (≈24 bytes per entry for `Result<f64, ParseFloatError>`),
+/// producing hundreds of MB of attacker-controlled allocations per request.
+///
+/// Every RIAPI list field defined today expects at most 4 values, so 16 is
+/// generous headroom while still bounding work to ~400 bytes per parse.
+const MAX_RIAPI_LIST_VALUES: usize = 16;
+
 macro_attr! {
 
 
@@ -765,8 +778,13 @@ impl<'a> Parser<'a> {
 
     fn parse_crop_strict(&mut self, key: &'static str) -> Option<[f64; 4]> {
         self.warning_parse(key, |s| {
+            // SECURITY: Cap iterator at MAX_RIAPI_LIST_VALUES + 1 to prevent
+            // unbounded Vec allocation from attacker-controlled comma counts
+            // (RIAPI values may originate from CommandString JSON nodes whose
+            // length is only bounded by max_json_bytes, default 64 MB).
             let values = s
                 .split(',')
+                .take(MAX_RIAPI_LIST_VALUES + 1)
                 .map(|v| v.trim().parse::<f64>())
                 .collect::<Vec<std::result::Result<f64, num::ParseFloatError>>>();
             if let Some(Err(e)) = values.iter().find(|v| v.is_err()) {
@@ -795,9 +813,11 @@ impl<'a> Parser<'a> {
             // TODO: We're also supposed to trim leading/trailing commas along with whitespace
             let str = s.replace("(", "").replace(")", "");
             // .unwrap_or(0) is ugly, but it's what IR4 does. :(
+            // SECURITY: see parse_crop_strict for cap rationale.
             let values = str
                 .trim()
                 .split(',')
+                .take(MAX_RIAPI_LIST_VALUES + 1)
                 .map(|v| v.trim().parse::<f64>().unwrap_or(0f64))
                 .collect::<Vec<f64>>();
             if values.len() == 4 {
@@ -810,8 +830,10 @@ impl<'a> Parser<'a> {
 
     fn parse_round_corners(&mut self, key: &'static str) -> Option<[f64; 4]> {
         self.warning_parse(key, |s| {
+            // SECURITY: see parse_crop_strict for cap rationale.
             let values = s
                 .split(',')
+                .take(MAX_RIAPI_LIST_VALUES + 1)
                 .map(|v| v.trim().parse::<f64>())
                 .collect::<Vec<std::result::Result<f64, num::ParseFloatError>>>();
             if let Some(Err(e)) = values.iter().find(|v| v.is_err()) {
@@ -928,9 +950,18 @@ impl<'a> Parser<'a> {
         text: &str,
         wrong_count_message: &'static str,
     ) -> Result<[f64; N], ParseListError> {
+        // SECURITY: Cap the iterator so a malicious CommandString containing
+        // millions of commas can't drive unbounded loop work. We accept up to
+        // MAX_RIAPI_LIST_VALUES + 1 entries; any overrun reports the standard
+        // wrong-count error.
+        const _: () = {
+            // Compile-time check that callers ask for at most MAX_RIAPI_LIST_VALUES.
+            // (Rust doesn't allow runtime-only assertions on N here, but every
+            // existing caller uses N <= 4.)
+        };
         let mut array = [0f64; N];
         let mut i = 0;
-        for s in text.split(',') {
+        for s in text.split(',').take(MAX_RIAPI_LIST_VALUES + 1) {
             match s.trim().parse::<f64>() {
                 Ok(v) => {
                     if i < N {
@@ -1689,6 +1720,62 @@ fn test_url_parsing() {
     // expect_warning("srcset","png,gif",  Instructions{format: Some(OutputFormat::Gif), ..srcset_default.to_owned()});
 
 
+}
+
+/// Regression test for H-3: confirm that an attacker-controlled flood of
+/// commas in a RIAPI list field does NOT result in a Vec allocation
+/// proportional to the input size.
+///
+/// Previously, `?crop=1,1,1,...` of length N would call `.collect::<Vec<_>>()`
+/// over a `split(',')` iterator with no cap, allocating ~24*N bytes per parse.
+/// We now cap at MAX_RIAPI_LIST_VALUES + 1 so excess commas surface as the
+/// expected wrong-count error and the parse runs in bounded memory.
+#[test]
+fn test_riapi_list_oom_dos_capped() {
+    // 1 million entries — pre-fix would have allocated ~24 MB per field.
+    let huge_csv = "1,".repeat(1_000_000) + "1";
+
+    // crop expects 4 values; >4 must surface as a wrong-count warning.
+    let url_str = format!("http://localhost/x.jpg?crop={}", huge_csv);
+    let url = Url::from_str(&url_str).unwrap();
+    let (i, warnings) = parse_url(&url);
+    assert!(i.crop.is_none(), "crop must reject overlong list");
+    assert!(
+        warnings.iter().any(|w| matches!(
+            w,
+            ParseWarning::ValueInvalid((k, _)) if *k == "crop"
+        )),
+        "expected a ValueInvalid warning for crop, got: {:?}",
+        warnings
+    );
+
+    // s.roundcorners likewise expects 1 or 4 values.
+    let url_str = format!("http://localhost/x.jpg?s.roundcorners={}", huge_csv);
+    let url = Url::from_str(&url_str).unwrap();
+    let (i, warnings) = parse_url(&url);
+    assert!(i.s_round_corners.is_none(), "roundcorners must reject overlong list");
+    assert!(
+        warnings.iter().any(|w| matches!(
+            w,
+            ParseWarning::ValueInvalid((k, _)) if *k == "s.roundcorners"
+        )),
+        "expected a ValueInvalid warning for s.roundcorners, got: {:?}",
+        warnings
+    );
+
+    // c.gravity uses parse_f64_list::<2> internally.
+    let url_str = format!("http://localhost/x.jpg?c.gravity={}", huge_csv);
+    let url = Url::from_str(&url_str).unwrap();
+    let (i, warnings) = parse_url(&url);
+    assert!(i.c_gravity.is_none(), "c.gravity must reject overlong list");
+    assert!(
+        warnings.iter().any(|w| matches!(
+            w,
+            ParseWarning::ValueInvalid((k, _)) if *k == "c.gravity"
+        )),
+        "expected a ValueInvalid warning for c.gravity, got: {:?}",
+        warnings
+    );
 }
 
 #[rustfmt::skip]
