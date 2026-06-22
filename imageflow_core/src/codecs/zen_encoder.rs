@@ -9,7 +9,7 @@ use std::io::Write;
 
 use zc::encode::{DynAnimationFrameEncoder, DynEncoderConfig, EncodeOutput};
 
-use super::zen_decoder::ZenDecoder;
+use super::zen_decoder::{encode_limits_from_security, ZenDecoder};
 
 /// Encoding strategy — native JPEG path for backward compat, zencodec for everything else.
 enum EncodeMode {
@@ -464,6 +464,10 @@ impl Encoder for ZenEncoder {
                 _ => unreachable!(),
             };
             let mut job = config.dyn_job();
+            job.set_stop(zc::StopToken::new(c.cancellation_token()));
+            if let Some(limits) = encode_limits_from_security(&c.security) {
+                job.set_limits(limits);
+            }
 
             // Try to get loop count from decoder and set on the job
             for io_id in decoder_io_ids {
@@ -597,7 +601,12 @@ impl Encoder for ZenEncoder {
             zenpixels::PixelDescriptor::RGBA8_SRGB
         };
 
-        let encoder = config.dyn_job().into_encoder().map_err(|e| {
+        let mut job = config.dyn_job();
+        job.set_stop(zc::StopToken::new(c.cancellation_token()));
+        if let Some(limits) = encode_limits_from_security(&c.security) {
+            job.set_limits(limits);
+        }
+        let encoder = job.into_encoder().map_err(|e| {
             nerror!(
                 ErrorKind::ImageEncodingError,
                 "{} encoder create error: {}",

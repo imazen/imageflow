@@ -82,6 +82,8 @@ pub struct ZenDecoder {
     ignore_color_profile_errors: bool,
     // Resource limits for decode jobs
     resource_limits: Option<zc::ResourceLimits>,
+    // Cooperative cancellation token threaded into every decode job
+    stop_token: Option<zc::StopToken>,
     // Image format (provides extension, mime type, animation support)
     format: ZenFormat,
     // Whether has_more_frames is known
@@ -90,8 +92,57 @@ pub struct ZenDecoder {
     target_frame: Option<u32>,
 }
 
+/// Map imageflow `ExecutionSecurity` decode caps → zencodec `ResourceLimits`
+/// for decode jobs. Returns `None` when no decode-relevant limit is configured.
+pub(crate) fn decode_limits_from_security(
+    security: &imageflow_types::ExecutionSecurity,
+) -> Option<zc::ResourceLimits> {
+    let frame = security.max_decode_size.as_ref().or(security.max_frame_size.as_ref());
+    if frame.is_none()
+        && security.max_input_file_bytes.is_none()
+        && security.max_total_file_pixels.is_none()
+    {
+        return None;
+    }
+    let mut limits = zc::ResourceLimits::default();
+    if let Some(f) = frame {
+        let max_pixels = (f.megapixels as f64 * 1_000_000.0) as u64;
+        limits.max_pixels = Some(max_pixels);
+        limits.max_memory_bytes = Some(max_pixels.saturating_mul(4));
+        limits.max_width = Some(f.w);
+        limits.max_height = Some(f.h);
+    }
+    if let Some(bytes) = security.max_input_file_bytes {
+        limits.max_input_bytes = Some(bytes as u64);
+    }
+    if let Some(pixels) = security.max_total_file_pixels {
+        limits.max_total_pixels = Some(pixels);
+    }
+    Some(limits)
+}
+
+/// Map imageflow `ExecutionSecurity` encode caps → zencodec `ResourceLimits`
+/// for encode jobs. Returns `None` when no encode-relevant limit is configured.
+pub(crate) fn encode_limits_from_security(
+    security: &imageflow_types::ExecutionSecurity,
+) -> Option<zc::ResourceLimits> {
+    let frame = security.max_encode_size.as_ref().or(security.max_frame_size.as_ref())?;
+    let mut limits = zc::ResourceLimits::default();
+    let max_pixels = (frame.megapixels as f64 * 1_000_000.0) as u64;
+    limits.max_pixels = Some(max_pixels);
+    limits.max_memory_bytes = Some(max_pixels.saturating_mul(4));
+    limits.max_width = Some(frame.w);
+    limits.max_height = Some(frame.h);
+    Some(limits)
+}
+
 impl ZenDecoder {
-    fn new_zencodec(config: Box<dyn DynDecoderConfig>, io: IoProxy, format: ZenFormat) -> Self {
+    fn new_zencodec(
+        c: &Context,
+        config: Box<dyn DynDecoderConfig>,
+        io: IoProxy,
+        format: ZenFormat,
+    ) -> Self {
         ZenDecoder {
             config,
             io,
@@ -104,14 +155,15 @@ impl ZenDecoder {
             loop_count: None,
             ignore_color_profile: false,
             ignore_color_profile_errors: false,
-            resource_limits: None,
+            resource_limits: decode_limits_from_security(&c.security),
+            stop_token: Some(zc::StopToken::new(c.cancellation_token())),
             format,
             has_more: None,
             target_frame: None,
         }
     }
 
-    pub fn create_jpeg(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
+    pub fn create_jpeg(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         // CmykHandling::Passthrough — emit raw CMYK bytes (PixelDescriptor::CMYK8)
         // for 4-component JPEGs instead of applying zenjpeg's internal CMYK→RGB
         // matrix. The CMS stage then applies the source ICC profile (or the
@@ -120,51 +172,37 @@ impl ZenDecoder {
         // ebb0e24f, but set explicitly so the intent survives any default flip.)
         let config = zenjpeg::JpegDecoderConfig::new()
             .cmyk_handling(zenjpeg::CmykHandling::Passthrough);
-        Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Jpeg))
+        Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Jpeg))
     }
 
-    pub fn create_webp(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
+    pub fn create_webp(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zenwebp::zencodec::WebpDecoderConfig::new();
-        Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::WebP))
+        Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::WebP))
     }
 
-    pub fn create_png(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
+    pub fn create_png(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zenpng::PngDecoderConfig::new();
-        Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Png))
+        Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Png))
     }
 
     pub fn create_gif(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zengif::GifDecoderConfig::new();
-
-        // Limits will be applied via DynDecodeJob::set_limits when decoding
-        let mut decoder = Self::new_zencodec(Box::new(config), io, ZenFormat::Gif);
-
-        // Store limits info for later use during decode
-        let limit = c.security.max_decode_size.as_ref().or(c.security.max_frame_size.as_ref());
-        if let Some(limit) = limit {
-            let max_bytes = (limit.megapixels * 1_000_000.0 * 4.0) as u64;
-            let mut limits = zc::ResourceLimits::default();
-            limits.max_pixels = Some(max_bytes / 4);
-            limits.max_memory_bytes = Some(max_bytes);
-            decoder.resource_limits = Some(limits);
-        }
-
-        Ok(decoder)
+        Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Gif))
     }
 
-    pub fn create_avif(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
+    pub fn create_avif(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zenavif::AvifDecoderConfig::new();
-        Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Avif))
+        Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Avif))
     }
 
-    pub fn create_jxl(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
+    pub fn create_jxl(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zenjxl::JxlDecoderConfig::new();
-        Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Jxl))
+        Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Jxl))
     }
 
-    pub fn create_bmp(_c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
+    pub fn create_bmp(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zenbitmaps::BmpDecoderConfig::new();
-        Ok(Self::new_zencodec(Box::new(config), io, ZenFormat::Bmp))
+        Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Bmp))
     }
 
     /// Ensure input bytes are available, either from a memory-backed IoProxy
@@ -212,6 +250,9 @@ impl ZenDecoder {
             let mut job = self.config.dyn_job();
             if let Some(ref limits) = self.resource_limits {
                 job.set_limits(*limits);
+            }
+            if let Some(ref stop) = self.stop_token {
+                job.set_stop(stop.clone());
             }
             let info = job.probe(data).map_err(|e| {
                 nerror!(
@@ -276,6 +317,9 @@ impl ZenDecoder {
         let mut job = self.config.dyn_job();
         if let Some(ref limits) = self.resource_limits {
             job.set_limits(*limits);
+        }
+        if let Some(ref stop) = self.stop_token {
+            job.set_stop(stop.clone());
         }
         job
     }
@@ -675,6 +719,22 @@ impl Decoder for ZenDecoder {
                 let dst = window.slice_mut();
 
                 copy_pixel_slice_to_bitmap(dst, dst_stride, &ps);
+            }
+
+            // Apply CMS transform if needed — mirror the single-frame path below.
+            // Animated WebP/AVIF/JXL can carry a non-sRGB ICC profile or CICP;
+            // without this every frame would be encoded in its source color space
+            // while tagged StandardRGB. (GIF reaches here too but carries no
+            // profile, so source_profile is Srgb and this is a no-op.)
+            if !matches!(source_profile, SourceProfile::Srgb) {
+                let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
+                let mut window = bitmap.get_window_u8().unwrap();
+                let result = cms::transform_to_srgb(&mut window, &source_profile);
+                if let Err(e) = result
+                    && !self.ignore_color_profile_errors
+                {
+                    return Err(e);
+                }
             }
 
             // Determine if more frames remain

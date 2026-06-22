@@ -520,7 +520,10 @@ fn create_encoder_auto(
         OutputImageFormat::Avif => {
             #[cfg(feature = "zen-codecs")]
             {
-                let quality = details.quality_profile.map(|qp| get_quality_hints(&qp).avif);
+                // quality_profile drives zencodec's generic-quality knob in
+                // SSIMULACRA2 units (via the libjpeg-turbo→ssim2 table) rather
+                // than the raw per-codec avif column.
+                let quality = details.quality_profile.map(|qp| generic_quality_ssim2(&qp));
                 let speed = details.quality_profile.map(|qp| get_quality_hints(&qp).avif_s);
                 let lossless = details.needs_lossless.unwrap_or(false);
                 Box::new(
@@ -612,6 +615,48 @@ fn approximate_quality_profile(qp: Option<QualityProfile>) -> f32 {
         Some(find) => get_quality_hints(&find).p,
         None => 90.0,
     }
+}
+
+/// Single anchor table approximating the libjpeg-turbo / mozjpeg quality dial
+/// (0–100, the unit imageflow's `quality_profile` is expressed in) to an
+/// SSIMULACRA2 score (0–100). Distilled from the per-profile (p, ssim2) columns
+/// of [`QUALITY_HINTS`]. Lets a `quality_profile` drive zencodec's
+/// codec-agnostic `with_generic_quality` knob in ssim2 units — the first step
+/// toward expressing quality in metric units (ssim2/zensim) instead of a raw
+/// per-codec dial.
+#[cfg(feature = "zen-codecs")]
+#[rustfmt::skip]
+const LIBJPEG_TURBO_Q_TO_SSIM2: [(f32, f32); 8] = [
+    (15.0, 10.0), (20.0, 30.0), (34.0, 50.0), (55.0, 60.0),
+    (73.0, 70.0), (91.0, 85.0), (96.0, 90.0), (100.0, 100.0),
+];
+
+/// Map a libjpeg-turbo quality (0–100) to an approximate SSIMULACRA2 score via
+/// piecewise-linear interpolation over [`LIBJPEG_TURBO_Q_TO_SSIM2`].
+#[cfg(feature = "zen-codecs")]
+fn libjpeg_turbo_quality_to_ssim2(q: f32) -> f32 {
+    let q = q.clamp(0.0, 100.0);
+    let table = &LIBJPEG_TURBO_Q_TO_SSIM2;
+    if q <= table[0].0 {
+        return table[0].1;
+    }
+    for pair in table.windows(2) {
+        let (q0, s0) = pair[0];
+        let (q1, s1) = pair[1];
+        if q <= q1 {
+            let t = (q - q0) / (q1 - q0);
+            return s0 + t * (s1 - s0);
+        }
+    }
+    table[table.len() - 1].1
+}
+
+/// SSIMULACRA2-unit generic quality for a `quality_profile`, for zencodec's
+/// `with_generic_quality`. Resolves the profile to its libjpeg-turbo quality,
+/// then maps it through [`LIBJPEG_TURBO_Q_TO_SSIM2`].
+#[cfg(feature = "zen-codecs")]
+fn generic_quality_ssim2(qp: &QualityProfile) -> f32 {
+    libjpeg_turbo_quality_to_ssim2(approximate_quality_profile(Some(*qp)))
 }
 
 fn interpolate_value(ratio: f32, a: f32, b: f32) -> f32 {
