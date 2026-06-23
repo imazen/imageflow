@@ -290,24 +290,48 @@ pub(super) fn get_image_info(
 }
 
 /// `v1/estimate` — predict peak memory for decoding `io_id` (and, later, encoding
-/// to `format`) WITHOUT running. Today returns the EXACT decoded-buffer term
-/// (`w·h·4`); the codec working-set estimates (`estimate_{decode,encode}_resources`)
-/// and the encode-side dry-run config build layer on top once those return real
-/// numbers (most zencodec codecs return `unknown()` for now, so the buffer
-/// dominates). Mirrors the run-path `MemBudgetPolicy` gate's model.
+/// to `format`) WITHOUT running, mirroring the run-path `MemBudgetPolicy` gate:
+/// `peak = max(decode_codec, encode_codec) working-set + exact w·h·4 frame buffer`.
+/// The decode codec working-set is wired here via the already-probed input
+/// decoder; the encode-side (`format`) working-set layers on with the #728
+/// per-format dry-run config builder. Codec working-sets are 0 until zencodec
+/// ships `estimate_*_resources` (all return `unknown()` today), so the exact
+/// frame buffer is the complete estimate for now.
 pub(super) fn estimate(context: &mut Context, data: EstimateEncode001) -> Result<EncodeEstimate> {
     let info = context.get_unscaled_rotated_image_info(data.io_id).map_err(|e| e.at(here!()))?;
-    let w = info.image_width.max(0) as u64;
-    let h = info.image_height.max(0) as u64;
-    // TODO(#728): add the codec working-set estimate (decode + encode via a
-    // dry-run config built from `data.format`) on top of this exact buffer term.
-    let _ = data.format;
-    let buffer = w.saturating_mul(h).saturating_mul(4);
+    let w = info.image_width.max(0) as u32;
+    let h = info.image_height.max(0) as u32;
+    let buffer = (w as u64).saturating_mul(h as u64).saturating_mul(4);
+    // Codec working-set = max(decode_codec, encode_codec); 0 until zencodec ships
+    // estimate_*_resources. Decode side is wired (via the probed input decoder);
+    // the encode side (`data.format`) layers on with the #728 per-format dry-run
+    // config builder.
+    #[cfg(feature = "zen-codecs")]
+    let (codec_avg, codec_max): (u64, u64) = {
+        if let Ok(mut codec) = context.get_codec(data.io_id)
+            && let Ok(decoder) = codec.get_decoder()
+            && let Some(zd) =
+                decoder.as_any().downcast_ref::<crate::codecs::zen_decoder::ZenDecoder>()
+        {
+            let mut env = zc::estimate::ComputeEnvironment::new();
+            if let Some(n) = context.security.max_threads {
+                env = env.with_cores(n as usize);
+            }
+            let est = zd.estimate_decode(&env, w, h);
+            let avg = est.peak_memory_bytes_est().unwrap_or(0);
+            (avg, est.peak_memory_bytes_max().unwrap_or(avg))
+        } else {
+            (0, 0)
+        }
+    };
+    #[cfg(not(feature = "zen-codecs"))]
+    let (codec_avg, codec_max): (u64, u64) = (0, 0);
+    let _ = &data.format;
     Ok(EncodeEstimate {
-        width: info.image_width.max(0) as u32,
-        height: info.image_height.max(0) as u32,
-        peak_avg_bytes: buffer,
-        peak_max_bytes: buffer,
+        width: w,
+        height: h,
+        peak_avg_bytes: codec_avg.saturating_add(buffer),
+        peak_max_bytes: codec_max.saturating_add(buffer),
     })
 }
 

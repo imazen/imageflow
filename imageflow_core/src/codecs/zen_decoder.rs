@@ -243,6 +243,20 @@ impl ZenDecoder {
         }
     }
 
+    /// Codec working-set estimate (excludes the BGRA frame buffer) for decoding
+    /// into `w×h`. Returns `unknown()` (zeros) until the codec ships an estimator;
+    /// used by `v1/estimate` to mirror the run-path decode memory gate.
+    pub(crate) fn estimate_decode(
+        &self,
+        env: &zc::estimate::ComputeEnvironment,
+        w: u32,
+        h: u32,
+    ) -> zc::estimate::ResourceEstimate {
+        let chars =
+            zc::estimate::ImageCharacteristics::new(w, h, zenpixels::PixelDescriptor::BGRA8_SRGB);
+        self.config.estimate_decode_resources(&chars, env)
+    }
+
     pub fn create_jpeg(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         // CmykHandling::Passthrough — emit raw CMYK bytes (PixelDescriptor::CMYK8)
         // for 4-component JPEGs instead of applying zenjpeg's internal CMYK→RGB
