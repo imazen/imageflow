@@ -43,6 +43,11 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
             let output = get_scaled_image_info(context, input)?;
             Ok(JsonResponse::ok(output))
         }
+        "v1/estimate" => {
+            let input = parse_json_with_limit::<s::EstimateEncode001>(json, max_json)?;
+            let output = estimate(context, input)?;
+            Ok(JsonResponse::ok(output))
+        }
         "v1/tell_decoder" | "v0.1/tell_decoder" => {
             let input = parse_json_with_limit::<s::TellDecoder001>(json, max_json)?;
             let output = tell_decoder(context, input)?;
@@ -282,6 +287,28 @@ pub(super) fn get_image_info(
     let image_info =
         context.get_unscaled_rotated_image_info(data.io_id).map_err(|e| e.at(here!()))?;
     Ok(GetImageInfoV1Response { image_info })
+}
+
+/// `v1/estimate` — predict peak memory for decoding `io_id` (and, later, encoding
+/// to `format`) WITHOUT running. Today returns the EXACT decoded-buffer term
+/// (`w·h·4`); the codec working-set estimates (`estimate_{decode,encode}_resources`)
+/// and the encode-side dry-run config build layer on top once those return real
+/// numbers (most zencodec codecs return `unknown()` for now, so the buffer
+/// dominates). Mirrors the run-path `MemBudgetPolicy` gate's model.
+pub(super) fn estimate(context: &mut Context, data: EstimateEncode001) -> Result<EncodeEstimate> {
+    let info = context.get_unscaled_rotated_image_info(data.io_id).map_err(|e| e.at(here!()))?;
+    let w = info.image_width.max(0) as u64;
+    let h = info.image_height.max(0) as u64;
+    // TODO(#728): add the codec working-set estimate (decode + encode via a
+    // dry-run config built from `data.format`) on top of this exact buffer term.
+    let _ = data.format;
+    let buffer = w.saturating_mul(h).saturating_mul(4);
+    Ok(EncodeEstimate {
+        width: info.image_width.max(0) as u32,
+        height: info.image_height.max(0) as u32,
+        peak_avg_bytes: buffer,
+        peak_max_bytes: buffer,
+    })
 }
 
 #[cfg_attr(feature = "schema-export", utoipa::path(

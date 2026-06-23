@@ -78,4 +78,26 @@ mid-flight. zencodec 0.1.13 exposes `DynDecodeJob::set_stop`/`DynEncodeJob::set_
 
 ## Delayed TODOs
 
+- **Empirical calibration of the ssim2↔quality tables (currently uncalibrated guesses).** The `ssim2`
+  column of `QUALITY_HINTS` and the `LIBJPEG_TURBO_Q_TO_SSIM2` table in
+  `imageflow_core/src/codecs/auto.rs` are hand-picked approximations with NO empirical backing — they
+  map the quality dial to an SSIMULACRA2 score by guess, and they now feed every zencodec
+  `with_generic_quality` decision, so a miscalibration mis-targets quality on every codec. Calibrate
+  per the CLAUDE.md sweep discipline: sweep q5–q100 (dense at low q) × tiny/small/medium/large sizes ×
+  photo/screen/line-art/mixed corpora, MEASURE achieved ssim2 (zensim/fast-ssim2) per (codec, quality),
+  fit per-codec quality→ssim2 curves, and replace the constants with provenance-commented fits (corpus,
+  date, n, validation error). Reconcile with each zen codec's OWN internal calibration (zenwebp
+  `calibrated_webp_quality`, zenavif `calibrated_avif_quality`, zenjxl `calibrated_jxl_quality`, zenjpeg
+  `ssim2_to_internal`/`SSIM2_TO_JPEGLI`) so quality is not double-mapped.
+
+- **Issue #728 zencodec passthrough (currently interim heuristic).** The `target=fast|optimal` +
+  balance directive and `is_optimal`/optimality-headroom annotations are implemented in imageflow with
+  an INTERIM local cost/RD heuristic (`auto.rs`), because zencodec 0.1.19 exposes no encode
+  resource-estimate, no candidate-`ImageFormat` selector, and no optimality API. zencodec 0.1.24 adds
+  `EncoderConfig::estimate_encode_resources` plumbing but every codec returns `ResourceEstimate::unknown()`.
+  Full passthrough needs: (1) imageflow on zencodec ≥ the release that ships real
+  `estimate_encode_resources` impls in zenavif/zenjpeg/zenwebp/zenjxl, and (2) NEW zencodec APIs (a
+  candidate-format selector + optimality/would-not-improve determination) that exist in no version yet.
+  Replace the interim seams (marked `// TODO(#728): zencodec passthrough`) when those land.
+
 - **Licensing/caching module** (`imageflow_helpers/src/unused/`): ~2300 lines of draft licensing, caching, and polling code. Currently unreferenced (no `mod` declaration). Needs review, modernization, and wiring into the build when ready to complete.

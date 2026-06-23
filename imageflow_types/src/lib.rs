@@ -1120,6 +1120,60 @@ pub struct FrameSizeLimit {
     pub megapixels: f32,
 }
 
+/// Composable, optional memory-budget assertions for a job. Each present
+/// threshold is enforced independently; absent ones are not checked.
+/// `#[non_exhaustive]` so more signals (cpu-ms, peak-rss, …) can be added.
+#[non_exhaustive]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct MemBudgetPolicy {
+    /// Reject before running unless the *expected* (avg) estimated peak bytes
+    /// are below this. Pre-flight; needs only the codec estimators + buffer math.
+    #[serde(default)]
+    pub require_est_bytes_below: Option<u64>,
+    /// Reject before running unless the *conservative* (max) estimated peak
+    /// bytes are below this. Pre-flight.
+    #[serde(default)]
+    pub require_est_max_bytes_below: Option<u64>,
+    /// Abort during the run if live *tracked* bytes reach this. Runtime; relies
+    /// on allocation accounting.
+    #[serde(default)]
+    pub require_tracked_bytes_below: Option<u64>,
+}
+
+impl MemBudgetPolicy {
+    /// Evaluate the pre-flight (estimate) assertions. Returns the first violated
+    /// `(assertion, limit, actual)` for error reporting, or `None` if they pass.
+    /// `require_tracked_bytes_below` is checked separately at runtime.
+    pub fn check_estimates(&self, peak_avg: u64, peak_max: u64) -> Option<(&'static str, u64, u64)> {
+        if let Some(limit) = self.require_est_bytes_below
+            && peak_avg >= limit
+        {
+            return Some(("require_est_bytes_below", limit, peak_avg));
+        }
+        if let Some(limit) = self.require_est_max_bytes_below
+            && peak_max >= limit
+        {
+            return Some(("require_est_max_bytes_below", limit, peak_max));
+        }
+        None
+    }
+
+    /// The tightest byte ceiling implied by any present threshold — used to size
+    /// per-stage codec `max_memory_bytes`.
+    pub fn byte_ceiling(&self) -> Option<u64> {
+        [
+            self.require_est_bytes_below,
+            self.require_est_max_bytes_below,
+            self.require_tracked_bytes_below,
+        ]
+        .into_iter()
+        .flatten()
+        .min()
+    }
+}
+
 #[non_exhaustive]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
@@ -1141,6 +1195,13 @@ pub struct ExecutionSecurity {
     /// Default: 400 megapixels. Set to `None` to disable.
     #[serde(default)]
     pub max_total_file_pixels: Option<u64>,
+    /// Maximum threads the job may use. Bounds a rayon pool installed around
+    /// each decode/encode stage. `None` = ambient/global pool.
+    #[serde(default)]
+    pub max_threads: Option<u32>,
+    /// Optional memory-budget assertions (estimate-gated and/or tracked).
+    #[serde(default)]
+    pub mem_budget_policy: Option<MemBudgetPolicy>,
 }
 
 impl ExecutionSecurity {
@@ -1154,6 +1215,8 @@ impl ExecutionSecurity {
             max_input_file_bytes: Some(256 * 1024 * 1024),
             max_json_bytes: Some(64 * 1024 * 1024),
             max_total_file_pixels: Some(400_000_000),
+            max_threads: None,
+            mem_budget_policy: None,
         }
     }
     pub fn unspecified() -> Self {
@@ -1164,6 +1227,8 @@ impl ExecutionSecurity {
             max_input_file_bytes: None,
             max_json_bytes: None,
             max_total_file_pixels: None,
+            max_threads: None,
+            mem_budget_policy: None,
         }
     }
 }
@@ -1755,6 +1820,35 @@ impl GetImageInfo001 {
         GetImageInfo001 { io_id: 0 }
     }
 }
+
+/// Request for `v1/estimate` — predict the peak memory (and eventually time) of
+/// decoding `io_id` and optionally encoding it to `format`, WITHOUT running.
+/// Mirrors the run-path memory gate so callers can budget background work.
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct EstimateEncode001 {
+    pub io_id: i32,
+    /// Target output format to estimate the encode side for. `None` estimates
+    /// only the decode side.
+    #[serde(default)]
+    pub format: Option<OutputImageFormat>,
+}
+
+/// Result of `v1/estimate`: the modeled `max(decode_peak, encode_peak) + buffer`
+/// memory bounds — `avg` (expected) and `max` (conservative) — the same model
+/// the run-path `MemBudgetPolicy` gate enforces.
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+pub struct EncodeEstimate {
+    pub width: u32,
+    pub height: u32,
+    /// Expected (avg) peak bytes: `max(decode_est, encode_est) + exact_buffer`.
+    pub peak_avg_bytes: u64,
+    /// Conservative (max) peak bytes: `max(decode_max, encode_max) + exact_buffer`.
+    pub peak_max_bytes: u64,
+}
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema-export", derive(ToSchema))]
@@ -1944,6 +2038,8 @@ pub enum ResponsePayload {
     QueryStringSchema(json_messages::QueryStringSchema),
     #[serde(rename = "query_string_validation_results")]
     QueryStringValidationResults(json_messages::QueryStringValidationResults),
+    #[serde(rename = "encode_estimate")]
+    EncodeEstimate(EncodeEstimate),
     #[serde(rename = "none")]
     None,
 }

@@ -136,6 +136,68 @@ pub(crate) fn encode_limits_from_security(
     Some(limits)
 }
 
+/// `encode_limits_from_security`, additionally capping `max_memory_bytes` to the
+/// `MemBudgetPolicy` ceiling minus the exact `w·h·4` source buffer (the per-stage
+/// runtime backstop beneath the pre-flight estimate gate).
+pub(crate) fn encode_limits_capped(
+    security: &imageflow_types::ExecutionSecurity,
+    w: u32,
+    h: u32,
+) -> Option<zc::ResourceLimits> {
+    let mut limits = encode_limits_from_security(security);
+    if let Some(ceiling) = security.mem_budget_policy.as_ref().and_then(|p| p.byte_ceiling()) {
+        let buffer = (w as u64).saturating_mul(h as u64).saturating_mul(4);
+        let cap = ceiling.saturating_sub(buffer).max(1);
+        let l = limits.get_or_insert_with(|| zc::ResourceLimits::default());
+        l.max_memory_bytes = Some(l.max_memory_bytes.map_or(cap, |m| m.min(cap)));
+    }
+    limits
+}
+
+/// Run `f` inside a `max_threads`-sized rayon pool so the codec's internal
+/// `par_iter` is bounded to that thread count; runs on the ambient pool when
+/// unset or when pool construction fails. `f` and its return must be `Send`:
+/// only the zencodec *execution* traits are (`DynEncoder`, `DynStreamingDecoder`,
+/// `DynAnimationFrameDecoder`). `DynDecodeJob`/`DynDecoder` are NOT `Send`, so a
+/// single-frame `into_decoder().decode()` can't be bounded this way (it needs a
+/// `Send` bound on zencodec's `DynDecoder`, or the streaming-decoder path).
+pub(crate) fn run_pooled<R: Send>(max_threads: Option<u32>, f: impl FnOnce() -> R + Send) -> R {
+    match max_threads {
+        Some(n) if n >= 1 => {
+            match rayon::ThreadPoolBuilder::new().num_threads(n as usize).build() {
+                Ok(pool) => pool.install(f),
+                Err(_) => f(),
+            }
+        }
+        _ => f(),
+    }
+}
+
+/// Pre-flight memory gate for one codec stage: the codec's working-set estimate
+/// plus the EXACT BGRA frame buffer (`w·h·4`). Returns the violated
+/// `(assertion, limit, actual)` when a present `MemBudgetPolicy` estimate
+/// threshold is exceeded, else `Ok(())`. Codecs without a real estimator return
+/// `unknown()` (all `None`) → treated as a zero working set, so only the exact
+/// buffer is gated until real estimators ship. `peak = max(decode_peak,
+/// encode_peak) + buffer` is enforced by each stage checking `codec_peak +
+/// buffer` against the same policy (the peak lands at whichever stage is larger).
+pub(crate) fn check_stage_memory(
+    policy: &imageflow_types::MemBudgetPolicy,
+    codec_est: &zc::estimate::ResourceEstimate,
+    w: u32,
+    h: u32,
+) -> std::result::Result<(), (&'static str, u64, u64)> {
+    let buffer_bytes = (w as u64).saturating_mul(h as u64).saturating_mul(4);
+    let codec_avg = codec_est.peak_memory_bytes_est().unwrap_or(0);
+    let codec_max = codec_est.peak_memory_bytes_max().unwrap_or(codec_avg);
+    let peak_avg = codec_avg.saturating_add(buffer_bytes);
+    let peak_max = codec_max.saturating_add(buffer_bytes);
+    match policy.check_estimates(peak_avg, peak_max) {
+        Some(v) => Err(v),
+        None => Ok(()),
+    }
+}
+
 impl ZenDecoder {
     fn new_zencodec(
         c: &Context,
@@ -639,6 +701,43 @@ impl Decoder for ZenDecoder {
         let info = self.cached_info.as_ref().unwrap().clone();
         let source_profile = self.source_profile_from_info(&info);
         let has_alpha = info.has_alpha;
+
+        // Pre-flight decode memory gate: codec working-set estimate + decoded buffer.
+        if let Some(policy) = c.security.mem_budget_policy.as_ref() {
+            let chars = zc::estimate::ImageCharacteristics::new(
+                info.width,
+                info.height,
+                zenpixels::PixelDescriptor::BGRA8_SRGB,
+            );
+            let mut env = zc::estimate::ComputeEnvironment::new();
+            if let Some(n) = c.security.max_threads {
+                env = env.with_cores(n as usize);
+            }
+            let est = self.config.estimate_decode_resources(&chars, &env);
+            if let Err((name, limit, actual)) =
+                check_stage_memory(policy, &est, info.width, info.height)
+            {
+                return Err(nerror!(
+                    ErrorKind::ImageDecodingError,
+                    "decode memory budget {} exceeded: estimated {} bytes >= limit {} bytes",
+                    name,
+                    actual,
+                    limit
+                ));
+            }
+            // Cap the codec's runtime working set to the budget ceiling minus the
+            // exact decoded buffer (per-stage backstop beneath the estimate gate).
+            if let Some(ceiling) = policy.byte_ceiling() {
+                let buffer = (info.width as u64)
+                    .saturating_mul(info.height as u64)
+                    .saturating_mul(4);
+                let codec_cap = ceiling.saturating_sub(buffer).max(1);
+                let limits =
+                    self.resource_limits.get_or_insert_with(|| zc::ResourceLimits::default());
+                limits.max_memory_bytes =
+                    Some(limits.max_memory_bytes.map_or(codec_cap, |m| m.min(codec_cap)));
+            }
+        }
         // Request BGRA8_SRGB only — every zen codec supports it natively, so
         // the codec does the (possibly vectorized) swizzle internally and
         // writes straight into the imageflow BGRA bitmap. No RGBA/RGB/Gray
@@ -804,22 +903,28 @@ impl Decoder for ZenDecoder {
             Ok(_) => { /* sink.finish() was called by codec — swizzle done */ }
             Err(_) => {
                 // Format rejected, codec error, or buffered-decode-preferred — use into_decoder.
-                let job = self.make_job();
-                let dec = job.into_decoder(Cow::Borrowed(data), &preferred).map_err(|e| {
-                    nerror!(
-                        ErrorKind::ImageDecodingError,
-                        "{} decode error: {}",
-                        self.format.extension(),
-                        e
-                    )
-                })?;
-                let output = dec.decode().map_err(|e| {
-                    nerror!(
-                        ErrorKind::ImageDecodingError,
-                        "{} decode error: {}",
-                        self.format.extension(),
-                        e
-                    )
+                // Build the job + decoder + run decode entirely INSIDE the pool:
+                // the `!Send` DynDecodeJob/DynDecoder never cross the thread
+                // boundary (they're local to the closure); only `config`
+                // (Send+Sync), `data`, `preferred` (Send) are captured and the
+                // `DecodeOutput` (Send) is returned. Bounds the rayon-parallel
+                // decode to max_threads.
+                let ext = self.format.extension();
+                let config = &self.config;
+                let limits = self.resource_limits;
+                let stop = self.stop_token.clone();
+                let output = run_pooled(c.security.max_threads, move || {
+                    let mut job = config.dyn_job();
+                    if let Some(l) = limits {
+                        job.set_limits(l);
+                    }
+                    if let Some(s) = stop {
+                        job.set_stop(s);
+                    }
+                    job.into_decoder(Cow::Borrowed(data), &preferred)?.decode()
+                })
+                .map_err(|e| {
+                    nerror!(ErrorKind::ImageDecodingError, "{} decode error: {}", ext, e)
                 })?;
                 let ps = output.pixels();
 

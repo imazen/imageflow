@@ -9,7 +9,7 @@ use std::io::Write;
 
 use zc::encode::{DynAnimationFrameEncoder, DynEncoderConfig, EncodeOutput};
 
-use super::zen_decoder::{encode_limits_from_security, ZenDecoder};
+use super::zen_decoder::{check_stage_memory, encode_limits_capped, run_pooled, ZenDecoder};
 
 /// Encoding strategy — native JPEG path for backward compat, zencodec for everything else.
 enum EncodeMode {
@@ -62,6 +62,7 @@ impl ZenEncoder {
         quality: Option<u8>,
         progressive: Option<bool>,
         matte: Option<imageflow_types::Color>,
+        generic_quality: Option<f32>,
     ) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::ZenJpegEncoder) {
             return Err(nerror!(
@@ -70,22 +71,27 @@ impl ZenEncoder {
             ));
         }
         use zenjpeg::encoder::{ChromaSubsampling, Quality};
-        let q = quality.unwrap_or(75).min(100);
+        // A quality_profile drives the native zenjpeg encoder in SSIMULACRA2 units
+        // (Quality::ApproxSsim2, resolved through zenjpeg's ssim2->jpegli mapping);
+        // explicit callers pass a libjpeg-turbo quality via `quality`.
         // mozjpeg's evalchroma::adjust_sampling stays at 4:2:0 even at q=90 for
-        // typical content; only above ~90 does it adopt 4:4:4. Match that boundary
-        // so default-quality (q=90) JPEG output agrees byte-class with the c-codecs
-        // path. Setting the cutoff strictly > 90 (vs ≥90) covers q=90 specifically;
-        // if a future zenjpeg implements adaptive subsampling we should call into
-        // it directly instead of this static threshold.
+        // typical content; only above ~90 (≈ ssim2 85) does it adopt 4:4:4. Match
+        // that boundary so default-quality JPEG output agrees byte-class with the
+        // c-codecs path.
+        let (q_setting, full_chroma) = if let Some(gq) = generic_quality {
+            (Quality::ApproxSsim2(gq), gq > 85.0)
+        } else {
+            let q = quality.unwrap_or(75).min(100);
+            (Quality::ApproxMozjpeg(q), q > 90)
+        };
         let subsampling =
-            if q > 90 { ChromaSubsampling::None } else { ChromaSubsampling::Quarter };
+            if full_chroma { ChromaSubsampling::None } else { ChromaSubsampling::Quarter };
 
         // Use the native EncoderConfig directly (not the zencodec JpegEncoderConfig wrapper)
         // to preserve exact backward compatibility with the old ZenJpegEncoder adapter.
-        let mut config =
-            zenjpeg::encoder::EncoderConfig::ycbcr(Quality::ApproxMozjpeg(q), subsampling)
-                .auto_optimize(true)
-                .progressive(progressive.unwrap_or(true));
+        let mut config = zenjpeg::encoder::EncoderConfig::ycbcr(q_setting, subsampling)
+            .auto_optimize(true)
+            .progressive(progressive.unwrap_or(true));
 
         // Enable parallel encoding by default
         config = config.parallel(zenjpeg::encoder::ParallelEncoding::Auto);
@@ -166,6 +172,7 @@ impl ZenEncoder {
         quality: Option<f32>,
         lossless: Option<bool>,
         matte: Option<imageflow_types::Color>,
+        generic_quality: Option<f32>,
     ) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::ZenWebPEncoder) {
             return Err(nerror!(
@@ -173,9 +180,14 @@ impl ZenEncoder {
                 "The ZenWebP encoder has been disabled"
             ));
         }
+        use zc::encode::EncoderConfig as _;
         let lossless = lossless.unwrap_or(false);
         let config = if lossless {
+            // Lossless "quality" is an effort/compression knob, not perceptual, so a
+            // generic (ssim2) quality is meaningless here — keep the native value.
             zenwebp::zencodec::WebpEncoderConfig::lossless().with_quality(quality.unwrap_or(85.0))
+        } else if let Some(gq) = generic_quality {
+            zenwebp::zencodec::WebpEncoderConfig::lossy().with_generic_quality(gq)
         } else {
             zenwebp::zencodec::WebpEncoderConfig::lossy().with_quality(quality.unwrap_or(85.0))
         };
@@ -285,6 +297,7 @@ impl ZenEncoder {
         io: IoProxy,
         distance: Option<f32>,
         lossless: bool,
+        generic_quality: Option<f32>,
     ) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::ZenJxlEncoder) {
             return Err(nerror!(
@@ -295,8 +308,12 @@ impl ZenEncoder {
         use zc::encode::EncoderConfig as _;
         let config = if lossless {
             zenjxl::JxlEncoderConfig::new().with_lossless(true)
+        } else if let Some(gq) = generic_quality {
+            // quality_profile → SSIMULACRA2-unit generic quality (zenjxl calibrates
+            // it to a butteraugli distance internally).
+            zenjxl::JxlEncoderConfig::new().with_generic_quality(gq)
         } else {
-            // JXL distance 0.0-25.0 → quality 0-100 (distance = (100-q) * 0.25)
+            // Explicit distance: 0.0-25.0 → quality 0-100 (distance = (100-q) * 0.25)
             let d = distance.unwrap_or(1.0);
             let quality = (100.0 - d * 4.0).clamp(0.0, 100.0);
             zenjxl::JxlEncoderConfig::new().with_generic_quality(quality)
@@ -457,6 +474,28 @@ impl Encoder for ZenEncoder {
         let stride = window.info().t_stride() as usize;
         let slice = window.slice_mut();
 
+        // Pre-flight encode memory gate: codec working-set estimate + source buffer.
+        if let (EncodeMode::Zencodec(config), Some(policy)) =
+            (&self.mode, c.security.mem_budget_policy.as_ref())
+        {
+            let chars =
+                zc::estimate::ImageCharacteristics::new(w, h, zenpixels::PixelDescriptor::BGRA8_SRGB);
+            let mut env = zc::estimate::ComputeEnvironment::new();
+            if let Some(n) = c.security.max_threads {
+                env = env.with_cores(n as usize);
+            }
+            let est = config.estimate_encode_resources(&chars, &env);
+            if let Err((name, limit, actual)) = check_stage_memory(policy, &est, w, h) {
+                return Err(nerror!(
+                    ErrorKind::ImageEncodingError,
+                    "encode memory budget {} exceeded: estimated {} bytes >= limit {} bytes",
+                    name,
+                    actual,
+                    limit
+                ));
+            }
+        }
+
         // Create frame encoder on first call for animation-capable formats
         if self.supports_animation && self.frame_enc.is_none() {
             let config = match &self.mode {
@@ -465,7 +504,7 @@ impl Encoder for ZenEncoder {
             };
             let mut job = config.dyn_job();
             job.set_stop(zc::StopToken::new(c.cancellation_token()));
-            if let Some(limits) = encode_limits_from_security(&c.security) {
+            if let Some(limits) = encode_limits_capped(&c.security, w, h) {
                 job.set_limits(limits);
             }
 
@@ -603,7 +642,7 @@ impl Encoder for ZenEncoder {
 
         let mut job = config.dyn_job();
         job.set_stop(zc::StopToken::new(c.cancellation_token()));
-        if let Some(limits) = encode_limits_from_security(&c.security) {
+        if let Some(limits) = encode_limits_capped(&c.security, w, h) {
             job.set_limits(limits);
         }
         let encoder = job.into_encoder().map_err(|e| {
@@ -617,7 +656,8 @@ impl Encoder for ZenEncoder {
 
         let ps = zenpixels::PixelSlice::new(slice, w, h, stride, desc)
             .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "pixel slice error: {}", e))?;
-        let output = encoder.encode(ps).map_err(|e| {
+        // Bound the encoder's rayon parallelism to the job's max_threads.
+        let output = run_pooled(c.security.max_threads, move || encoder.encode(ps)).map_err(|e| {
             nerror!(
                 ErrorKind::ImageEncodingError,
                 "{} encode error: {}",

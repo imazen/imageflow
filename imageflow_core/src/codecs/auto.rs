@@ -146,6 +146,7 @@ pub(crate) fn create_encoder(
                         quality,
                         progressive,
                         matte.clone(),
+                        None,
                     )
                     .map_err(|e| e.at(here!()))?,
                 ),
@@ -308,6 +309,7 @@ pub(crate) fn create_encoder(
                         None,
                         Some(true),
                         None,
+                        None,
                     )
                     .map_err(|e| e.at(here!()))?,
                 ),
@@ -350,6 +352,7 @@ pub(crate) fn create_encoder(
                         io,
                         Some(quality),
                         Some(false),
+                        None,
                         None,
                     )
                     .map_err(|e| e.at(here!()))?,
@@ -411,21 +414,24 @@ fn create_encoder_auto(
                 if details.allow.jpeg_progressive != Some(true) {
                     progressive = false;
                 }
-                let profile_hints = details
-                    .quality_profile
-                    .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
-                let moz_quality = profile_hints
-                    .map(|hints: QualityProfileHints| hints.moz)
-                    .or(manual_quality)
-                    .unwrap_or(90.0)
-                    .clamp(0.0, 100.0) as u8;
+                // No explicit quality hint → drive the encoder in SSIMULACRA2 units
+                // from the quality_profile (generic quality); an explicit
+                // encoder_hints.jpeg.quality stays a native libjpeg-turbo value.
+                let (native_quality, generic_quality) = match manual_quality {
+                    Some(q) => (Some(q.clamp(0.0, 100.0) as u8), None),
+                    None => match details.quality_profile {
+                        Some(qp) => (None, Some(generic_quality_ssim2(&qp))),
+                        None => (Some(90), None),
+                    },
+                };
                 Box::new(
                     crate::codecs::zen_encoder::ZenEncoder::create_jpeg(
                         ctx,
                         io,
-                        Some(moz_quality),
+                        native_quality,
                         Some(progressive),
                         details.matte.clone(),
+                        generic_quality,
                     )
                     .map_err(|e| e.at(here!()))?,
                 )
@@ -468,25 +474,27 @@ fn create_encoder_auto(
                 // Mirror create_webp_auto: encoder_hints.webp.quality > quality_profile > 80.
                 let manual_quality =
                     manual_and_default_hints.and_then(|hints| hints.quality);
-                let profile_hints = details
-                    .quality_profile
-                    .map(|qp| get_quality_hints_with_dpr(&qp, details.quality_profile_dpr));
-                let quality = if !lossless {
-                    profile_hints
-                        .map(|hints: QualityProfileHints| hints.webp)
-                        .or(manual_quality)
-                        .unwrap_or(80.0)
-                        .clamp(0.0, 100.0)
+                // No explicit quality hint → drive zenwebp's generic-quality knob in
+                // SSIMULACRA2 units from the quality_profile; an explicit
+                // encoder_hints.webp.quality stays a native WebP value. Lossless
+                // ignores quality entirely.
+                let (native_quality, generic_quality) = if lossless {
+                    (Some(80.0), None)
+                } else if let Some(q) = manual_quality {
+                    (Some(q.clamp(0.0, 100.0)), None)
+                } else if let Some(qp) = details.quality_profile {
+                    (None, Some(generic_quality_ssim2(&qp)))
                 } else {
-                    80.0 // ignored by lossless encoder
+                    (Some(80.0), None)
                 };
                 Box::new(
                     crate::codecs::zen_encoder::ZenEncoder::create_webp(
                         ctx,
                         io,
-                        Some(quality),
+                        native_quality,
                         Some(lossless),
                         None,
+                        generic_quality,
                     )
                     .map_err(|e| e.at(here!()))?,
                 )
@@ -502,11 +510,18 @@ fn create_encoder_auto(
         OutputImageFormat::Jxl => {
             #[cfg(feature = "zen-codecs")]
             {
-                let distance = details.quality_profile.map(|qp| get_quality_hints(&qp).jxl);
+                let generic_quality =
+                    details.quality_profile.map(|qp| generic_quality_ssim2(&qp));
                 let lossless = details.needs_lossless.unwrap_or(false);
                 Box::new(
-                    crate::codecs::zen_encoder::ZenEncoder::create_jxl(ctx, io, distance, lossless)
-                        .map_err(|e| e.at(here!()))?,
+                    crate::codecs::zen_encoder::ZenEncoder::create_jxl(
+                        ctx,
+                        io,
+                        None,
+                        lossless,
+                        generic_quality,
+                    )
+                    .map_err(|e| e.at(here!()))?,
                 )
             }
             #[cfg(not(feature = "zen-codecs"))]

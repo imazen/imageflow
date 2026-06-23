@@ -65,6 +65,8 @@ zenresize = { version = "0.3.0", features = ["std"] }
 evalchroma = "1"
 enough = { version = "0.4", features = ["std"] }
 garb = "0.2.5"
+# Used (zen-codecs only) to bound a job's codec parallelism via a sized pool.
+rayon = { version = "1", optional = true }
 moxcms = { version = ">=0.8.1, <0.10", features = ["in_place", "options"] }
 
 # Used for schema generation if feature enabled
@@ -131,6 +133,7 @@ c-codecs = [
 ]
 # Pure Rust codecs: zenjpeg, zenpng, zenwebp, zengif, zenavif, mozjpeg-rs (no C deps)
 zen-codecs = [
+    "dep:rayon",
     "dep:zenjpeg",
     "dep:zenpng",
     "dep:zengif",
