@@ -30,8 +30,10 @@ opt-level = 2
 #  libwebp-sys = { git = "https://github.com/imazen/libwebp-sys" }
 libpng-sys = { git = "https://github.com/imazen/rust-libpng-sys" }
 lcms2-sys = { git = "https://github.com/imazen/rust-lcms2-sys", branch = "update-lcms2-2.18" }
-# CMYK plumbing: github main until zenpixels 0.2.7 / zenjpeg CMYK8 are published.
-zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main" }
+# zencodec 0.1.24 (AllocPreference + estimate_decode_resources) resolves from
+# crates.io — published 2026-06-21; the temporary local path ref is no longer needed.
+# zenpixels 0.2.14 (published — CMYK plumbing landed) resolves from crates.io;
+# its old main-patch was removed. zenjpeg github main until CMYK8 is published.
 zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
 # Local zenwebp with push_frame stride fix for strided input (imageflow
 # bitmaps are SIMD-aligned with stride > width*bpp).
