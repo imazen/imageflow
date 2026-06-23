@@ -84,6 +84,9 @@ pub struct ZenDecoder {
     resource_limits: Option<zc::ResourceLimits>,
     // Cooperative cancellation token threaded into every decode job
     stop_token: Option<zc::StopToken>,
+    // Cached max_threads-sized rayon pool, reused across animation frames so the
+    // codec's internal par_iter is bounded without re-spawning a pool per frame.
+    thread_pool: Option<rayon::ThreadPool>,
     // Image format (provides extension, mime type, animation support)
     format: ZenFormat,
     // Whether has_more_frames is known
@@ -154,22 +157,36 @@ pub(crate) fn encode_limits_capped(
     limits
 }
 
-/// Run `f` inside a `max_threads`-sized rayon pool so the codec's internal
-/// `par_iter` is bounded to that thread count; runs on the ambient pool when
-/// unset or when pool construction fails. `f` and its return must be `Send`:
-/// only the zencodec *execution* traits are (`DynEncoder`, `DynStreamingDecoder`,
-/// `DynAnimationFrameDecoder`). `DynDecodeJob`/`DynDecoder` are NOT `Send`, so a
-/// single-frame `into_decoder().decode()` can't be bounded this way (it needs a
-/// `Send` bound on zencodec's `DynDecoder`, or the streaming-decoder path).
+/// Run `f` inside a freshly-built `max_threads`-sized rayon pool so the codec's
+/// internal `par_iter` is bounded to that thread count; runs on the ambient pool
+/// when unset or when pool construction fails. `f` and its return must be `Send`.
+/// `DynDecodeJob`/`DynDecoder` are NOT `Send`, but a single-frame decode is still
+/// bounded here by BUILDING the job+decoder *inside* `f`, so only the `Send`
+/// config/data/output cross the pool boundary. For repeated calls (animation
+/// frames) cache the pool with `build_pool` + `install_pooled` instead, so it is
+/// spawned once rather than per frame.
 pub(crate) fn run_pooled<R: Send>(max_threads: Option<u32>, f: impl FnOnce() -> R + Send) -> R {
+    install_pooled(&build_pool(max_threads), f)
+}
+
+/// Build a `max_threads`-sized rayon pool (`None` ⇒ use the ambient pool). Cache
+/// the result and reuse it via `install_pooled` across many calls — e.g. per-frame
+/// animation decode/encode — so the pool is spawned once, not per call.
+pub(crate) fn build_pool(max_threads: Option<u32>) -> Option<rayon::ThreadPool> {
     match max_threads {
-        Some(n) if n >= 1 => {
-            match rayon::ThreadPoolBuilder::new().num_threads(n as usize).build() {
-                Ok(pool) => pool.install(f),
-                Err(_) => f(),
-            }
-        }
-        _ => f(),
+        Some(n) if n >= 1 => rayon::ThreadPoolBuilder::new().num_threads(n as usize).build().ok(),
+        _ => None,
+    }
+}
+
+/// Run `f` on `pool` if present, else on the ambient pool. `f`/`R` must be `Send`.
+pub(crate) fn install_pooled<R: Send>(
+    pool: &Option<rayon::ThreadPool>,
+    f: impl FnOnce() -> R + Send,
+) -> R {
+    match pool {
+        Some(p) => p.install(f),
+        None => f(),
     }
 }
 
@@ -219,6 +236,7 @@ impl ZenDecoder {
             ignore_color_profile_errors: false,
             resource_limits: decode_limits_from_security(&c.security),
             stop_token: Some(zc::StopToken::new(c.cancellation_token())),
+            thread_pool: build_pool(c.security.max_threads),
             format,
             has_more: None,
             target_frame: None,
@@ -783,9 +801,10 @@ impl Decoder for ZenDecoder {
             let frame = if let Some(f) = self.peeked_frame.take() {
                 Some(f)
             } else {
-                frame_dec.render_next_frame_owned(None).map_err(|e| {
-                    nerror!(ErrorKind::ImageDecodingError, "frame decode error: {}", e)
-                })?
+                install_pooled(&self.thread_pool, move || frame_dec.render_next_frame_owned(None))
+                    .map_err(|e| {
+                        nerror!(ErrorKind::ImageDecodingError, "frame decode error: {}", e)
+                    })?
             };
 
             let frame = frame
@@ -841,7 +860,9 @@ impl Decoder for ZenDecoder {
                 self.has_more = Some(false);
             } else {
                 let frame_dec = self.frame_dec.as_mut().unwrap();
-                match frame_dec.render_next_frame_owned(None) {
+                match install_pooled(&self.thread_pool, move || {
+                    frame_dec.render_next_frame_owned(None)
+                }) {
                     Ok(Some(next)) => {
                         self.peeked_frame = Some(next);
                         self.has_more = Some(true);

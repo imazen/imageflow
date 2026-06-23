@@ -1136,8 +1136,11 @@ pub struct MemBudgetPolicy {
     /// bytes are below this. Pre-flight.
     #[serde(default)]
     pub require_est_max_bytes_below: Option<u64>,
-    /// Abort during the run if live *tracked* bytes reach this. Runtime; relies
-    /// on allocation accounting.
+    /// Keep live *tracked* bytes below this. Until continuous allocation
+    /// accounting lands, enforced as (a) a pre-flight reject when the conservative
+    /// (max) estimate exceeds it, and (b) a per-stage codec `max_memory_bytes` cap
+    /// (`byte_ceiling`) with fallible allocation as the runtime backstop. The
+    /// continuous live-accounting abort lands with the memory-accounting overhaul.
     #[serde(default)]
     pub require_tracked_bytes_below: Option<u64>,
 }
@@ -1145,7 +1148,6 @@ pub struct MemBudgetPolicy {
 impl MemBudgetPolicy {
     /// Evaluate the pre-flight (estimate) assertions. Returns the first violated
     /// `(assertion, limit, actual)` for error reporting, or `None` if they pass.
-    /// `require_tracked_bytes_below` is checked separately at runtime.
     pub fn check_estimates(&self, peak_avg: u64, peak_max: u64) -> Option<(&'static str, u64, u64)> {
         if let Some(limit) = self.require_est_bytes_below
             && peak_avg >= limit
@@ -1156,6 +1158,14 @@ impl MemBudgetPolicy {
             && peak_max >= limit
         {
             return Some(("require_est_max_bytes_below", limit, peak_max));
+        }
+        // No continuous live-allocation accounting yet, so the conservative (max)
+        // estimate is the best available pre-flight proxy for a tracked-bytes
+        // budget; the per-stage codec cap (byte_ceiling) backstops at runtime.
+        if let Some(limit) = self.require_tracked_bytes_below
+            && peak_max >= limit
+        {
+            return Some(("require_tracked_bytes_below", limit, peak_max));
         }
         None
     }

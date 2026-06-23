@@ -9,7 +9,9 @@ use std::io::Write;
 
 use zc::encode::{DynAnimationFrameEncoder, DynEncoderConfig, EncodeOutput};
 
-use super::zen_decoder::{check_stage_memory, encode_limits_capped, run_pooled, ZenDecoder};
+use super::zen_decoder::{
+    build_pool, check_stage_memory, encode_limits_capped, install_pooled, run_pooled, ZenDecoder,
+};
 
 /// Encoding strategy — native JPEG path for backward compat, zencodec for everything else.
 enum EncodeMode {
@@ -34,6 +36,9 @@ pub struct ZenEncoder {
     // Format metadata
     preferred_extension: &'static str,
     preferred_mime_type: &'static str,
+    // Cached max_threads-sized rayon pool, reused across animation frames + finish
+    // so the codec's par_iter is bounded without re-spawning a pool per frame.
+    thread_pool: Option<rayon::ThreadPool>,
 }
 
 impl ZenEncoder {
@@ -53,6 +58,7 @@ impl ZenEncoder {
             supports_animation,
             preferred_extension,
             preferred_mime_type,
+            thread_pool: None,
         }
     }
 
@@ -109,6 +115,7 @@ impl ZenEncoder {
             supports_animation: false,
             preferred_extension: "jpg",
             preferred_mime_type: "image/jpeg",
+            thread_pool: None,
         })
     }
 
@@ -163,6 +170,7 @@ impl ZenEncoder {
             supports_animation: false,
             preferred_extension: "jpg",
             preferred_mime_type: "image/jpeg",
+            thread_pool: None,
         })
     }
 
@@ -531,6 +539,9 @@ impl Encoder for ZenEncoder {
             })?;
 
             self.frame_enc = Some(frame_enc);
+            // Bound this format's per-frame par_iter to max_threads — spawned once
+            // and reused for every push_frame + the final finish().
+            self.thread_pool = build_pool(c.security.max_threads);
         }
 
         // Animation frame path.
@@ -592,14 +603,15 @@ impl Encoder for ZenEncoder {
             let ps = zenpixels::PixelSlice::new(slice, w, h, stride, desc)
                 .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "pixel slice error: {}", e))?;
 
-            frame_enc.push_frame(ps, delay_ms, None).map_err(|e| {
-                nerror!(
-                    ErrorKind::ImageEncodingError,
-                    "{} frame encode error: {}",
-                    self.preferred_extension,
-                    e
-                )
-            })?;
+            install_pooled(&self.thread_pool, move || frame_enc.push_frame(ps, delay_ms, None))
+                .map_err(|e| {
+                    nerror!(
+                        ErrorKind::ImageEncodingError,
+                        "{} frame encode error: {}",
+                        self.preferred_extension,
+                        e
+                    )
+                })?;
 
             return Ok(EncodeResult {
                 w: w as i32,
@@ -680,14 +692,15 @@ impl Encoder for ZenEncoder {
 
     fn into_io(self: Box<Self>) -> Result<IoProxy> {
         if let Some(frame_enc) = self.frame_enc {
-            let output = frame_enc.finish(None).map_err(|e| {
-                nerror!(
-                    ErrorKind::ImageEncodingError,
-                    "{} finish error: {}",
-                    self.preferred_extension,
-                    e
-                )
-            })?;
+            let output = install_pooled(&self.thread_pool, move || frame_enc.finish(None))
+                .map_err(|e| {
+                    nerror!(
+                        ErrorKind::ImageEncodingError,
+                        "{} finish error: {}",
+                        self.preferred_extension,
+                        e
+                    )
+                })?;
             let mut io = self.io;
             Self::write_output(&mut io, output)?;
             Ok(io)
