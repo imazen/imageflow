@@ -14,6 +14,9 @@ use zc::decode::{DecodeRowSink, DynAnimationFrameDecoder, DynDecoderConfig, Sink
 use zc::ImageFormat as ZenFormat;
 use zc::ImageInfo as ZenImageInfo;
 use zc::OwnedAnimationFrame;
+use zc::StopToken;
+// Bare `Stop` / `StopToken` to thread per-call cancellation without qualification noise.
+use enough::Stop;
 
 /// Fallback CMYK ICC profile used when a CMYK JPEG has no embedded profile.
 /// Same profile used by the mozjpeg (C) decoder path for consistent output.
@@ -83,7 +86,7 @@ pub struct ZenDecoder {
     // Resource limits for decode jobs
     resource_limits: Option<zc::ResourceLimits>,
     // Cooperative cancellation token threaded into every decode job
-    stop_token: Option<zc::StopToken>,
+    stop_token: Option<StopToken>,
     // Cached max_threads-sized rayon pool, reused across animation frames so the
     // codec's internal par_iter is bounded without re-spawning a pool per frame.
     thread_pool: Option<rayon::ThreadPool>,
@@ -235,7 +238,7 @@ impl ZenDecoder {
             ignore_color_profile: false,
             ignore_color_profile_errors: false,
             resource_limits: decode_limits_from_security(&c.security),
-            stop_token: Some(zc::StopToken::new(c.cancellation_token())),
+            stop_token: Some(StopToken::new(c.cancellation_token())),
             thread_pool: build_pool(c.security.max_threads),
             format,
             has_more: None,
@@ -815,10 +818,16 @@ impl Decoder for ZenDecoder {
             let frame = if let Some(f) = self.peeked_frame.take() {
                 Some(f)
             } else {
-                install_pooled(&self.thread_pool, move || frame_dec.render_next_frame_owned(None))
-                    .map_err(|e| {
-                        nerror!(ErrorKind::ImageDecodingError, "frame decode error: {}", e)
-                    })?
+                // Thread the per-call stop: the animation frame decoders for
+                // GIF/WebP/AVIF drop the job stop and honor ONLY this argument,
+                // so passing None here leaves animated decode uncancellable.
+                let stop = c.cancellation_token();
+                install_pooled(&self.thread_pool, move || {
+                    frame_dec.render_next_frame_owned(Some(&stop as &dyn Stop))
+                })
+                .map_err(|e| {
+                    nerror!(ErrorKind::ImageDecodingError, "frame decode error: {}", e)
+                })?
             };
 
             let frame = frame
@@ -874,8 +883,9 @@ impl Decoder for ZenDecoder {
                 self.has_more = Some(false);
             } else {
                 let frame_dec = self.frame_dec.as_mut().unwrap();
+                let stop = c.cancellation_token();
                 match install_pooled(&self.thread_pool, move || {
-                    frame_dec.render_next_frame_owned(None)
+                    frame_dec.render_next_frame_owned(Some(&stop as &dyn Stop))
                 }) {
                     Ok(Some(next)) => {
                         self.peeked_frame = Some(next);

@@ -8,6 +8,9 @@ use imageflow_types::PixelFormat;
 use std::io::Write;
 
 use zc::encode::{DynAnimationFrameEncoder, DynEncoderConfig, EncodeOutput};
+use zc::StopToken;
+// Bare `Stop` / `StopToken` to thread per-call cancellation without qualification noise.
+use enough::Stop;
 
 use super::zen_decoder::{
     build_pool, check_stage_memory, encode_limits_capped, install_pooled, run_pooled, ZenDecoder,
@@ -39,6 +42,9 @@ pub struct ZenEncoder {
     // Cached max_threads-sized rayon pool, reused across animation frames + finish
     // so the codec's par_iter is bounded without re-spawning a pool per frame.
     thread_pool: Option<rayon::ThreadPool>,
+    // Cancellation token persisted at animation-encoder setup so the final
+    // finish() (in into_io, which has no Context) still honors cancellation.
+    stop_token: Option<StopToken>,
 }
 
 impl ZenEncoder {
@@ -59,6 +65,7 @@ impl ZenEncoder {
             preferred_extension,
             preferred_mime_type,
             thread_pool: None,
+            stop_token: None,
         }
     }
 
@@ -116,6 +123,7 @@ impl ZenEncoder {
             preferred_extension: "jpg",
             preferred_mime_type: "image/jpeg",
             thread_pool: None,
+            stop_token: None,
         })
     }
 
@@ -171,6 +179,7 @@ impl ZenEncoder {
             preferred_extension: "jpg",
             preferred_mime_type: "image/jpeg",
             thread_pool: None,
+            stop_token: None,
         })
     }
 
@@ -511,7 +520,7 @@ impl Encoder for ZenEncoder {
                 _ => unreachable!(),
             };
             let mut job = config.dyn_job();
-            job.set_stop(zc::StopToken::new(c.cancellation_token()));
+            job.set_stop(StopToken::new(c.cancellation_token()));
             if let Some(limits) = encode_limits_capped(&c.security, w, h) {
                 job.set_limits(limits);
             }
@@ -542,6 +551,9 @@ impl Encoder for ZenEncoder {
             // Bound this format's per-frame par_iter to max_threads — spawned once
             // and reused for every push_frame + the final finish().
             self.thread_pool = build_pool(c.security.max_threads);
+            // Persist a cancellation token so finish() (into_io has no Context)
+            // can still honor cancellation, mirroring the per-frame push below.
+            self.stop_token = Some(StopToken::new(c.cancellation_token()));
         }
 
         // Animation frame path.
@@ -603,15 +615,21 @@ impl Encoder for ZenEncoder {
             let ps = zenpixels::PixelSlice::new(slice, w, h, stride, desc)
                 .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "pixel slice error: {}", e))?;
 
-            install_pooled(&self.thread_pool, move || frame_enc.push_frame(ps, delay_ms, None))
-                .map_err(|e| {
-                    nerror!(
-                        ErrorKind::ImageEncodingError,
-                        "{} frame encode error: {}",
-                        self.preferred_extension,
-                        e
-                    )
-                })?;
+            // Thread the per-call stop: animation frame encoders honor only this
+            // argument, not the job stop, so None would leave animated encode
+            // uncancellable.
+            let stop = c.cancellation_token();
+            install_pooled(&self.thread_pool, move || {
+                frame_enc.push_frame(ps, delay_ms, Some(&stop as &dyn Stop))
+            })
+            .map_err(|e| {
+                nerror!(
+                    ErrorKind::ImageEncodingError,
+                    "{} frame encode error: {}",
+                    self.preferred_extension,
+                    e
+                )
+            })?;
 
             return Ok(EncodeResult {
                 w: w as i32,
@@ -653,7 +671,7 @@ impl Encoder for ZenEncoder {
         };
 
         let mut job = config.dyn_job();
-        job.set_stop(zc::StopToken::new(c.cancellation_token()));
+        job.set_stop(StopToken::new(c.cancellation_token()));
         if let Some(limits) = encode_limits_capped(&c.security, w, h) {
             job.set_limits(limits);
         }
@@ -692,15 +710,20 @@ impl Encoder for ZenEncoder {
 
     fn into_io(self: Box<Self>) -> Result<IoProxy> {
         if let Some(frame_enc) = self.frame_enc {
-            let output = install_pooled(&self.thread_pool, move || frame_enc.finish(None))
-                .map_err(|e| {
-                    nerror!(
-                        ErrorKind::ImageEncodingError,
-                        "{} finish error: {}",
-                        self.preferred_extension,
-                        e
-                    )
-                })?;
+            // Persisted at setup (into_io has no Context); honored by codecs that
+            // check the per-call stop during the final flush/encode.
+            let stop = self.stop_token.clone();
+            let output = install_pooled(&self.thread_pool, move || {
+                frame_enc.finish(stop.as_ref().map(|s| s as &dyn Stop))
+            })
+            .map_err(|e| {
+                nerror!(
+                    ErrorKind::ImageEncodingError,
+                    "{} finish error: {}",
+                    self.preferred_extension,
+                    e
+                )
+            })?;
             let mut io = self.io;
             Self::write_output(&mut io, output)?;
             Ok(io)

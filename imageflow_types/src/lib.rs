@@ -1170,17 +1170,21 @@ impl MemBudgetPolicy {
         None
     }
 
-    /// The tightest byte ceiling implied by any present threshold — used to size
-    /// per-stage codec `max_memory_bytes`.
+    /// The tightest byte ceiling implied by the **conservative** thresholds
+    /// (`require_est_max_bytes_below`, `require_tracked_bytes_below`) — used to
+    /// size per-stage codec `max_memory_bytes`.
+    ///
+    /// Deliberately EXCLUDES `require_est_bytes_below`: that is a soft pre-flight
+    /// check on the *avg/expected* estimate (see [`check_estimates`](Self::check_estimates)),
+    /// not a hard runtime ceiling. Folding it in here would turn an advisory
+    /// avg-gate into a hard `max_memory_bytes` cap and OOM-reject jobs whose
+    /// actual working set exceeds the avg threshold even though their expected
+    /// peak passed pre-flight.
     pub fn byte_ceiling(&self) -> Option<u64> {
-        [
-            self.require_est_bytes_below,
-            self.require_est_max_bytes_below,
-            self.require_tracked_bytes_below,
-        ]
-        .into_iter()
-        .flatten()
-        .min()
+        [self.require_est_max_bytes_below, self.require_tracked_bytes_below]
+            .into_iter()
+            .flatten()
+            .min()
     }
 }
 
@@ -2472,6 +2476,72 @@ mod key_casing {
 #[test]
 fn test_file_macro_for_this_build() {
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
+}
+
+#[test]
+fn byte_ceiling_excludes_soft_avg_threshold() {
+    // byte_ceiling sizes the HARD runtime max_memory_bytes cap, so it must use
+    // only the conservative thresholds. require_est_bytes_below is a soft
+    // pre-flight avg gate and must NOT lower the runtime ceiling — else a job
+    // that passes pre-flight gets OOM-rejected mid-flight.
+    let avg_only = MemBudgetPolicy {
+        require_est_bytes_below: Some(1000),
+        ..Default::default()
+    };
+    assert_eq!(
+        avg_only.byte_ceiling(),
+        None,
+        "a soft avg threshold alone must not impose a runtime ceiling"
+    );
+
+    let max_only = MemBudgetPolicy {
+        require_est_max_bytes_below: Some(2000),
+        ..Default::default()
+    };
+    assert_eq!(max_only.byte_ceiling(), Some(2000));
+
+    let tracked_only = MemBudgetPolicy {
+        require_tracked_bytes_below: Some(3000),
+        ..Default::default()
+    };
+    assert_eq!(tracked_only.byte_ceiling(), Some(3000));
+
+    // All three set: the ceiling is the min of the two CONSERVATIVE ones; the
+    // (smaller) avg threshold is ignored.
+    let all = MemBudgetPolicy {
+        require_est_bytes_below: Some(500),
+        require_est_max_bytes_below: Some(2500),
+        require_tracked_bytes_below: Some(2000),
+        ..Default::default()
+    };
+    assert_eq!(
+        all.byte_ceiling(),
+        Some(2000),
+        "avg threshold (500) must not lower the ceiling below the conservative min (2000)"
+    );
+}
+
+#[test]
+fn check_estimates_gates_on_the_right_metric() {
+    // avg threshold checks peak_avg; the two conservative ones check peak_max.
+    // Rejection is on >= (reject-when-equal).
+    let p = MemBudgetPolicy {
+        require_est_bytes_below: Some(100),
+        require_est_max_bytes_below: Some(200),
+        require_tracked_bytes_below: Some(200),
+        ..Default::default()
+    };
+    assert_eq!(p.check_estimates(99, 199), None, "both under the limits -> pass");
+    assert_eq!(
+        p.check_estimates(100, 199).map(|(n, ..)| n),
+        Some("require_est_bytes_below"),
+        "avg AT the limit rejects on the avg metric"
+    );
+    assert_eq!(
+        p.check_estimates(99, 200).map(|(n, ..)| n),
+        Some("require_est_max_bytes_below"),
+        "max AT the limit rejects on the conservative metric, not the avg one"
+    );
 }
 
 // mod try_nested_mut{
