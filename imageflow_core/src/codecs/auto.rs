@@ -632,18 +632,42 @@ fn approximate_quality_profile(qp: Option<QualityProfile>) -> f32 {
     }
 }
 
-/// Single anchor table approximating the libjpeg-turbo / mozjpeg quality dial
-/// (0–100, the unit imageflow's `quality_profile` is expressed in) to an
-/// SSIMULACRA2 score (0–100). Distilled from the per-profile (p, ssim2) columns
-/// of [`QUALITY_HINTS`]. Lets a `quality_profile` drive zencodec's
-/// codec-agnostic `with_generic_quality` knob in ssim2 units — the first step
-/// toward expressing quality in metric units (ssim2/zensim) instead of a raw
-/// per-codec dial.
+/// **Measured** libjpeg-turbo quality (0–100, the unit imageflow's `quality_profile`
+/// is expressed in) → SSIMULACRA2. Median over an 81,552-cell sweep — codec-corpus
+/// 502 images (CID22/clic2025/gb82/gb82-sc/imazen-26) × {64,256,1024,native≤4MP} × 24
+/// quality values × 2 encoders, scored with fast-ssim2, 2026-06-26 (see
+/// `benchmarks/jpeg-q-ssim2-2026-06-26/`). Replaces the prior hand-guessed anchors.
+/// Canonical copy: `zencodecs::quality_calibration::LIBJPEG_TURBO` (duplicated here
+/// because imageflow doesn't depend on zencodecs — keep in sync).
+///
+/// Accuracy: central estimate. SSIMULACRA2 at a fixed quality has ~±7 IQR content
+/// spread (wider at the tails). This value still feeds the `with_generic_quality`
+/// double-mapping for WebP/AVIF/JXL (TODO #728); the zenjpeg `ApproxSsim2` path
+/// (native JPEG) consumes it correctly as an ssim2 target.
 #[cfg(feature = "zen-codecs")]
 #[rustfmt::skip]
-const LIBJPEG_TURBO_Q_TO_SSIM2: [(f32, f32); 8] = [
-    (15.0, 10.0), (20.0, 30.0), (34.0, 50.0), (55.0, 60.0),
-    (73.0, 70.0), (91.0, 85.0), (96.0, 90.0), (100.0, 100.0),
+const LIBJPEG_TURBO_Q_TO_SSIM2: [(f32, f32); 24] = [
+    (5.0, -26.4), (10.0, 10.5), (15.0, 28.6), (20.0, 39.2), (25.0, 46.1), (30.0, 51.1),
+    (35.0, 55.4), (40.0, 58.1), (45.0, 60.7), (50.0, 62.9), (55.0, 64.7), (60.0, 66.4),
+    (65.0, 68.6), (70.0, 70.9), (75.0, 73.4), (80.0, 76.1), (85.0, 79.1), (88.0, 81.0),
+    (90.0, 82.5), (92.0, 83.9), (94.0, 85.5), (96.0, 86.9), (98.0, 87.8), (100.0, 88.4),
+];
+
+/// **Measured** mozjpeg+evalchroma (imageflow-2's actual JPEG encoder) quality →
+/// SSIMULACRA2, same sweep. mozjpeg tracks ~1–2 ssim2 below libjpeg-turbo through q95
+/// but reaches a higher q100 ceiling (91.9 vs 88.4) via evalchroma's content-adaptive
+/// 4:4:4, and is 15–30% more byte-efficient (largest edge at low bitrate). This is the
+/// faithful q→ssim2 for what imageflow's JPEG path actually emits; provided for a future
+/// JPEG-specific calibration (the live path currently uses the libjpeg-turbo reference
+/// dial above). Canonical copy: `zencodecs::quality_calibration::MOZJPEG_EVALCHROMA`.
+#[cfg(feature = "zen-codecs")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+const MOZJPEG_EVALCHROMA_Q_TO_SSIM2: [(f32, f32); 24] = [
+    (5.0, -37.3), (10.0, 2.0), (15.0, 22.0), (20.0, 32.9), (25.0, 41.3), (30.0, 46.8),
+    (35.0, 51.4), (40.0, 54.9), (45.0, 57.4), (50.0, 60.2), (55.0, 62.4), (60.0, 64.3),
+    (65.0, 67.0), (70.0, 69.2), (75.0, 72.3), (80.0, 75.1), (85.0, 78.0), (88.0, 80.1),
+    (90.0, 81.8), (92.0, 83.3), (94.0, 85.2), (96.0, 87.4), (98.0, 89.7), (100.0, 91.9),
 ];
 
 /// Map a libjpeg-turbo quality (0–100) to an approximate SSIMULACRA2 score via

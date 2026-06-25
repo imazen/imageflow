@@ -1,0 +1,28 @@
+[package]
+name = "jpeg-q-ssim2-cal"
+version = "0.1.0"
+edition = "2021"
+description = "Calibration sweep: libjpeg-turbo (cjpeg) vs imageflow-2 mozjpeg+evalchroma — JPEG quality dial → SSIMULACRA2, across a corpus × sizes × q grid. Emits CSV; convert to Parquet + fit in analysis."
+
+[[bin]]
+name = "sweep"
+path = "src/main.rs"
+
+[dependencies]
+# Imageflow-2's exact mozjpeg + evalchroma versions — the replica must be byte-faithful.
+mozjpeg = "=0.10.13"
+evalchroma = "=1.0.3"
+# SSIMULACRA2.
+fast-ssim2 = "0.8.2"
+# Corpus load (PNG/JPEG/etc.) + downscale.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff"] }
+rgb = "0.8"
+imgref = "1.11"
+rayon = "1"
+clap = { version = "4", features = ["derive"] }
+walkdir = "2"
+anyhow = "1"
+csv = "1"
+
+[profile.release]
+opt-level = 3
