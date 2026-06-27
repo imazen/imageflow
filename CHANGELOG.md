@@ -30,6 +30,7 @@ All notable changes to Imageflow are documented here. Format follows [Keep a Cha
 - ROADMAP.md plus README announcements for imageflow 3 and imageflow 4 (796ce1c4).
 
 ### Changed
+- JPEG quality→SSIMULACRA2 calibration is now measured, not guessed: `LIBJPEG_TURBO_Q_TO_SSIM2` (`auto.rs`) becomes a 24-anchor table fit from an 81,552-cell codec-corpus sweep (502 images × {64,256,1024,native≤4 MP} × q5–100 × libjpeg-turbo + mozjpeg/evalchroma, fast-ssim2; 2026-06-26), and a companion `MOZJPEG_EVALCHROMA_Q_TO_SSIM2` is added (unused pending JPEG-path adoption). Canonical copy + `q_to_ssim2`/`ssim2_to_q`/`q_to_bpp` helpers live in `zencodecs::quality_calibration`; provenance + per-content-class rosetta tables under `benchmarks/jpeg-q-ssim2-2026-06-26/` (07402c2e).
 - Resizer rewrite: replace ~600 lines of hand-written sRGB↔linear, premultiply, V/H filter, and canvas-composite code with `zenresize` 0.3.0's streaming API. Three compositing modes (`ReplaceSelf`, `BlendWithMatte`, `BlendWithSelf`). Net −657 lines (bc752d9f).
 - perf: close the zen-vs-mozjpeg JPEG decode gap from 2.5–3.5× → 1.08–1.18× (effectively parity) by switching JPEG to `into_decoder().decode()` (rayon-parallel fast i16 path) and correcting a CMYK swizzle bug in `copy_pixel_slice_to_bitmap` (c07b70ae).
 - perf: zero-copy JPEG decode via `decode_into` on the fast path with a safe `decode()` fallback for progressive/arithmetic/XYB/edge cases (a447668c).
@@ -42,6 +43,8 @@ All notable changes to Imageflow are documented here. Format follows [Keep a Cha
 - deps: npm bindings refresh — basic-ftp 5.2.2, axios 1.15.0, `@nestjs/core` 11.1.18 (resolves Dependabot #707–#710); lodash dropped as a transitive dep, 0 vulnerabilities (2b5d3786).
 
 ### Fixed
+- Animated WebP/AVIF decode and encode now honor cooperative cancellation — the animation frame paths previously passed no `Stop` token (`render_next_frame_owned(None)`), so a long animation job could not be interrupted mid-flight; they now thread the job's `Stop` (f8e17eb5).
+- `MemBudgetPolicy::byte_ceiling()` no longer folds the soft per-image-average threshold (`require_est_bytes_below`) into the hard runtime byte cap, which had silently turned an advisory average into a hard limit (f8e17eb5).
 - WebP auto-routing honored `lossless` but ignored `encoder_hints.webp.lossless`, so `format=webp&webp.lossless=true` silently produced lossy output on zen-only builds. Zen path now mirrors the c-codecs lossless resolution (066d6edd).
 - GIF decoder hardened against malformed inputs: bounds-checked palette indexing, frame-bounds clipping to canvas, safe background color index lookup, and disposal clipping; ships with 5 reduced fuzz artifacts and 6 robustness tests (7f319d3f).
 - `Ir4Command::parse` no longer panics on malformed URLs — `expect()` replaced with a `LayoutError::InvalidQueryString` error path; all three call sites now report the offending query (606626e3).
