@@ -10,7 +10,8 @@ fn main() {
         ctx.add_output_buffer(1).unwrap();
         let steps = vec![
             s::Node::CreateCanvas {
-                w: 1024, h: 1024,
+                w: 1024,
+                h: 1024,
                 format: s::PixelFormat::Bgra32,
                 color: s::Color::Srgb(s::ColorSrgb::Hex("FF8040FF".to_string())),
             },
@@ -29,7 +30,8 @@ fn main() {
             security: None,
             job_options: None,
             framewise: s::Framewise::Steps(steps),
-        }).unwrap();
+        })
+        .unwrap();
         ctx.take_output_buffer(1).unwrap()
     };
     eprintln!("fixture: {} bytes", jpeg.len());
@@ -50,6 +52,7 @@ fn main() {
                 s::Node::Decode { io_id: 0, commands: None },
                 // No resize — pure decode
             ]),
-        }).unwrap();
+        })
+        .unwrap();
     }
 }

@@ -405,12 +405,10 @@ fn create_encoder_auto(
                 // and details.matte. Previously this branch ignored all of them and
                 // hardcoded quality from quality_profile (defaulting to 85 vs c's 90),
                 // progressive=true, matte=None — diverging from c-codecs output.
-                let manual_and_default_hints =
-                    details.encoder_hints.and_then(|hints| hints.jpeg);
+                let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.jpeg);
                 let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
-                let mut progressive = manual_and_default_hints
-                    .and_then(|hints| hints.progressive)
-                    .unwrap_or(true);
+                let mut progressive =
+                    manual_and_default_hints.and_then(|hints| hints.progressive).unwrap_or(true);
                 if details.allow.jpeg_progressive != Some(true) {
                     progressive = false;
                 }
@@ -459,8 +457,7 @@ fn create_encoder_auto(
                 // (the c-codecs path) so `&webp.lossless=true` works on zen-only too.
                 // The original zen branch only consulted `needs_lossless`, so users
                 // setting only `webp.lossless=true` got a lossy WebP back.
-                let manual_and_default_hints =
-                    details.encoder_hints.and_then(|hints| hints.webp);
+                let manual_and_default_hints = details.encoder_hints.and_then(|hints| hints.webp);
                 let manual_lossless =
                     match manual_and_default_hints.and_then(|hints| hints.lossless) {
                         Some(s::BoolKeep::Keep) => Some(
@@ -472,8 +469,7 @@ fn create_encoder_auto(
                     };
                 let lossless = details.needs_lossless.or(manual_lossless).unwrap_or(false);
                 // Mirror create_webp_auto: encoder_hints.webp.quality > quality_profile > 80.
-                let manual_quality =
-                    manual_and_default_hints.and_then(|hints| hints.quality);
+                let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
                 // No explicit quality hint → drive zenwebp's generic-quality knob in
                 // SSIMULACRA2 units from the quality_profile; an explicit
                 // encoder_hints.webp.quality stays a native WebP value. Lossless
@@ -510,8 +506,7 @@ fn create_encoder_auto(
         OutputImageFormat::Jxl => {
             #[cfg(feature = "zen-codecs")]
             {
-                let generic_quality =
-                    details.quality_profile.map(|qp| generic_quality_ssim2(&qp));
+                let generic_quality = details.quality_profile.map(|qp| generic_quality_ssim2(&qp));
                 let lossless = details.needs_lossless.unwrap_or(false);
                 Box::new(
                     crate::codecs::zen_encoder::ZenEncoder::create_jxl(

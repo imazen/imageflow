@@ -1148,7 +1148,11 @@ pub struct MemBudgetPolicy {
 impl MemBudgetPolicy {
     /// Evaluate the pre-flight (estimate) assertions. Returns the first violated
     /// `(assertion, limit, actual)` for error reporting, or `None` if they pass.
-    pub fn check_estimates(&self, peak_avg: u64, peak_max: u64) -> Option<(&'static str, u64, u64)> {
+    pub fn check_estimates(
+        &self,
+        peak_avg: u64,
+        peak_max: u64,
+    ) -> Option<(&'static str, u64, u64)> {
         if let Some(limit) = self.require_est_bytes_below
             && peak_avg >= limit
         {
@@ -2484,26 +2488,19 @@ fn byte_ceiling_excludes_soft_avg_threshold() {
     // only the conservative thresholds. require_est_bytes_below is a soft
     // pre-flight avg gate and must NOT lower the runtime ceiling — else a job
     // that passes pre-flight gets OOM-rejected mid-flight.
-    let avg_only = MemBudgetPolicy {
-        require_est_bytes_below: Some(1000),
-        ..Default::default()
-    };
+    let avg_only = MemBudgetPolicy { require_est_bytes_below: Some(1000), ..Default::default() };
     assert_eq!(
         avg_only.byte_ceiling(),
         None,
         "a soft avg threshold alone must not impose a runtime ceiling"
     );
 
-    let max_only = MemBudgetPolicy {
-        require_est_max_bytes_below: Some(2000),
-        ..Default::default()
-    };
+    let max_only =
+        MemBudgetPolicy { require_est_max_bytes_below: Some(2000), ..Default::default() };
     assert_eq!(max_only.byte_ceiling(), Some(2000));
 
-    let tracked_only = MemBudgetPolicy {
-        require_tracked_bytes_below: Some(3000),
-        ..Default::default()
-    };
+    let tracked_only =
+        MemBudgetPolicy { require_tracked_bytes_below: Some(3000), ..Default::default() };
     assert_eq!(tracked_only.byte_ceiling(), Some(3000));
 
     // All three set: the ceiling is the min of the two CONSERVATIVE ones; the

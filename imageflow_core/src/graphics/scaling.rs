@@ -2,8 +2,7 @@ use crate::graphics::bitmaps::BitmapCompositing;
 use crate::graphics::color::{self, ColorContext, WorkingFloatspace};
 use crate::graphics::prelude::*;
 use zenresize::{
-    AlphaMode, Filter as ZenFilter, PixelDescriptor, ResizeConfig, StreamingResize,
-    SolidBackground,
+    AlphaMode, Filter as ZenFilter, PixelDescriptor, ResizeConfig, SolidBackground, StreamingResize,
 };
 
 #[derive(Copy, Clone)]
@@ -55,7 +54,14 @@ pub fn scale_and_render(
 
     match compositing {
         BitmapCompositing::ReplaceSelf => {
-            resize_to_canvas(&input, &mut cropped_canvas, info, zen_filter, linear, alpha_meaningful)?;
+            resize_to_canvas(
+                &input,
+                &mut cropped_canvas,
+                info,
+                zen_filter,
+                linear,
+                alpha_meaningful,
+            )?;
         }
         BitmapCompositing::BlendWithMatte(ref color) => {
             let bgra = color.to_bgra8().unwrap_or(rgb::alt::BGRA8 { b: 0, g: 0, r: 0, a: 0 });
@@ -93,9 +99,8 @@ fn resize_to_canvas(
     alpha_meaningful: bool,
 ) -> Result<(), FlowError> {
     let desc = pixel_desc(alpha_meaningful);
-    let mut builder = ResizeConfig::builder(input.w(), input.h(), info.w, info.h)
-        .filter(filter)
-        .format(desc);
+    let mut builder =
+        ResizeConfig::builder(input.w(), input.h(), info.w, info.h).filter(filter).format(desc);
     if info.sharpen_percent_goal > 0.0 {
         builder = builder.resize_sharpen(info.sharpen_percent_goal);
     }
@@ -121,9 +126,8 @@ fn resize_with_matte(
     matte: rgb::alt::BGRA8,
 ) -> Result<(), FlowError> {
     let desc = pixel_desc(alpha_meaningful);
-    let mut builder = ResizeConfig::builder(input.w(), input.h(), info.w, info.h)
-        .filter(filter)
-        .format(desc);
+    let mut builder =
+        ResizeConfig::builder(input.w(), input.h(), info.w, info.h).filter(filter).format(desc);
     if info.sharpen_percent_goal > 0.0 {
         builder = builder.resize_sharpen(info.sharpen_percent_goal);
     }
@@ -335,4 +339,3 @@ fn map_filter(f: crate::graphics::weights::Filter) -> ZenFilter {
         Filter::LegacyIDCTFilter => ZenFilter::LegacyIDCTFilter,
     }
 }
-

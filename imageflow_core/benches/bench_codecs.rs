@@ -172,9 +172,7 @@ fn decode_only_job(fixture: &[u8]) {
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
         job_options: None,
-        framewise: s::Framewise::Steps(vec![
-            s::Node::Decode { io_id: 0, commands: None },
-        ]),
+        framewise: s::Framewise::Steps(vec![s::Node::Decode { io_id: 0, commands: None }]),
     };
     ctx.execute_1(execute).unwrap();
 }
@@ -187,9 +185,7 @@ fn decode_with_config(fixture: &[u8], preferred: NamedDecoders, disable: &[Named
         graph_recording: Some(s::Build001GraphRecording::off()),
         security: None,
         job_options: None,
-        framewise: s::Framewise::Steps(vec![
-            s::Node::Decode { io_id: 0, commands: None },
-        ]),
+        framewise: s::Framewise::Steps(vec![s::Node::Decode { io_id: 0, commands: None }]),
     };
     ctx.execute_1(execute).unwrap();
 }

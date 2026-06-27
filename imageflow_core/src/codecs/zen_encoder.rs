@@ -495,8 +495,11 @@ impl Encoder for ZenEncoder {
         if let (EncodeMode::Zencodec(config), Some(policy)) =
             (&self.mode, c.security.mem_budget_policy.as_ref())
         {
-            let chars =
-                zc::estimate::ImageCharacteristics::new(w, h, zenpixels::PixelDescriptor::BGRA8_SRGB);
+            let chars = zc::estimate::ImageCharacteristics::new(
+                w,
+                h,
+                zenpixels::PixelDescriptor::BGRA8_SRGB,
+            );
             let mut env = zc::estimate::ComputeEnvironment::new();
             if let Some(n) = c.security.max_threads {
                 env = env.with_cores(n as usize);
@@ -576,15 +579,13 @@ impl Encoder for ZenEncoder {
                 EncodeMode::Zencodec(config) => config,
                 _ => unreachable!(),
             };
-            let use_bgra = config
-                .supported_descriptors()
-                .contains(&zenpixels::PixelDescriptor::BGRA8_SRGB);
+            let use_bgra =
+                config.supported_descriptors().contains(&zenpixels::PixelDescriptor::BGRA8_SRGB);
             let needs_alpha_fill = make_opaque && config.capabilities().native_alpha();
             let desc = if use_bgra {
                 if needs_alpha_fill {
-                    let _ = garb::bytes::fill_alpha_bgra_strided(
-                        slice, w as usize, h as usize, stride,
-                    );
+                    let _ =
+                        garb::bytes::fill_alpha_bgra_strided(slice, w as usize, h as usize, stride);
                 }
                 zenpixels::PixelDescriptor::BGRA8_SRGB
             } else {
@@ -592,9 +593,8 @@ impl Encoder for ZenEncoder {
                     slice, w as usize, h as usize, stride,
                 );
                 if needs_alpha_fill {
-                    let _ = garb::bytes::fill_alpha_rgba_strided(
-                        slice, w as usize, h as usize, stride,
-                    );
+                    let _ =
+                        garb::bytes::fill_alpha_rgba_strided(slice, w as usize, h as usize, stride);
                 }
                 zenpixels::PixelDescriptor::RGBA8_SRGB
             };
@@ -647,25 +647,19 @@ impl Encoder for ZenEncoder {
             EncodeMode::Zencodec(config) => config,
             EncodeMode::NativeJpeg { .. } => unreachable!(),
         };
-        let use_bgra = config
-            .supported_descriptors()
-            .contains(&zenpixels::PixelDescriptor::BGRA8_SRGB);
+        let use_bgra =
+            config.supported_descriptors().contains(&zenpixels::PixelDescriptor::BGRA8_SRGB);
         let needs_alpha_fill = make_opaque && config.capabilities().native_alpha();
         let desc = if use_bgra {
             if needs_alpha_fill {
-                let _ = garb::bytes::fill_alpha_bgra_strided(
-                    slice, w as usize, h as usize, stride,
-                );
+                let _ = garb::bytes::fill_alpha_bgra_strided(slice, w as usize, h as usize, stride);
             }
             zenpixels::PixelDescriptor::BGRA8_SRGB
         } else {
-            let _ = garb::bytes::bgra_to_rgba_inplace_strided(
-                slice, w as usize, h as usize, stride,
-            );
+            let _ =
+                garb::bytes::bgra_to_rgba_inplace_strided(slice, w as usize, h as usize, stride);
             if needs_alpha_fill {
-                let _ = garb::bytes::fill_alpha_rgba_strided(
-                    slice, w as usize, h as usize, stride,
-                );
+                let _ = garb::bytes::fill_alpha_rgba_strided(slice, w as usize, h as usize, stride);
             }
             zenpixels::PixelDescriptor::RGBA8_SRGB
         };
@@ -687,14 +681,15 @@ impl Encoder for ZenEncoder {
         let ps = zenpixels::PixelSlice::new(slice, w, h, stride, desc)
             .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "pixel slice error: {}", e))?;
         // Bound the encoder's rayon parallelism to the job's max_threads.
-        let output = run_pooled(c.security.max_threads, move || encoder.encode(ps)).map_err(|e| {
-            nerror!(
-                ErrorKind::ImageEncodingError,
-                "{} encode error: {}",
-                self.preferred_extension,
-                e
-            )
-        })?;
+        let output =
+            run_pooled(c.security.max_threads, move || encoder.encode(ps)).map_err(|e| {
+                nerror!(
+                    ErrorKind::ImageEncodingError,
+                    "{} encode error: {}",
+                    self.preferred_extension,
+                    e
+                )
+            })?;
 
         Self::write_output(&mut self.io, output)?;
 
