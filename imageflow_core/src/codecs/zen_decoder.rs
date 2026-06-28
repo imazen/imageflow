@@ -352,11 +352,10 @@ impl ZenDecoder {
                 job.set_stop(stop.clone());
             }
             let info = job.probe(data).map_err(|e| {
-                nerror!(
+                FlowError::from_codec_error(
                     ErrorKind::ImageDecodingError,
-                    "{} probe error: {}",
-                    self.format.extension(),
-                    e
+                    &format!("{} probe", self.format.extension()),
+                    &*e,
                 )
             })?;
             self.cached_info = Some(info);
@@ -800,11 +799,10 @@ impl Decoder for ZenDecoder {
                 let frame_dec = job
                     .into_animation_frame_decoder(Cow::Owned(data), &preferred)
                     .map_err(|e| {
-                        nerror!(
+                        FlowError::from_codec_error(
                             ErrorKind::ImageDecodingError,
-                            "{} frame decoder error: {}",
-                            self.format.extension(),
-                            e
+                            &format!("{} frame decoder", self.format.extension()),
+                            &*e,
                         )
                     })?;
                 self.loop_count = frame_dec.loop_count();
@@ -824,7 +822,9 @@ impl Decoder for ZenDecoder {
                 install_pooled(&self.thread_pool, move || {
                     frame_dec.render_next_frame_owned(Some(&stop as &dyn Stop))
                 })
-                .map_err(|e| nerror!(ErrorKind::ImageDecodingError, "frame decode error: {}", e))?
+                .map_err(|e| {
+                    FlowError::from_codec_error(ErrorKind::ImageDecodingError, "frame decode", &*e)
+                })?
             };
 
             let frame = frame
@@ -965,7 +965,11 @@ impl Decoder for ZenDecoder {
                     job.into_decoder(Cow::Borrowed(data), &preferred)?.decode()
                 })
                 .map_err(|e| {
-                    nerror!(ErrorKind::ImageDecodingError, "{} decode error: {}", ext, e)
+                    FlowError::from_codec_error(
+                        ErrorKind::ImageDecodingError,
+                        &format!("{ext} decode"),
+                        &*e,
+                    )
                 })?;
                 let ps = output.pixels();
 

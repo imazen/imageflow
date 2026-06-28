@@ -103,6 +103,9 @@ libz-sys = { version = "1", features = ["static"], optional = true }
 
 [dev-dependencies]
 fs2 = "0.4.3"
+# Construct a real whereat At<E> in the codec-error-bridge fidelity test (same
+# version zencodec wraps its errors in). Dev-only — the bridge itself is generic.
+whereat = "0.1.5"
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
 criterion = "0.8"
 rand = "*"

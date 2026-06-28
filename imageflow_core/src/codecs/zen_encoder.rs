@@ -429,24 +429,28 @@ impl Encoder for ZenEncoder {
 
             let mut encoder =
                 config.encode_from_bytes(w as u32, h as u32, pixel_layout).map_err(|e| {
-                    nerror!(ErrorKind::ImageEncodingError, "zenjpeg config error: {}", e)
+                    FlowError::from_codec_error(ErrorKind::ImageEncodingError, "zenjpeg config", &e)
                 })?;
 
             let stop = c.stop();
             if w * window.pixel_format().bytes() == src_stride {
                 encoder.push_packed(window.get_slice(), stop).map_err(|e| {
-                    nerror!(ErrorKind::ImageEncodingError, "zenjpeg encode error: {}", e)
+                    FlowError::from_codec_error(ErrorKind::ImageEncodingError, "zenjpeg encode", &e)
                 })?;
             } else {
                 for line in window.scanlines() {
                     encoder.push_packed(line.row(), stop).map_err(|e| {
-                        nerror!(ErrorKind::ImageEncodingError, "zenjpeg encode error: {}", e)
+                        FlowError::from_codec_error(
+                            ErrorKind::ImageEncodingError,
+                            "zenjpeg encode",
+                            &e,
+                        )
                     })?;
                 }
             }
 
             let jpeg_bytes = encoder.finish().map_err(|e| {
-                nerror!(ErrorKind::ImageEncodingError, "zenjpeg finish error: {}", e)
+                FlowError::from_codec_error(ErrorKind::ImageEncodingError, "zenjpeg finish", &e)
             })?;
 
             if self.io.can_swap_output() {
@@ -542,11 +546,10 @@ impl Encoder for ZenEncoder {
             }
 
             let frame_enc = job.into_animation_frame_encoder().map_err(|e| {
-                nerror!(
+                FlowError::from_codec_error(
                     ErrorKind::ImageEncodingError,
-                    "{} frame encoder create error: {}",
-                    self.preferred_extension,
-                    e
+                    &format!("{} frame encoder create", self.preferred_extension),
+                    &*e,
                 )
             })?;
 
@@ -623,11 +626,10 @@ impl Encoder for ZenEncoder {
                 frame_enc.push_frame(ps, delay_ms, Some(&stop as &dyn Stop))
             })
             .map_err(|e| {
-                nerror!(
+                FlowError::from_codec_error(
                     ErrorKind::ImageEncodingError,
-                    "{} frame encode error: {}",
-                    self.preferred_extension,
-                    e
+                    &format!("{} frame encode", self.preferred_extension),
+                    &*e,
                 )
             })?;
 
@@ -670,11 +672,10 @@ impl Encoder for ZenEncoder {
             job.set_limits(limits);
         }
         let encoder = job.into_encoder().map_err(|e| {
-            nerror!(
+            FlowError::from_codec_error(
                 ErrorKind::ImageEncodingError,
-                "{} encoder create error: {}",
-                self.preferred_extension,
-                e
+                &format!("{} encoder create", self.preferred_extension),
+                &*e,
             )
         })?;
 
@@ -683,11 +684,10 @@ impl Encoder for ZenEncoder {
         // Bound the encoder's rayon parallelism to the job's max_threads.
         let output =
             run_pooled(c.security.max_threads, move || encoder.encode(ps)).map_err(|e| {
-                nerror!(
+                FlowError::from_codec_error(
                     ErrorKind::ImageEncodingError,
-                    "{} encode error: {}",
-                    self.preferred_extension,
-                    e
+                    &format!("{} encode", self.preferred_extension),
+                    &*e,
                 )
             })?;
 
@@ -712,11 +712,10 @@ impl Encoder for ZenEncoder {
                 frame_enc.finish(stop.as_ref().map(|s| s as &dyn Stop))
             })
             .map_err(|e| {
-                nerror!(
+                FlowError::from_codec_error(
                     ErrorKind::ImageEncodingError,
-                    "{} finish error: {}",
-                    self.preferred_extension,
-                    e
+                    &format!("{} finish", self.preferred_extension),
+                    &*e,
                 )
             })?;
             let mut io = self.io;

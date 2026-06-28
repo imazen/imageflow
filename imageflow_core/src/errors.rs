@@ -475,6 +475,49 @@ impl FlowError {
             _ => FlowError::without_location(ErrorKind::ImageDecodingError, format!("{:?}", e)),
         }
     }
+
+    /// Bridge a zencodec codec error into a `FlowError` **without losing diagnostic
+    /// information** — the whereat trace, the crate identity, and the nested source chain.
+    ///
+    /// zencodec's dyn boundary hands us a `BoxedError` (`Box<dyn Error + Send + Sync>`)
+    /// that boxes a `whereat::At<_>`. We capture, in order:
+    /// 1. the inner error's `Display` as a readable headline — `At`'s `Display` is the
+    ///    codec's human-readable message, which is what the old `nerror!("{}", e)` bridge
+    ///    kept;
+    /// 2. every nested cause, by walking [`Error::source`](::std::error::Error::source);
+    /// 3. the inner error's `Debug`, which for a `whereat::At<_>` renders the full
+    ///    captured location trace — `file:line:col` frames, frame contexts, and the crate
+    ///    info that produces the GitHub source links. That trace is precisely the part
+    ///    `At`'s `Display` (and so the old `{}` bridge) silently dropped, and it is the
+    ///    only place it survives zencodec's `Box<dyn Error>` type-erasure. For a plain
+    ///    (non-`At`) codec error this is just its own `Debug`, which is cheap.
+    ///
+    /// `#[track_caller]` additionally records the imageflow call site as the FlowError's
+    /// own stack location.
+    #[track_caller]
+    pub(crate) fn from_codec_error<E: ::std::error::Error + ?Sized>(
+        kind: ErrorKind,
+        context: &str,
+        e: &E,
+    ) -> FlowError {
+        use ::std::fmt::Write;
+        // (1) readable headline: the inner error's Display (the codec's human message).
+        let mut message = format!("{kind:?}: {context}: {e}");
+        // (2) every nested cause — At's Debug shows only the immediate error.
+        let mut source = e.source();
+        while let Some(s) = source {
+            let _ = write!(message, "\n  caused by: {s}");
+            source = s.source();
+        }
+        // (3) the full Debug — carries the whereat trace + crate info that Display drops.
+        let _ = write!(message, "\n{e:?}");
+        let loc = ::std::panic::Location::caller();
+        FlowError::without_location(kind, message).at(CodeLocation::new(
+            loc.file(),
+            loc.line(),
+            loc.column(),
+        ))
+    }
 }
 
 #[test]
@@ -511,6 +554,73 @@ fn test_flow_error_size() {
 
     print!("size_of(FlowError) = {} bytes;  ", std::mem::size_of::<FlowError>());
     assert!(std::mem::size_of::<FlowError>() < 90);
+}
+
+/// Proves `FlowError::from_codec_error` bridges a zencodec-shaped error losslessly:
+/// the whereat location trace, the nested source chain, and the readable Display
+/// headline all survive the `Box<dyn Error>` type-erasure.
+#[cfg(test)]
+mod codec_error_bridge_tests {
+    use super::*;
+
+    /// Nested cause — its Display text must survive the source-chain walk.
+    #[derive(Debug)]
+    struct InnerCause;
+    impl ::std::fmt::Display for InnerCause {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            write!(f, "inner-cause-text")
+        }
+    }
+    impl ::std::error::Error for InnerCause {}
+
+    /// Top error carrying a source, mimicking a codec error with a nested cause.
+    #[derive(Debug)]
+    struct TopError {
+        cause: InnerCause,
+    }
+    impl ::std::fmt::Display for TopError {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            write!(f, "top-error-text")
+        }
+    }
+    impl ::std::error::Error for TopError {
+        fn source(&self) -> Option<&(dyn ::std::error::Error + 'static)> {
+            Some(&self.cause)
+        }
+    }
+
+    #[test]
+    fn from_codec_error_is_lossless() {
+        // Wrap in a whereat At with trace frames exactly as zencodec does, then erase
+        // to the BoxedError shape the dyn boundary actually hands imageflow.
+        let at = ::whereat::At::wrap(TopError { cause: InnerCause }).at().at();
+        let boxed: Box<dyn ::std::error::Error + Send + Sync> = Box::new(at);
+
+        let fe = FlowError::from_codec_error(ErrorKind::ImageDecodingError, "unit probe", &*boxed);
+
+        // (1) human-readable Display headline preserved (what the old bridge kept):
+        assert!(fe.message.contains("top-error-text"), "Display headline lost: {}", fe.message);
+        // (2) nested source cause preserved via the source() walk:
+        assert!(
+            fe.message.contains("caused by: inner-cause-text"),
+            "source chain lost: {}",
+            fe.message
+        );
+        // (3) whereat trace preserved — At's Debug emits the captured frame locations,
+        //     which point at THIS file. This is the part the old `{}` bridge dropped.
+        assert!(fe.message.contains("errors.rs"), "whereat trace lost: {}", fe.message);
+        // context + kind present, and the imageflow call site was recorded:
+        assert!(fe.message.contains("unit probe"));
+        assert!(fe.message.contains("ImageDecodingError"));
+        assert!(!fe.at.is_empty(), "imageflow call-site location not recorded");
+
+        // Regression guard: the OLD bridge used `{}` (At's Display), which drops the
+        // trace. Confirm Display alone really lacks it, so this test proves the fix.
+        assert!(
+            !format!("{boxed}").contains("errors.rs"),
+            "At Display unexpectedly carried the trace; test no longer proves the fix"
+        );
+    }
 }
 
 /// Fuck the description() method. It prevents lazy-allocating solutions.
