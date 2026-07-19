@@ -27,16 +27,19 @@ just test-list         # list all test names
 just test-build        # compile-check tests without running
 ```
 
-Checksum TOML files: `imageflow_core/tests/visuals/checksums/`
-Reference images: `imageflow_core/tests/visuals/checksums/images/`
+Checksum baselines: `imageflow_core/tests/integration/visuals/*.checksums` (one line-format file
+per suite: canvas, codec, color, composition, icc, idct, orientation, scaling, trim, watermark)
+Reference images: `imageflow_core/tests/integration/visuals/images/<suite>/`
 
 ## Known Bugs
 
 ### CRITICAL — generic-quality double-mapping: ssim2 score fed into the libjpeg-turbo-quality knob (WebP/AVIF/JXL)
-*Found & source-verified 2026-06-24 (audit of the 7-day zen-codec window).* `auto.rs` passes
-`generic_quality_ssim2(qp)` — an SSIMULACRA2 **score** — into `ZenEncoder::create_{webp,avif,jxl}`
-(`auto.rs:486,514,541`), which forward it to zencodec `with_generic_quality(...)`. But that trait knob is a
-**calibrated 0–100 libjpeg-turbo quality** (`zencodec traits/encoding.rs:55`, "calibrated 0.0–100.0 scale"),
+*Found & source-verified 2026-06-24 (audit of the 7-day zen-codec window); re-verified live 2026-07-19.*
+`auto.rs` passes `generic_quality_ssim2(qp)` — an SSIMULACRA2 **score** — into
+`ZenEncoder::create_{webp,jxl,avif}` (`auto.rs:482,509,536`; the fourth `generic_quality_ssim2` call site,
+`auto.rs:421`, is the JPEG `ApproxSsim2` path, which is correct), which forward it to zencodec
+`with_generic_quality(...)`. But that trait knob is a
+**calibrated 0–100 libjpeg-turbo quality** (`zencodec 0.1.24 traits/encoding.rs:54`, "calibrated 0.0–100.0 scale"),
 which each codec re-maps via its OWN calibration (`zenwebp calibrated_webp_quality` doc: "Map generic
 quality (libjpeg-turbo scale) to WebP native quality"). So quality is mapped TWICE through mismatched units:
 imageflow does libjpeg-q→ssim2, then the codec reads that ssim2 number as libjpeg-q→native. `High` profile:
@@ -97,12 +100,6 @@ bitmap-window sink — the closure must own/move it).
   one-shot encode rebuilds a pool per call (`zen_encoder.rs:672`). Build lazily / reuse `self.thread_pool`.
 - Zero tests for the budgeting/estimate math (`check_estimates`/`byte_ceiling`/`v1/estimate`) and zero for
   mid-flight cancellation. The `>=` reject boundary and the cap interaction are untested.
-
-### RESOLVED 2026-06-24 — animated non-sRGB CMS bypass (was: color corruption)
-The 2026-06-22 animated-CMS-bypass bug is FIXED in `687d008d` and re-verified this audit: the animation
-branch now applies `cms::transform_to_srgb` per frame before returning (`zen_decoder.rs:~861`), with the same
-sRGB-skip and `ignore_color_profile`/`ignore_color_profile_errors` gating as the single-frame path, no
-double-transform, no missed frames, stride-correct. (Kept here as a resolved-record; remove on next cleanup.)
 
 ## Audit Notes (2026-06-22, "since v2.3.1-rc01" review)
 
