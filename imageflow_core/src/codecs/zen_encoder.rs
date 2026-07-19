@@ -326,8 +326,9 @@ impl ZenEncoder {
         let config = if lossless {
             zenjxl::JxlEncoderConfig::new().with_lossless(true)
         } else if let Some(gq) = generic_quality {
-            // quality_profile → SSIMULACRA2-unit generic quality (zenjxl calibrates
-            // it to a butteraugli distance internally).
+            // quality_profile → libjpeg-turbo-scale generic quality (zenjxl
+            // calibrates it to a native quality, then a butteraugli distance,
+            // internally).
             zenjxl::JxlEncoderConfig::new().with_generic_quality(gq)
         } else {
             // Explicit distance: 0.0-25.0 → quality 0-100 (distance = (100-q) * 0.25)

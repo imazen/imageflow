@@ -470,8 +470,9 @@ fn create_encoder_auto(
                 let lossless = details.needs_lossless.or(manual_lossless).unwrap_or(false);
                 // Mirror create_webp_auto: encoder_hints.webp.quality > quality_profile > 80.
                 let manual_quality = manual_and_default_hints.and_then(|hints| hints.quality);
-                // No explicit quality hint → drive zenwebp's generic-quality knob in
-                // SSIMULACRA2 units from the quality_profile; an explicit
+                // No explicit quality hint → drive zenwebp's generic-quality knob
+                // with the profile's libjpeg-turbo-scale quality (zenwebp calibrates
+                // that to a native WebP quality internally); an explicit
                 // encoder_hints.webp.quality stays a native WebP value. Lossless
                 // ignores quality entirely.
                 let (native_quality, generic_quality) = if lossless {
@@ -479,7 +480,7 @@ fn create_encoder_auto(
                 } else if let Some(q) = manual_quality {
                     (Some(q.clamp(0.0, 100.0)), None)
                 } else if let Some(qp) = details.quality_profile {
-                    (None, Some(generic_quality_ssim2(&qp)))
+                    (None, Some(zencodec_generic_quality(&qp)))
                 } else {
                     (Some(80.0), None)
                 };
@@ -506,7 +507,8 @@ fn create_encoder_auto(
         OutputImageFormat::Jxl => {
             #[cfg(feature = "zen-codecs")]
             {
-                let generic_quality = details.quality_profile.map(|qp| generic_quality_ssim2(&qp));
+                let generic_quality =
+                    details.quality_profile.map(|qp| zencodec_generic_quality(&qp));
                 let lossless = details.needs_lossless.unwrap_or(false);
                 Box::new(
                     crate::codecs::zen_encoder::ZenEncoder::create_jxl(
@@ -530,10 +532,11 @@ fn create_encoder_auto(
         OutputImageFormat::Avif => {
             #[cfg(feature = "zen-codecs")]
             {
-                // quality_profile drives zencodec's generic-quality knob in
-                // SSIMULACRA2 units (via the libjpeg-turbo→ssim2 table) rather
-                // than the raw per-codec avif column.
-                let quality = details.quality_profile.map(|qp| generic_quality_ssim2(&qp));
+                // quality_profile drives zencodec's generic-quality knob with the
+                // profile's libjpeg-turbo-scale quality (zenavif calibrates that to
+                // a native AVIF quality internally) rather than the raw per-codec
+                // avif column.
+                let quality = details.quality_profile.map(|qp| zencodec_generic_quality(&qp));
                 let speed = details.quality_profile.map(|qp| get_quality_hints(&qp).avif_s);
                 let lossless = details.needs_lossless.unwrap_or(false);
                 Box::new(
@@ -636,9 +639,11 @@ fn approximate_quality_profile(qp: Option<QualityProfile>) -> f32 {
 /// because imageflow doesn't depend on zencodecs — keep in sync).
 ///
 /// Accuracy: central estimate. SSIMULACRA2 at a fixed quality has ~±7 IQR content
-/// spread (wider at the tails). This value still feeds the `with_generic_quality`
-/// double-mapping for WebP/AVIF/JXL (TODO #728); the zenjpeg `ApproxSsim2` path
-/// (native JPEG) consumes it correctly as an ssim2 target.
+/// spread (wider at the tails). This table feeds ONLY the zenjpeg `ApproxSsim2`
+/// path (native JPEG), which consumes it as an ssim2 target; the WebP/JXL/AVIF
+/// generic-quality knob takes the libjpeg-turbo dial itself (see
+/// [`zencodec_generic_quality`] — passing the ssim2 score there was the
+/// double-mapping bug fixed 2026-07-19).
 #[cfg(feature = "zen-codecs")]
 #[rustfmt::skip]
 const LIBJPEG_TURBO_Q_TO_SSIM2: [(f32, f32); 24] = [
@@ -685,12 +690,29 @@ fn libjpeg_turbo_quality_to_ssim2(q: f32) -> f32 {
     table[table.len() - 1].1
 }
 
-/// SSIMULACRA2-unit generic quality for a `quality_profile`, for zencodec's
-/// `with_generic_quality`. Resolves the profile to its libjpeg-turbo quality,
-/// then maps it through [`LIBJPEG_TURBO_Q_TO_SSIM2`].
+/// SSIMULACRA2-unit generic quality for a `quality_profile`: resolves the
+/// profile to its libjpeg-turbo quality, then maps it through
+/// [`LIBJPEG_TURBO_Q_TO_SSIM2`]. Consumed ONLY by the zen JPEG path, whose
+/// `zenjpeg::Quality::ApproxSsim2` genuinely takes SSIMULACRA2 units.
 #[cfg(feature = "zen-codecs")]
 fn generic_quality_ssim2(qp: &QualityProfile) -> f32 {
     libjpeg_turbo_quality_to_ssim2(approximate_quality_profile(Some(*qp)))
+}
+
+/// Generic-quality value for zencodec's `with_generic_quality` knob
+/// (WebP/JXL/AVIF): the profile's libjpeg-turbo-scale quality (`p`).
+///
+/// zencodec defines the knob as a calibrated 0–100 scale, and each zen codec
+/// re-maps it through its OWN measured libjpeg-q→native table (zenwebp
+/// `calibrated_webp_quality`, zenavif `calibrated_avif_quality`, jxl-encoder
+/// `calibrated_jxl_quality` — all documented "Map generic quality
+/// (libjpeg-turbo scale) to … native quality"). Feeding the ssim2 SCORE of
+/// that quality instead double-maps through mismatched units (deflated
+/// high-q, inflated low-q). See [`generic_quality_ssim2`] for the one path
+/// (zen JPEG `ApproxSsim2`) that really wants ssim2 units.
+#[cfg(feature = "zen-codecs")]
+fn zencodec_generic_quality(qp: &QualityProfile) -> f32 {
+    approximate_quality_profile(Some(*qp))
 }
 
 fn interpolate_value(ratio: f32, a: f32, b: f32) -> f32 {
@@ -1239,4 +1261,53 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
     }
 
     None
+}
+
+#[cfg(all(test, feature = "zen-codecs"))]
+mod quality_mapping_tests {
+    use super::*;
+
+    /// zencodec's `with_generic_quality` is a libjpeg-turbo-scale 0–100 dial:
+    /// zenwebp/zenavif/zenjxl each re-map it through their own measured
+    /// libjpeg-q→native calibration tables. The WebP/JXL/AVIF arms of
+    /// `create_auto_encoder` must therefore hand the knob the profile's
+    /// libjpeg-turbo quality (`p`), NOT `generic_quality_ssim2(qp)` — the
+    /// SSIMULACRA2 *score* of that quality. Feeding the score double-maps
+    /// quality through mismatched units: High deflates (91 → ≈83.2, delivered
+    /// webp native ≈85.9 instead of ≈91.3) and low profiles inflate
+    /// (Low: 20 → 39.2), worst in the q5–q40 web range.
+    #[test]
+    fn codec_knob_gets_libjpeg_scale_quality_not_ssim2_score() {
+        assert_eq!(zencodec_generic_quality(&QualityProfile::High), 91.0);
+        assert_eq!(zencodec_generic_quality(&QualityProfile::Low), 20.0);
+        assert_eq!(zencodec_generic_quality(&QualityProfile::Medium), 55.0);
+        assert_eq!(zencodec_generic_quality(&QualityProfile::Lowest), 15.0);
+        assert_eq!(zencodec_generic_quality(&QualityProfile::Highest), 96.0);
+        // Percent profiles are already libjpeg-turbo-scale — identity on `p`.
+        assert_eq!(zencodec_generic_quality(&QualityProfile::Percent(63.0)), 63.0);
+        // Regression guard against re-introducing the double-mapping.
+        assert_ne!(
+            zencodec_generic_quality(&QualityProfile::High),
+            generic_quality_ssim2(&QualityProfile::High),
+            "generic-quality knob is being fed the ssim2 score again (double-mapping)"
+        );
+    }
+
+    /// The zen JPEG path is the one consumer that genuinely wants SSIMULACRA2
+    /// units (zenjpeg `Quality::ApproxSsim2`): profile → libjpeg-turbo q →
+    /// measured ssim2 via `LIBJPEG_TURBO_Q_TO_SSIM2`. Pin that mapping so the
+    /// two units can't silently swap.
+    #[test]
+    fn jpeg_approx_ssim2_path_stays_in_ssim2_units() {
+        // High: p=91 → interpolated between (90.0, 82.5) and (92.0, 83.9) = 83.2.
+        let high = generic_quality_ssim2(&QualityProfile::High);
+        assert!((high - 83.2).abs() < 1e-3, "ssim2(91) expected ~83.2, got {high}");
+        // Low: p=20 → exact table anchor 39.2.
+        let low = generic_quality_ssim2(&QualityProfile::Low);
+        assert!((low - 39.2).abs() < 1e-3, "ssim2(20) expected 39.2, got {low}");
+        // The ssim2 mapping is not the identity at these profiles — if these
+        // ever coincide, the units test above has lost its meaning.
+        assert_ne!(high, 91.0);
+        assert_ne!(low, 20.0);
+    }
 }

@@ -33,21 +33,22 @@ Reference images: `imageflow_core/tests/integration/visuals/images/<suite>/`
 
 ## Known Bugs
 
-### CRITICAL — generic-quality double-mapping: ssim2 score fed into the libjpeg-turbo-quality knob (WebP/AVIF/JXL)
-*Found & source-verified 2026-06-24 (audit of the 7-day zen-codec window); re-verified live 2026-07-19.*
-`auto.rs` passes `generic_quality_ssim2(qp)` — an SSIMULACRA2 **score** — into
-`ZenEncoder::create_{webp,jxl,avif}` (`auto.rs:482,509,536`; the fourth `generic_quality_ssim2` call site,
-`auto.rs:421`, is the JPEG `ApproxSsim2` path, which is correct), which forward it to zencodec
-`with_generic_quality(...)`. But that trait knob is a
-**calibrated 0–100 libjpeg-turbo quality** (`zencodec 0.1.24 traits/encoding.rs:54`, "calibrated 0.0–100.0 scale"),
-which each codec re-maps via its OWN calibration (`zenwebp calibrated_webp_quality` doc: "Map generic
-quality (libjpeg-turbo scale) to WebP native quality"). So quality is mapped TWICE through mismatched units:
-imageflow does libjpeg-q→ssim2, then the codec reads that ssim2 number as libjpeg-q→native. `High` profile:
-intended webp native ≈91.3, delivered ≈85.9 (deflated); low-q profiles inflate — worst in the q5–q40 web
-range. JPEG is CORRECT (uses `Quality::ApproxSsim2`, the genuinely-ssim2 zenjpeg API; `zen_encoder.rs:88`).
-**Fix:** pass the libjpeg-turbo quality (`approximate_quality_profile(qp)`, the `p` value) to
-`with_generic_quality` for WebP/AVIF/JXL; reserve `generic_quality_ssim2` for the JPEG `ApproxSsim2` path.
-Changes encoded output → shifts checksum baselines. This is the active form of the Delayed-TODO double-map risk.
+### FIXED (2026-07-19) — generic-quality double-mapping: ssim2 score was fed into the libjpeg-turbo-quality knob (WebP/JXL/AVIF)
+*Found & source-verified 2026-06-24; re-verified live and FIXED 2026-07-19.* `auto.rs` passed
+`generic_quality_ssim2(qp)` — an SSIMULACRA2 **score** — into `ZenEncoder::create_{webp,jxl,avif}`, which
+forward it to zencodec `with_generic_quality(...)`. That trait knob is a **calibrated 0–100 libjpeg-turbo
+quality** (`zencodec 0.1.24 traits/encoding.rs:54`), which each codec re-maps via its OWN calibration
+(zenwebp `calibrated_webp_quality`, zenavif `calibrated_avif_quality`, jxl-encoder `calibrated_jxl_quality`
+— all documented "Map generic quality (libjpeg-turbo scale) to … native quality"). Quality was mapped TWICE
+through mismatched units: `High` deflated (intended webp native ≈91.3, delivered ≈85.9); low-q profiles
+inflated — worst in the q5–q40 web range. **Fixed:** the three knob sites now pass the profile's
+libjpeg-turbo quality via `zencodec_generic_quality` (= `approximate_quality_profile`);
+`generic_quality_ssim2` is reserved for the zen JPEG path (`Quality::ApproxSsim2`, `zen_encoder.rs:88`),
+which genuinely takes ssim2 units. Unit tests `quality_mapping_tests::*` (auto.rs) pin both mappings
+(red-verified against the buggy mapping first: got 83.2 for `High`, expected 91.0). Encoded output changes
+for quality_profile-driven WebP (zen-only build) and JXL/AVIF (zen-codecs builds) — intended; no in-tree
+checksum baselines cover those paths (default CI build is c-codecs, where Jxl/Avif auto-select is disabled
+via `FEATURES_IMPLEMENTED` and the zen WebP/JPEG arms don't compile).
 
 ### FIXED (2026-06-25) — animated WebP/AVIF/GIF decode+encode were uncancellable (`None` at frame sites)
 *Found 2026-06-24, fixed 2026-06-25.* The animation frame loop passed `None` for the per-call stop at all four
@@ -94,7 +95,7 @@ bitmap-window sink — the closure must own/move it).
 - `check_estimates` `peak_max = …unwrap_or(peak_avg)` collapses the conservative gate onto the avg when a
   codec sets `est` but not `max` (`ResourceEstimate::new` does exactly that). Apply a conservatism factor or
   have codecs always set `max`.
-- `LIBJPEG_TURBO_Q_TO_SSIM2` (`auto.rs:644`) duplicates the `QUALITY_HINTS.ssim2` column verbatim — second
+- `LIBJPEG_TURBO_Q_TO_SSIM2` (`auto.rs:649`) duplicates the `QUALITY_HINTS.ssim2` column verbatim — second
   source of truth that will drift; generate one from the other.
 - Per-decode eager rayon pool (`zen_decoder.rs:239`) built even for single-frame decodes that never use it;
   one-shot encode rebuilds a pool per call (`zen_encoder.rs:672`). Build lazily / reuse `self.thread_pool`.
@@ -136,14 +137,13 @@ bitmap-window sink — the closure must own/move it).
   - **STILL UNCALIBRATED:** the `ssim2` column of `QUALITY_HINTS` (the DPR/quality-scalar math) has NO
     empirical backing. The measured tables cover **JPEG dials only** — WebP/AVIF/JXL quality→ssim2 were
     NOT swept, so the generic-quality target for those codecs is still a guess.
-  - **STILL BROKEN (the real correctness bug, tracked separately below as the double-mapping issue):**
-    auto.rs feeds an *SSIMULACRA2 score* (`generic_quality_ssim2`) into `with_generic_quality`, which
-    expects a *libjpeg-turbo 0–100 dial*. Measured-vs-guessed values don't fix the type confusion. JPEG
-    is correct (uses `Quality::ApproxSsim2`); the zen-only codecs (AVIF/JXL in the default build) get the
-    wrong-units number. Reconcile with each zen codec's OWN internal calibration (zenwebp
-    `calibrated_webp_quality`, zenavif `calibrated_avif_quality`, zenjxl `calibrated_jxl_quality`, zenjpeg
-    `ssim2_to_internal`/`SSIM2_TO_JPEGLI`) so quality is not double-mapped, then sweep those codecs to
-    calibrate their own quality→ssim2 curves the way JPEG now is.
+  - **FIXED (2026-07-19) — the double-mapping correctness bug** (see the Known Bugs entry above):
+    auto.rs now feeds `with_generic_quality` the profile's *libjpeg-turbo 0–100 dial*
+    (`zencodec_generic_quality`); the ssim2-unit `generic_quality_ssim2` is reserved for the JPEG
+    `ApproxSsim2` path. Remaining follow-up: sweep WebP/AVIF/JXL to calibrate their own quality→ssim2
+    curves the way JPEG's dials now are (the codecs' internal libjpeg-q→native tables are CID22-512
+    medians; imageflow-side per-codec ssim2 columns in `QUALITY_HINTS` are still guesses, per the
+    bullet above).
 
 - **Issue #728 zencodec passthrough (currently interim heuristic).** The `target=fast|optimal` +
   balance directive and `is_optimal`/optimality-headroom annotations are implemented in imageflow with
