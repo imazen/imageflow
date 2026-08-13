@@ -32,7 +32,6 @@ pub fn transpose_u32_slices(
 /// Same as `transpose_u32_slices` but with a configurable cache tile size.
 /// Block size must be a multiple of 8 and at least 8.
 #[doc(hidden)]
-#[allow(clippy::too_many_arguments)]
 pub fn transpose_u32_slices_with_block_size(
     from: &[u32],
     to: &mut [u32],
@@ -130,7 +129,6 @@ pub fn bitmap_window_transpose(
 /// Process a rectangular region in 8×8 blocks, calling `f` for each block.
 /// Only full 8×8 blocks are processed — caller handles the remainder.
 #[inline(always)]
-#[allow(clippy::too_many_arguments)]
 fn process_8x8_blocks(
     x_start: usize,
     x_end: usize,

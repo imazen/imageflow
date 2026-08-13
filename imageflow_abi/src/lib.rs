@@ -385,7 +385,6 @@ include!("abi_version.rs");
 /// False means that
 ///
 #[unsafe(no_mangle)]
-#[allow(clippy::absurd_extreme_comparisons)]
 pub extern "C" fn imageflow_abi_compatible(
     imageflow_abi_ver_major: u32,
     imageflow_abi_ver_minor: u32,
