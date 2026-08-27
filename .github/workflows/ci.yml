@@ -47,6 +47,7 @@ jobs:
             force-cross: 'true'
             max-glibc: '2.17'
             linux: 'true'
+            deb-arch: amd64
 
           - name: linux-x64-ubuntu-24
             package-suffix: ubuntu-x86_64-24-mistake
@@ -67,6 +68,7 @@ jobs:
             force-cross: 'false'
             max-glibc: '2.34'
             linux: 'true'
+            deb-arch: arm64
 
           - name: osx-x64-15
             package-suffix: osx-x86_64
@@ -395,6 +397,21 @@ jobs:
           TAG_SHA_SUFFIX: ${{ env.TAG_SHA_SUFFIX }}
           IMAGEFLOW_TOOL: ${{ env.IMAGEFLOW_TOOL }}
 
+      # CREATE .DEB PACKAGE (glibc Linux builds only; imazen/imageflow#400) ---------------------
+      - name: "Create .deb package (${{ matrix.deb-arch }})"
+        if: matrix.deb-arch
+        shell: bash
+        run: |
+          chmod +x ./ci/pack_deb.sh
+          ./ci/pack_deb.sh
+        env:
+          REL_BINARIES_DIR: ${{ env.REL_BINARIES_DIR }}
+          IMAGEFLOW_TOOL: ${{ env.IMAGEFLOW_TOOL }}
+          LIBIMAGEFLOW_DYNAMIC: ${{ env.LIBIMAGEFLOW_DYNAMIC }}
+          DEB_ARCH: ${{ matrix.deb-arch }}
+          DEB_MIN_GLIBC: ${{ matrix.max-glibc }}
+          MATRIX_COMMIT_SUFFIX: ${{ matrix.package-suffix }}
+
 
       # STAGE NATIVE BINARIES FOR NUGET PACKING JOB ---------------------------------------------------------------------
       - name: Stage Native Binaries for NuGet Artifact and S3 Upload
@@ -522,7 +539,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          file: "./artifacts/github/*.${{ env.EXTENSION }}"
+          file: "./artifacts/github/*.${{ env.EXTENSION }};./artifacts/github/*.deb"
           tags: true
           overwrite: true
           verbose: true
