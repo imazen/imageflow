@@ -18,6 +18,7 @@ All notable changes to Imageflow are documented here. Format follows [Keep a Cha
 - Codec dispatch gets a pure-function `codec_decisions` module with a structured trace, `QualityIntent` system, and zen/C-aware `build_config` + `FullCodecDecision`.
 
 ### Added
+- `docs/sharpen-imageresizer4-vs-imageflow.md`: traced, measured comparison of ImageResizer4's `f.sharpen` (bounded post-resample 3-tap) with Imageflow's lobe-ratio sharpening, including the `f.sharpen=100` no-op and the hyperbolic strength curve, with recommendations (#616, 4d52ae29).
 - Docs + tests for `c.gravity=x,y`, the percentage focal point that positions `mode=crop` (overrides `anchor`), and the `c=x1,y1,x2,y2` percentage crop (#602, 05788886).
 - Release artifacts: `.deb` packages (`imageflow_<version>_amd64.deb` / `_arm64.deb` with `imageflow_tool`, `libimageflow.so`, `imageflow.h`) are built by CI for the glibc Linux targets and attached to GitHub releases and S3 (#400, 5a27d8af).
 - JSON API: `v1/schema/riapi/v1/keys` lists understood RIAPI keys per backend (`v2` today) with a version identifier, sorted key list, and count (#699, afb40656).
