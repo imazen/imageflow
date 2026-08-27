@@ -211,6 +211,44 @@
         }
       }
     },
+    "/v1/schema/formats/v1/decodable": {
+      "post": {
+        "tags": [],
+        "operationId": "list_decodable_formats",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Formats the context can decode, with the decoder implementations behind each",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_ListDecodableFormatsV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to list decodable formats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/schema/json/latest/v1/all": {
       "post": {
         "tags": [],
@@ -953,6 +991,26 @@
           "within_pad",
           "fit_pad"
         ]
+      },
+      "DecodableFormat": {
+        "type": "object",
+        "description": "An image format the current context can decode, with every enabled\ndecoder for it in preference order (`v1/schema/formats/v1/decodable`).",
+        "required": [
+          "format",
+          "decoders"
+        ],
+        "properties": {
+          "decoders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormatDecoder"
+            }
+          },
+          "format": {
+            "type": "string",
+            "description": "Lower-case format name: `jpeg`, `png`, `gif`, `webp`, `avif`, `jxl`, `bmp`."
+          }
+        }
       },
       "DecodeResult": {
         "type": "object",
@@ -1717,6 +1775,29 @@
           "n_cubic_sharp"
         ]
       },
+      "FormatDecoder": {
+        "type": "object",
+        "description": "One decoder implementation that can handle a format\n(`v1/schema/formats/v1/decodable`).",
+        "required": [
+          "name",
+          "backend",
+          "preferred"
+        ],
+        "properties": {
+          "backend": {
+            "type": "string",
+            "description": "`v2` (the C / classic pipeline) or `zen` (pure-Rust zen codecs)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Implementation name, e.g. `mozjpeg`, `zenjpeg`, `libpng`, `zenbitmaps`."
+          },
+          "preferred": {
+            "type": "boolean",
+            "description": "True for the decoder the context will actually pick for this format\n(the first enabled decoder whose magic-byte check matches)."
+          }
+        }
+      },
       "FramePerformance": {
         "type": "object",
         "required": [
@@ -2385,6 +2466,46 @@
           }
         }
       },
+      "JsonAnswer_ListDecodableFormatsV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "description": "Response of `v1/schema/formats/v1/decodable`: the formats this context can\ndecode, reflecting the runtime `EnabledCodecs` state (issue #700).",
+            "required": [
+              "formats"
+            ],
+            "properties": {
+              "formats": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DecodableFormat"
+                }
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
       "JsonAnswer_ListRiapiKeysV1Response": {
         "type": "object",
         "required": [
@@ -2553,6 +2674,21 @@
           "success": {
             "type": "boolean",
             "example": false
+          }
+        }
+      },
+      "ListDecodableFormatsV1Response": {
+        "type": "object",
+        "description": "Response of `v1/schema/formats/v1/decodable`: the formats this context can\ndecode, reflecting the runtime `EnabledCodecs` state (issue #700).",
+        "required": [
+          "formats"
+        ],
+        "properties": {
+          "formats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DecodableFormat"
+            }
           }
         }
       },

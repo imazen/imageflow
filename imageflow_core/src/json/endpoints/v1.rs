@@ -53,6 +53,11 @@ pub fn invoke(context: &mut Context, method: &str, json: &[u8]) -> Result<JsonRe
             let output = tell_decoder(context, input)?;
             Ok(JsonResponse::ok(output))
         }
+        "v1/schema/formats/v1/decodable" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = list_decodable_formats(context)?;
+            Ok(JsonResponse::ok(output))
+        }
         "v1/execute" | "v0.1/execute" => {
             let input = parse_json_with_limit::<s::Execute001>(json, max_json)?;
             let output = execute(context, input)?;
@@ -209,6 +214,15 @@ pub struct ListRiapiKeysV1Response {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ValidateRiapiQueryStringV1Response {
     pub results: json_messages::QueryStringValidationResults,
+}
+
+/// Response of `v1/schema/formats/v1/decodable`: the formats this context can
+/// decode, reflecting the runtime `EnabledCodecs` state (issue #700).
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ListDecodableFormatsV1Response {
+    pub formats: Vec<json_messages::DecodableFormat>,
 }
 
 // New response structs for JSON schema endpoints
@@ -430,6 +444,19 @@ pub(super) fn list_riapi_keys() -> Result<ListRiapiKeysV1Response> {
 
 #[cfg_attr(feature = "schema-export", utoipa::path(
     post,
+    path = "/v1/schema/formats/v1/decodable",
+    request_body = EmptyRequest,
+    responses(
+        (status = 200, description = "Formats the context can decode, with the decoder implementations behind each", body = JsonAnswer<ListDecodableFormatsV1Response>),
+        (status = 500, description = "Failed to list decodable formats", body = JsonError)
+    )
+))]
+pub(super) fn list_decodable_formats(context: &Context) -> Result<ListDecodableFormatsV1Response> {
+    Ok(ListDecodableFormatsV1Response { formats: context.enabled_codecs.decodable_formats() })
+}
+
+#[cfg_attr(feature = "schema-export", utoipa::path(
+    post,
     path = "/v1/schema/riapi/latest/validate",
     request_body = ValidateQueryString,
     responses(
@@ -459,6 +486,7 @@ pub(super) fn validate_riapi_query_string(
         get_riapi_schema,
         list_riapi_keys,
         validate_riapi_query_string,
+        list_decodable_formats,
         get_openapi_schema_json,
         list_schema_endpoints,
         #[cfg(feature = "json-schema")]
@@ -476,6 +504,8 @@ pub(super) fn validate_riapi_query_string(
             JsonAnswer<GetRiapiSchemaV1Response>, GetRiapiSchemaV1Response,
             JsonAnswer<ListRiapiKeysV1Response>, ListRiapiKeysV1Response,
             JsonAnswer<ValidateRiapiQueryStringV1Response>, ValidateRiapiQueryStringV1Response,
+            JsonAnswer<ListDecodableFormatsV1Response>, ListDecodableFormatsV1Response,
+            json_messages::DecodableFormat, json_messages::FormatDecoder,
             JsonAnswer<ListSchemaEndpointsResponse>, ListSchemaEndpointsResponse,
             JsonAnswer<GetJsonSchemasV1Response>, GetJsonSchemasV1Response,
             EndpointSchemaPair, AllJsonSchemasV1,
@@ -813,6 +843,7 @@ pub(super) fn list_schema_endpoints() -> Result<ListSchemaEndpointsResponse> {
         "/v1/schema/riapi/latest/validate".to_string(),
         "/v1/schema/openapi/latest/get".to_string(),
         "/v1/schema/list-schema-endpoints".to_string(),
+        "/v1/schema/formats/v1/decodable".to_string(),
     ];
     if cfg!(feature = "json-schema") {
         endpoints.push("/v1/schema/json/latest/v1/all".to_string());

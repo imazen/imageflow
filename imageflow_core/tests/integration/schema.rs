@@ -58,3 +58,65 @@ fn test_schema_endpoint() {
     // Clean up
     context.destroy().unwrap();
 }
+
+/// Issue #700: `v1/schema/formats/v1/decodable` lists what this context can
+/// decode and which implementation is preferred, reflecting runtime state.
+#[test]
+fn test_decodable_formats_endpoint_reflects_enabled_codecs() {
+    use imageflow_core::NamedDecoders;
+    use imageflow_types::json_messages::DecodableFormat;
+
+    fn call(context: &mut Context) -> Vec<DecodableFormat> {
+        let (response, result) = context.message("v1/schema/formats/v1/decodable", b"{}");
+        assert!(result.is_ok(), "endpoint should succeed: {:?}", result.err());
+        assert_eq!(response.status_code, 200);
+        let json: serde_json::Value = serde_json::from_slice(&response.response_json).unwrap();
+        assert_eq!(json["success"], serde_json::Value::Bool(true));
+        serde_json::from_value(json["data"]["formats"].clone()).unwrap()
+    }
+
+    let mut context = Context::create().unwrap();
+    let formats = call(&mut context);
+
+    let names: Vec<&str> = formats.iter().map(|f| f.format.as_str()).collect();
+    for expected in ["jpeg", "png", "gif", "bmp"] {
+        assert!(names.contains(&expected), "expected {expected} in {names:?}");
+    }
+    assert_eq!(names.len(), names.iter().collect::<std::collections::HashSet<_>>().len());
+
+    for f in &formats {
+        assert!(!f.decoders.is_empty(), "{} lists no decoders", f.format);
+        // Exactly one preferred decoder per format, and it is the first listed.
+        assert_eq!(f.decoders.iter().filter(|d| d.preferred).count(), 1, "{:?}", f);
+        assert!(f.decoders[0].preferred, "{:?}", f);
+        for d in &f.decoders {
+            assert!(d.backend == "v2" || d.backend == "zen", "{:?}", d);
+            assert!(!d.name.is_empty());
+        }
+    }
+    let bmp = formats.iter().find(|f| f.format == "bmp").unwrap();
+    assert_eq!(bmp.decoders[0].name, "zenbitmaps");
+    assert_eq!(bmp.decoders[0].backend, "zen");
+    #[cfg(feature = "c-codecs")]
+    {
+        let jpeg = formats.iter().find(|f| f.format == "jpeg").unwrap();
+        assert_eq!(jpeg.decoders[0].name, "mozjpeg");
+        assert_eq!(jpeg.decoders[0].backend, "v2");
+    }
+
+    // Runtime state, not compile-time flags: disabling a decoder removes it.
+    context.enabled_codecs.disable_decoder(NamedDecoders::ZenBmpDecoder);
+    let after = call(&mut context);
+    assert!(
+        !after.iter().any(|f| f.format == "bmp"),
+        "bmp should disappear once its only decoder is disabled: {after:?}"
+    );
+    assert_eq!(after.len(), formats.len() - 1);
+
+    let (response, _) = context.message("v1/schema/list-schema-endpoints", b"{}");
+    let json: serde_json::Value = serde_json::from_slice(&response.response_json).unwrap();
+    let endpoints = json["data"]["endpoints"].as_array().unwrap();
+    assert!(endpoints.iter().any(|e| e == "/v1/schema/formats/v1/decodable"), "{endpoints:?}");
+
+    context.destroy().unwrap();
+}

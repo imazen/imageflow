@@ -163,6 +163,80 @@ impl NamedDecoders {
         }
     }
 
+    /// Lower-case name of the format this decoder reads (`jpeg`, `png`, ...).
+    pub fn format_name(&self) -> &'static str {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::MozJpegRsDecoder | NamedDecoders::ImageRsJpegDecoder => "jpeg",
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::LibPngRsDecoder => "png",
+            NamedDecoders::ImageRsPngDecoder => "png",
+            NamedDecoders::GifRsDecoder => "gif",
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::WebPDecoder => "webp",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder => "jpeg",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenWebPDecoder => "webp",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => "gif",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenPngDecoder => "png",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenAvifDecoder => "avif",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => "jxl",
+            #[cfg(feature = "bmp")]
+            NamedDecoders::ZenBmpDecoder => "bmp",
+        }
+    }
+
+    /// Name of the implementation behind this decoder (`mozjpeg`, `zenjpeg`, ...).
+    pub fn implementation_name(&self) -> &'static str {
+        match self {
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::MozJpegRsDecoder => "mozjpeg",
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::ImageRsJpegDecoder => "jpeg-decoder",
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::LibPngRsDecoder => "libpng",
+            NamedDecoders::ImageRsPngDecoder => "png-rs",
+            NamedDecoders::GifRsDecoder => "gif-rs",
+            #[cfg(feature = "c-codecs")]
+            NamedDecoders::WebPDecoder => "libwebp",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder => "zenjpeg",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenWebPDecoder => "zenwebp",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenGifDecoder => "zengif",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenPngDecoder => "zenpng",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenAvifDecoder => "zenavif",
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJxlDecoder => "zenjxl",
+            #[cfg(feature = "bmp")]
+            NamedDecoders::ZenBmpDecoder => "zenbitmaps",
+        }
+    }
+
+    /// `v2` for the C / classic pipeline decoders, `zen` for the pure-Rust zen codecs.
+    pub fn backend_name(&self) -> &'static str {
+        match self {
+            #[cfg(feature = "zen-codecs")]
+            NamedDecoders::ZenJpegDecoder
+            | NamedDecoders::ZenWebPDecoder
+            | NamedDecoders::ZenGifDecoder
+            | NamedDecoders::ZenPngDecoder
+            | NamedDecoders::ZenAvifDecoder
+            | NamedDecoders::ZenJxlDecoder => "zen",
+            #[cfg(feature = "bmp")]
+            NamedDecoders::ZenBmpDecoder => "zen",
+            _ => "v2",
+        }
+    }
+
     pub fn create(&self, c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>> {
         return_if_cancelled!(c);
         match self {
@@ -362,6 +436,33 @@ impl Default for EnabledCodecs {
 }
 
 impl EnabledCodecs {
+    /// The formats this codec set can decode, in decoder-preference order, with
+    /// every enabled decoder per format. The first decoder listed for a format
+    /// is the one `create_decoder_for_magic_bytes` will pick. Backs the
+    /// `v1/schema/formats/v1/decodable` endpoint (issue #700).
+    pub fn decodable_formats(&self) -> Vec<s::json_messages::DecodableFormat> {
+        let mut formats: Vec<s::json_messages::DecodableFormat> = Vec::new();
+        for decoder in self.decoders.iter() {
+            let format = decoder.format_name();
+            let entry = match formats.iter_mut().find(|f| f.format == format) {
+                Some(existing) => existing,
+                None => {
+                    formats.push(s::json_messages::DecodableFormat {
+                        format: format.to_owned(),
+                        decoders: Vec::new(),
+                    });
+                    formats.last_mut().unwrap()
+                }
+            };
+            entry.decoders.push(s::json_messages::FormatDecoder {
+                name: decoder.implementation_name().to_owned(),
+                backend: decoder.backend_name().to_owned(),
+                preferred: entry.decoders.is_empty(),
+            });
+        }
+        formats
+    }
+
     pub fn prefer_decoder(&mut self, decoder: NamedDecoders) {
         self.decoders.retain(|item| item != &decoder);
         self.decoders.insert(0, decoder);

@@ -2219,6 +2219,32 @@ pub mod json_messages {
         pub description: QueryStringDescription,
         pub generated_markdown: Option<String>,
     }
+
+    /// One decoder implementation that can handle a format
+    /// (`v1/schema/formats/v1/decodable`).
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+    pub struct FormatDecoder {
+        /// Implementation name, e.g. `mozjpeg`, `zenjpeg`, `libpng`, `zenbitmaps`.
+        pub name: String,
+        /// `v2` (the C / classic pipeline) or `zen` (pure-Rust zen codecs).
+        pub backend: String,
+        /// True for the decoder the context will actually pick for this format
+        /// (the first enabled decoder whose magic-byte check matches).
+        pub preferred: bool,
+    }
+
+    /// An image format the current context can decode, with every enabled
+    /// decoder for it in preference order (`v1/schema/formats/v1/decodable`).
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+    pub struct DecodableFormat {
+        /// Lower-case format name: `jpeg`, `png`, `gif`, `webp`, `avif`, `jxl`, `bmp`.
+        pub format: String,
+        pub decoders: Vec<FormatDecoder>,
+    }
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
