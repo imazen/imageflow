@@ -527,6 +527,157 @@ fn test_gif_double_encode_no_eof_crash() {
 // Issue #653: Animated GIF with transparent background
 // ============================================================================
 
+/// Build an animated GIF whose frames each paint an opaque `color` on half of
+/// the canvas (left half on even frames, right half on odd frames) and leave
+/// the other half transparent, with `Background` disposal so the transparent
+/// half really is transparent when a browser composites the animation.
+fn build_half_transparent_gif(size: u16, colors: &[(u8, u8, u8)], delay: u16) -> Vec<u8> {
+    let mut buf = Vec::new();
+    {
+        let mut encoder = gif::Encoder::new(&mut buf, size, size, &[]).unwrap();
+        encoder.set_repeat(gif::Repeat::Infinite).unwrap();
+        for (i, &(r, g, b)) in colors.iter().enumerate() {
+            let mut pixels = Vec::with_capacity(size as usize * size as usize * 4);
+            for _y in 0..size {
+                for x in 0..size {
+                    let left = x < size / 2;
+                    let painted = if i % 2 == 0 { left } else { !left };
+                    if painted {
+                        pixels.extend_from_slice(&[r, g, b, 255]);
+                    } else {
+                        pixels.extend_from_slice(&[0, 0, 0, 0]);
+                    }
+                }
+            }
+            let mut frame = gif::Frame::from_rgba(size, size, &mut pixels);
+            frame.delay = delay;
+            frame.dispose = gif::DisposalMethod::Background;
+            encoder.write_frame(&frame).unwrap();
+        }
+    }
+    buf
+}
+
+/// Composite an animated GIF the way a browser does (transparent index = do not
+/// paint; `Background` disposal clears the frame rect before the next frame) and
+/// return the full canvas after each frame as RGBA.
+fn composite_gif_frames(bytes: &[u8]) -> Vec<(u16, u16, Vec<[u8; 4]>)> {
+    let mut opts = gif::DecodeOptions::new();
+    opts.set_color_output(gif::ColorOutput::RGBA);
+    let mut reader = opts.read_info(bytes).unwrap();
+    let (w, h) = (reader.width(), reader.height());
+    let mut canvas = vec![[0u8; 4]; w as usize * h as usize];
+    let mut out = Vec::new();
+    let mut prev: Option<(gif::DisposalMethod, u16, u16, u16, u16)> = None;
+    while let Some(frame) = reader.read_next_frame().unwrap() {
+        if let Some((gif::DisposalMethod::Background, l, t, fw, fh)) = prev {
+            for y in t..t + fh {
+                for x in l..l + fw {
+                    canvas[y as usize * w as usize + x as usize] = [0, 0, 0, 0];
+                }
+            }
+        }
+        for fy in 0..frame.height {
+            for fx in 0..frame.width {
+                let i = (fy as usize * frame.width as usize + fx as usize) * 4;
+                let px = [
+                    frame.buffer[i],
+                    frame.buffer[i + 1],
+                    frame.buffer[i + 2],
+                    frame.buffer[i + 3],
+                ];
+                if px[3] != 0 {
+                    let (x, y) = (frame.left + fx, frame.top + fy);
+                    canvas[y as usize * w as usize + x as usize] = px;
+                }
+            }
+        }
+        out.push((w, h, canvas.clone()));
+        prev = Some((frame.dispose, frame.left, frame.top, frame.width, frame.height));
+    }
+    out
+}
+
+/// Issue #653: a transparent animated GIF must stay transparent after a
+/// GIF → GIF roundtrip. Frame 1 paints the left half red, frame 2 the right
+/// half blue; after frame 2 the left half must be transparent again, not a
+/// red ghost left over from frame 1.
+#[test]
+fn test_animated_gif_transparency_survives_roundtrip_pixel_exact() {
+    test_init();
+    let input = build_half_transparent_gif(8, &[(255, 0, 0), (0, 0, 255)], 10);
+    // Sanity-check the fixture itself composites as intended.
+    let frames = composite_gif_frames(&input);
+    assert_eq!(frames.len(), 2);
+    assert_eq!(frames[1].2[0][3], 0, "fixture: left half must be transparent after frame 2");
+
+    let output = roundtrip_animated_gif(input, EncoderPreset::Gif);
+    let frames = composite_gif_frames(&output);
+    assert_eq!(frames.len(), 2, "expected 2 frames");
+    let (w, _h, ref f1) = frames[0];
+    let (_w, _h, ref f2) = frames[1];
+    let w = w as usize;
+    // Frame 1: left opaque red, right transparent.
+    assert_eq!(f1[0][3], 255, "frame 1 left must be opaque");
+    assert!(
+        f1[0][0] > 200 && f1[0][1] < 60 && f1[0][2] < 60,
+        "frame 1 left should be red: {:?}",
+        f1[0]
+    );
+    assert_eq!(f1[w - 1][3], 0, "frame 1 right must be transparent: {:?}", f1[w - 1]);
+    // Frame 2: left transparent (no ghost of frame 1), right opaque blue.
+    assert_eq!(f2[0][3], 0, "frame 2 left must be transparent (no ghost of frame 1): {:?}", f2[0]);
+    assert_eq!(f2[w - 1][3], 255, "frame 2 right must be opaque");
+    assert!(
+        f2[w - 1][2] > 200 && f2[w - 1][0] < 60,
+        "frame 2 right should be blue: {:?}",
+        f2[w - 1]
+    );
+    // Every row agrees, not just row 0.
+    for y in 0..8 {
+        assert_eq!(f2[y * w][3], 0, "row {y}: ghost pixel in frame 2");
+        assert_eq!(f1[y * w + w - 1][3], 0, "row {y}: frame 1 right not transparent");
+    }
+}
+
+/// Same as above through a resize, which is what imageflow-server does.
+#[test]
+fn test_animated_gif_transparency_survives_resize_pixel_exact() {
+    test_init();
+    let input = build_half_transparent_gif(16, &[(255, 0, 0), (0, 0, 255)], 10);
+    let steps = vec![
+        Node::Decode { io_id: 0, commands: None },
+        Node::Resample2D {
+            w: 8,
+            h: 8,
+            hints: Some(ResampleHints::new().with_bi_filter(Filter::Hermite)),
+        },
+        Node::Encode { io_id: 1, preset: EncoderPreset::Gif },
+    ];
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, input).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    ctx.execute_1(Execute001 {
+        job_options: None,
+        graph_recording: default_graph_recording(false),
+        security: None,
+        framewise: Framewise::Steps(steps),
+    })
+    .unwrap();
+    let output = ctx.take_output_buffer(1).unwrap();
+    let frames = composite_gif_frames(&output);
+    assert_eq!(frames.len(), 2);
+    let w = frames[0].0 as usize;
+    assert_eq!(w, 8);
+    // Stay away from the middle column where resampling blends the halves.
+    for y in 0..8 {
+        assert_eq!(frames[0].2[y * w + w - 1][3], 0, "row {y}: frame 1 right edge not transparent");
+        assert_eq!(frames[1].2[y * w][3], 0, "row {y}: frame 2 left edge ghosted/opaque");
+        assert_eq!(frames[0].2[y * w][3], 255, "row {y}: frame 1 left edge not opaque");
+        assert_eq!(frames[1].2[y * w + w - 1][3], 255, "row {y}: frame 2 right edge not opaque");
+    }
+}
+
 #[test]
 fn test_animated_gif_transparent_bg_roundtrip() {
     test_init();

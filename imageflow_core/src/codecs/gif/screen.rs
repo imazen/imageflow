@@ -30,11 +30,12 @@ impl Screen {
         let pal = reader.global_palette().map(to_bgra);
 
         let pixels = reader.width() as usize * reader.height() as usize;
-        let bg_color = if let (Some(bg_index), Some(pal)) = (reader.bg_color(), pal.as_ref()) {
-            pal.get(bg_index).copied().unwrap_or_default()
-        } else {
-            BGRA8::default()
-        };
+        // The logical screen's background color index is ignored, as browsers
+        // do: the canvas starts fully transparent and "restore to background"
+        // disposal clears to transparent. Seeding it with the (opaque) palette
+        // entry turned every transparent pixel of a transparent animated GIF
+        // into opaque black (imazen/imageflow#653).
+        let bg_color = BGRA8::default();
 
         Screen {
             pixels: vec![bg_color; pixels],

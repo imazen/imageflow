@@ -481,6 +481,12 @@ impl Encoder for GifEncoder {
             f.delay = from.delay;
             f.needs_user_input = from.needs_user_input;
         }
+        // Every frame is written as a full, already-composited canvas, and its
+        // transparent index means "nothing here". With the default Keep
+        // disposal a transparent pixel would reveal the previous frame; clear
+        // to (transparent) background first so transparency survives
+        // animation (imazen/imageflow#653).
+        f.dispose = ::gif::DisposalMethod::Background;
         if self.frame_ix == 0 {
             // Only write before any frames
             if let Some(r) = repeat {
