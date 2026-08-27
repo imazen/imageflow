@@ -71,12 +71,12 @@ Now you can edit images from HTML... and use srcset without headache.
 
 ```
 
-![](https://www.imageflow.io/images/imageflow-responsive.svg) ![](https://www.imageflow.io/images/edit-url.gif)
+![Imageflow responsive image workflow](docs/images/imageflow-responsive.svg) ![](https://www.imageflow.io/images/edit-url.gif)
 
 
 ## Using libimageflow from your language
 
-![](https://www.imageflow.io/images/libimageflow-direct.svg)
+![Using libimageflow directly from your language](docs/images/libimageflow-direct.svg)
 
 * .NET Standard bindings can be found at https://github.com/imazen/imageflow-dotnet
 * Node bindings available at https://github.com/imazen/imageflow-node
