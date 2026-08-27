@@ -306,7 +306,7 @@ pub(super) fn estimate(context: &mut Context, data: EstimateEncode001) -> Result
     // estimate_*_resources. Decode side is wired (via the probed input decoder);
     // the encode side (`data.format`) layers on with the #728 per-format dry-run
     // config builder.
-    #[cfg(feature = "zen-codecs")]
+    #[cfg(feature = "bmp")]
     let (codec_avg, codec_max): (u64, u64) = {
         if let Ok(mut codec) = context.get_codec(data.io_id)
             && let Ok(decoder) = codec.get_decoder()
@@ -324,7 +324,7 @@ pub(super) fn estimate(context: &mut Context, data: EstimateEncode001) -> Result
             (0, 0)
         }
     };
-    #[cfg(not(feature = "zen-codecs"))]
+    #[cfg(not(feature = "bmp"))]
     let (codec_avg, codec_max): (u64, u64) = (0, 0);
     let _ = &data.format;
     Ok(EncodeEstimate {

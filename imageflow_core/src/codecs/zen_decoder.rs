@@ -260,6 +260,7 @@ impl ZenDecoder {
         self.config.estimate_decode_resources(&chars, env)
     }
 
+    #[cfg(feature = "zen-codecs")]
     pub fn create_jpeg(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         // CmykHandling::Passthrough — emit raw CMYK bytes (PixelDescriptor::CMYK8)
         // for 4-component JPEGs instead of applying zenjpeg's internal CMYK→RGB
@@ -272,26 +273,31 @@ impl ZenDecoder {
         Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Jpeg))
     }
 
+    #[cfg(feature = "zen-codecs")]
     pub fn create_webp(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zenwebp::zencodec::WebpDecoderConfig::new();
         Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::WebP))
     }
 
+    #[cfg(feature = "zen-codecs")]
     pub fn create_png(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zenpng::PngDecoderConfig::new();
         Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Png))
     }
 
+    #[cfg(feature = "zen-codecs")]
     pub fn create_gif(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zengif::GifDecoderConfig::new();
         Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Gif))
     }
 
+    #[cfg(feature = "zen-codecs")]
     pub fn create_avif(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zenavif::AvifDecoderConfig::new();
         Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Avif))
     }
 
+    #[cfg(feature = "zen-codecs")]
     pub fn create_jxl(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
         let config = zenjxl::JxlDecoderConfig::new();
         Ok(Self::new_zencodec(c, Box::new(config), io, ZenFormat::Jxl))

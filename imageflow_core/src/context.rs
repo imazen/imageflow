@@ -376,7 +376,7 @@ impl Context {
     /// An owned, cloneable cancellation token for codec jobs that take ownership
     /// of a stop signal (zencodec `set_stop` stores a `StopToken` for the
     /// duration of decode/encode). Shares the same flag as [`Context::stop`].
-    #[cfg(feature = "zen-codecs")]
+    #[cfg(feature = "bmp")]
     #[inline]
     pub(crate) fn cancellation_token(&self) -> impl Stop + Clone + 'static {
         self.cancellation_token.clone()

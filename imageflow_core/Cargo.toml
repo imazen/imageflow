@@ -122,7 +122,7 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg"]
 zenbench = "0.1.7"
 
 [features]
-default = ["c-codecs"]
+default = ["c-codecs", "bmp"]
 neon = ["libwebp-sys/neon"]
 # All C library codecs: mozjpeg, libpng, libwebp, lcms2, and the C components library.
 c-codecs = [
@@ -134,8 +134,12 @@ c-codecs = [
     "dep:lcms2", "dep:lcms2-sys",
     "dep:libz-sys",
 ]
+# Pure-Rust BMP (DIB) decoding/encoding via zenbitmaps + the zencodec bridge.
+# On by default (issue #626): user-submitted "JPEG"s are sometimes bitmaps.
+bmp = ["dep:rayon", "dep:zenbitmaps", "dep:zenpixels", "dep:zc"]
 # Pure Rust codecs: zenjpeg, zenpng, zenwebp, zengif, zenavif, mozjpeg-rs (no C deps)
 zen-codecs = [
+    "bmp",
     "dep:rayon",
     "dep:zenjpeg",
     "dep:zenpng",

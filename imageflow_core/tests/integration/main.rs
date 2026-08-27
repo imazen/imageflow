@@ -1,6 +1,7 @@
 #[macro_use]
 mod common;
 
+mod bmp;
 mod cms_diagnostic;
 mod color_conversion;
 mod encoders;

@@ -39,8 +39,9 @@ mod mozjpeg_decoder_helpers;
 #[cfg(feature = "c-codecs")]
 mod webp;
 
-// Zen codec adapters (zencodec dyn dispatch)
-#[cfg(feature = "zen-codecs")]
+// Zen codec adapters (zencodec dyn dispatch). The decoder bridge is also
+// needed by the `bmp` feature (implied by `zen-codecs`).
+#[cfg(feature = "bmp")]
 pub(crate) mod zen_decoder;
 #[cfg(feature = "zen-codecs")]
 pub(crate) mod zen_encoder;
@@ -106,7 +107,7 @@ pub enum NamedDecoders {
     ZenAvifDecoder,
     #[cfg(feature = "zen-codecs")]
     ZenJxlDecoder,
-    #[cfg(feature = "zen-codecs")]
+    #[cfg(feature = "bmp")]
     ZenBmpDecoder,
 }
 impl NamedDecoders {
@@ -157,7 +158,7 @@ impl NamedDecoders {
                     || (bytes.len() >= 12
                         && bytes.starts_with(&[0x00, 0x00, 0x00, 0x0C, 0x4A, 0x58, 0x4C, 0x20]))
             }
-            #[cfg(feature = "zen-codecs")]
+            #[cfg(feature = "bmp")]
             NamedDecoders::ZenBmpDecoder => bytes.starts_with(b"BM"),
         }
     }
@@ -207,7 +208,7 @@ impl NamedDecoders {
             NamedDecoders::ZenJxlDecoder => {
                 Ok(Box::new(zen_decoder::ZenDecoder::create_jxl(c, io, io_id)?))
             }
-            #[cfg(feature = "zen-codecs")]
+            #[cfg(feature = "bmp")]
             NamedDecoders::ZenBmpDecoder => {
                 Ok(Box::new(zen_decoder::ZenDecoder::create_bmp(c, io, io_id)?))
             }
@@ -321,7 +322,7 @@ impl Default for EnabledCodecs {
                 NamedDecoders::ZenAvifDecoder,
                 #[cfg(feature = "zen-codecs")]
                 NamedDecoders::ZenJxlDecoder,
-                #[cfg(feature = "zen-codecs")]
+                #[cfg(feature = "bmp")]
                 NamedDecoders::ZenBmpDecoder,
             ]),
             encoders: smallvec::SmallVec::from_slice(&[
