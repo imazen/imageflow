@@ -18,6 +18,13 @@
 The default is `middlecenter`
     * values are `topleft`, `topcenter`, `topright`, `middleleft`, `middlecenter`, `middleright`, 
     `bottomleft`, `bottomcenter`, and `bottomright`.
+* `c.gravity=x,y` sets a focal point for `mode=crop`, as percentages of the source image
+(`0,0` is the top-left corner, `50,50` the center, `100,100` the bottom-right). When the aspect ratio
+forces a crop, the crop rectangle is positioned so this point keeps its relative position and stays in
+view (it is clamped to the image, never padded). `c.gravity` overrides `anchor`. Example: 
+`w=300&h=300&mode=crop&c.gravity=80,20` keeps the upper-right area of a landscape photo.
+* `c=x1,y1,x2,y2` crops the source image using percentages (equivalent to `crop=` with 
+`cropxunits=100&cropyunits=100`).
 * `sflip` flips the source image in the `x`, `y`, or `xy` dimensions. 
 * `flip` flips the result image in the `x`, `y`, or `xy` dimensions. 
 * `srotate` rotates the source image `90`, `180`, or `270` degrees. 

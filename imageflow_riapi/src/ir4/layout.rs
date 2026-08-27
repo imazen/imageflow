@@ -855,6 +855,77 @@ fn test_crop_and_scale() {
     );
 }
 
+/// Issue #602: `c.gravity=x,y` (percentages) is the focal point for
+/// `mode=crop`. The auto-crop rectangle is positioned so the focal point keeps
+/// its relative position, and it overrides `anchor`.
+#[test]
+fn test_crop_gravity_is_focal_point() {
+    fn crop_for(c_gravity: Option<[f64; 2]>, anchor: Option<(Anchor1D, Anchor1D)>) -> s::Node {
+        let mut b = FramewiseBuilder::new();
+        let l = Ir4Layout::new(
+            Instructions {
+                w: Some(100),
+                h: Some(200),
+                mode: Some(FitMode::Crop),
+                c_gravity,
+                anchor,
+                ..Default::default()
+            },
+            768,
+            433,
+            768,
+            433,
+        );
+        l.add_steps(&mut b, &None).unwrap();
+        b.steps[0].clone()
+    }
+    // A 768x433 source cropped to 1:2 keeps a 217-wide column; gravity chooses which.
+    assert_eq!(crop_for(None, None), s::Node::Crop { x1: 275, y1: 0, x2: 492, y2: 433 });
+    // Focal point at the left edge: crop hugs x=0.
+    assert_eq!(crop_for(Some([0.0, 50.0]), None), s::Node::Crop { x1: 0, y1: 0, x2: 217, y2: 433 });
+    // Focal point at the right edge: crop hugs the right side.
+    assert_eq!(
+        crop_for(Some([100.0, 50.0]), None),
+        s::Node::Crop { x1: 551, y1: 0, x2: 768, y2: 433 }
+    );
+    // 25% across: the crop's left edge sits at 25% of the slack (551 * 0.25).
+    assert_eq!(
+        crop_for(Some([25.0, 0.0]), None),
+        s::Node::Crop { x1: 138, y1: 0, x2: 355, y2: 433 }
+    );
+    // c.gravity wins over anchor.
+    assert_eq!(
+        crop_for(Some([100.0, 50.0]), Some((Anchor1D::Near, Anchor1D::Near))),
+        s::Node::Crop { x1: 551, y1: 0, x2: 768, y2: 433 }
+    );
+    // Without c.gravity, anchor still applies.
+    assert_eq!(
+        crop_for(None, Some((Anchor1D::Near, Anchor1D::Near))),
+        s::Node::Crop { x1: 0, y1: 0, x2: 217, y2: 433 }
+    );
+}
+
+/// Issue #602: the vertical axis works the same way for a wide target.
+#[test]
+fn test_crop_gravity_vertical() {
+    let mut b = FramewiseBuilder::new();
+    let l = Ir4Layout::new(
+        Instructions {
+            w: Some(400),
+            h: Some(100),
+            mode: Some(FitMode::Crop),
+            c_gravity: Some([50.0, 100.0]),
+            ..Default::default()
+        },
+        400,
+        400,
+        400,
+        400,
+    );
+    l.add_steps(&mut b, &None).unwrap();
+    assert_eq!(b.steps[0], s::Node::Crop { x1: 0, y1: 300, x2: 400, y2: 400 });
+}
+
 #[test]
 fn test_custom_crop_with_preshrink() {
     let mut b = FramewiseBuilder::new();
