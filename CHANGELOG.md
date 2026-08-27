@@ -18,6 +18,7 @@ All notable changes to Imageflow are documented here. Format follows [Keep a Cha
 - Codec dispatch gets a pure-function `codec_decisions` module with a structured trace, `QualityIntent` system, and zen/C-aware `build_config` + `FullCodecDecision`.
 
 ### Added
+- BMP (DIB) decoding in the default build: new `bmp` feature (pure-Rust zenbitmaps, no C deps) is on by default and implied by `zen-codecs`, so bitmaps — including ones uploaded with a `.jpg` extension — no longer fail with `NoEnabledDecoderFound` (#626, 96c31057).
 - `imageflow_tool`: `--out -` streams the encoded image to stdout (JSON response suppressed unless `--response <file>` is given) and `--in -` reads the source from stdin, so the tool composes in shell pipelines (#622, 4d3deb67).
 - Pure-Rust codec stack: new `zen-codecs` feature provides zenjpeg/zenpng/zenwebp/zengif/zenavif decoders and zenjpeg/mozjpeg-rs/zenpng/zenwebp/zengif/zenavif encoders, fully usable without any C dependencies (1bb00db5).
 - Fuzzing: four libFuzzer targets (`fuzz_decode`, `fuzz_transcode`, `fuzz_riapi`, `fuzz_json`) with clang sancov instrumentation for C decoder coverage, three format/RIAPI/JSON dictionaries (1070 entries), a CI workflow, and `just fuzz*` recipes (a8d25bf3, 2eb25593).
