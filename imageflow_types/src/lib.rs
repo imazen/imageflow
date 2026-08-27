@@ -2220,6 +2220,22 @@ pub mod json_messages {
         pub generated_markdown: Option<String>,
     }
 
+    /// The RIAPI querystring keys understood by one backend
+    /// (`v1/schema/riapi/v1/keys`).
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+    #[cfg_attr(feature = "schema-export", derive(ToSchema))]
+    pub struct RiapiKeysBackend {
+        /// Backend identifier: `v2` (the ImageResizer4-compatible `imageflow_riapi` parser).
+        pub backend: String,
+        /// Version identifier of the key set (the `imageflow_riapi` crate version).
+        pub version: String,
+        /// Sorted, de-duplicated key names.
+        pub keys: Vec<String>,
+        /// `keys.len()`, for convenience.
+        pub count: u32,
+    }
+
     /// One decoder implementation that can handle a format
     /// (`v1/schema/formats/v1/decodable`).
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]

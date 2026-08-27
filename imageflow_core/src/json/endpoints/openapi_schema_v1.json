@@ -457,6 +457,44 @@
         }
       }
     },
+    "/v1/schema/riapi/v1/keys": {
+      "post": {
+        "tags": [],
+        "operationId": "list_riapi_keys_by_backend",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Understood RIAPI keys per backend, each with a version identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAnswer_ListRiapiKeysByBackendV1Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to list keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/tell_decoder": {
       "post": {
         "tags": [],
@@ -2506,6 +2544,46 @@
           }
         }
       },
+      "JsonAnswer_ListRiapiKeysByBackendV1Response": {
+        "type": "object",
+        "required": [
+          "code",
+          "success",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int64",
+            "example": 200
+          },
+          "data": {
+            "type": "object",
+            "description": "Response of `v1/schema/riapi/v1/keys`: the understood RIAPI keys, per backend,\neach tagged with a version identifier (issue #699).",
+            "required": [
+              "backends"
+            ],
+            "properties": {
+              "backends": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RiapiKeysBackend"
+                }
+              }
+            }
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
       "JsonAnswer_ListRiapiKeysV1Response": {
         "type": "object",
         "required": [
@@ -2688,6 +2766,21 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/DecodableFormat"
+            }
+          }
+        }
+      },
+      "ListRiapiKeysByBackendV1Response": {
+        "type": "object",
+        "description": "Response of `v1/schema/riapi/v1/keys`: the understood RIAPI keys, per backend,\neach tagged with a version identifier (issue #699).",
+        "required": [
+          "backends"
+        ],
+        "properties": {
+          "backends": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RiapiKeysBackend"
             }
           }
         }
@@ -4315,6 +4408,39 @@
             ]
           }
         ]
+      },
+      "RiapiKeysBackend": {
+        "type": "object",
+        "description": "The RIAPI querystring keys understood by one backend\n(`v1/schema/riapi/v1/keys`).",
+        "required": [
+          "backend",
+          "version",
+          "keys",
+          "count"
+        ],
+        "properties": {
+          "backend": {
+            "type": "string",
+            "description": "Backend identifier: `v2` (the ImageResizer4-compatible `imageflow_riapi` parser)."
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32",
+            "description": "`keys.len()`, for convenience.",
+            "minimum": 0
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sorted, de-duplicated key names."
+          },
+          "version": {
+            "type": "string",
+            "description": "Version identifier of the key set (the `imageflow_riapi` crate version)."
+          }
+        }
       },
       "RoundCornersMode": {
         "oneOf": [

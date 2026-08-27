@@ -120,3 +120,46 @@ fn test_decodable_formats_endpoint_reflects_enabled_codecs() {
 
     context.destroy().unwrap();
 }
+
+/// Issue #699: `v1/schema/riapi/v1/keys` returns the understood keys per backend
+/// with a version identifier, sorted, de-duplicated, and counted.
+#[test]
+fn test_riapi_keys_by_backend_endpoint() {
+    use imageflow_types::json_messages::RiapiKeysBackend;
+
+    let mut context = Context::create().unwrap();
+    let (response, result) = context.message("v1/schema/riapi/v1/keys", b"{}");
+    assert!(result.is_ok(), "{:?}", result.err());
+    assert_eq!(response.status_code, 200);
+    let json: serde_json::Value = serde_json::from_slice(&response.response_json).unwrap();
+    let backends: Vec<RiapiKeysBackend> =
+        serde_json::from_value(json["data"]["backends"].clone()).unwrap();
+
+    assert_eq!(backends.len(), 1, "only the v2 backend lives in this repo: {backends:?}");
+    let v2 = &backends[0];
+    assert_eq!(v2.backend, "v2");
+    assert!(!v2.version.is_empty());
+    assert_eq!(v2.count as usize, v2.keys.len());
+    let mut sorted = v2.keys.clone();
+    sorted.sort();
+    sorted.dedup();
+    assert_eq!(v2.keys, sorted, "keys must be sorted and de-duplicated");
+
+    // Same key set the flat legacy endpoint reports.
+    let (legacy, _) = context.message("v1/schema/riapi/latest/list_keys", b"{}");
+    let legacy: serde_json::Value = serde_json::from_slice(&legacy.response_json).unwrap();
+    let mut legacy_keys: Vec<String> =
+        serde_json::from_value(legacy["data"]["schema"]["key_names"].clone()).unwrap();
+    legacy_keys.sort();
+    legacy_keys.dedup();
+    assert_eq!(v2.keys, legacy_keys);
+    for k in ["w", "h", "mode", "c.gravity", "qp"] {
+        assert!(v2.keys.iter().any(|x| x == k), "missing {k}");
+    }
+
+    let (response, _) = context.message("v1/schema/list-schema-endpoints", b"{}");
+    let json: serde_json::Value = serde_json::from_slice(&response.response_json).unwrap();
+    let endpoints = json["data"]["endpoints"].as_array().unwrap();
+    assert!(endpoints.iter().any(|e| e == "/v1/schema/riapi/v1/keys"), "{endpoints:?}");
+    context.destroy().unwrap();
+}

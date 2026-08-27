@@ -79,6 +79,11 @@ pub fn try_invoke_static(method: &str, json: &[u8]) -> Result<Option<JsonRespons
             let output = list_riapi_keys()?;
             Ok(Some(JsonResponse::ok(output)))
         }
+        "v1/schema/riapi/v1/keys" => {
+            let _input = parse_json::<s::EmptyRequest>(json)?;
+            let output = list_riapi_keys_by_backend()?;
+            Ok(Some(JsonResponse::ok(output)))
+        }
         "v1/schema/riapi/latest/validate" => {
             let input = parse_json::<s::ValidateQueryString>(json)?;
             let output = validate_riapi_query_string(input)?;
@@ -214,6 +219,15 @@ pub struct ListRiapiKeysV1Response {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ValidateRiapiQueryStringV1Response {
     pub results: json_messages::QueryStringValidationResults,
+}
+
+/// Response of `v1/schema/riapi/v1/keys`: the understood RIAPI keys, per backend,
+/// each tagged with a version identifier (issue #699).
+#[cfg_attr(feature = "schema-export", derive(ToSchema))]
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ListRiapiKeysByBackendV1Response {
+    pub backends: Vec<json_messages::RiapiKeysBackend>,
 }
 
 /// Response of `v1/schema/formats/v1/decodable`: the formats this context can
@@ -444,6 +458,23 @@ pub(super) fn list_riapi_keys() -> Result<ListRiapiKeysV1Response> {
 
 #[cfg_attr(feature = "schema-export", utoipa::path(
     post,
+    path = "/v1/schema/riapi/v1/keys",
+    request_body = EmptyRequest,
+    responses(
+        (status = 200, description = "Understood RIAPI keys per backend, each with a version identifier", body = JsonAnswer<ListRiapiKeysByBackendV1Response>),
+        (status = 500, description = "Failed to list keys", body = JsonError)
+    )
+))]
+pub(super) fn list_riapi_keys_by_backend() -> Result<ListRiapiKeysByBackendV1Response> {
+    // Only the v2 (imageflow_riapi) backend lives in this repository today; a
+    // zen-node backend is listed here once imageflow depends on it.
+    Ok(ListRiapiKeysByBackendV1Response {
+        backends: imageflow_riapi::ir4::get_query_string_keys_by_backend(),
+    })
+}
+
+#[cfg_attr(feature = "schema-export", utoipa::path(
+    post,
     path = "/v1/schema/formats/v1/decodable",
     request_body = EmptyRequest,
     responses(
@@ -486,6 +517,7 @@ pub(super) fn validate_riapi_query_string(
         get_riapi_schema,
         list_riapi_keys,
         validate_riapi_query_string,
+        list_riapi_keys_by_backend,
         list_decodable_formats,
         get_openapi_schema_json,
         list_schema_endpoints,
@@ -504,6 +536,8 @@ pub(super) fn validate_riapi_query_string(
             JsonAnswer<GetRiapiSchemaV1Response>, GetRiapiSchemaV1Response,
             JsonAnswer<ListRiapiKeysV1Response>, ListRiapiKeysV1Response,
             JsonAnswer<ValidateRiapiQueryStringV1Response>, ValidateRiapiQueryStringV1Response,
+            JsonAnswer<ListRiapiKeysByBackendV1Response>, ListRiapiKeysByBackendV1Response,
+            json_messages::RiapiKeysBackend,
             JsonAnswer<ListDecodableFormatsV1Response>, ListDecodableFormatsV1Response,
             json_messages::DecodableFormat, json_messages::FormatDecoder,
             JsonAnswer<ListSchemaEndpointsResponse>, ListSchemaEndpointsResponse,
@@ -844,6 +878,7 @@ pub(super) fn list_schema_endpoints() -> Result<ListSchemaEndpointsResponse> {
         "/v1/schema/openapi/latest/get".to_string(),
         "/v1/schema/list-schema-endpoints".to_string(),
         "/v1/schema/formats/v1/decodable".to_string(),
+        "/v1/schema/riapi/v1/keys".to_string(),
     ];
     if cfg!(feature = "json-schema") {
         endpoints.push("/v1/schema/json/latest/v1/all".to_string());

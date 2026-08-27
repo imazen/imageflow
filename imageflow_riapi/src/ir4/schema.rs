@@ -32,6 +32,25 @@ pub fn get_query_string_schema() -> Result<QueryStringSchema, String> {
     })
 }
 
+/// Backend identifier reported for this parser's key set (`v1/schema/riapi/v1/keys`).
+pub const V2_BACKEND_NAME: &str = "v2";
+
+/// The keys understood by the `v2` (ImageResizer4-compatible) backend, sorted and
+/// de-duplicated, tagged with this crate's version (issue #699).
+pub fn get_query_string_keys_by_backend() -> Vec<RiapiKeysBackend> {
+    let mut keys: Vec<String> =
+        crate::ir4::parsing::IR4_KEYS.iter().map(|k| k.to_string()).collect();
+    keys.sort_unstable();
+    keys.dedup();
+    let count = keys.len() as u32;
+    vec![RiapiKeysBackend {
+        backend: V2_BACKEND_NAME.to_owned(),
+        version: env!("CARGO_PKG_VERSION").to_owned(),
+        keys,
+        count,
+    }]
+}
+
 pub fn get_query_string_keys() -> Result<QueryStringSchema, String> {
     Ok(QueryStringSchema {
         key_names: crate::ir4::parsing::IR4_KEYS.iter().map(|s| s.to_string()).collect(),

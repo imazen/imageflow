@@ -22,6 +22,10 @@ pub fn get_query_string_keys() -> Result<s::json_messages::QueryStringSchema, St
     schema::get_query_string_keys()
 }
 
+pub fn get_query_string_keys_by_backend() -> Vec<s::json_messages::RiapiKeysBackend> {
+    schema::get_query_string_keys_by_backend()
+}
+
 pub fn validate_query_string(
     query_string: String,
 ) -> Result<s::json_messages::QueryStringValidationResults, String> {
