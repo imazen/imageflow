@@ -50,6 +50,9 @@ pub enum JobSource {
 pub struct CmdBuild {
     job: Result<s::Build001>,
     response: Option<Result<s::ResponsePayload>>,
+    /// Outputs routed to stdout (`--out -`). When non-empty, the JSON response
+    /// is never written to stdout; use `--response <file>` to capture it.
+    stdout_io_ids: Vec<i32>,
 }
 
 #[derive(Debug)]
@@ -119,13 +122,23 @@ impl std::fmt::Display for CmdError {
     }
 }
 
-fn parse_io_enum(s: &str) -> s::IoEnum {
+/// The argument value that selects stdin (for `--in`) or stdout (for `--out`).
+pub(crate) const STDIO_ARG: &str = "-";
+
+fn parse_io_enum(s: &str, dir: s::IoDirection) -> Result<s::IoEnum> {
     match s {
-        "base64:" => s::IoEnum::OutputBase64,
-        s if s.starts_with("http://") || s.starts_with("https://") => {
-            panic!("URLs are not permitted")
+        "base64:" => Ok(s::IoEnum::OutputBase64),
+        STDIO_ARG if dir == s::IoDirection::Out => Ok(s::IoEnum::OutputBuffer),
+        STDIO_ARG => {
+            // `--in -` reads the whole image from stdin (issue #622)
+            let mut bytes = Vec::new();
+            std::io::stdin().lock().read_to_end(&mut bytes)?;
+            Ok(s::IoEnum::ByteArray(bytes))
         }
-        s => s::IoEnum::Filename(s.to_owned()),
+        s if s.starts_with("http://") || s.starts_with("https://") => {
+            Err(CmdError::BadArguments("URLs are not permitted".to_owned()))
+        }
+        s => Ok(s::IoEnum::Filename(s.to_owned())),
     }
 }
 
@@ -173,17 +186,19 @@ impl CmdBuild {
         }
     }
 
+    /// Substitutes `--in` / `--out` arguments into the recipe. The second value
+    /// is the list of output io_ids the user routed to stdout with `--out -`.
     fn inject(
         before: s::Build001,
         inject: Option<Vec<String>>,
         dir: s::IoDirection,
-    ) -> Result<s::Build001> {
+    ) -> Result<(s::Build001, Vec<i32>)> {
         if inject.is_none() {
-            return Ok(before);
+            return Ok((before, Vec::new()));
         }
         let args: Vec<String> = inject.unwrap();
         if args.is_empty() {
-            return Ok(before);
+            return Ok((before, Vec::new()));
         }
 
         let user_providing_numbers = args.as_slice().iter().any(|v| v.parse::<i32>().is_ok());
@@ -249,22 +264,35 @@ impl CmdBuild {
             }
         }
 
+        // Outputs the user routed to stdout with `--out -` (issue #622). Only the
+        // literal argument counts: an `output_buffer` already present in a JSON
+        // recipe keeps its existing behavior (bytes are not written anywhere).
+        let mut stdout_io_ids: Vec<i32> = if dir == s::IoDirection::Out {
+            hash.iter().filter(|(_, v)| **v == STDIO_ARG).map(|(k, _)| *k).collect()
+        } else {
+            Vec::new()
+        };
+        stdout_io_ids.sort_unstable();
+        if stdout_io_ids.len() > 1 {
+            return Err(CmdError::BadArguments(format!(
+                "Only one output may be written to stdout (`--out -`); found {} (io_ids {:?})",
+                stdout_io_ids.len(),
+                stdout_io_ids
+            )));
+        }
+
         let old_io_copy = before.io.clone();
 
-        Ok(s::Build001 {
-            io: old_io_copy
-                .into_iter()
-                .map(|io| {
-                    let id = io.io_id;
-                    if let Some(v) = hash.get(&id) {
-                        s::IoObject { direction: dir, io_id: id, io: parse_io_enum(v) }
-                    } else {
-                        io
-                    }
-                })
-                .collect::<Vec<s::IoObject>>(),
-            ..before
-        })
+        let mut io = Vec::with_capacity(old_io_copy.len());
+        for obj in old_io_copy {
+            let id = obj.io_id;
+            if let Some(v) = hash.get(&id) {
+                io.push(s::IoObject { direction: dir, io_id: id, io: parse_io_enum(v, dir)? });
+            } else {
+                io.push(obj);
+            }
+        }
+        Ok((s::Build001 { io, ..before }, stdout_io_ids))
     }
     fn inject_security(
         before: s::Build001,
@@ -355,9 +383,9 @@ impl CmdBuild {
         in_args: Option<Vec<String>>,
         out_args: Option<Vec<String>>,
         limit_args: Option<Vec<String>>,
-    ) -> Result<s::Build001> {
+    ) -> Result<(s::Build001, Vec<i32>)> {
         let original = CmdBuild::load_job(source)?;
-        let a = CmdBuild::inject(original, in_args, s::IoDirection::In)?;
+        let (a, _) = CmdBuild::inject(original, in_args, s::IoDirection::In)?;
         let b = CmdBuild::inject_security(a, limit_args)?;
         CmdBuild::inject(b, out_args, s::IoDirection::Out)
     }
@@ -367,10 +395,15 @@ impl CmdBuild {
         out_args: Option<Vec<String>>,
         limit_args: Option<Vec<String>>,
     ) -> CmdBuild {
-        CmdBuild {
-            job: CmdBuild::parse_maybe(source, in_args, out_args, limit_args),
-            response: None,
+        match CmdBuild::parse_maybe(source, in_args, out_args, limit_args) {
+            Ok((job, stdout_io_ids)) => CmdBuild { job: Ok(job), response: None, stdout_io_ids },
+            Err(e) => CmdBuild { job: Err(e), response: None, stdout_io_ids: Vec::new() },
         }
+    }
+
+    /// True when an output is routed to stdout, which reserves stdout for image bytes.
+    pub fn writes_image_to_stdout(&self) -> bool {
+        !self.stdout_io_ids.is_empty()
     }
 
     fn transform_build(b: s::Build001, directory: &Path) -> Result<(Vec<String>, s::Build001)> {
@@ -471,7 +504,7 @@ impl CmdBuild {
 
     pub fn build_maybe(self) -> CmdBuild {
         let response = if let Ok(ref b) = self.job {
-            CmdBuild::build(b.clone())
+            CmdBuild::build(b.clone(), &self.stdout_io_ids)
         } else {
             Err(CmdError::Incomplete)
         };
@@ -500,7 +533,9 @@ impl CmdBuild {
             if let Some(filename) = response_file {
                 let mut file = BufWriter::new(File::create(filename).unwrap());
                 file.write_all(&self.get_json_response().response_json)?;
-            } else if allow_stdout {
+            } else if allow_stdout && !self.writes_image_to_stdout() {
+                // `--out -` reserves stdout for the image bytes (issue #622);
+                // the JSON response is only available via --response.
                 std::io::stdout().write_all(&self.get_json_response().response_json)?;
             }
         }
@@ -532,8 +567,17 @@ impl CmdBuild {
         })
     }
 
-    fn build(data: s::Build001) -> Result<s::ResponsePayload> {
+    fn build(data: s::Build001, stdout_io_ids: &[i32]) -> Result<s::ResponsePayload> {
         let mut context = fc::Context::create()?;
-        Ok(context.build_1(data)?)
+        let response = context.build_1(data)?;
+        // Stream `--out -` results to stdout (issue #622). Done here, before the
+        // JSON response is considered, so stdout carries only image bytes.
+        for &io_id in stdout_io_ids {
+            let bytes = context.take_output_buffer(io_id)?;
+            let mut stdout = std::io::stdout().lock();
+            stdout.write_all(&bytes)?;
+            stdout.flush()?;
+        }
+        Ok(response)
     }
 }
