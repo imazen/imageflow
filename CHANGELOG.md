@@ -18,6 +18,7 @@ All notable changes to Imageflow are documented here. Format follows [Keep a Cha
 - Codec dispatch gets a pure-function `codec_decisions` module with a structured trace, `QualityIntent` system, and zen/C-aware `build_config` + `FullCodecDecision`.
 
 ### Added
+- JSON API: `v1/schema/riapi/v1/keys` lists understood RIAPI keys per backend (`v2` today) with a version identifier, sorted key list, and count (#699, afb40656).
 - JSON API: `v1/schema/formats/v1/decodable` lists the formats the current context can decode with each enabled decoder implementation (name, `v2`/`zen` backend, preferred flag), reflecting runtime `EnabledCodecs` state (#700, 2ee295e5).
 - BMP (DIB) decoding in the default build: new `bmp` feature (pure-Rust zenbitmaps, no C deps) is on by default and implied by `zen-codecs`, so bitmaps — including ones uploaded with a `.jpg` extension — no longer fail with `NoEnabledDecoderFound` (#626, 96c31057).
 - `imageflow_tool`: `--out -` streams the encoded image to stdout (JSON response suppressed unless `--response <file>` is given) and `--in -` reads the source from stdin, so the tool composes in shell pipelines (#622, 4d3deb67).
