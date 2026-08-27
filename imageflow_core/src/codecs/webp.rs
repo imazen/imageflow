@@ -252,6 +252,74 @@ pub struct WebPEncoder {
     quality: Option<f32>,
     lossless: Option<bool>,
     matte: Option<s::Color>,
+    /// Frames written so far. The first frame decides the mode: if an input
+    /// decoder reports more frames to come, an animated WebP is assembled via
+    /// libwebp's WebPAnimEncoder (issue #606); otherwise the still path below
+    /// is used unchanged (byte-identical output for single-frame inputs).
+    frames_written: u32,
+    anim: Option<AnimEncoderState>,
+}
+
+/// State for the animated (multi-frame) libwebp path.
+struct AnimEncoderState {
+    enc: *mut WebPAnimEncoder,
+    w: i32,
+    h: i32,
+    /// Timestamp (ms) at which the next frame starts.
+    next_timestamp_ms: i32,
+}
+
+impl Drop for AnimEncoderState {
+    fn drop(&mut self) {
+        if !self.enc.is_null() {
+            unsafe { WebPAnimEncoderDelete(self.enc) };
+            self.enc = ptr::null_mut();
+        }
+    }
+}
+
+/// Delay (ms) of the frame most recently produced by one of the input decoders,
+/// and whether that decoder still has frames to produce. Defaults to 100 ms /
+/// false when no input decoder exposes frame timing.
+fn input_frame_info(c: &Context, decoder_io_ids: &[i32]) -> (i32, bool) {
+    for io_id in decoder_io_ids {
+        if let Ok(mut codec) = c.get_codec(*io_id)
+            && let Ok(decoder) = codec.get_decoder()
+        {
+            let more = decoder.has_more_frames().unwrap_or(false);
+            let mut delay_ms = 100;
+            if let Some(gif) = decoder.as_any().downcast_ref::<super::gif::GifDecoder>()
+                && let Some(frame) = gif.current_frame()
+            {
+                // GIF delays are in centiseconds
+                delay_ms = i32::from(frame.delay) * 10;
+            }
+            #[cfg(feature = "zen-codecs")]
+            if let Some(zd) = decoder.as_any().downcast_ref::<super::zen_decoder::ZenDecoder>()
+                && let Some(d) = zd.last_frame_delay()
+            {
+                delay_ms = d as i32 * 10;
+            }
+            return (delay_ms.max(0), more);
+        }
+    }
+    (100, false)
+}
+
+/// Loop count for the animation, from the first GIF input decoder (0 = infinite).
+fn input_loop_count(c: &Context, decoder_io_ids: &[i32]) -> i32 {
+    for io_id in decoder_io_ids {
+        if let Ok(mut codec) = c.get_codec(*io_id)
+            && let Ok(decoder) = codec.get_decoder()
+            && let Some(gif) = decoder.as_any().downcast_ref::<super::gif::GifDecoder>()
+        {
+            return match gif.get_repeat() {
+                Some(::gif::Repeat::Finite(n)) => i32::from(n),
+                _ => 0,
+            };
+        }
+    }
+    0
 }
 
 impl WebPEncoder {
@@ -274,7 +342,171 @@ impl WebPEncoder {
                 "Cannot specify both lossless=true and quality"
             ));
         }
-        Ok(WebPEncoder { io, quality, lossless, matte })
+        Ok(WebPEncoder { io, quality, lossless, matte, frames_written: 0, anim: None })
+    }
+
+    fn webp_config(&self) -> Result<WebPConfig> {
+        let mut config = std::mem::MaybeUninit::<WebPConfig>::uninit();
+        // SAFETY: WebPConfigInitInternal fully initializes the struct on success.
+        let ok = unsafe {
+            WebPConfigInitInternal(
+                config.as_mut_ptr(),
+                WebPPreset::WEBP_PRESET_DEFAULT,
+                self.quality.unwrap_or(85.0).clamp(0.0, 100.0),
+                WEBP_ENCODER_ABI_VERSION as i32,
+            )
+        };
+        if ok == 0 {
+            return Err(nerror!(ErrorKind::ImageEncodingError, "WebPConfigInit failed"));
+        }
+        let mut config = unsafe { config.assume_init() };
+        if self.lossless.unwrap_or(false) {
+            // Mirror the simple lossless API: lossless with exact RGB under alpha.
+            config.lossless = 1;
+            config.exact = 1;
+        }
+        Ok(config)
+    }
+
+    /// Start the animated path with the canvas size of the first frame.
+    fn start_animation(
+        &mut self,
+        c: &Context,
+        w: i32,
+        h: i32,
+        decoder_io_ids: &[i32],
+    ) -> Result<()> {
+        let mut options = std::mem::MaybeUninit::<WebPAnimEncoderOptions>::uninit();
+        // SAFETY: WebPAnimEncoderOptionsInitInternal initializes every field on success.
+        let ok = unsafe {
+            WebPAnimEncoderOptionsInitInternal(options.as_mut_ptr(), WEBP_MUX_ABI_VERSION as i32)
+        };
+        if ok == 0 {
+            return Err(nerror!(
+                ErrorKind::ImageEncodingError,
+                "WebPAnimEncoderOptionsInit failed"
+            ));
+        }
+        let mut options = unsafe { options.assume_init() };
+        options.anim_params.loop_count = input_loop_count(c, decoder_io_ids);
+        let enc =
+            unsafe { WebPAnimEncoderNewInternal(w, h, &options, WEBP_MUX_ABI_VERSION as i32) };
+        if enc.is_null() {
+            return Err(nerror!(ErrorKind::ImageEncodingError, "WebPAnimEncoderNew failed"));
+        }
+        self.anim = Some(AnimEncoderState { enc, w, h, next_timestamp_ms: 0 });
+        Ok(())
+    }
+
+    /// Add one frame to the animation. `pixels` is a strided BGRA/BGR window.
+    fn add_animation_frame(
+        &mut self,
+        pixels: &[u8],
+        w: i32,
+        h: i32,
+        stride: i32,
+        layout: PixelLayout,
+        delay_ms: i32,
+    ) -> Result<()> {
+        let config = self.webp_config()?;
+        let anim = self
+            .anim
+            .as_mut()
+            .ok_or_else(|| nerror!(ErrorKind::InternalError, "animation encoder not started"))?;
+        if (w, h) != (anim.w, anim.h) {
+            return Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "Animated WebP frames must all be {}x{}, got {}x{}",
+                anim.w,
+                anim.h,
+                w,
+                h
+            ));
+        }
+        let mut pic = std::mem::MaybeUninit::<WebPPicture>::uninit();
+        // SAFETY: WebPPictureInitInternal initializes every field on success.
+        let ok =
+            unsafe { WebPPictureInitInternal(pic.as_mut_ptr(), WEBP_ENCODER_ABI_VERSION as i32) };
+        if ok == 0 {
+            return Err(nerror!(ErrorKind::ImageEncodingError, "WebPPictureInit failed"));
+        }
+        let mut pic = unsafe { pic.assume_init() };
+        pic.use_argb = 1;
+        pic.width = w;
+        pic.height = h;
+        // SAFETY: `pixels` covers h rows of `stride` bytes in the given layout; the
+        // import copies into picture-owned memory, freed by WebPPictureFree below.
+        let imported = unsafe {
+            match layout {
+                PixelLayout::BGRA => WebPPictureImportBGRA(&mut pic, pixels.as_ptr(), stride),
+                PixelLayout::BGR => WebPPictureImportBGR(&mut pic, pixels.as_ptr(), stride),
+                other => {
+                    return Err(nerror!(
+                        ErrorKind::InvalidArgument,
+                        "PixelLayout {:?} not supported for WebP encoding",
+                        other
+                    ))
+                }
+            }
+        };
+        if imported == 0 {
+            return Err(nerror!(ErrorKind::ImageEncodingError, "WebPPictureImport failed"));
+        }
+        let added =
+            unsafe { WebPAnimEncoderAdd(anim.enc, &mut pic, anim.next_timestamp_ms, &config) };
+        unsafe { WebPPictureFree(&mut pic) };
+        if added == 0 {
+            let msg = unsafe { std::ffi::CStr::from_ptr(WebPAnimEncoderGetError(anim.enc)) }
+                .to_string_lossy()
+                .into_owned();
+            return Err(nerror!(
+                ErrorKind::ImageEncodingError,
+                "WebPAnimEncoderAdd failed: {}",
+                msg
+            ));
+        }
+        anim.next_timestamp_ms = anim.next_timestamp_ms.saturating_add(delay_ms);
+        Ok(())
+    }
+
+    /// Flush the animation and write the assembled WebP to the output.
+    fn finish_animation(&mut self) -> Result<()> {
+        let Some(anim) = self.anim.take() else { return Ok(()) };
+        // A NULL frame marks the end of the last frame's duration.
+        let flushed = unsafe {
+            WebPAnimEncoderAdd(anim.enc, ptr::null_mut(), anim.next_timestamp_ms, ptr::null())
+        };
+        if flushed == 0 {
+            let msg = unsafe { std::ffi::CStr::from_ptr(WebPAnimEncoderGetError(anim.enc)) }
+                .to_string_lossy()
+                .into_owned();
+            return Err(nerror!(
+                ErrorKind::ImageEncodingError,
+                "WebPAnimEncoderAdd(flush) failed: {}",
+                msg
+            ));
+        }
+        let mut data = WebPData { bytes: ptr::null(), size: 0 };
+        let assembled = unsafe { WebPAnimEncoderAssemble(anim.enc, &mut data) };
+        if assembled == 0 || data.bytes.is_null() || data.size == 0 {
+            let msg = unsafe { std::ffi::CStr::from_ptr(WebPAnimEncoderGetError(anim.enc)) }
+                .to_string_lossy()
+                .into_owned();
+            return Err(nerror!(
+                ErrorKind::ImageEncodingError,
+                "WebPAnimEncoderAssemble failed: {}",
+                msg
+            ));
+        }
+        // SAFETY: data.bytes/size come from libwebp and stay valid until WebPFree.
+        let result = unsafe {
+            let bytes = slice::from_raw_parts(data.bytes, data.size);
+            let r = self.io.write_all(bytes).map_err(|e| FlowError::from_encoder(e).at(here!()));
+            WebPFree(data.bytes as *mut core::ffi::c_void);
+            r
+        };
+        drop(anim); // WebPAnimEncoderDelete
+        result
     }
 }
 
@@ -302,6 +534,33 @@ impl Encoder for WebPEncoder {
 
         let mut_slice = window.slice_mut();
         let length = mut_slice.len();
+
+        // Animated path (issue #606): decoders pre-read the next frame, so on the
+        // first frame we already know whether more are coming.
+        let (delay_ms, more_frames) = input_frame_info(c, decoder_io_ids);
+        if self.frames_written == 0 && more_frames {
+            self.start_animation(c, w, h, decoder_io_ids)?;
+        }
+        if self.anim.is_some() {
+            self.add_animation_frame(mut_slice, w, h, stride, layout, delay_ms)?;
+            self.frames_written += 1;
+            return Ok(s::EncodeResult {
+                w,
+                h,
+                io_id: self.io.io_id(),
+                bytes: ::imageflow_types::ResultBytes::Elsewhere,
+                preferred_extension: "webp".to_owned(),
+                preferred_mime_type: "image/webp".to_owned(),
+            });
+        }
+        if self.frames_written > 0 {
+            return Err(nerror!(
+                ErrorKind::InvalidState,
+                "libwebp encoder already wrote a still WebP; cannot append frame {}",
+                self.frames_written + 1
+            ));
+        }
+        self.frames_written += 1;
 
         let lossless = self.lossless.unwrap_or(false);
         let quality = self.quality.unwrap_or(85.0).clamp(0.0, 100.0);
@@ -344,7 +603,8 @@ impl Encoder for WebPEncoder {
         })
     }
 
-    fn into_io(self: Box<Self>) -> Result<IoProxy> {
+    fn into_io(mut self: Box<Self>) -> Result<IoProxy> {
+        self.finish_animation()?;
         Ok(self.io)
     }
 }

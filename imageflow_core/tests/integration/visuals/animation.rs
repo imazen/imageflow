@@ -18,6 +18,40 @@ fn count_gif_frames(bytes: &[u8]) -> usize {
     count
 }
 
+/// Walk the RIFF chunks of a WebP file, returning (fourcc, payload) pairs.
+fn webp_chunks(bytes: &[u8]) -> Vec<([u8; 4], &[u8])> {
+    assert!(bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP", "not a WebP container");
+    let riff_len = u32::from_le_bytes(bytes[4..8].try_into().unwrap()) as usize;
+    assert_eq!(
+        riff_len + 8,
+        bytes.len(),
+        "RIFF length must cover the whole file (no trailing garbage)"
+    );
+    let mut chunks = Vec::new();
+    let mut pos = 12;
+    while pos + 8 <= bytes.len() {
+        let fourcc: [u8; 4] = bytes[pos..pos + 4].try_into().unwrap();
+        let size = u32::from_le_bytes(bytes[pos + 4..pos + 8].try_into().unwrap()) as usize;
+        let payload = &bytes[pos + 8..pos + 8 + size];
+        chunks.push((fourcc, payload));
+        pos += 8 + size + (size & 1);
+    }
+    chunks
+}
+
+/// Durations (ms) of every ANMF frame in an animated WebP.
+fn webp_frame_durations(bytes: &[u8]) -> Vec<u32> {
+    webp_chunks(bytes)
+        .iter()
+        .filter(|(fourcc, _)| fourcc == b"ANMF")
+        .map(|(_, p)| u32::from_le_bytes([p[12], p[13], p[14], 0]))
+        .collect()
+}
+
+fn webp_has_chunk(bytes: &[u8], fourcc: &[u8; 4]) -> bool {
+    webp_chunks(bytes).iter().any(|(f, _)| f == fourcc)
+}
+
 /// Decode a single pixel from a PNG byte buffer (top-left corner).
 fn decode_png_pixel(bytes: &[u8]) -> (u8, u8, u8, u8) {
     let decoder = lodepng::decode32(bytes).unwrap();
@@ -404,31 +438,29 @@ fn test_animated_gif_to_webp_preserves_animation() {
     let input = build_animated_gif(8, 8, &["FF0000", "00FF00", "0000FF"], 10);
     let output = roundtrip_animated_gif(input, EncoderPreset::WebPLossy { quality: 80.0 });
     assert!(output.starts_with(b"RIFF"), "Output should be WebP");
-    // WebP animated files should have ANIM chunk
-    // At minimum, the file should be significantly larger than a single-frame WebP
-    assert!(
-        output.len() > 200,
-        "Animated WebP should be larger than a trivial single-frame output (got {} bytes)",
-        output.len()
-    );
+    assert!(webp_has_chunk(&output, b"ANIM"), "animated WebP needs an ANIM chunk");
+    // 3 GIF frames at 10cs = 100ms each must become 3 ANMF frames of 100ms.
+    assert_eq!(webp_frame_durations(&output), vec![100, 100, 100]);
 }
 
 #[test]
-#[cfg_attr(
-    any(not(feature = "zen-codecs"), feature = "c-codecs"),
-    ignore = "WebP lossless animation requires zen-codecs without c-codecs \
-              (C libwebp is preferred for stable encode output but doesn't preserve animation)"
-)]
 fn test_animated_gif_to_webp_lossless_preserves_animation() {
     test_init();
     let input = build_animated_gif(8, 8, &["FF0000", "00FF00", "0000FF", "FFFF00"], 5);
     let output = roundtrip_animated_gif(input, EncoderPreset::WebPLossless);
     assert!(output.starts_with(b"RIFF"), "Output should be WebP");
-    assert!(
-        output.len() > 200,
-        "Animated WebP lossless should have multiple frames (got {} bytes)",
-        output.len()
-    );
+    assert!(webp_has_chunk(&output, b"ANIM"), "animated lossless WebP needs an ANIM chunk");
+    assert_eq!(webp_frame_durations(&output), vec![50, 50, 50, 50]);
+}
+
+#[test]
+fn test_single_frame_gif_to_webp_is_a_still_image() {
+    test_init();
+    let input = build_animated_gif(8, 8, &["FF0000"], 10);
+    let output = roundtrip_animated_gif(input, EncoderPreset::WebPLossy { quality: 80.0 });
+    assert!(output.starts_with(b"RIFF"), "Output should be WebP");
+    assert!(!webp_has_chunk(&output, b"ANIM"), "single-frame input must stay a still WebP");
+    assert!(webp_frame_durations(&output).is_empty());
 }
 
 // ============================================================================
