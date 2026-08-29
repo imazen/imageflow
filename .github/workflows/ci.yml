@@ -1,8 +1,17 @@
 name: "Test/Release" # Reminder, to test locally, https://sanjulaganepola.github.io/github-local-actions-docs/
 on:
+  # `branches: ["**"]` ran the full 10-cell matrix — including `macos-15-intel`
+  # and `macos-14`, the two scarcest runners — on every push to every branch,
+  # and, because `pull_request` is also listed, twice over for any branch with
+  # an open PR. Nothing here publishes on a push: `ALLOW_PUBLISH` (set below,
+  # and the gate on every S3 / GitHub-release / Docker-push step) is
+  # `github.event_name == 'release'`, so a branch push has never produced an
+  # artifact anyone could consume — it was only ever a test run. `main` plus
+  # `pull_request` keeps every result someone actually reads, and
+  # `workflow_dispatch` still covers a branch with no PR open yet.
   push:
     branches:
-      - "**"
+      - main
     tags-ignore:
       - "v*"
   pull_request:
@@ -10,6 +19,20 @@ on:
   release:
     types:
       - published
+
+concurrency:
+  # There was no `concurrency` block at all, so nothing ever cancelled a
+  # superseded run and consecutive pushes stacked two macOS cells apiece into a
+  # queue shared with the rest of the org. `github.ref` is set on every event
+  # type used here (`refs/heads/main` on push, `refs/pull/N/merge` on a PR,
+  # `refs/tags/vX` on a release), unlike `github.head_ref`, which is empty on
+  # anything but a pull_request.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # A `release` run is the only one that publishes — to S3, to the GitHub
+  # release, and to Docker Hub. Cancelling one midway would leave those three
+  # destinations holding a partial set of the ten platform packages, so release
+  # runs are never superseded; every other event type is.
+  cancel-in-progress: ${{ github.event_name != 'release' }}
 
 env:
     ZENSIM_TOOLS_VERSION: "tools-v0.1.0"

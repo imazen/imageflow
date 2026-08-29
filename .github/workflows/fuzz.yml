@@ -10,6 +10,15 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch:
 
+concurrency:
+  # `github.event_name` is in the group on purpose. A `schedule` run and a
+  # `push` run both report `github.ref` as `refs/heads/main`, so without it a
+  # push to main would cancel the nightly fuzz — the long run that actually
+  # explores new corpus — partway through. Keyed this way, pushes supersede
+  # pushes and the nightly is left alone.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
   fuzz:
     runs-on: ubuntu-24.04

@@ -7,6 +7,12 @@ on:
       - 'imageflow_types/src/**'
   workflow_dispatch:
 
+concurrency:
+  # Two of these racing would open two "Update OpenAPI schema" PRs for the same
+  # schema drift, since the PR branch name is keyed on `github.run_number`.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check-schema:
     runs-on: ubuntu-latest
