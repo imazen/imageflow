@@ -58,12 +58,6 @@ pub mod timeywimey {
     pub use chrono::prelude::Utc;
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {}
-}
-
 #[test]
 fn test_file_macro_for_this_build() {
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))

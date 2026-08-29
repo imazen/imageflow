@@ -10,9 +10,3 @@ pub mod sizing;
 
 #[cfg(test)]
 mod sizing_tests;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {}
-}

@@ -1,6 +1,18 @@
 //! Resource limit and robustness tests
 //!
 //! These tests verify that oversized or malformed images are rejected gracefully.
+//!
+//! Some classes of failure only appear under conditions a normal `cargo test` run
+//! does not create — large allocations, memory pressure, or a specific file's
+//! contents. To dig past what is asserted here:
+//!
+//! - `RUST_BACKTRACE=1 cargo test --release` for a backtrace on the failing frame
+//! - `RUSTFLAGS='-Zsanitizer=address' cargo +nightly test` for AddressSanitizer
+//! - ThreadSanitizer for race conditions
+//! - valgrind for memory analysis
+//!
+//! (That guidance used to live in a `run_robustness_summary` test that printed it
+//! and asserted nothing — a green check for text that belongs in a doc comment.)
 
 use imageflow_core::{Context, ErrorKind};
 use imageflow_types as s;
@@ -736,21 +748,3 @@ fn test_png_icc_lifetime() {
     );
 }
 
-// =============================================================================
-// Summary
-// =============================================================================
-
-#[test]
-fn run_robustness_summary() {
-    println!("\n============================================================");
-    println!("ROBUSTNESS TEST SUMMARY");
-    println!("============================================================\n");
-
-    println!("For deeper analysis:");
-    println!("1. Run with: RUST_BACKTRACE=1 cargo test --release");
-    println!("2. Run with AddressSanitizer: RUSTFLAGS='-Zsanitizer=address' cargo +nightly test");
-    println!("3. Run with ThreadSanitizer for race conditions");
-    println!("4. Use valgrind for memory analysis");
-    println!("\nNote: Many issues only manifest under specific conditions");
-    println!("(large allocations, memory pressure, specific file contents)");
-}
