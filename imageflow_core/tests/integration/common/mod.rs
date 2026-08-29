@@ -14,6 +14,7 @@ use std::path::Path;
 
 use imageflow_core;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::{self, panic};
 
 use imageflow_core::BitmapKey;
@@ -147,14 +148,26 @@ fn url_to_cache_path(url: &str) -> PathBuf {
 /// Caches downloaded files in `.image-cache/sources/` at the workspace root,
 /// using the URL path as the cache key. Subsequent calls with the same URL
 /// return the cached bytes without making a network request.
+///
+/// The cache entry is published with a temp-file + rename, because nextest runs
+/// tests in parallel processes and several tests share one source URL. A plain
+/// `fs::write` truncates the destination and then fills it, so a racing reader
+/// could observe a zero-filled or half-written file and fail with
+/// `NoEnabledDecoderFound: file starting in [0, 0, 0, ...]`. `fs::rename`
+/// replaces atomically on both POSIX and Windows, so a reader sees either the
+/// old entry or the complete new one, never a partial one.
 pub fn get_url_bytes_with_retry(url: &str) -> Result<Vec<u8>, FlowError> {
     let cache_dir = source_cache_dir();
     let rel_path = url_to_cache_path(url);
     let full_path = cache_dir.join(&rel_path);
 
-    if full_path.exists() {
-        return std::fs::read(&full_path)
-            .map_err(|e| nerror!(ErrorKind::FetchError, "{}: {}", full_path.display(), e));
+    // Treat an empty cache entry as absent: an interrupted run (or an older
+    // non-atomic write) can leave a zero-length file behind, and handing those
+    // bytes back would fail the test forever on that machine.
+    if let Ok(bytes) = std::fs::read(&full_path)
+        && !bytes.is_empty()
+    {
+        return Ok(bytes);
     }
 
     // Download with retry
@@ -163,9 +176,28 @@ pub fn get_url_bytes_with_retry(url: &str) -> Result<Vec<u8>, FlowError> {
     if let Some(parent) = full_path.parent() {
         std::fs::create_dir_all(parent).unwrap();
     }
-    std::fs::write(&full_path, &bytes).unwrap();
+    write_cache_entry_atomically(&full_path, &bytes);
 
     Ok(bytes)
+}
+
+/// Publish `bytes` at `full_path` via a uniquely-named sibling temp file plus a
+/// rename, so concurrent readers never see a partially-written cache entry.
+/// Cache population is best-effort: a failure here only costs a re-download.
+fn write_cache_entry_atomically(full_path: &Path, bytes: &[u8]) {
+    static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
+    let temp_path = full_path.with_extension(format!(
+        "tmp-{}-{}",
+        std::process::id(),
+        NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed)
+    ));
+    if std::fs::write(&temp_path, bytes).is_err() {
+        let _ = std::fs::remove_file(&temp_path);
+        return;
+    }
+    if std::fs::rename(&temp_path, full_path).is_err() {
+        let _ = std::fs::remove_file(&temp_path);
+    }
 }
 
 /// Internal: download URL bytes with exponential backoff retry.
