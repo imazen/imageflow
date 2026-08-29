@@ -2,7 +2,7 @@
 //!
 //! These tests verify that oversized or malformed images are rejected gracefully.
 
-use imageflow_core::Context;
+use imageflow_core::{Context, ErrorKind};
 use imageflow_types as s;
 use std::fs;
 use std::path::PathBuf;
@@ -305,175 +305,223 @@ fn test_concurrent_context_creation() {
 }
 
 // =============================================================================
+// GIF crafted-input helpers
+// =============================================================================
+
+/// Runs `Decode` -> `Encode(gif)` over `gif_bytes` on a fresh context.
+///
+/// The input and output buffers are registered on the context and the graph is
+/// submitted with `Execute001`, which does *not* re-declare IO. An earlier shape
+/// of these tests used `Build001` with `IoEnum::Placeholder` for the input;
+/// `IoTranslator::add_all` rejects a placeholder outright, so every one of those
+/// jobs failed with `GraphInvalid: Io Placeholder 0 was never substituted`
+/// before a decoder was ever constructed. Since they only asserted "did not
+/// panic", they passed while exercising nothing.
+fn run_gif_decode_encode(
+    gif_bytes: &[u8],
+    select_frame: Option<i32>,
+) -> imageflow_core::Result<s::JobResult> {
+    let mut ctx = create_context();
+    ctx.add_copied_input_buffer(0, gif_bytes).expect("add input buffer");
+    ctx.add_output_buffer(1).expect("add output buffer");
+    let commands = select_frame.map(|f| vec![s::DecoderCommand::SelectFrame(f)]);
+    let payload = ctx.execute_1(s::Execute001 {
+        graph_recording: None,
+        security: None,
+        job_options: None,
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands },
+            s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
+        ]),
+    })?;
+    match payload {
+        s::ResponsePayload::JobResult(r) => Ok(r),
+        other => panic!("expected JobResult, got {:?}", other),
+    }
+}
+
+/// Same as [`run_gif_decode_encode`] but reads the input from `tests/crash_repro`.
+fn run_gif_crash_repro(name: &str) -> imageflow_core::Result<s::JobResult> {
+    let gif = fs::read(repo_root().join("imageflow_core/tests/crash_repro").join(name))
+        .unwrap_or_else(|e| panic!("read fixture {}: {}", name, e));
+    run_gif_decode_encode(&gif, None)
+}
+
+/// Asserts the job failed with `kind`, and returns the rendered error message.
+fn expect_gif_error(result: imageflow_core::Result<s::JobResult>, kind: ErrorKind) -> String {
+    match result {
+        Ok(ok) => panic!("expected error kind {:?}, but the job succeeded: {:?}", kind, ok),
+        Err(e) => {
+            assert_eq!(kind, e.kind, "wrong error kind; full error: {}", e);
+            format!("{}", e)
+        }
+    }
+}
+
+/// Asserts the job decoded and re-encoded to exactly `w` x `h`.
+fn expect_gif_size(result: imageflow_core::Result<s::JobResult>, w: i32, h: i32) {
+    let job = result.expect("expected the GIF pipeline to succeed");
+    assert_eq!(1, job.decodes.len(), "expected one decode result: {:?}", job);
+    assert_eq!((w, h), (job.decodes[0].w, job.decodes[0].h), "decoded size: {:?}", job);
+    assert_eq!(1, job.encodes.len(), "expected one encode result: {:?}", job);
+    assert_eq!((w, h), (job.encodes[0].w, job.encodes[0].h), "encoded size: {:?}", job);
+}
+
+/// Minimum LZW code size used by [`craft_gif_frame`].
+const CRAFT_MIN_CODE_SIZE: u8 = 8;
+/// Clear code for an 8-bit minimum code size.
+const CRAFT_CLEAR_CODE: u16 = 256;
+/// End-of-information code for an 8-bit minimum code size.
+const CRAFT_EOI_CODE: u16 = 257;
+/// Fixed code width; the decoder starts at `CRAFT_MIN_CODE_SIZE + 1` bits.
+const CRAFT_CODE_BITS: u32 = 9;
+/// How often to emit a clear code. A GIF decoder adds one dictionary entry per
+/// code after the first following a clear, so at 128 literals per run the next
+/// free code never passes 385 and the code width never has to grow past 9 bits.
+const CRAFT_CLEAR_INTERVAL: usize = 128;
+
+fn craft_push_code(code: u16, stream: &mut Vec<u8>, acc: &mut u32, acc_bits: &mut u32) {
+    *acc |= u32::from(code) << *acc_bits;
+    *acc_bits += CRAFT_CODE_BITS;
+    while *acc_bits >= 8 {
+        stream.push((*acc & 0xFF) as u8);
+        *acc >>= 8;
+        *acc_bits -= 8;
+    }
+}
+
+/// Encodes `pixels` as GIF image data (minimum-code-size byte, sub-blocks, then
+/// the block terminator) using literal-only LZW at a fixed 9-bit code width.
+/// Every palette index round-trips exactly, so a crafted fixture can declare any
+/// frame size and any index values without a real compressor.
+fn craft_lzw_literals(pixels: &[u8]) -> Vec<u8> {
+    let mut stream: Vec<u8> = Vec::new();
+    let mut acc: u32 = 0;
+    let mut acc_bits: u32 = 0;
+    for (i, px) in pixels.iter().enumerate() {
+        if i % CRAFT_CLEAR_INTERVAL == 0 {
+            craft_push_code(CRAFT_CLEAR_CODE, &mut stream, &mut acc, &mut acc_bits);
+        }
+        craft_push_code(u16::from(*px), &mut stream, &mut acc, &mut acc_bits);
+    }
+    craft_push_code(CRAFT_EOI_CODE, &mut stream, &mut acc, &mut acc_bits);
+    if acc_bits > 0 {
+        stream.push((acc & 0xFF) as u8);
+    }
+
+    let mut out = vec![CRAFT_MIN_CODE_SIZE];
+    for chunk in stream.chunks(255) {
+        out.push(chunk.len() as u8);
+        out.extend_from_slice(chunk);
+    }
+    out.push(0x00);
+    out
+}
+
+/// GIF89a header, logical screen descriptor, and a grayscale global color table
+/// with `palette_entries` (a power of two, 2..=256) entries.
+fn craft_gif_header(screen_w: u16, screen_h: u16, palette_entries: usize) -> Vec<u8> {
+    assert!(palette_entries.is_power_of_two() && (2..=256).contains(&palette_entries));
+    let size_bits = (palette_entries.trailing_zeros() - 1) as u8;
+    let mut b = Vec::new();
+    b.extend_from_slice(b"GIF89a");
+    b.extend_from_slice(&screen_w.to_le_bytes());
+    b.extend_from_slice(&screen_h.to_le_bytes());
+    // Global color table present | 8-bit color resolution | table size 2^(n+1).
+    b.push(0x80 | 0x70 | size_bits);
+    b.push(0x00); // background color index
+    b.push(0x00); // pixel aspect ratio
+    for i in 0..palette_entries {
+        let v = (i * 255 / palette_entries) as u8;
+        b.extend_from_slice(&[v, v, v]);
+    }
+    b
+}
+
+/// Appends an image descriptor at (0, 0) whose declared width and height are
+/// independent of the logical screen size. `pixels`, when present, must be
+/// exactly `w * h` palette indices. `None` writes the minimum-code-size byte and
+/// an empty data block, which is enough for `next_frame_info()` to report the
+/// frame's declared size without any of its pixels being decodable.
+fn craft_gif_frame(b: &mut Vec<u8>, w: u16, h: u16, pixels: Option<&[u8]>) {
+    b.push(0x2C); // image separator
+    b.extend_from_slice(&0u16.to_le_bytes()); // left
+    b.extend_from_slice(&0u16.to_le_bytes()); // top
+    b.extend_from_slice(&w.to_le_bytes());
+    b.extend_from_slice(&h.to_le_bytes());
+    b.push(0x00); // no local color table, not interlaced
+    match pixels {
+        Some(px) => {
+            assert_eq!(px.len(), usize::from(w) * usize::from(h), "pixel count must equal w*h");
+            b.extend_from_slice(&craft_lzw_literals(px));
+        }
+        None => {
+            b.push(CRAFT_MIN_CODE_SIZE);
+            b.push(0x00); // empty data block
+        }
+    }
+}
+
+/// A deterministic `w * h` ramp of palette indices.
+fn craft_pixels(w: u16, h: u16) -> Vec<u8> {
+    (0..usize::from(w) * usize::from(h)).map(|i| (i % 251) as u8).collect()
+}
+
+// =============================================================================
 // GIF palette bounds test
 // =============================================================================
 
+/// Pixel data may reference palette entries that do not exist. `Screen::blit`
+/// has to treat those as transparent rather than indexing the palette directly.
 #[test]
 fn test_gif_palette_bounds() {
-    // Create a GIF with 2-color palette but image data referencing color index > 1
-    let mut gif = Vec::new();
-
-    // GIF89a header
-    gif.extend_from_slice(b"GIF89a");
-
-    // 4x4 image
-    gif.extend_from_slice(&4u16.to_le_bytes());
-    gif.extend_from_slice(&4u16.to_le_bytes());
-
-    // Has 2-color global color table
-    gif.push(0x80); // 2^(0+1) = 2 colors
-    gif.push(0x00);
-    gif.push(0x00);
-
-    // 2-color palette
-    gif.extend_from_slice(&[0x00, 0x00, 0x00]);
-    gif.extend_from_slice(&[0xFF, 0xFF, 0xFF]);
-
-    // Image descriptor
-    gif.push(0x2C);
-    gif.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]);
-    gif.extend_from_slice(&4u16.to_le_bytes());
-    gif.extend_from_slice(&4u16.to_le_bytes());
-    gif.push(0x00);
-
-    // LZW data that should decode to valid indices only
-    gif.push(0x02); // min code size
-    gif.push(0x02);
-    gif.extend_from_slice(&[0x4C, 0x01]);
-    gif.push(0x00);
+    // 2-entry global color table, every pixel referencing index 200.
+    let mut gif = craft_gif_header(4, 4, 2);
+    craft_gif_frame(&mut gif, 4, 4, Some(&[200u8; 16]));
     gif.push(0x3B);
 
-    let mut ctx = create_context();
-    let _ = ctx.add_copied_input_buffer(0, &gif);
+    expect_gif_size(run_gif_decode_encode(&gif, None), 4, 4);
+}
 
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        // Try to decode the GIF
-        let _ = ctx.add_output_buffer(1);
-        let job = s::Build001 {
-            builder_config: None,
-            io: vec![
-                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
-                s::IoObject {
-                    direction: s::IoDirection::Out,
-                    io_id: 1,
-                    io: s::IoEnum::OutputBuffer,
-                },
-            ],
-            framewise: s::Framewise::Steps(vec![
-                s::Node::Decode { io_id: 0, commands: None },
-                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
-            ]),
-        };
-        let _ = ctx.build_1(job);
-    }));
+/// The same, mixing in-range and out-of-range indices in one frame.
+#[test]
+fn test_gif_palette_bounds_mixed_indices() {
+    let mut gif = craft_gif_header(4, 4, 4);
+    let pixels: Vec<u8> = (0..16u32).map(|i| if i % 2 == 0 { 1 } else { 250 }).collect();
+    craft_gif_frame(&mut gif, 4, 4, Some(&pixels));
+    gif.push(0x3B);
 
-    match result {
-        Ok(_) => println!("GIF palette access handled safely"),
-        Err(e) => panic!("Panic during GIF decode with out-of-bounds palette index: {:?}", e),
-    }
+    expect_gif_size(run_gif_decode_encode(&gif, None), 4, 4);
 }
 
 // =============================================================================
 // GIF frame bounds clipping (frames extending beyond canvas)
 // =============================================================================
 
+// The fixtures below are hand-built crash repros whose LZW streams stop short of
+// the pixel count their descriptors promise. They must reach the decoder and be
+// rejected with a decoder error — never a panic, and never a graph error that
+// would mean the decoder was skipped.
+
 #[test]
 fn test_gif_frame_exceeds_canvas() {
-    let gif =
-        fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_frame_exceeds_canvas.gif"))
-            .expect("read fixture");
-    let mut ctx = create_context();
-    let _ = ctx.add_copied_input_buffer(0, &gif);
-
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = ctx.add_output_buffer(1);
-        let _ = ctx.build_1(s::Build001 {
-            builder_config: None,
-            io: vec![
-                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
-                s::IoObject {
-                    direction: s::IoDirection::Out,
-                    io_id: 1,
-                    io: s::IoEnum::OutputBuffer,
-                },
-            ],
-            framewise: s::Framewise::Steps(vec![
-                s::Node::Decode { io_id: 0, commands: None },
-                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
-            ]),
-        });
-    }));
-
-    match result {
-        Ok(_) => println!("GIF with frame exceeding canvas handled safely (clipped)"),
-        Err(e) => panic!("Panic on GIF with frame exceeding canvas: {:?}", e),
-    }
+    expect_gif_error(
+        run_gif_crash_repro("gif_frame_exceeds_canvas.gif"),
+        ErrorKind::GifDecodingError,
+    );
 }
 
 #[test]
 fn test_gif_overflow_frame_position() {
-    let gif =
-        fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_overflow_frame_pos.gif"))
-            .expect("read fixture");
-    let mut ctx = create_context();
-    let _ = ctx.add_copied_input_buffer(0, &gif);
-
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = ctx.add_output_buffer(1);
-        let _ = ctx.build_1(s::Build001 {
-            builder_config: None,
-            io: vec![
-                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
-                s::IoObject {
-                    direction: s::IoDirection::Out,
-                    io_id: 1,
-                    io: s::IoEnum::OutputBuffer,
-                },
-            ],
-            framewise: s::Framewise::Steps(vec![
-                s::Node::Decode { io_id: 0, commands: None },
-                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
-            ]),
-        });
-    }));
-
-    match result {
-        Ok(_) => println!("GIF with overflow frame position handled safely"),
-        Err(e) => panic!("Panic on GIF with overflow frame position: {:?}", e),
-    }
+    expect_gif_error(
+        run_gif_crash_repro("gif_overflow_frame_pos.gif"),
+        ErrorKind::GifDecodingError,
+    );
 }
 
 #[test]
 fn test_gif_zero_size_frame() {
-    let gif =
-        fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_zero_size_frame.gif"))
-            .expect("read fixture");
-    let mut ctx = create_context();
-    let _ = ctx.add_copied_input_buffer(0, &gif);
-
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = ctx.add_output_buffer(1);
-        let _ = ctx.build_1(s::Build001 {
-            builder_config: None,
-            io: vec![
-                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
-                s::IoObject {
-                    direction: s::IoDirection::Out,
-                    io_id: 1,
-                    io: s::IoEnum::OutputBuffer,
-                },
-            ],
-            framewise: s::Framewise::Steps(vec![
-                s::Node::Decode { io_id: 0, commands: None },
-                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
-            ]),
-        });
-    }));
-
-    match result {
-        Ok(_) => println!("GIF with zero-size frame handled safely"),
-        Err(e) => panic!("Panic on GIF with zero-size frame: {:?}", e),
-    }
+    expect_gif_error(run_gif_crash_repro("gif_zero_size_frame.gif"), ErrorKind::GifDecodingError);
 }
 
 // =============================================================================
@@ -482,34 +530,7 @@ fn test_gif_zero_size_frame() {
 
 #[test]
 fn test_gif_bad_bg_index() {
-    let gif = fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_bad_bg_index.gif"))
-        .expect("read fixture");
-    let mut ctx = create_context();
-    let _ = ctx.add_copied_input_buffer(0, &gif);
-
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = ctx.add_output_buffer(1);
-        let _ = ctx.build_1(s::Build001 {
-            builder_config: None,
-            io: vec![
-                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
-                s::IoObject {
-                    direction: s::IoDirection::Out,
-                    io_id: 1,
-                    io: s::IoEnum::OutputBuffer,
-                },
-            ],
-            framewise: s::Framewise::Steps(vec![
-                s::Node::Decode { io_id: 0, commands: None },
-                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
-            ]),
-        });
-    }));
-
-    match result {
-        Ok(_) => println!("GIF with invalid bg_index handled safely"),
-        Err(e) => panic!("Panic on GIF with invalid bg_index: {:?}", e),
-    }
+    expect_gif_error(run_gif_crash_repro("gif_bad_bg_index.gif"), ErrorKind::GifDecodingError);
 }
 
 // =============================================================================
@@ -518,72 +539,97 @@ fn test_gif_bad_bg_index() {
 
 #[test]
 fn test_gif_oob_palette_in_pixels() {
-    let gif =
-        fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_oob_palette_index.gif"))
-            .expect("read fixture");
-    let mut ctx = create_context();
-    let _ = ctx.add_copied_input_buffer(0, &gif);
-
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = ctx.add_output_buffer(1);
-        let _ = ctx.build_1(s::Build001 {
-            builder_config: None,
-            io: vec![
-                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
-                s::IoObject {
-                    direction: s::IoDirection::Out,
-                    io_id: 1,
-                    io: s::IoEnum::OutputBuffer,
-                },
-            ],
-            framewise: s::Framewise::Steps(vec![
-                s::Node::Decode { io_id: 0, commands: None },
-                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
-            ]),
-        });
-    }));
-
-    match result {
-        Ok(_) => println!("GIF with OOB palette indices in pixel data handled safely"),
-        Err(e) => panic!("Panic on GIF with OOB palette index: {:?}", e),
-    }
+    let message = expect_gif_error(
+        run_gif_crash_repro("gif_oob_palette_index.gif"),
+        ErrorKind::GifDecodingError,
+    );
+    assert!(message.contains("LZW"), "expected an LZW decode failure, got: {}", message);
 }
 
 // =============================================================================
-// GIF frame buffer OOB (existing crash repro)
+// GIF frame buffer sizing (crash repro + the guard it exists for)
 // =============================================================================
 
+// `gif::Reader::buffer_size()` is derived from the *frame's* image descriptor,
+// not from the logical screen descriptor, and the two are unrelated in a crafted
+// file. Sizing the reusable frame buffer as `screen_w * screen_h` and then
+// slicing it to `buffer_size()` therefore panicked on out-of-range slice
+// indices for any frame larger than the screen (fixed in b2808b73). The tests
+// below drive each branch of the replacement: allocate at `required`, grow to
+// `required` when a later frame needs more, and refuse anything over 16 MP.
+
+/// The committed crash repro. Its frame descriptor declares 65527 x 65535, so
+/// the 16 MP cap is what stops it.
 #[test]
 fn test_gif_frame_buffer_oob() {
-    let gif =
-        fs::read(repo_root().join("imageflow_core/tests/crash_repro/gif_frame_buffer_oob.gif"))
-            .expect("read fixture");
-    let mut ctx = create_context();
-    let _ = ctx.add_copied_input_buffer(0, &gif);
+    let message = expect_gif_error(
+        run_gif_crash_repro("gif_frame_buffer_oob.gif"),
+        ErrorKind::SizeLimitExceeded,
+    );
+    assert!(
+        message.contains("GIF frame buffer_size 4293787665 exceeds 16MP limit"),
+        "unexpected error message: {}",
+        message
+    );
+}
 
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = ctx.add_output_buffer(1);
-        let _ = ctx.build_1(s::Build001 {
-            builder_config: None,
-            io: vec![
-                s::IoObject { direction: s::IoDirection::In, io_id: 0, io: s::IoEnum::Placeholder },
-                s::IoObject {
-                    direction: s::IoDirection::Out,
-                    io_id: 1,
-                    io: s::IoEnum::OutputBuffer,
-                },
-            ],
-            framewise: s::Framewise::Steps(vec![
-                s::Node::Decode { io_id: 0, commands: None },
-                s::Node::Encode { io_id: 1, preset: s::EncoderPreset::Gif },
-            ]),
-        });
-    }));
+/// A frame larger than the logical screen, well under the 16 MP cap: the buffer
+/// must be allocated at the frame's size, and `Screen::blit` clips to the canvas.
+#[test]
+fn test_gif_frame_larger_than_logical_screen_decodes() {
+    let mut gif = craft_gif_header(4, 4, 256);
+    craft_gif_frame(&mut gif, 64, 64, Some(&craft_pixels(64, 64)));
+    gif.push(0x3B);
 
-    match result {
-        Ok(_) => println!("GIF frame buffer OOB handled safely"),
-        Err(e) => panic!("Panic on GIF frame buffer OOB: {:?}", e),
-    }
+    expect_gif_size(run_gif_decode_encode(&gif, None), 4, 4);
+}
+
+/// A small frame followed by a larger one. The buffer is allocated for the first
+/// frame, so the second has to grow it before use.
+#[test]
+fn test_gif_frame_buffer_grows_between_frames() {
+    let mut gif = craft_gif_header(4, 4, 256);
+    craft_gif_frame(&mut gif, 4, 4, Some(&craft_pixels(4, 4)));
+    craft_gif_frame(&mut gif, 64, 64, Some(&craft_pixels(64, 64)));
+    gif.push(0x3B);
+
+    // Selecting frame 1 composites frame 0 first, so both frames go through the
+    // buffer: the small one allocates it, the large one must resize it.
+    expect_gif_size(run_gif_decode_encode(&gif, Some(1)), 4, 4);
+}
+
+/// A frame declaring 5000 x 5000 = 25,000,000 bytes, over the 16 MP cap. No
+/// pixel data is needed — the cap is checked before anything is decoded.
+#[test]
+fn test_gif_frame_buffer_size_cap_rejects_oversized_frame() {
+    let mut gif = craft_gif_header(4, 4, 256);
+    craft_gif_frame(&mut gif, 5000, 5000, None);
+    gif.push(0x3B);
+
+    let message = expect_gif_error(run_gif_decode_encode(&gif, None), ErrorKind::SizeLimitExceeded);
+    assert!(
+        message.contains("GIF frame buffer_size 25000000 exceeds 16MP limit"),
+        "unexpected error message: {}",
+        message
+    );
+}
+
+/// The cap also has to hold for frames that are only composited on the way to a
+/// requested frame, which is a separate copy of the check.
+#[test]
+fn test_gif_frame_buffer_size_cap_applies_to_skipped_frames() {
+    let mut gif = craft_gif_header(4, 4, 256);
+    craft_gif_frame(&mut gif, 5000, 5000, None);
+    craft_gif_frame(&mut gif, 4, 4, Some(&craft_pixels(4, 4)));
+    gif.push(0x3B);
+
+    let message =
+        expect_gif_error(run_gif_decode_encode(&gif, Some(1)), ErrorKind::SizeLimitExceeded);
+    assert!(
+        message.contains("GIF frame buffer_size 25000000 exceeds 16MP limit"),
+        "unexpected error message: {}",
+        message
+    );
 }
 
 // =============================================================================
