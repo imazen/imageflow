@@ -91,10 +91,26 @@ fn main() {
     }
 
     // Step 7: Gather source files
-    // Goal: Add each .c file to the build.
-    for file in glob::glob("lib/*.c").unwrap() {
-        let path = file.unwrap();
-        cc.file(path);
+    // Goal: Add each .c file to the build, and tell cargo to rebuild when any
+    // C source or header changes.
+    //
+    // Without these directives nothing rebuilt on a C edit: this script emitted
+    // no `rerun-if-changed` at all, and cargo's fallback did not pick up changes
+    // under `lib/`. Editing a kernel in `lib/codecs_jpeg_idct_fast.c` and
+    // re-running `cargo test -p imageflow_c_components` silently relinked the
+    // previous static library, so a deliberately broken downscale kernel still
+    // passed its test. Only `touch build.rs` or a clean forced a recompile.
+    // Headers are listed too — they are what `.c` files include, and a header-only
+    // change (a struct layout, a macro) is exactly the kind that must not be
+    // silently skipped.
+    for pattern in ["lib/*.c", "lib/*.h"] {
+        for file in glob::glob(pattern).unwrap() {
+            let path = file.unwrap();
+            println!("cargo:rerun-if-changed={}", path.display());
+            if path.extension().is_some_and(|e| e == "c") {
+                cc.file(path);
+            }
+        }
     }
 
     // Step 8: Optional coverage and profiling flags
