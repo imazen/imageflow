@@ -76,6 +76,61 @@ jobs:
 
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
+  # Nothing in CI checked formatting either. The tree is already clean, so this
+  # starts green and exists to keep it that way.
+  fmt:
+    runs-on: ubuntu-24.04
+    name: "cargo fmt --check"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      # Scoped to the packages this workspace owns rather than `--all`, which
+      # also descends into path dependencies. There are none today (the
+      # [patch.crates-io] entries are git refs), and scoping keeps that true if
+      # one is ever added.
+      - run: cargo fmt $(cargo metadata --no-deps --format-version 1 | jq -r '.packages[].name' | sed 's/^/-p /') -- --check
+
+  # Every crate here declares rust-version = "1.93", and until now nothing
+  # checked that the workspace actually builds on it. The MSRV is read from the
+  # manifests rather than written here, so the job cannot drift from what the
+  # crates claim.
+  msrv:
+    runs-on: ubuntu-24.04
+    name: "cargo check on the declared MSRV"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Resolve and install the declared MSRV
+        id: msrv
+        run: |
+          MSRV=$(cargo metadata --no-deps --format-version 1 \
+                 | jq -r '[.packages[].rust_version] | unique | .[]' \
+                 | sort -V | tail -1)
+          if [ -z "$MSRV" ] || [ "$MSRV" = "null" ]; then
+            echo "::error::no rust-version declared by any workspace member"
+            exit 1
+          fi
+          echo "Declared MSRV: $MSRV"
+          echo "version=$MSRV" >> "$GITHUB_OUTPUT"
+          rustup toolchain install "$MSRV" --profile minimal
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: msrv
+
+      - name: Install NASM
+        uses: ./.github/actions/install-nasm
+
+      - run: cargo "+${{ steps.msrv.outputs.version }}" check --workspace --all-targets --locked
+
   # Every other job builds --release, so `#[cfg(debug_assertions)]` code has never
   # been compiled — let alone run — on any CI platform. That covers the
   # `request_cancellation_after_n_polls` poll-countdown hook and the two tests that
