@@ -51,8 +51,13 @@ jobs:
           # what upstream released that morning.
           mdbook-version: '0.5.4'
 
+      # `-d` resolves against the working directory, not the book root, so
+      # `../_site` wrote the book to the parent of the workspace — where the
+      # upload step, which reads `_site/` inside the workspace, could never
+      # find it (`tar: _site/: Cannot open`). Verified against mdbook 0.5.4:
+      # `-d _site` lands at the workspace root and produces all 31 pages.
       - name: mdbook build
-        run:  mdbook build -d ../_site ./docs
+        run:  mdbook build -d _site ./docs
 
       - name: Upload artifact
         # Automatically uploads an artifact from the './_site' directory by default
