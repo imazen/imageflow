@@ -71,10 +71,22 @@ test-sizing-exhaustive:
 check:
     cargo check --workspace
 
-# Format and lint
+# (Until 2026-08-29 this linted only `-p imageflow_core --tests`, so warnings in
+# the other nine crates and both build scripts never showed up here or in CI.)
+# Format, then lint exactly what the CI clippy job lints
 fmt:
     cargo fmt --all
-    cargo clippy -p imageflow_core --tests -- -D warnings
+    cargo clippy --workspace --all-targets --locked -- -D warnings
+
+# Lint without reformatting — same command as the CI `clippy` job
+clippy:
+    cargo clippy --workspace --all-targets --locked -- -D warnings
+
+# The `#[cfg(debug_assertions)]` cancellation tests only exist in this build;
+# every other CI job (and `just test`) builds --release.
+# Run the whole suite in the debug profile — same as the CI `debug-tests` job
+test-debug:
+    cargo nextest run --all --locked --profile ci
 
 # Build fuzz targets with C decoder coverage instrumentation
 fuzz-build:

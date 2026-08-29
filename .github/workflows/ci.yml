@@ -29,6 +29,80 @@ env:
     IMAGEFLOW_NET_VERSION: "*-*" # 0.13.2 # Ensure consistency
 
 jobs:
+  # Nothing else in CI runs clippy, which is how 121 warnings accumulated across
+  # ten crates and both build scripts before 2026-08-29. `-D warnings` on the whole
+  # workspace, so a new one fails the build instead of being invisible.
+  clippy:
+    runs-on: ubuntu-24.04
+    name: "cargo clippy --workspace --all-targets -- -D warnings"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Checkout zensim (sibling dependency)
+        run: git clone --depth 1 https://github.com/imazen/zensim.git ../zensim
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: clippy
+
+      - name: Install NASM
+        uses: ./.github/actions/install-nasm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  # Every other job builds --release, so `#[cfg(debug_assertions)]` code has never
+  # been compiled — let alone run — on any CI platform. That covers the
+  # `request_cancellation_after_n_polls` poll-countdown hook and the two tests that
+  # drive it (`test_cancellation_token_stop_with_poll_countdown`,
+  # `test_job_with_cancellation_at_every_point`), plus every `debug_assert!` in the
+  # workspace. This job is the same test command without --release.
+  debug-tests:
+    runs-on: ubuntu-24.04
+    name: "cargo nextest run --all (debug profile, debug_assertions on)"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Checkout zensim (sibling dependency)
+        run: git clone --depth 1 https://github.com/imazen/zensim.git ../zensim
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: debug-tests
+
+      - name: Install NASM
+        uses: ./.github/actions/install-nasm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      # Fails the job if the debug-only tests stop being compiled in, which is the
+      # exact regression this job exists to catch. `nextest list` prints one line
+      # per test, so grep -q is enough.
+      - name: "Verify the debug-only tests are present in this build"
+        run: |
+          cargo nextest list --all --locked > debug-test-list.txt
+          cat debug-test-list.txt
+          for t in test_cancellation_token_stop_with_poll_countdown \
+                   test_job_with_cancellation_at_every_point; do
+            grep -q "$t" debug-test-list.txt \
+              || { echo "::error::$t is missing from the debug test list"; exit 1; }
+          done
+
+      - name: "cargo nextest run --all --locked --profile ci"
+        run: cargo nextest run --all --locked --profile ci
+        env:
+          REGRESS_MANIFEST_DIR: ${{ github.workspace }}/.image-cache/manifests
+
   build:
     strategy:
       fail-fast: false
