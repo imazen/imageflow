@@ -77,6 +77,18 @@ fn test_reverse_lut_costs() {
         let median_ns = times[times.len() / 2];
         let memory_bytes = size;
 
+        // Timing a builder is only meaningful if it built the right thing, and
+        // nothing here looked at the table it produced. A reverse sRGB LUT spans
+        // the full output range and never decreases.
+        let (lut, _) = build_reverse_lut(size);
+        assert_eq!(size, lut.len(), "LUT size {size} produced {} entries", lut.len());
+        assert_eq!(0, lut[0], "LUT size {size}: linear 0.0 must map to sRGB 0");
+        assert_eq!(255, lut[size - 1], "LUT size {size}: linear 1.0 must map to sRGB 255");
+        assert!(
+            lut.windows(2).all(|w| w[0] <= w[1]),
+            "LUT size {size} is not monotonically non-decreasing"
+        );
+
         println!(
             "LUT size {:>6}: {:>8} bytes, build time: {:>8} ns ({:.2} us)",
             size,
@@ -439,31 +451,52 @@ fn test_performance_comparison() {
 
     // Current implementation (fastpow)
     let start = Instant::now();
-    let mut sum = 0u32;
+    let mut current_sum = 0u64;
     for &v in &test_values {
-        sum += cc.floatspace_to_srgb(v) as u32;
+        current_sum += cc.floatspace_to_srgb(v) as u64;
     }
     let current_time = start.elapsed();
-    std::hint::black_box(sum);
+    std::hint::black_box(current_sum);
 
     // colorutils-rs
     let start = Instant::now();
-    let mut sum = 0u32;
+    let mut colorutils_sum = 0u64;
     for &v in &test_values {
         let srgb = srgb_from_linear(v);
-        sum += (srgb * 255.0 + 0.5) as u32;
+        colorutils_sum += (srgb * 255.0 + 0.5) as u64;
     }
     let colorutils_time = start.elapsed();
-    std::hint::black_box(sum);
+    std::hint::black_box(colorutils_sum);
 
     // LUT with interpolation
     let start = Instant::now();
-    let mut sum = 0u32;
+    let mut lut_sum = 0u64;
     for &v in &test_values {
-        sum += lut_lookup_interpolated(&lut_4k, v, 4096) as u32;
+        lut_sum += lut_lookup_interpolated(&lut_4k, v, 4096) as u64;
     }
     let lut_time = start.elapsed();
-    std::hint::black_box(sum);
+    std::hint::black_box(lut_sum);
+
+    // Three implementations of one conversion over identical inputs. Timing them
+    // against each other only means something if they agree on the answer, and
+    // nothing here checked that — the sums were computed, black_boxed, and
+    // discarded. Each is off by at most about a level on a small fraction of
+    // samples (measured mean error: fastpow 0.0077, colorutils 0.0008, LUT-4096
+    // 0.0155 levels), so the totals cannot drift more than a few thousandths of
+    // a percent apart; 0.1% leaves roughly eight times that margin.
+    println!("\nchecksums: current={current_sum} colorutils={colorutils_sum} lut={lut_sum}");
+    let mean = (current_sum + colorutils_sum + lut_sum) as f64 / 3.0;
+    for (name, sum) in
+        [("colorutils-rs", colorutils_sum), ("LUT 4096", lut_sum), ("fastpow", current_sum)]
+    {
+        let drift = (sum as f64 - mean).abs() / mean;
+        assert!(
+            drift < 0.001,
+            "{name} totalled {sum} over {test_count} conversions, {:.4}% from the mean of \
+             {mean:.0}; the three implementations should agree to well under 0.1%",
+            drift * 100.0
+        );
+    }
 
     println!("{} conversions:\n", test_count);
     println!(
@@ -575,21 +608,32 @@ fn test_lut_vs_fastpow_performance() {
 
     // Fastpow (current)
     let start = Instant::now();
-    let mut sum = 0u32;
+    let mut fastpow_sum = 0u64;
     for &v in &test_values {
-        sum += cc.floatspace_to_srgb(v) as u32;
+        fastpow_sum += cc.floatspace_to_srgb(v) as u64;
     }
     let fastpow_time = start.elapsed();
-    std::hint::black_box(sum);
+    std::hint::black_box(fastpow_sum);
 
     // Embedded LUT
     let start = Instant::now();
-    let mut sum = 0u32;
+    let mut lut_sum = 0u64;
     for &v in &test_values {
-        sum += linear_to_srgb_lut(v) as u32;
+        lut_sum += linear_to_srgb_lut(v) as u64;
     }
     let lut_time = start.elapsed();
-    std::hint::black_box(sum);
+    std::hint::black_box(lut_sum);
+
+    // Both loops convert the same million values, and for WorkingFloatspace::
+    // LinearRGB `floatspace_to_srgb` dispatches straight to `linear_to_srgb_lut`
+    // — so these totals must match exactly. The test previously black_boxed both
+    // sums and compared only elapsed time, which meant it stayed green even if
+    // the two paths disagreed on every single pixel.
+    assert_eq!(
+        fastpow_sum, lut_sum,
+        "floatspace_to_srgb and linear_to_srgb_lut disagree over {test_count} values; \
+         for LinearRGB the former should dispatch straight to the latter"
+    );
 
     println!("{} conversions:\n", test_count);
     println!(

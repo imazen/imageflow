@@ -174,6 +174,11 @@ mod tests {
 
         // Benchmark each scaling function
         for (i, func) in BLOCKSCALE_FUNCTIONS.iter().enumerate() {
+            // A timing loop over a function that does nothing measures nothing.
+            // Mark the buffer and require the kernel to have written its top-left
+            // output cell, which every size from 1x1 up covers.
+            output[0] = 0xAB;
+
             let start = Instant::now();
 
             for _ in 0..reps {
@@ -181,6 +186,11 @@ mod tests {
                     func(input.as_mut_ptr(), rows.as_mut_ptr(), 0);
                 }
             }
+
+            assert_ne!(
+                0xAB, output[0],
+                "blockscale fn {i} never wrote its output after {reps} calls"
+            );
 
             let duration = start.elapsed();
             let ms = duration.as_secs_f64() * 1000.0;
