@@ -289,26 +289,36 @@ fn test_exif_parsing_with_real_jpeg() {
 // Concurrent context creation (JOB_ID atomicity)
 // =============================================================================
 
+/// Every context gets its own `debug_job_id`, even when created concurrently.
+///
+/// The id comes from a single `NEXT_JOB_ID.fetch_add`, so ten contexts built in
+/// parallel must come back with ten distinct ids — that is the whole point of
+/// the counter being an `AtomicI32`. The previous version of this test created
+/// ten contexts, dropped them, checked only that no thread panicked, and printed
+/// "No crash observed"; a plain non-atomic `i32` counter would have satisfied it
+/// just as well, which is precisely the bug it is named for.
+///
+/// This is a race detector of opportunity, not a guarantee — a lost update has
+/// to actually happen on this run to be caught. ThreadSanitizer or MIRI remain
+/// the tools for proving the absence of one.
 #[test]
 fn test_concurrent_context_creation() {
     use std::thread;
 
-    // Create multiple contexts in parallel to exercise AtomicI32 JOB_ID
-    let handles: Vec<_> = (0..10)
-        .map(|_| {
-            thread::spawn(|| {
-                let ctx = create_context();
-                drop(ctx);
-            })
-        })
-        .collect();
+    let handles: Vec<_> =
+        (0..10).map(|_| thread::spawn(|| create_context().debug_job_id)).collect();
 
-    for handle in handles {
-        handle.join().expect("Thread panicked");
-    }
+    let ids: Vec<i32> = handles.into_iter().map(|h| h.join().expect("thread panicked")).collect();
+    assert_eq!(10, ids.len());
 
-    println!("No crash observed in multi-threaded context creation");
-    println!("Note: Use ThreadSanitizer or MIRI for proper race detection");
+    let mut unique = ids.clone();
+    unique.sort_unstable();
+    unique.dedup();
+    assert_eq!(
+        ids.len(),
+        unique.len(),
+        "two contexts were handed the same debug_job_id, so the counter dropped an update: {ids:?}"
+    );
 }
 
 // =============================================================================
