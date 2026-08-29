@@ -558,8 +558,9 @@ fn test_gif_oob_palette_in_pixels() {
 // below drive each branch of the replacement: allocate at `required`, grow to
 // `required` when a later frame needs more, and refuse anything over 16 MP.
 
-/// The committed crash repro. Its frame descriptor declares 65527 x 65535, so
-/// the 16 MP cap is what stops it.
+/// The committed crash repro: a 34-byte GIF87a whose logical screen is 0 x 256
+/// but whose image descriptor declares a 65535 x 65519 frame at (18746, 65535).
+/// 65535 * 65519 = 4,293,787,665 bytes, so the 16 MP cap is what stops it.
 #[test]
 fn test_gif_frame_buffer_oob() {
     let message = expect_gif_error(
