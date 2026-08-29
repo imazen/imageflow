@@ -108,7 +108,7 @@ impl ProcOutput {
             panic!(
                 "{}\nExpected exit code 0 and no output to stderr or stdout. Received\n {:?}\n{}",
                 m,
-                &self.r,
+                self.r,
                 std::str::from_utf8(self.stderr()).unwrap()
             );
         }
@@ -228,7 +228,7 @@ impl ProcTestContext {
             Err(format!(
                 "Failed to locate {:?} in ancestors of {:?}. err({:?})",
                 filename.as_ref(),
-                &dir,
+                dir,
                 last_err
             ))
         }
@@ -241,7 +241,7 @@ impl ProcTestContext {
     pub fn subfolder_context<P: AsRef<Path>>(&self, subfolder: P) -> ProcTestContext {
         let new_dir = self.working_dir.join(subfolder.as_ref());
         if let Err(e) = create_dir_all(&new_dir) {
-            panic!("Failed to create directory {:?} due to {:?}", &new_dir, e);
+            panic!("Failed to create directory {:?} due to {:?}", new_dir, e);
         }
         ProcTestContext { working_dir: new_dir, exe: self.exe.clone() }
     }
@@ -269,7 +269,7 @@ impl ProcTestContext {
         F: Fn(&mut std::process::Child),
     {
         //TODO: serialize in a safer way - this isn't correct
-        let full_invocation = format!("{} {}", &self.exe.to_str().unwrap(), args_vec.join(" "));
+        let full_invocation = format!("{} {}", self.exe.to_str().unwrap(), args_vec.join(" "));
 
         let dir = self.working_dir.as_path();
         let exe = self.exe.as_path();
@@ -293,7 +293,7 @@ impl ProcTestContext {
         let mut child_process = match cmd.spawn() {
             Ok(v) => v,
             Err(e) => {
-                panic!("Failed to start {:?} {:?} error: {:?}", &exe, &cmd, e)
+                panic!("Failed to start {:?} {:?} error: {:?}", exe, cmd, e)
             }
         };
 

@@ -747,4 +747,3 @@ fn test_png_icc_lifetime() {
          output, which means the embedded ICC profile was never applied"
     );
 }
-

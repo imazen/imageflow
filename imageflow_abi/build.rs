@@ -180,9 +180,8 @@ fn strip_preprocessor_directives(contents: &str) -> String {
     //Strip all ifndef/ifdef statements
     //let temp2 = Regex::new(r"(?im)^\s*\#\s*(ifdef|ifndef|endif).*").unwrap().replace_all(&temp, "");
     //Strip ALL # preprocessor directives
-    let temp2 = Regex::new(r"(?im)^\s*\#\s*.*").unwrap().replace_all(&temp, "").into();
 
-    temp2
+    Regex::new(r"(?im)^\s*\#\s*.*").unwrap().replace_all(&temp, "").into()
 }
 
 fn build(file: String, target: Target) {
@@ -314,10 +313,10 @@ fn generate_to_string(builder: Builder) -> String {
 fn create_file_and_parent<P: AsRef<path::Path>>(file: P, text: String) {
     let file = file.as_ref();
 
-    if let Some(dir) = file.parent() {
-        if let Err(error) = std::fs::create_dir_all(dir) {
-            panic!("could not create directories in '{}': {}", dir.display(), error);
-        }
+    if let Some(dir) = file.parent()
+        && let Err(error) = std::fs::create_dir_all(dir)
+    {
+        panic!("could not create directories in '{}': {}", dir.display(), error);
     }
     let bytes_buf = text.into_bytes();
     if let Err(error) = std::fs::File::create(file).and_then(|mut f| f.write_all(&bytes_buf)) {

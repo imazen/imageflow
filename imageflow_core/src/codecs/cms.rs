@@ -213,7 +213,9 @@ fn compare_results_against_frame(
         let moxcms_row = &moxcms[moxcms_offset..moxcms_offset + lcms2_row.len()];
         moxcms_offset += lcms2_row.len();
 
-        for (m_pixel, l_pixel) in moxcms_row.chunks_exact(4).zip(lcms2_row.chunks_exact(4)) {
+        for (m_pixel, l_pixel) in
+            moxcms_row.as_chunks::<4>().0.iter().zip(lcms2_row.as_chunks::<4>().0.iter())
+        {
             let mut pixel_max_diff: u8 = 0;
             for (ch, (&a, &b)) in m_pixel.iter().zip(l_pixel.iter()).enumerate() {
                 let diff = a.abs_diff(b);

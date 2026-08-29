@@ -118,10 +118,10 @@ impl Encoder for MozjpegEncoder {
         if let Some(q) = self.quality {
             cinfo.set_quality(u8::min(100, q).into());
         }
-        if let Some(p) = self.progressive {
-            if p {
-                cinfo.set_progressive_mode();
-            }
+        if let Some(p) = self.progressive
+            && p
+        {
+            cinfo.set_progressive_mode();
         }
         if let Some(o) = self.optimize_coding {
             cinfo.set_optimize_coding(o);

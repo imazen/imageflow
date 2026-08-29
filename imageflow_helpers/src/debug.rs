@@ -94,6 +94,6 @@ fn set_panic_hook() {
             }
         }
 
-        let _ = writeln!(&mut std::io::stderr(), "{:?}", &Backtrace::from(frames));
+        let _ = writeln!(&mut std::io::stderr(), "{:?}", Backtrace::from(frames));
     }));
 }

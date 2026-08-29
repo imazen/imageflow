@@ -390,7 +390,9 @@ fn describe_icc_bytes(bytes: &[u8], kind: &str) -> String {
                 if abs_start + 1 < abs_end {
                     // UTF-16BE
                     let u16s: Vec<u16> = bytes[abs_start..abs_end]
-                        .chunks_exact(2)
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
                         .map(|c| u16::from_be_bytes([c[0], c[1]]))
                         .collect();
                     desc_text =

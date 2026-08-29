@@ -37,15 +37,15 @@ where
     D: serde::de::DeserializeOwned,
     D: 'a,
 {
-    if let Some(max) = max_bytes {
-        if json.len() > max {
-            return Err(nerror!(
-                ErrorKind::InvalidArgument,
-                "JSON payload is {} bytes, exceeding maximum of {} bytes",
-                json.len(),
-                max
-            ));
-        }
+    if let Some(max) = max_bytes
+        && json.len() > max
+    {
+        return Err(nerror!(
+            ErrorKind::InvalidArgument,
+            "JSON payload is {} bytes, exceeding maximum of {} bytes",
+            json.len(),
+            max
+        ));
     }
     match serde_json::from_slice(json) {
         Ok(d) => Ok(d),
@@ -128,9 +128,9 @@ impl JsonResponse {
                 if let Ok(s::Response001 { message: Some(message), .. }) =
                     serde_json::from_slice(self.response_json.as_ref())
                 {
-                    panic!("Json Status {}\n{}\n{}", self.status_code, &s, message);
+                    panic!("Json Status {}\n{}\n{}", self.status_code, s, message);
                 }
-                panic!("Json Status {}\n{}", self.status_code, &s);
+                panic!("Json Status {}\n{}", self.status_code, s);
             } else {
                 panic!("Json Status {} - payload invalid utf8", self.status_code);
             }

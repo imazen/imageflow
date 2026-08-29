@@ -45,16 +45,11 @@ fn find_integral_weights(
                 for reduce in (1..=4).rev() {
                     let new_divisor: u32 = 1 << reduce;
 
-                    let mut all_divisible = true;
-                    for i in 0..8 {
-                        if eight[i] as i32 % new_divisor as i32 != 0 {
-                            all_divisible = false;
-                        }
-                    }
+                    let all_divisible = eight.iter().all(|&v| v as i32 % new_divisor as i32 == 0);
                     if all_divisible {
                         *divisor /= new_divisor;
-                        for i in 0usize..8usize {
-                            eight[i] /= new_divisor as i8;
+                        for v in eight.iter_mut() {
+                            *v /= new_divisor as i8;
                         }
                         break;
                     }
@@ -113,16 +108,11 @@ fn print_short_luts() -> String {
         output.push_str("    ");
         for b in 0..16 {
             let index = (a * 16 + b) as usize;
-            let v = f32::min(
-                255f32,
-                f32::max(
-                    0f32,
-                    0.5f32
-                        + linear_to_srgb(
-                            (index as f32 + 0.1875f32) / (REVERSE_LUT_SIZE_SHORT - 1) as f32,
-                        ),
-                ),
-            );
+            // The argument is in [0, 1] and `linear_to_srgb` is finite over it, so
+            // clamp's NaN behavior (propagate) is unreachable here.
+            let v = (0.5f32
+                + linear_to_srgb((index as f32 + 0.1875f32) / (REVERSE_LUT_SIZE_SHORT - 1) as f32))
+            .clamp(0f32, 255f32);
             reverse_lut[index] = v as u32;
             output.push_str(&format!("{}, ", v as u32));
         }

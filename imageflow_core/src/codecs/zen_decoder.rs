@@ -154,7 +154,7 @@ pub(crate) fn encode_limits_capped(
     if let Some(ceiling) = security.mem_budget_policy.as_ref().and_then(|p| p.byte_ceiling()) {
         let buffer = (w as u64).saturating_mul(h as u64).saturating_mul(4);
         let cap = ceiling.saturating_sub(buffer).max(1);
-        let l = limits.get_or_insert_with(|| zc::ResourceLimits::default());
+        let l = limits.get_or_insert_with(zc::ResourceLimits::default);
         l.max_memory_bytes = Some(l.max_memory_bytes.map_or(cap, |m| m.min(cap)));
     }
     limits
@@ -771,8 +771,7 @@ impl Decoder for ZenDecoder {
                 let buffer =
                     (info.width as u64).saturating_mul(info.height as u64).saturating_mul(4);
                 let codec_cap = ceiling.saturating_sub(buffer).max(1);
-                let limits =
-                    self.resource_limits.get_or_insert_with(|| zc::ResourceLimits::default());
+                let limits = self.resource_limits.get_or_insert_with(zc::ResourceLimits::default);
                 limits.max_memory_bytes =
                     Some(limits.max_memory_bytes.map_or(codec_cap, |m| m.min(codec_cap)));
             }

@@ -220,7 +220,7 @@ impl FluentGraphBuilder {
     pub fn to_framewise(&self) -> s::Framewise {
         let mut nodes = self.collect_unique();
         if self.output_nodes.len() == 1 && nodes.as_slice().iter().all(|n| n.canvas.is_none()) {
-            nodes.sort_by(|a, b| a.uid.cmp(&b.uid));
+            nodes.sort_by_key(|a| a.uid);
             s::Framewise::Steps(
                 nodes.into_iter().map(|b| b.data.clone().unwrap()).collect::<Vec<s::Node>>(),
             )

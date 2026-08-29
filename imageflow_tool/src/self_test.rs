@@ -456,7 +456,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
             }
             Ok(r) => match r.data {
                 s::ResponsePayload::BuildResult(info) => {
-                    println!("encodes: {:?}", &info.encodes);
+                    println!("encodes: {:?}", info.encodes);
                     assert!(!info.encodes.is_empty());
                     let encode: &s::EncodeResult = &info.encodes[0];
                     assert_eq!(encode.w, 100);

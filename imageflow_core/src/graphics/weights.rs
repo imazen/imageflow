@@ -12,20 +12,15 @@ use crate::graphics::aligned_buffer::AlignedBuffer;
 use serde::{Deserialize, Serialize};
 
 /// Controls how negative weight lobes are adjusted during normalization.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub enum LobeRatio {
     /// Use filter's natural negative/positive weight ratio (default).
+    #[default]
     Natural,
     /// Set exact ratio (bidirectional). 0.0 = eliminate negative lobes, >natural = sharpen.
     Exact(f32),
     /// Imageflow-compatible: amplify only (one-way), percentage 0–100.
     SharpenPercent(f32),
-}
-
-impl Default for LobeRatio {
-    fn default() -> Self {
-        LobeRatio::Natural
-    }
 }
 
 impl LobeRatio {

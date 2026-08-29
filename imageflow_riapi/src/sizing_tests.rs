@@ -340,7 +340,7 @@ fn vary_number(v: i32, variation_kind: u8) -> Option<i32> {
         ::std::u8::MAX => Some(24), // Return the upper bound number of variations
         _ => None,
     }
-    .and_then(|v| if v > 0 { Some(v) } else { None })
+    .filter(|&v| v > 0)
 }
 
 //Not used or ever tested
@@ -401,10 +401,9 @@ fn generate_aspects(into: &mut Vec<AspectRatio>, temp: &mut Vec<AspectRatio>, se
         let (w, h) = base_ver.size();
         for vary_w in 0..30 {
             for vary_h in 0..30 {
-                let new_w = vary_number(w, vary_w);
-                let new_h = vary_number(h, vary_h);
-                if new_w.is_some() && new_h.is_some() {
-                    n.push(r(new_w.unwrap(), new_h.unwrap()));
+                if let (Some(new_w), Some(new_h)) = (vary_number(w, vary_w), vary_number(h, vary_h))
+                {
+                    n.push(r(new_w, new_h));
                 }
             }
         }
@@ -525,7 +524,7 @@ struct EvaluationContext {
     source: AspectRatio,
 }
 impl EvaluationContext {
-    fn to_compact(&self) -> String {
+    fn to_compact(self) -> String {
         if let Ok(l) = self.result {
             format!(
                 "target: {:?}, source: {:?}, canvas: {:?}, image: {:?}, source_crop: {:?}",
@@ -789,21 +788,17 @@ impl ShrinkWithinTest {
             panic!("Must specify at least one dimension");
         }
         let mut target_within = origin;
-        if w.is_some() {
-            if w.unwrap() > origin.width() {
+        if let Some(w) = w {
+            if w > origin.width() {
                 return None;
             }
-            target_within =
-                AspectRatio::create(w.unwrap(), origin.height_for(w.unwrap(), None).unwrap())
-                    .unwrap();
+            target_within = AspectRatio::create(w, origin.height_for(w, None).unwrap()).unwrap();
         }
-        if h.is_some() {
-            if h.unwrap() > origin.height() {
+        if let Some(h) = h {
+            if h > origin.height() {
                 return None;
             }
-            target_within =
-                AspectRatio::create(origin.width_for(h.unwrap(), None).unwrap(), h.unwrap())
-                    .unwrap();
+            target_within = AspectRatio::create(origin.width_for(h, None).unwrap(), h).unwrap();
         }
         let loss_w = origin.rounding_loss_based_on_target_width(target_within.width());
         let loss_h = origin.rounding_loss_based_on_target_height(target_within.height());
@@ -814,8 +809,12 @@ impl ShrinkWithinTest {
 
 impl fmt::Display for ShrinkWithinTest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let char = if self.w.is_some() { "w" } else { "h" };
-        let dim = if self.w.is_some() { self.w.unwrap() } else { self.h.unwrap() };
+        // `new` rejects both-or-neither, so exactly one of w/h is Some here.
+        let (char, dim) = match (self.w, self.h) {
+            (Some(w), _) => ("w", w),
+            (None, Some(h)) => ("h", h),
+            (None, None) => unreachable!("ShrinkWithinTest::new requires exactly one dimension"),
+        };
         write!(
             f,
             "{:?} -> {}={} -> [{:?}] (loss w={:.2} h={:.2})",
@@ -1023,7 +1022,7 @@ fn test_steps() {
     }
 
     if !failed_kits.is_empty() {
-        panic!("The following kits failed:\n {:#?}\n", &failed_kits);
+        panic!("The following kits failed:\n {:#?}\n", failed_kits);
     }
 }
 
@@ -1297,7 +1296,7 @@ where
                 kit.file,
                 kit.line,
                 ctx.to_compact(),
-                &failed
+                failed
             );
         }
 

@@ -4,8 +4,8 @@ extern crate imageflow_c_components;
 #[test]
 fn test_spatial_scaling() {
     let mut input: [u8; 64] = [0; 64];
-    for x in 0..64 {
-        input[x] = if x % 2 == 0 { 0 } else { 255 };
+    for (x, v) in input.iter_mut().enumerate() {
+        *v = if x % 2 == 0 { 0 } else { 255 };
     }
 
     let mut output: [u8; 1] = [0; 1];

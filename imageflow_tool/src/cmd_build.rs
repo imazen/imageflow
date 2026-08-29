@@ -222,7 +222,7 @@ impl CmdBuild {
                 "Too many arguments provided for {:?}. Only {} openings in the recipe ({:?}).",
                 dir,
                 old_io_ids.len(),
-                &old_io_ids
+                old_io_ids
             )));
         }
 
@@ -304,15 +304,15 @@ impl CmdBuild {
         let lowercase_args =
             limit_args.unwrap().into_iter().map(|s| s.to_lowercase()).collect::<Vec<String>>();
         let args_string = lowercase_args.join(" ");
-        let security;
+
         let unlimited_frame_size =
             s::FrameSizeLimit { w: i32::MAX as u32, h: i32::MAX as u32, megapixels: f32::MAX };
-        if lowercase_args.contains(&"disabled".to_string()) {
+        let security = if lowercase_args.contains(&"disabled".to_string()) {
             let mut sec = s::ExecutionSecurity::unspecified();
             sec.max_decode_size = Some(unlimited_frame_size);
             sec.max_frame_size = Some(unlimited_frame_size);
             sec.max_encode_size = Some(unlimited_frame_size);
-            security = Some(sec)
+            Some(sec)
         } else {
             let mut max_frame_size = unlimited_frame_size;
             let mut found_arg = false;
@@ -371,8 +371,8 @@ impl CmdBuild {
             }
             let mut sec = s::ExecutionSecurity::sane_defaults();
             sec.max_frame_size = Some(max_frame_size);
-            security = Some(sec);
-        }
+            Some(sec)
+        };
 
         let builder_config =
             s::Build001Config { security, ..before.builder_config.clone().unwrap_or_default() };
@@ -426,7 +426,7 @@ impl CmdBuild {
                             std::fs::copy(&path, &new_path).unwrap();
                             log.push(format!(
                                 "Copied {} to {} (referenced as {})",
-                                &path, &new_path, &fname
+                                path, new_path, fname
                             ));
                             s::IoEnum::Filename(fname)
                         }
@@ -448,10 +448,10 @@ impl CmdBuild {
                             let fname = format!(
                                 "output_{}_{}",
                                 obj.io_id,
-                                &std::path::Path::new(&path).file_name().unwrap().to_str().unwrap()
+                                std::path::Path::new(&path).file_name().unwrap().to_str().unwrap()
                             );
                             //let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
-                            log.push(format!("Changed output {} to {}", &path, &fname));
+                            log.push(format!("Changed output {} to {}", path, fname));
                             s::IoEnum::Filename(fname)
                         }
                         other => other,
@@ -494,10 +494,10 @@ impl CmdBuild {
         }
         let (log, transformed) = CmdBuild::transform_build(self.job.unwrap(), directory).unwrap();
         CmdBuild::write_json(&directory.join("recipe.json"), &transformed);
-        println!("cd {:?}", &directory);
+        println!("cd {:?}", directory);
         println!("imageflow_tool --json recipe.json\n\n");
         for s in log {
-            println!("# {}", &s);
+            println!("# {}", s);
         }
         0
     }

@@ -689,14 +689,14 @@ impl FlowError {
                 kind: ErrorKind::Category(ErrorCategory::InvalidJson),
                 at: ::smallvec::SmallVec::new(),
                 node: None,
-                message: format!("Json <{}> Error: {}: {}", type_name, &e, &annotated_line),
+                message: format!("Json <{}> Error: {}: {}", type_name, e, annotated_line),
             }
         } else {
             FlowError {
                 kind: ErrorKind::Category(ErrorCategory::InvalidJson),
                 at: ::smallvec::SmallVec::new(),
                 node: None,
-                message: format!("Invalid UTF-8, JSON Parsing Failed: {}", &e),
+                message: format!("Invalid UTF-8, JSON Parsing Failed: {}", e),
             }
         }
     }
@@ -705,7 +705,7 @@ impl FlowError {
             kind: ErrorKind::LayoutError,
             at: ::smallvec::SmallVec::new(),
             node: None,
-            message: format!("LayoutError: {:?}", &e),
+            message: format!("LayoutError: {:?}", e),
         }
     }
     pub fn from_layout_for(e: LayoutError, context: &dyn std::fmt::Debug) -> FlowError {
@@ -713,7 +713,7 @@ impl FlowError {
             kind: ErrorKind::LayoutError,
             at: ::smallvec::SmallVec::new(),
             node: None,
-            message: format!("LayoutError: {:?} for {:?}", &e, context),
+            message: format!("LayoutError: {:?} for {:?}", e, context),
         }
     }
 }

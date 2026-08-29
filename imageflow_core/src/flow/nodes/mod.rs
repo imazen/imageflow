@@ -80,11 +80,11 @@ use crate::graphics::bitmaps::BitmapKey;
 fn test_err() {
     let e = nerror!(crate::ErrorKind::BitmapPointerNull);
     assert_eq!(e.kind, crate::ErrorKind::BitmapPointerNull);
-    assert!(format!("{}", &e).starts_with("InternalError: BitmapPointerNull at"));
+    assert!(format!("{}", e).starts_with("InternalError: BitmapPointerNull at"));
     let e = nerror!(crate::ErrorKind::BitmapPointerNull, "hi");
-    assert!(format!("{}", &e).starts_with("InternalError: BitmapPointerNull: hi at"));
+    assert!(format!("{}", e).starts_with("InternalError: BitmapPointerNull: hi at"));
     let e = nerror!(crate::ErrorKind::BitmapPointerNull, "hi {}", 1);
-    assert!(format!("{}", &e).starts_with("InternalError: BitmapPointerNull: hi 1 at"));
+    assert!(format!("{}", e).starts_with("InternalError: BitmapPointerNull: hi 1 at"));
 }
 impl<'c> OpCtxMut<'c> {
     pub fn set_more_frames(&self, value: bool) {

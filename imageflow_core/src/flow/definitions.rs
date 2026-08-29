@@ -35,10 +35,10 @@ impl NodeDebugInfo {
 
 impl FlowError {
     fn try_add_node_info(mut self, info: Option<NodeDebugInfo>) -> FlowError {
-        if self.node.is_none() {
-            if let Some(n) = info {
-                self.node = Some(Box::new(n));
-            }
+        if self.node.is_none()
+            && let Some(n) = info
+        {
+            self.node = Some(Box::new(n));
         }
         self
     }
@@ -402,7 +402,7 @@ impl FrameEstimate {
         match self {
             FrameEstimate::Some(v) => v,
             _ => {
-                panic!("Unwrapped {:?} expecting FrameEstimate::Some()", &self);
+                panic!("Unwrapped {:?} expecting FrameEstimate::Some()", self);
             }
         }
     }

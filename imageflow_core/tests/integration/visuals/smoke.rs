@@ -585,10 +585,8 @@ fn test_detect_whitespace_all_small_images() {
         ctx.destroy().unwrap();
     }
 
-    if failed_count > 0 {
-        if failures.len() > 3 {
-            panic!("Failed {} of {} whitespace detection tests", failed_count, count);
-        }
+    if failed_count > 0 && failures.len() > 3 {
+        panic!("Failed {} of {} whitespace detection tests", failed_count, count);
     }
 }
 

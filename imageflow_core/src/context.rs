@@ -54,6 +54,13 @@ pub struct Context {
     // `ThreadSafeContext::allocations`; a second, never-read `RefCell<AllocationContainer>`
     // used to sit here and cost 32 bytes of the `Context` size budget above.
     /// Bitmap keys captured by CaptureBitmapKey nodes during graph execution.
+    // The box is deliberate and is not a redundant indirection: `Context` has a
+    // hard stack-size budget (see the type doc above, enforced by
+    // `test_context_size`). `Option<Box<HashMap<..>>>` is 8 bytes; the unboxed
+    // `Option<HashMap<..>>` clippy suggests here is 48, which alone is more than
+    // the headroom the budget leaves. Nothing is allocated unless a
+    // CaptureBitmapKey node actually runs.
+    #[allow(clippy::box_collection)]
     captured_bitmap_keys: Option<Box<std::collections::HashMap<i32, BitmapKey>>>,
 }
 
@@ -495,10 +502,10 @@ impl Context {
             .get_exif_rotation_flag(self)
             .map_err(|e| e.at(here!()))?;
 
-        if let Some(exif_flag) = exif_maybe {
-            if (5..=8).contains(&exif_flag) {
-                std::mem::swap(&mut image_info.image_width, &mut image_info.image_height);
-            }
+        if let Some(exif_flag) = exif_maybe
+            && (5..=8).contains(&exif_flag)
+        {
+            std::mem::swap(&mut image_info.image_width, &mut image_info.image_height);
         }
         Ok(())
     }

@@ -86,7 +86,7 @@ impl CaptureTo {
         //
         //        }
 
-        let status_file = format!("exitcode_{:?}.txt", &output.status.code());
+        let status_file = format!("exitcode_{:?}.txt", output.status.code());
         self.write_bytes(&status_file, &[]).unwrap();
 
         self.write_bytes("stdout.txt", &output.stdout).unwrap();

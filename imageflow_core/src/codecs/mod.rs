@@ -672,13 +672,12 @@ impl CodecInstanceContainer {
     /// This must be called before reading the output buffer, since some encoders
     /// (e.g., GIF) write trailing data when finalized.
     fn finalize_encoder(&mut self) -> Result<()> {
-        if matches!(self.codec, CodecKind::Encoder(_)) {
-            if let CodecKind::Encoder(encoder) =
+        if matches!(self.codec, CodecKind::Encoder(_))
+            && let CodecKind::Encoder(encoder) =
                 std::mem::replace(&mut self.codec, CodecKind::EncoderFinished)
-            {
-                let io = encoder.into_io().map_err(|e| e.at(here!()))?;
-                self.output_state = OutputBufferState::Ready(io);
-            }
+        {
+            let io = encoder.into_io().map_err(|e| e.at(here!()))?;
+            self.output_state = OutputBufferState::Ready(io);
         }
         Ok(())
     }

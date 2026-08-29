@@ -288,7 +288,9 @@ fn expected_gamma_to_srgb(input: &[u8], encoding_gamma: f64) -> Vec<u8> {
                 let normalized = v as f64 / 255.0;
                 let linear = normalized.powf(decoding_exponent);
                 let srgb = linear_to_srgb(linear);
-                (srgb * 255.0 + 0.5).floor().min(255.0).max(0.0) as u8
+                // `linear` is in [0, 1] and `linear_to_srgb` is finite over it, so
+                // clamp's NaN behavior (propagate) is unreachable here.
+                (srgb * 255.0 + 0.5).floor().clamp(0.0, 255.0) as u8
             }
         })
         .collect()

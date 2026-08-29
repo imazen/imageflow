@@ -182,10 +182,10 @@ struct Rect {
 
 impl Rect {
     fn to_corners_checked(self) -> Option<RectCorners> {
-        if let Some(x2) = self.x.checked_add(self.w) {
-            if let Some(y2) = self.y.checked_add(self.h) {
-                return Some(RectCorners { x1: self.x, y1: self.y, x2, y2 });
-            }
+        if let Some(x2) = self.x.checked_add(self.w)
+            && let Some(y2) = self.y.checked_add(self.h)
+        {
+            return Some(RectCorners { x1: self.x, y1: self.y, x2, y2 });
         }
         None
     }

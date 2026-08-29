@@ -10,11 +10,11 @@ const ICC_OVERHEAD_LEN: u32 = 14; /* size of non-profile data in APP2 */
 
 fn is_marker_icc(marker: &mozjpeg_sys::jpeg_marker_struct) -> bool {
     // verify the identifying string
-    let is_icc = marker.marker == ffi::JpegMarker::ICC as u8
+
+    marker.marker == ffi::JpegMarker::ICC as u8
         && marker.data_length >= ICC_OVERHEAD_LEN
         && unsafe { std::slice::from_raw_parts(marker.data, marker.data_length as usize) }
-            .starts_with(b"ICC_PROFILE\0");
-    is_icc
+            .starts_with(b"ICC_PROFILE\0")
 }
 
 /// Reassemble and return the profile data.
@@ -144,11 +144,11 @@ fn get_tiff_start(data: &[u8]) -> Option<(usize, Endian)> {
 }
 
 pub fn get_exif_orientation(codec: &mozjpeg_sys::jpeg_decompress_struct) -> Option<i32> {
-    if let Some(data) = get_exif_bytes(codec) {
-        if let Some((tiff_index, endian)) = get_tiff_start(data) {
-            let little = matches!(endian, Endian::Little);
-            return parse_exif(&data[tiff_index + 4..], little).unwrap_or(None);
-        }
+    if let Some(data) = get_exif_bytes(codec)
+        && let Some((tiff_index, endian)) = get_tiff_start(data)
+    {
+        let little = matches!(endian, Endian::Little);
+        return parse_exif(&data[tiff_index + 4..], little).unwrap_or(None);
     }
     None
 }

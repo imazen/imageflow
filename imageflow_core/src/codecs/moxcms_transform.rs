@@ -363,7 +363,9 @@ impl MoxcmsTransformCache {
                 for mut scanline in frame.scanlines() {
                     let row = scanline.row_mut();
                     // Extract gray + alpha from BGRA pixels
-                    for (pixel, ga) in row.chunks_exact(4).zip(gray_alpha.chunks_exact_mut(2)) {
+                    for (pixel, ga) in
+                        row.as_chunks::<4>().0.iter().zip(gray_alpha.as_chunks_mut::<2>().0)
+                    {
                         ga[0] = pixel[0]; // Gray ← B (R=G=B for grayscale)
                         ga[1] = pixel[3]; // Alpha
                     }

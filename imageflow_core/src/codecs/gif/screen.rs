@@ -83,10 +83,10 @@ impl Screen {
                 frame.width as usize,
             ),
         ) {
-            if let Some(transparent) = frame.transparent {
-                if src == transparent {
-                    continue;
-                }
+            if let Some(transparent) = frame.transparent
+                && src == transparent
+            {
+                continue;
             }
             *dst = pal.get(src as usize).copied().unwrap_or(BGRA8 { r: 0, g: 0, b: 0, a: 0 });
         }
@@ -97,7 +97,9 @@ impl Screen {
 
 fn to_bgra(palette_bytes: &[u8]) -> Vec<BGRA8> {
     palette_bytes
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|byte| BGRA8 { r: byte[0], g: byte[1], b: byte[2], a: 255 })
         .collect()
 }

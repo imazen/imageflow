@@ -43,7 +43,7 @@ pub fn notify_graph_changed(
         let prev_filename =
             format!("job_{}_graph_version_{}.dot", r.debug_job_id, prev_graph_version);
         if files_identical(&current_filename, &prev_filename).unwrap_or_else(|_| {
-            panic!("Comparison err'd for {} and {}", &current_filename, &prev_filename)
+            panic!("Comparison err'd for {} and {}", current_filename, prev_filename)
         }) {
             std::fs::remove_file(&current_filename).unwrap();
 

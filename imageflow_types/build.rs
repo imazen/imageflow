@@ -80,9 +80,7 @@ fn fetch_env(key: &str, result_required: bool, empty_is_missing: bool) -> Option
             }
         }
     } else {
-        env::var(key)
-            .ok()
-            .and_then(|v| if v.is_empty() && empty_is_missing { None } else { Some(v) })
+        env::var(key).ok().filter(|v| !(v.is_empty() && empty_is_missing))
     }
 }
 fn command(key: &str, cmd: &str, result_required: bool, fallback_to_env: bool) -> Option<String> {
@@ -95,15 +93,15 @@ fn command(key: &str, cmd: &str, result_required: bool, fallback_to_env: bool) -
     };
 
     //Ensure consistency if both are present
-    if let Ok(ref out_str) = output {
-        if let Some(ref env_str) = env_val {
-            if out_str != env_str && out_str.trim() != env_str.trim() {
-                panic!(
-                    "Inconsistent values for {} and {}.\nCommand output: {}\nEnv var: {}",
-                    key, cmd, out_str, env_str
-                );
-            }
-        }
+    if let Ok(ref out_str) = output
+        && let Some(ref env_str) = env_val
+        && out_str != env_str
+        && out_str.trim() != env_str.trim()
+    {
+        panic!(
+            "Inconsistent values for {} and {}.\nCommand output: {}\nEnv var: {}",
+            key, cmd, out_str, env_str
+        );
     }
 
     if result_required && output.is_err() && env_val.is_none() {
@@ -257,7 +255,7 @@ fn main() {
     .iter()
     {
         let value = results.get::<str>(name).unwrap().to_owned().unwrap();
-        let line = format!("pub static {}: &str = {:?};\n", name, &value);
+        let line = format!("pub static {}: &str = {:?};\n", name, value);
         contents += &line;
     }
 

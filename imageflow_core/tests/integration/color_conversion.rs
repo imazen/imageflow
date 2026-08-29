@@ -526,10 +526,13 @@ fn test_performance_comparison() {
 fn test_linear_to_srgb_lut_correctness() {
     println!("\n=== LUT Correctness Verification ===\n");
 
+    // Iterating the LUT itself (rather than a hardcoded 0..16384) means the whole
+    // table is checked even if its length ever changes; `max_index` stays in step.
+    let max_index = (LINEAR_TO_SRGB_LUT.len() - 1) as f64;
     let mut mismatches = 0;
-    for i in 0..16384 {
+    for (i, &actual) in LINEAR_TO_SRGB_LUT.iter().enumerate() {
         // Use f64 for high precision reference calculation
-        let linear = i as f64 / 16383.0;
+        let linear = i as f64 / max_index;
         let srgb = if linear <= 0.0031308 {
             12.92 * linear
         } else {
@@ -537,7 +540,6 @@ fn test_linear_to_srgb_lut_correctness() {
         };
         let expected = (srgb * 255.0 + 0.5).clamp(0.0, 255.0) as u8;
 
-        let actual = LINEAR_TO_SRGB_LUT[i];
         if actual != expected {
             if mismatches < 10 {
                 println!("Mismatch at index {}: expected {}, got {}", i, expected, actual);
@@ -546,7 +548,7 @@ fn test_linear_to_srgb_lut_correctness() {
         }
     }
 
-    println!("Checked 16384 LUT entries");
+    println!("Checked {} LUT entries", LINEAR_TO_SRGB_LUT.len());
     println!("Mismatches: {}", mismatches);
 
     assert_eq!(mismatches, 0, "LUT has {} mismatches against reference calculation", mismatches);

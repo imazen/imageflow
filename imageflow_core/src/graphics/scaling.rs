@@ -112,7 +112,7 @@ fn resize_to_canvas(
     let config = builder.build();
     let mut stream = StreamingResize::new(&config);
 
-    drain_resize_u8(&input, &mut stream, canvas, alpha_meaningful)
+    drain_resize_u8(input, &mut stream, canvas, alpha_meaningful)
 }
 
 /// Resize with a solid matte color background (u8→u8).
@@ -144,7 +144,7 @@ fn resize_with_matte(
     let mut stream = StreamingResize::with_background(&config, bg)
         .map_err(|e| nerror!(ErrorKind::InvalidState, "Composite error: {}", e))?;
 
-    drain_resize_u8(&input, &mut stream, canvas, alpha_meaningful)
+    drain_resize_u8(input, &mut stream, canvas, alpha_meaningful)
 }
 
 /// Resize to premultiplied linear f32, then composite over existing canvas.
@@ -226,7 +226,7 @@ fn drain_resize_u8<B: zenresize::Background>(
             dest[..out_row_len].copy_from_slice(&row[..out_row_len]);
             if !alpha_meaningful {
                 // Ensure alpha=255 when alpha isn't meaningful
-                for pixel in dest[..out_row_len].chunks_exact_mut(4) {
+                for pixel in dest[..out_row_len].as_chunks_mut::<4>().0 {
                     pixel[3] = 255;
                 }
             }
@@ -241,7 +241,7 @@ fn drain_resize_u8<B: zenresize::Background>(
         let dest = canvas.row_mut(out_y).unwrap();
         dest[..out_row_len].copy_from_slice(&row[..out_row_len]);
         if !alpha_meaningful {
-            for pixel in dest[..out_row_len].chunks_exact_mut(4) {
+            for pixel in dest[..out_row_len].as_chunks_mut::<4>().0 {
                 pixel[3] = 255;
             }
         }
@@ -260,7 +260,7 @@ fn composite_premul_f32_over_srgb_u8(
     let dest_alpha_coeff = if alpha_meaningful { 1.0f32 / 255.0f32 } else { 0.0f32 };
     let dest_alpha_offset = if alpha_meaningful { 0.0f32 } else { 1.0f32 };
 
-    for (src_px, canvas_px) in src.chunks_exact(4).zip(canvas.chunks_exact_mut(4)) {
+    for (src_px, canvas_px) in src.as_chunks::<4>().0.iter().zip(canvas.as_chunks_mut::<4>().0) {
         let src_a = src_px[3];
         if src_a > 0.994f32 || !alpha_meaningful {
             canvas_px[0] = cc.floatspace_to_srgb(src_px[0]);

@@ -201,10 +201,10 @@ impl Decoder for ImagePngDecoder {
             }
             if !profile.is_srgb() {
                 let result = crate::codecs::cms::transform_to_srgb(&mut canvas, &profile);
-                if let Err(e) = result {
-                    if !self.ignore_color_profile_errors {
-                        return Err(e.at(here!()));
-                    }
+                if let Err(e) = result
+                    && !self.ignore_color_profile_errors
+                {
+                    return Err(e.at(here!()));
                 }
             }
         }

@@ -12,7 +12,6 @@ use imageflow_core::{Context, ErrorKind, FlowError};
 use std::io::Write as _;
 use std::path::Path;
 
-use imageflow_core;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::{self, panic};
@@ -51,14 +50,14 @@ fn global_manager() -> &'static ChecksumManager {
         let cache_dir = checksums_dir.join(".remote-cache");
         let download_url = std::env::var("REGRESS_REFERENCE_URL")
             .ok()
-            .and_then(|v| if v.is_empty() { None } else { Some(v) })
+            .filter(|v| !v.is_empty())
             .unwrap_or_else(|| {
                 "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums"
                     .to_string()
             });
         let upload_prefix = std::env::var("REGRESS_UPLOAD_PREFIX")
             .ok()
-            .and_then(|v| if v.is_empty() { None } else { Some(v) })
+            .filter(|v| !v.is_empty())
             .or_else(|| Some("s3://imageflow-resources/visual_test_checksums".to_string()));
         let upload_enabled =
             std::env::var("UPLOAD_REFERENCES").is_ok_and(|v| v == "1" || v == "true");
@@ -306,11 +305,11 @@ pub fn smoke_test(
     steps: Vec<s::Node>,
 ) -> Result<s::ResponsePayload, imageflow_core::FlowError> {
     let mut io_list = Vec::new();
-    if input.is_some() {
-        io_list.push(input.unwrap());
+    if let Some(input) = input {
+        io_list.push(input);
     }
-    if output.is_some() {
-        io_list.push(output.unwrap());
+    if let Some(output) = output {
+        io_list.push(output);
     }
     let mut context = Context::create().unwrap();
     build_steps(&mut context, &steps, io_list, security, debug)
@@ -341,8 +340,8 @@ pub fn file_extension_for_bytes(bytes: &[u8]) -> &'static str {
 /// Iterates scanlines to exclude stride padding. Dimensions are prepended
 /// to avoid collisions between differently-shaped images.
 pub fn checksum_bitmap_window(bitmap_window: &mut BitmapWindowMut<u8>) -> String {
-    let w = bitmap_window.w() as u32;
-    let h = bitmap_window.h() as u32;
+    let w = bitmap_window.w();
+    let h = bitmap_window.h();
 
     let mut buf = Vec::with_capacity(8 + (w as usize * h as usize * 4));
     buf.extend_from_slice(&w.to_le_bytes());
@@ -404,8 +403,8 @@ pub enum Similarity {
 
 impl Similarity {
     /// Convert to a `Tolerance` for `.checksums` files and pixel comparison.
-    pub fn to_tolerance_spec(&self) -> Tolerance {
-        match *self {
+    pub fn to_tolerance_spec(self) -> Tolerance {
+        match self {
             Similarity::AllowOffByOneBytesCount(n) => {
                 if n == 0 {
                     Tolerance::exact()
@@ -452,7 +451,7 @@ impl Similarity {
 
     /// Convert to a `RegressionTolerance` for direct bitmap comparison.
     fn to_regression_tolerance_for_comparison(
-        &self,
+        self,
     ) -> zensim_regress::testing::RegressionTolerance {
         let spec = self.to_tolerance_spec();
         spec.to_regression_tolerance(zensim_regress::arch::detect_arch_tag())
@@ -613,15 +612,15 @@ pub fn compare_with(
 ) -> bool {
     test_init();
     // Check file size
-    if let Some(max) = require.max_file_size {
-        if actual_bytes.len() > max {
-            let message = format!("Encoded size ({}) exceeds limit ({max})", actual_bytes.len());
-            if do_panic {
-                panic!("{}", &message);
-            } else {
-                eprintln!("{}", &message);
-                return false;
-            }
+    if let Some(max) = require.max_file_size
+        && actual_bytes.len() > max
+    {
+        let message = format!("Encoded size ({}) exceeds limit ({max})", actual_bytes.len());
+        if do_panic {
+            panic!("{}", &message);
+        } else {
+            eprintln!("{}", message);
+            return false;
         }
     }
 
@@ -705,21 +704,19 @@ pub fn check_visual_bitmap(
     );
     let passed = handle_check_result(&result);
     // In CREATE_BASELINES mode, write the entry for brand-new tests
-    if passed {
-        if let Ok(CheckResult::NoBaseline { .. }) = &result {
-            manager
-                .accept(
-                    identity.module,
-                    identity.func_name,
-                    detail,
-                    &hash,
-                    None,
-                    None,
-                    None,
-                    "new-baseline",
-                )
-                .expect("Failed to write new baseline entry");
-        }
+    if passed && let Ok(CheckResult::NoBaseline { .. }) = &result {
+        manager
+            .accept(
+                identity.module,
+                identity.func_name,
+                detail,
+                &hash,
+                None,
+                None,
+                None,
+                "new-baseline",
+            )
+            .expect("Failed to write new baseline entry");
     }
     passed
 }
@@ -774,21 +771,19 @@ pub fn check_visual_bytes(
     );
     let passed = handle_check_result(&result);
     // In CREATE_BASELINES mode, write the entry for brand-new tests
-    if passed {
-        if let Ok(CheckResult::NoBaseline { .. }) = &result {
-            manager
-                .accept(
-                    identity.module,
-                    identity.func_name,
-                    detail,
-                    &hash,
-                    None,
-                    None,
-                    None,
-                    "new-baseline",
-                )
-                .expect("Failed to write new baseline entry");
-        }
+    if passed && let Ok(CheckResult::NoBaseline { .. }) = &result {
+        manager
+            .accept(
+                identity.module,
+                identity.func_name,
+                detail,
+                &hash,
+                None,
+                None,
+                None,
+                "new-baseline",
+            )
+            .expect("Failed to write new baseline entry");
     }
     passed
 }

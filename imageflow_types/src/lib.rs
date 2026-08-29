@@ -1508,7 +1508,7 @@ impl Framewise {
                 _ => None,
             })
             .collect::<Vec<(i32, IoDirection)>>();
-        vec.sort_by(|&(a, _), &(b, _)| a.cmp(&b));
+        vec.sort_by_key(|&(a, _)| a);
         vec
     }
 

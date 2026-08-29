@@ -1232,7 +1232,7 @@ impl<'a, T> Iterator for ScanlineIterMut<'a, T> {
 
         let chop_len = if self.next_y + 1 == self.h { self.t_per_row } else { self.t_stride };
         if slice.len() < chop_len {
-            panic!("Remaining_slice length {} is less than chop_len {}, this should never happen. \n{}: ", slice.len(), chop_len, &self);
+            panic!("Remaining_slice length {} is less than chop_len {}, this should never happen. \n{}: ", slice.len(), chop_len, self);
         }
 
         // Safe split
@@ -1374,13 +1374,13 @@ impl<'a> BitmapWindowMut<'a, BGRA8> {
         x2: u32,
         y2: u32,
     ) -> Result<(), FlowError> {
-        if let BitmapCompositing::BlendWithMatte(_) = self.info().compose() {
-            if self.is_sub_window || (x, y, x2, y2) != (0, 0, self.w(), self.h()) {
-                return Err(nerror!(
-                    ErrorKind::InvalidArgument,
-                    "Cannot draw a rectangle on a sub-rectangle of a bitmap in BlendWithMatte mode"
-                ));
-            }
+        if let BitmapCompositing::BlendWithMatte(_) = self.info().compose()
+            && (self.is_sub_window || (x, y, x2, y2) != (0, 0, self.w(), self.h()))
+        {
+            return Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "Cannot draw a rectangle on a sub-rectangle of a bitmap in BlendWithMatte mode"
+            ));
         }
         if y2 == y || x2 == x {
             return Ok(());
@@ -1509,13 +1509,13 @@ impl<'a> BitmapWindowMut<'a, u8> {
         x2: u32,
         y2: u32,
     ) -> Result<(), FlowError> {
-        if let BitmapCompositing::BlendWithMatte(_) = self.info().compose() {
-            if self.is_sub_window || (x, y, x2, y2) != (0, 0, self.w(), self.h()) {
-                return Err(nerror!(
-                    ErrorKind::InvalidArgument,
-                    "Cannot draw a rectangle on a sub-rectangle of a bitmap in BlendWithMatte mode"
-                ));
-            }
+        if let BitmapCompositing::BlendWithMatte(_) = self.info().compose()
+            && (self.is_sub_window || (x, y, x2, y2) != (0, 0, self.w(), self.h()))
+        {
+            return Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "Cannot draw a rectangle on a sub-rectangle of a bitmap in BlendWithMatte mode"
+            ));
         }
         if y2 == y || x2 == x {
             return Ok(());
@@ -1720,7 +1720,7 @@ fn test_scanline_for_1x1() {
     let mut row_count = 0;
     for scanline in window.scanlines() {
         assert_eq!(scanline.row.len(), scanline.w * scanline.t_per_pixel());
-        eprintln!("{}\n{:?}", &scanline, &scanline.row);
+        eprintln!("{}\n{:?}", scanline, scanline.row);
         assert_eq!(scanline.row[0], 0xFF);
         row_count += 1;
     }
@@ -1757,7 +1757,7 @@ fn test_scanline_iterator_bgra32() {
     // Test u8 scanlines
     for scanline in window.scanlines() {
         assert_eq!(scanline.row.len(), scanline.w * scanline.t_per_pixel());
-        println!("{}\n{:?}", &scanline, &scanline.row);
+        println!("{}\n{:?}", scanline, scanline.row);
         for x in (0..scanline.w).step_by(4) {
             assert_eq!(scanline.row[x..x + 4], [0, scanline.y as u8, (x / 4) as u8, 255]);
         }
@@ -1772,7 +1772,7 @@ fn test_scanline_iterator_bgra32() {
     for scanline in window.scanlines_bgra().unwrap() {
         assert_eq!(scanline.row.len(), scanline.w);
         // Each item is one BGRA pixel
-        println!("{}\n{:?}", &scanline, &scanline.row);
+        println!("{}\n{:?}", scanline, scanline.row);
         for x in 0..scanline.w {
             print!("{} ", scanline.row[x]);
             assert_eq!(

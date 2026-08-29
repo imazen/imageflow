@@ -94,16 +94,16 @@ impl NodeDef for DecoderDef {
         let io_id = decoder_get_io_id(&ctx.weight(ix).params)?;
 
         // Add the necessary rotation step afterwards
-        if let Some(exif_flag) = ctx.c.get_exif_rotation_flag(io_id).map_err(|e| e.at(here!()))? {
-            if exif_flag > 0 {
-                let new_node = ctx.graph.add_node(Node::n(
-                    &APPLY_ORIENTATION,
-                    NodeParams::Json(s::Node::ApplyOrientation { flag: exif_flag }),
-                ));
-                ctx.copy_edges_to(ix, new_node, EdgeDirection::Outgoing);
-                ctx.delete_child_edges_for(ix);
-                ctx.graph.add_edge(ix, new_node, EdgeKind::Input).unwrap();
-            }
+        if let Some(exif_flag) = ctx.c.get_exif_rotation_flag(io_id).map_err(|e| e.at(here!()))?
+            && exif_flag > 0
+        {
+            let new_node = ctx.graph.add_node(Node::n(
+                &APPLY_ORIENTATION,
+                NodeParams::Json(s::Node::ApplyOrientation { flag: exif_flag }),
+            ));
+            ctx.copy_edges_to(ix, new_node, EdgeDirection::Outgoing);
+            ctx.delete_child_edges_for(ix);
+            ctx.graph.add_edge(ix, new_node, EdgeKind::Input).unwrap();
         }
         // Mutate instead of replace
         ctx.weight_mut(ix).def = &PRIMITIVE_DECODER;

@@ -136,8 +136,8 @@ fn parse_format_tuning(
         }
     }
     // Now, set i.format, the appropriate quality and lossless values
-    let max_count;
-    match format {
+
+    let max_count = match format {
         OutputFormat::Webp => {
             i.format = Some(OutputFormat::Webp);
             if let Some(quality) = quality {
@@ -146,7 +146,7 @@ fn parse_format_tuning(
             if let Some(lossless) = set_lossless {
                 i.webp_lossless = Some(lossless);
             }
-            max_count = 2; //lossless|keep,quality
+            2 //lossless|keep,quality
         }
         OutputFormat::Jxl => {
             i.format = Some(OutputFormat::Jxl);
@@ -156,21 +156,21 @@ fn parse_format_tuning(
             if let Some(lossless) = set_lossless {
                 i.jxl_lossless = Some(lossless);
             }
-            max_count = 4; //lossless|keep,quality,distance,effort
+            4 //lossless|keep,quality,distance,effort
         }
         OutputFormat::Avif => {
             i.format = Some(OutputFormat::Avif);
             if let Some(quality) = quality {
                 i.avif_quality = Some(quality);
             }
-            max_count = 2; //quality,speed
+            2 //quality,speed
         }
         OutputFormat::Jpeg => {
             i.format = Some(OutputFormat::Jpeg);
             if let Some(quality) = quality {
                 i.jpeg_quality = Some(quality as i32);
             }
-            max_count = 2; //quality,progressive|baseline
+            2 //quality,progressive|baseline
         }
         OutputFormat::Png => {
             i.format = Some(OutputFormat::Png);
@@ -180,17 +180,17 @@ fn parse_format_tuning(
             if let Some(lossless) = set_lossless {
                 i.png_lossless = Some(lossless);
             }
-            max_count = 3; //quality,lossless,min_quality
+            3 //quality,lossless,min_quality
         }
         OutputFormat::Auto => {
             i.format = Some(OutputFormat::Auto);
-            max_count = 1; //lossless
+            1 //lossless
         }
         other => {
             i.format = Some(other);
-            max_count = 0;
+            0
         }
-    }
+    };
     if count > max_count {
         warnings.push(ParseWarning::ValueInvalid((
             srcset_syntax_message_for(format),

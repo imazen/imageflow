@@ -322,7 +322,7 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
 
 impl fmt::Display for Instructions {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", &self.to_string_internal())
+        write!(f, "{}", self.to_string_internal())
     }
 }
 
@@ -1451,13 +1451,16 @@ fn test_url_parsing() {
         let match_failed = i != expected || warns != expected_warnings;
 
         if match_failed {
-            error_text.push_str(&format!("Failed to parse as expected: {}\n", &rel_url));
+            error_text.push_str(&format!("Failed to parse as expected: {}\n", rel_url));
         }else{
            return;
         }
             // eprintln!("{} -> {}", &url, i.to_string());
-        if i.bgcolor_srgb != expected.bgcolor_srgb && i.bgcolor_srgb.is_some() && expected.bgcolor_srgb.is_some(){
-            error_text.push_str(&format!("Expected bgcolor={}, actual={}\n", expected.bgcolor_srgb.unwrap().to_aarrggbb_string(), i.bgcolor_srgb.unwrap().to_aarrggbb_string()));
+        // (this crate is edition 2018, so no let-chains)
+        if let (Some(expected_bg), Some(actual_bg)) = (expected.bgcolor_srgb, i.bgcolor_srgb) {
+            if expected_bg != actual_bg {
+                error_text.push_str(&format!("Expected bgcolor={}, actual={}\n", expected_bg.to_aarrggbb_string(), actual_bg.to_aarrggbb_string()));
+            }
         }
 
 
@@ -1477,8 +1480,7 @@ fn test_url_parsing() {
 
     }
     fn expect_warning(key: &'static str, value: &str, expected: Instructions){
-        let mut expect_warnings = Vec::new();
-        expect_warnings.push(ParseWarning::ValueInvalid((key, value.to_owned())));
+        let expect_warnings = vec![ParseWarning::ValueInvalid((key, value.to_owned()))];
         let url = format!("{}={}", key, value);
         t(&url, expected, expect_warnings)
     }
@@ -1699,9 +1701,9 @@ fn test_tostr(){
         let b = from.to_string();
         if expected_query != b.as_str(){
             let mut text = format!("Expected: {}\n", expected_query);
-            text.push_str(&format!("Actual: {}\n", &b.as_str()));
+            text.push_str(&format!("Actual: {}\n", b.as_str()));
             text.push_str(&format!("Diff:\n{}", debug_diff(&expected_query, &b.as_str(), true)));
-            text.push_str(&format!("Input Instructions:\n{}", &from.to_string()));
+            text.push_str(&format!("Input Instructions:\n{}", from));
             panic!("{}", text);
         }
     }

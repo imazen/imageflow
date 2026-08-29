@@ -27,7 +27,7 @@ fn sync_and_verify_uploads() {
 
     let upload_prefix = std::env::var("REGRESS_UPLOAD_PREFIX")
         .ok()
-        .and_then(|v| if v.is_empty() { None } else { Some(v) })
+        .filter(|v| !v.is_empty())
         .or_else(|| Some("s3://imageflow-resources/visual_test_checksums".to_string()));
     let upload_enabled = std::env::var("UPLOAD_REFERENCES").is_ok_and(|v| v == "1" || v == "true");
 
@@ -174,12 +174,16 @@ fn backfill_diff_stats() {
                     // Convert to zensim pixel format
                     let actual_pixels: Vec<[u8; 4]> = actual_img
                         .as_raw()
-                        .chunks_exact(4)
+                        .as_chunks::<4>()
+                        .0
+                        .iter()
                         .map(|c| [c[0], c[1], c[2], c[3]])
                         .collect();
                     let baseline_pixels: Vec<[u8; 4]> = baseline_img
                         .as_raw()
-                        .chunks_exact(4)
+                        .as_chunks::<4>()
+                        .0
+                        .iter()
                         .map(|c| [c[0], c[1], c[2], c[3]])
                         .collect();
 
