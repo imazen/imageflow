@@ -272,6 +272,33 @@ impl FluentGraphBuilder {
     //    }
 }
 
+/// Asserts a framewise survives a JSON round trip.
+///
+/// Serializing is the whole point of the builder — the result is handed to
+/// `Execute001`/`Build001` as JSON — so a chain that cannot round-trip is
+/// useless no matter how cleanly it was constructed.
+#[cfg(test)]
+fn assert_framewise_round_trips(framewise: &s::Framewise) {
+    let json = serde_json::to_string(framewise).expect("framewise should serialize");
+    let parsed: s::Framewise =
+        serde_json::from_str(&json).expect("framewise should deserialize again");
+    assert_eq!(framewise, &parsed, "framewise did not survive a JSON round trip");
+}
+
+/// Asserts a single-output chain collapsed to `Steps` with `expected` nodes.
+///
+/// The three smoke tests below each built a chain and dropped the result on the
+/// floor, so they passed as long as nothing panicked: `to_framewise()` could
+/// have returned an empty step list and they would have been just as green.
+#[cfg(test)]
+fn assert_steps(framewise: &s::Framewise, expected: usize) {
+    let s::Framewise::Steps(steps) = framewise else {
+        panic!("a single-output chain should collapse to Steps, got {framewise:?}");
+    };
+    assert_eq!(expected, steps.len(), "unexpected node count; steps: {steps:?}");
+    assert_framewise_round_trips(framewise);
+}
+
 #[test]
 fn smoke_test_chaining() {
     let chain = fluently()
@@ -290,6 +317,17 @@ fn smoke_test_chaining() {
         .encode(1, s::EncoderPreset::libpng32())
         .builder()
         .to_framewise();
+
+    assert_steps(&chain, 9);
+    let s::Framewise::Steps(steps) = &chain else { unreachable!() };
+    assert!(
+        matches!(steps.first(), Some(s::Node::Decode { io_id: 0, .. })),
+        "chain should start at the decoder: {steps:?}"
+    );
+    assert!(
+        matches!(steps.last(), Some(s::Node::Encode { io_id: 1, .. })),
+        "chain should end at the encoder: {steps:?}"
+    );
 }
 
 #[test]
@@ -351,6 +389,8 @@ fn smoke_test_many_operations() {
         );
 
     let framewise = chain.builder().to_framewise();
+
+    assert_steps(&framewise, 15);
 }
 #[test]
 fn smoke_test_graph_builder() {
@@ -368,5 +408,14 @@ fn smoke_test_graph_builder() {
         .branch()
         .to(s::Node::Resample2D { w: 100, h: 100, hints: None })
         .to(s::Node::Encode { preset: s::EncoderPreset::libpng32(), io_id: 1 });
-    b.builder().with(c).to_framewise();
+    let framewise = b.builder().with(c).to_framewise();
+
+    // Two outputs off a shared branch point, so this cannot collapse to Steps —
+    // it has to come back as a Graph whose edges record the fan-out.
+    let s::Framewise::Graph(graph) = &framewise else {
+        panic!("two output nodes should produce a Graph, got {framewise:?}");
+    };
+    assert_eq!(5, graph.nodes.len(), "nodes: {:?}", graph.nodes);
+    assert_eq!(4, graph.edges.len(), "edges: {:?}", graph.edges);
+    assert_framewise_round_trips(&framewise);
 }
