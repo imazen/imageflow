@@ -1,0 +1,29 @@
+version: 2
+
+# This replaces .github/workflows/update-actions.yml, which ran
+# saadmk11/github-actions-version-updater on a weekly cron and failed on all 59
+# of its runs between 2025-07-13 and 2026-08-23 with "Input required and not
+# supplied: token" — `secrets.WORKFLOW_SECRET` was never set. Thirteen months of
+# silent weekly failure is why this repo carried the workspace's stalest
+# actions while looking like something was maintaining them.
+#
+# Dependabot needs no secret: it authenticates as itself rather than through a
+# stored PAT carrying `workflow` scope, which is also one less standing
+# credential able to rewrite workflow files.
+updates:
+  - package-ecosystem: "github-actions"
+    directories:
+      - "/" # .github/workflows/
+      - "/.github/actions/*" # the composite actions
+    schedule:
+      interval: "weekly"
+      day: "sunday" # same slot the old cron used
+    groups:
+      # One PR per week for all action bumps rather than one per action; the
+      # matrix is expensive enough that a dozen separate PRs is real money.
+      github-actions:
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "github-actions"
