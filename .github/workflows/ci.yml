@@ -61,7 +61,7 @@ jobs:
     name: "cargo clippy --workspace --all-targets -- -D warnings"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -87,7 +87,7 @@ jobs:
     name: "cargo nextest run --all (debug profile, debug_assertions on)"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -240,7 +240,7 @@ jobs:
 
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Parse version
         uses: ./.github/actions/parse-version
@@ -290,7 +290,7 @@ jobs:
       # ----------------------------------------------------------------------------
       # Provides GITHUB_SHA_SHORT and others
       # ----------------------------------------------------------------------------
-      - uses: FranzDiebold/github-env-vars-action@v1.3.0
+      - uses: FranzDiebold/github-env-vars-action@v2.9.0
 
       - name: Set EXTENSION to .zip or .tar.gz based on OS
         shell: bash
@@ -415,14 +415,14 @@ jobs:
         if: always() && hashFiles('.image-cache/manifests/*.tsv') != ''
 
       - name: Upload updated checksums
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: checksums-${{ matrix.name }}
           path: imageflow_core/tests/integration/visuals/*.checksums
         if: always()
 
       - name: Upload test output images (for debugging)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-outputs-${{ matrix.name }}
           path: |
@@ -441,7 +441,7 @@ jobs:
 
 
       - name: "cross cargo build --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
-        uses: houseabsolute/actions-rust-cross@v1.0.2
+        uses: houseabsolute/actions-rust-cross@v1.0.8
         with:
           command: "build"
           target: ${{ matrix.target }}
@@ -590,7 +590,7 @@ jobs:
 
       - name: Upload Native Binaries Artifact
         if: ${{ !matrix.test-only }} # Don't upload artifacts for unpublished builds
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: native-binaries-${{ matrix.nuget-rid }}
           path: artifacts/native_binaries/
@@ -615,7 +615,7 @@ jobs:
       # No test results file to upload - script checks exit code
       # - name: Upload Test Results (from single-pack-and-test run)
       #   if: ${{ !matrix.static && !matrix.test-only }} # If test was run
-      #   uses: actions/upload-artifact@v4
+      #   uses: actions/upload-artifact@v7
       #   with:
       #     name: test-results-${{ matrix.nuget-rid }}
       #     path: "./dotnet/nuget/test/bin/Release/**/*.trx" # Assuming TRX output path
@@ -679,7 +679,7 @@ jobs:
       - name: From git, get 'latest' / 'main' / 'v1.2.3' tags
         id: meta
         if: ${{ contains(matrix.docker-image-name, 'imageflow') }}
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             ${{ matrix.docker-image-name }}
@@ -691,11 +691,11 @@ jobs:
 
       - name: "Set up Docker Buildx"
         if: ${{ contains(matrix.docker-image-name, 'imageflow') }}
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: "Login to Docker Hub"
         if: ${{ env.ALLOW_PUBLISH == 'true' && contains(matrix.docker-image-name, 'imageflow') }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -708,7 +708,7 @@ jobs:
       - name: "Build and push imageflow_tool Docker image (allow failure)"
         continue-on-error: true
         if: ${{ contains(matrix.docker-image-name, 'imageflow') }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./docker/imageflow_tool/
           file: ./docker/imageflow_tool/Dockerfile
@@ -725,7 +725,7 @@ jobs:
     runs-on: ubuntu-24.04
     name: "Cross-platform regression report"
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: test-outputs-*
           path: artifacts/
@@ -761,7 +761,7 @@ jobs:
           echo "Generating merged report for: ${PLATFORMS[*]}"
           ./regress_report "${PLATFORMS[@]}" -o merged-regression-report.html
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: merged-regression-report
           path: merged-regression-report.html
@@ -783,7 +783,7 @@ jobs:
         run: echo "Starting NuGet pack, test, and publish job..."
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Parse version
         uses: ./.github/actions/parse-version
@@ -791,12 +791,12 @@ jobs:
       - run: echo "NUGET_PACKAGE_VERSION=${{ steps.parse_version.outputs.version }}" >> $GITHUB_ENV
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x' # Or your required version
 
       - name: Download all Native Binaries artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: native-binaries-* # Match artifact names from build job
           path: artifacts/native_binaries/ # Download into this base directory
