@@ -192,63 +192,96 @@ fn test_bitmap_canvas_i32_overflow() {
 // ICC profile and EXIF handling tests
 // =============================================================================
 
+/// Base URL of the shared test corpus — the same bucket the visual tests pull
+/// from, cached under `.image-cache/sources/`.
+const CORPUS_BASE: &str = "https://s3-us-west-2.amazonaws.com/imageflow-resources/";
+
+/// Fetches a corpus image by its path within the bucket.
+///
+/// The three tests below previously looked for fixtures under the repo root
+/// (`examples/export_4_sizes/waterhouse.jpg`, `imageflow_core/tests/visuals/`).
+/// Neither path has ever existed in this repo, so each test took its "not
+/// found" branch, printed a line, and passed without decoding anything — on
+/// every machine and in every CI run. Pulling from the corpus the rest of the
+/// suite already uses means there is no missing-fixture branch to take.
+fn corpus_bytes(relative: &str) -> Vec<u8> {
+    crate::common::get_url_bytes_with_retry(&format!("{CORPUS_BASE}{relative}"))
+        .unwrap_or_else(|e| panic!("fetching corpus image {relative}: {e}"))
+}
+
+/// Decodes `bytes` and re-encodes to PNG, returning the encoded output.
+fn decode_to_png(bytes: &[u8], commands: Option<Vec<s::DecoderCommand>>) -> Vec<u8> {
+    let mut ctx = create_context();
+    ctx.add_copied_input_buffer(0, bytes).expect("add input buffer");
+    ctx.add_output_buffer(1).expect("add output buffer");
+    ctx.execute_1(s::Execute001 {
+        graph_recording: None,
+        security: None,
+        job_options: None,
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode { io_id: 0, commands },
+            s::Node::Encode {
+                io_id: 1,
+                preset: s::EncoderPreset::Lodepng { maximum_deflate: None },
+            },
+        ]),
+    })
+    .expect("decode + PNG encode should succeed");
+    ctx.take_output_buffer(1).expect("output buffer")
+}
+
+/// A JPEG carrying an ICC profile must actually be color-managed, not just
+/// survive decoding.
+///
+/// Decoding the same Display-P3 file with and without `DiscardColorProfile` has
+/// to produce different pixels: P3 primaries are wider than sRGB, so if the two
+/// agree, the profile was never applied. Asserting only "it decoded" would pass
+/// with color management removed entirely.
 #[test]
 fn test_icc_profile_handling() {
-    let test_jpg = repo_root().join("examples/export_4_sizes/waterhouse.jpg");
+    let jpg = corpus_bytes("test_inputs/wide-gamut/display-p3/flickr_1b94e1228c32cb98.jpg");
 
-    if test_jpg.exists() {
-        let jpg_bytes = fs::read(test_jpg).expect("Failed to read test JPEG");
+    let mut ctx = create_context();
+    ctx.add_copied_input_buffer(0, &jpg).expect("add input buffer");
+    let info = ctx.get_unscaled_unrotated_image_info(0).expect("ICC-tagged JPEG info");
+    assert_eq!("image/jpeg", info.preferred_mime_type);
+    assert!(info.image_width > 0 && info.image_height > 0, "info: {:?}", info);
 
-        let mut ctx = create_context();
-        let _ = ctx.add_copied_input_buffer(0, &jpg_bytes);
+    let color_managed = decode_to_png(&jpg, None);
+    let profile_discarded = decode_to_png(&jpg, Some(vec![s::DecoderCommand::DiscardColorProfile]));
 
-        let info = ctx.get_unscaled_unrotated_image_info(0);
-        match info {
-            Ok(i) => {
-                println!("Test JPEG: {}x{}", i.image_width, i.image_height);
-                // ICC profile parsing happens during get_unscaled_unrotated_image_info
-                // Issues would manifest under valgrind/ASAN if ICC handling is broken
-            }
-            Err(e) => {
-                println!("Test JPEG info failed: {:?}", e);
-            }
-        }
-    } else {
-        println!("Test JPEG not found, skipping ICC tests");
-    }
+    assert_ne!(
+        color_managed, profile_discarded,
+        "decoding a Display-P3 JPEG with and without DiscardColorProfile produced identical \
+         output, which means the embedded ICC profile was never applied"
+    );
 }
 
 // =============================================================================
-// EXIF parsing timing test
+// EXIF parsing
 // =============================================================================
 
+/// The EXIF orientation tag must be read back exactly, for every one of the
+/// eight values.
+///
+/// The corpus names each file after the flag it carries, so the expected value
+/// is known without hardcoding a magic number. The previous version of this test
+/// timed a `get_unscaled_unrotated_image_info` call on a fixture that does not
+/// exist and printed the elapsed milliseconds; it never looked at EXIF at all.
 #[test]
 fn test_exif_parsing_with_real_jpeg() {
-    let test_jpg = repo_root().join("examples/export_4_sizes/waterhouse.jpg");
-
-    if test_jpg.exists() {
-        let jpg_bytes = fs::read(test_jpg).expect("Failed to read test JPEG");
+    for flag in 1..=8i32 {
+        let jpg = corpus_bytes(&format!("test_inputs/orientation/Landscape_{flag}.jpg"));
 
         let mut ctx = create_context();
-        let _ = ctx.add_copied_input_buffer(0, &jpg_bytes);
+        ctx.add_copied_input_buffer(0, &jpg).expect("add input buffer");
 
-        let start = std::time::Instant::now();
-        let info = ctx.get_unscaled_unrotated_image_info(0);
-        let elapsed = start.elapsed();
-
-        match info {
-            Ok(i) => {
-                println!(
-                    "Normal JPEG info took {}ms: {}x{}",
-                    elapsed.as_millis(),
-                    i.image_width,
-                    i.image_height
-                );
-            }
-            Err(e) => {
-                println!("Normal JPEG info failed in {}ms: {:?}", elapsed.as_millis(), e);
-            }
-        }
+        let parsed = ctx.get_exif_rotation_flag(0).expect("reading the EXIF flag should succeed");
+        assert_eq!(
+            Some(flag),
+            parsed,
+            "Landscape_{flag}.jpg declares EXIF orientation {flag}, decoder reported {parsed:?}"
+        );
     }
 }
 
@@ -662,42 +695,35 @@ fn test_webp_oversized_riff_claim() {
 // PNG ICC profile lifetime test
 // =============================================================================
 
+/// The ICC buffer taken from a PNG's `iCCP` chunk has to stay valid for the
+/// whole transform, not just until the chunk reader is dropped.
+///
+/// Decoding with and without `DiscardColorProfile` must differ — that is what
+/// proves the profile was read *and* used. A lifetime bug shows up here as a
+/// crash, or (under valgrind/ASAN) as a use-after-free; run it under those for
+/// full detection. The previous version pointed at
+/// `imageflow_core/tests/visuals/01864661ED8AB31EF.png`, a directory that does
+/// not exist, and printed "No test PNG found".
 #[test]
 fn test_png_icc_lifetime() {
-    // Test PNG ICC profile handling — the ICC buffer must remain valid for the
-    // duration of processing. Run under valgrind/ASAN for full detection.
+    let png = corpus_bytes(
+        "test_inputs/repro-icc/sharp/1323_115925293-3319d700-a481-11eb-8083-66b5188ee1da.png",
+    );
 
-    let visuals_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/visuals");
-    let test_pngs = [visuals_dir.join("01864661ED8AB31EF.png")];
+    let mut ctx = create_context();
+    ctx.add_copied_input_buffer(0, &png).expect("add input buffer");
+    let info = ctx.get_unscaled_unrotated_image_info(0).expect("ICC-tagged PNG info");
+    assert_eq!("image/png", info.preferred_mime_type);
+    assert!(info.image_width > 0 && info.image_height > 0, "info: {:?}", info);
 
-    for png_path in &test_pngs {
-        if png_path.exists() {
-            let png_bytes = fs::read(png_path).expect("Failed to read PNG");
+    let color_managed = decode_to_png(&png, None);
+    let profile_discarded = decode_to_png(&png, Some(vec![s::DecoderCommand::DiscardColorProfile]));
 
-            let mut ctx = create_context();
-            let _ = ctx.add_copied_input_buffer(0, &png_bytes);
-
-            let info = ctx.get_unscaled_unrotated_image_info(0);
-            match info {
-                Ok(i) => {
-                    println!(
-                        "PNG info retrieved for {}: {}x{}",
-                        png_path.display(),
-                        i.image_width,
-                        i.image_height
-                    );
-                    println!("Note: Use valgrind/ASAN to detect lifetime issues");
-                }
-                Err(e) => {
-                    println!("PNG info failed: {:?}", e);
-                }
-            }
-
-            return; // Test one file
-        }
-    }
-
-    println!("No test PNG found");
+    assert_ne!(
+        color_managed, profile_discarded,
+        "decoding an iCCP-tagged PNG with and without DiscardColorProfile produced identical \
+         output, which means the embedded ICC profile was never applied"
+    );
 }
 
 // =============================================================================
