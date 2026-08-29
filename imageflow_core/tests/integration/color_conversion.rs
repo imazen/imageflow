@@ -161,6 +161,35 @@ fn test_colorutils_comparison() {
     println!("  Max u8 diff: {}", max_diff_reverse);
     println!("  Current impl errors: {}/256 values", current_errors);
     println!("  colorutils-rs errors: {}/256 values", colorutils_errors);
+
+    // These numbers were printed and discarded, so this test passed whatever
+    // srgb_to_floatspace and floatspace_to_srgb did to the data.
+    //
+    // Measured 2026-08-29, release, aarch64-apple-darwin:
+    //   forward max diff from exact 0.0000048280 (mean 0.0000015708)
+    //   reverse max u8 diff 0; 0/256 values wrong for both implementations
+    //
+    // The reverse direction is a round trip through all 256 sRGB levels, so
+    // exact recovery is the property worth holding onto; the bounds allow one
+    // level of slack for platforms where powf lands on the other side of a
+    // rounding boundary.
+    assert!(
+        max_diff_forward < 0.001,
+        "srgb_to_floatspace differs from the exact curve by {max_diff_forward:.10}; \
+         measured 0.0000048280"
+    );
+    assert!(
+        max_diff_reverse <= 1,
+        "round-tripping the 256 sRGB levels is off by {max_diff_reverse} levels; measured 0"
+    );
+    assert!(
+        current_errors <= 2,
+        "floatspace_to_srgb failed to recover {current_errors} of 256 sRGB levels; measured 0"
+    );
+    assert!(
+        colorutils_errors <= 2,
+        "colorutils-rs failed to recover {colorutils_errors} of 256 sRGB levels; measured 0"
+    );
 }
 
 #[test]
