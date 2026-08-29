@@ -45,7 +45,11 @@ jobs:
       - name: Install mdBook
         uses: peaceiris/actions-mdbook@v2
         with:
-          mdbook-version: 'latest'
+          # Pinned, not 'latest'. This workflow's first-ever run failed because
+          # mdbook had moved to 0.5.x, which rejects the `multilingual` key
+          # docs/book.toml carried; with 'latest' the build's success depends on
+          # what upstream released that morning.
+          mdbook-version: '0.5.4'
 
       - name: mdbook build
         run:  mdbook build -d ../_site ./docs
