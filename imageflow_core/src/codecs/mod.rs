@@ -362,9 +362,35 @@ impl NamedEncoders {
     }
 }
 
+/// Inline capacity of both codec lists in [`EnabledCodecs`].
+///
+/// `EnabledCodecs` is stored inline in every `Context`, so the lists spilling to
+/// the heap costs an allocation per context. The default build (`c-codecs` +
+/// `bmp`) registers five decoders, which did not fit the previous inline
+/// capacity of four.
+///
+/// Eight is the largest capacity that is free here. Measured with smallvec
+/// 1.15.2, `size_of::<SmallVec<[u8; N]>>()` is:
+///
+/// | N          | 1  | 4  | 6  | 8  | 9  | 12 | 16 |
+/// |------------|----|----|----|----|----|----|----|
+/// | 64-bit     | 24 | 24 | 24 | 24 | 32 | 32 | 32 |
+/// | i686       | 12 | 12 | 16 | 16 | 16 | 20 | 24 |
+///
+/// So on a 64-bit target every capacity through 8 is the same 24 bytes and 9
+/// starts costing 8 more — the free capacity is `size_of::<usize>()`, not 16.
+///
+/// A `zen-codecs` build registers eleven decoders and fourteen encoders and so
+/// still spills both lists, exactly as it did before. Holding those inline needs
+/// capacity 16, and that is not free: measured, it puts `ThreadSafeContext` at
+/// 568 bytes against its `<= 560` assertion. Raising this therefore has to wait
+/// for room in the `Context` size budget; see
+/// `enabled_codecs_size_tests::enabled_codecs_fit_inline_unless_zen_codecs`.
+const CODEC_LIST_INLINE: usize = 8;
+
 pub struct EnabledCodecs {
-    pub decoders: ::smallvec::SmallVec<[NamedDecoders; 4]>,
-    pub encoders: ::smallvec::SmallVec<[NamedEncoders; 8]>,
+    pub decoders: ::smallvec::SmallVec<[NamedDecoders; CODEC_LIST_INLINE]>,
+    pub encoders: ::smallvec::SmallVec<[NamedEncoders; CODEC_LIST_INLINE]>,
 }
 impl Default for EnabledCodecs {
     fn default() -> Self {
@@ -728,5 +754,69 @@ impl CodecInstanceContainer {
                 self.io_id
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod enabled_codecs_size_tests {
+    use super::*;
+    use std::mem::size_of;
+
+    /// `EnabledCodecs` lives inline in `Context`, and every context builds one,
+    /// so a list that spills costs a heap allocation per context that
+    /// `Context::calculate_heap_allocations` does not model. The default build
+    /// (`c-codecs` + `bmp`) registers five decoders and six encoders; the
+    /// previous decoder inline capacity of four spilled on every context.
+    ///
+    /// A `zen-codecs` build registers eleven and fourteen, which do not fit
+    /// [`CODEC_LIST_INLINE`] and cannot be made to without 16 bytes the
+    /// `Context` size budget does not have (see the constant's docs). This
+    /// asserts the exact expected state per configuration rather than skipping,
+    /// so it fails both if a default build starts spilling and if a `zen-codecs`
+    /// build stops — the latter meaning the capacity was raised and the sizes
+    /// need re-checking.
+    #[test]
+    fn enabled_codecs_fit_inline_unless_zen_codecs() {
+        let codecs = EnabledCodecs::default();
+        let expect_inline = !cfg!(feature = "zen-codecs");
+        assert_eq!(
+            expect_inline,
+            !codecs.decoders.spilled(),
+            "{} decoders against an inline capacity of {}",
+            codecs.decoders.len(),
+            CODEC_LIST_INLINE
+        );
+        assert_eq!(
+            expect_inline,
+            !codecs.encoders.spilled(),
+            "{} encoders against an inline capacity of {}",
+            codecs.encoders.len(),
+            CODEC_LIST_INLINE
+        );
+    }
+
+    /// Pins the measured smallvec layout that [`CODEC_LIST_INLINE`] is picked
+    /// from. On a 64-bit target every inline capacity through 8 costs the same
+    /// 24 bytes and 9 costs 32, so the decoder list's 4 -> 8 widening was free
+    /// and the 16 a `zen-codecs` build would need is not.
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn smallvec_inline_capacity_is_free_through_eight() {
+        assert_eq!(1, size_of::<NamedDecoders>());
+        assert_eq!(1, size_of::<NamedEncoders>());
+
+        assert_eq!(24, size_of::<::smallvec::SmallVec<[NamedDecoders; 1]>>());
+        assert_eq!(24, size_of::<::smallvec::SmallVec<[NamedDecoders; 4]>>());
+        assert_eq!(24, size_of::<::smallvec::SmallVec<[NamedDecoders; 8]>>());
+        assert_eq!(32, size_of::<::smallvec::SmallVec<[NamedDecoders; 9]>>());
+        assert_eq!(32, size_of::<::smallvec::SmallVec<[NamedDecoders; 16]>>());
+
+        // `EnabledCodecs` is exactly two of those lists and nothing else, so
+        // widening the decoder list from 4 to 8 left its size unchanged.
+        assert_eq!(
+            2 * size_of::<::smallvec::SmallVec<[NamedDecoders; CODEC_LIST_INLINE]>>(),
+            size_of::<EnabledCodecs>()
+        );
+        assert_eq!(48, size_of::<EnabledCodecs>());
     }
 }

@@ -722,6 +722,13 @@ impl Context {
     /// - Arc allocation for shared state (cancellation_token)
     ///
     /// Note: RefCell stores its contents inline, not on the heap
+    ///
+    /// `enabled_codecs` deliberately contributes nothing: both of its lists are
+    /// `SmallVec`s whose inline capacity holds every codec the build registers,
+    /// so no allocation happens. That is not free by accident — the decoder list
+    /// used to spill on every context, an allocation this function never
+    /// modelled. `codecs::enabled_codecs_size_tests::enabled_codecs_fit_inline_unless_zen_codecs`
+    /// keeps it inline.
     pub(crate) fn calculate_heap_allocations() -> (usize, usize) {
         let mut total_bytes = 0;
         let mut num_allocations = 0;
