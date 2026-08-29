@@ -41,7 +41,7 @@ jobs:
             duration: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Stable Rust works — sancov instrumentation (-Cpasses=sancov-module)
       # doesn't require nightly. Only -Zsanitizer=address needs nightly,
@@ -101,7 +101,7 @@ jobs:
 
       - name: Upload crash artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fuzz-crashes-${{ matrix.target }}
           path: fuzz/artifacts/${{ matrix.target }}/
