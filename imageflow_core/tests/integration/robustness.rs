@@ -22,80 +22,60 @@ fn repo_root() -> PathBuf {
 // GIF dimension limit tests
 // =============================================================================
 
-/// Direct test of Screen::new with large dimensions
-/// This tests if the gif crate's memory limit is applied BEFORE Screen::new
+/// Reading the logical screen descriptor must not allocate the screen: a header
+/// is parsed, not a canvas.
 #[test]
 fn test_gif_screen_allocation_order() {
-    // Create a valid minimal GIF with maximum allowed dimensions
-    // GIF dimensions are u16, so max is 65535x65535
-    // But gif crate has a memory limit of 8000*8000 = 64MB
-
-    // Test with dimensions that fit in memory limit
+    // GIF dimensions are u16, so the screen descriptor can claim up to 65535 in
+    // each axis. A 100x100 file is the control case for the two limit tests below.
     let valid_gif = create_valid_gif(100, 100);
 
     let mut ctx = create_context();
-    let result = ctx.add_copied_input_buffer(0, &valid_gif);
-    assert!(result.is_ok(), "Valid 100x100 GIF should be accepted");
+    ctx.add_copied_input_buffer(0, &valid_gif).expect("valid 100x100 GIF should be accepted");
 
-    let info = ctx.get_unscaled_unrotated_image_info(0);
-    assert!(info.is_ok(), "Should get info for valid GIF");
+    let info = ctx.get_unscaled_unrotated_image_info(0).expect("should get info for a valid GIF");
+    assert_eq!((100, 100), (info.image_width, info.image_height));
+    assert_eq!("image/gif", info.preferred_mime_type);
 }
 
-/// Test GIF with dimensions just at the memory limit
+/// `get_unscaled_unrotated_image_info` reports the logical screen size straight
+/// from the header. 8000 x 8000 is the largest screen the `gif` crate will
+/// allocate for, and reporting it must not be gated on that allocation
+/// succeeding — nothing is decoded at this stage.
 #[test]
 fn test_gif_at_memory_limit() {
-    // 8000 * 8000 = 64,000,000 which is at the gif crate's limit
-    // This tests if the limit is inclusive or exclusive
+    // 8000 * 8000 = 64,000,000, the gif crate's memory limit exactly.
     let gif = create_valid_gif(8000, 8000);
 
     let mut ctx = create_context();
-    let result = ctx.add_copied_input_buffer(0, &gif);
+    ctx.add_copied_input_buffer(0, &gif).expect("8000x8000 GIF buffer should be accepted");
 
-    // Note: This should either succeed (if limit is inclusive) or fail gracefully
-    println!("GIF 8000x8000 result: {:?}", result);
-
-    if result.is_ok() {
-        let info = ctx.get_unscaled_unrotated_image_info(0);
-        match info {
-            Ok(i) => println!(
-                "GIF 8000x8000 accepted: {}x{} = {} pixels",
-                i.image_width,
-                i.image_height,
-                i.image_width as i64 * i.image_height as i64
-            ),
-            Err(e) => println!("GIF 8000x8000 info error: {:?}", e),
-        }
-    }
+    let info = ctx.get_unscaled_unrotated_image_info(0).expect("8000x8000 GIF info should succeed");
+    assert_eq!((8000, 8000), (info.image_width, info.image_height));
 }
 
-/// Test GIF just over the memory limit — should be rejected by dimension validation
+/// Characterization: a logical screen *over* the `gif` crate's 64,000,000-pixel
+/// limit is still reported by `get_unscaled_unrotated_image_info`, because that
+/// call only parses the header.
+///
+/// This pins current behavior rather than asserting a preference. The header is
+/// attacker-controlled and costs nothing to claim, so what actually bounds
+/// allocation is the 16 MP frame-buffer cap applied during decode (see
+/// `test_gif_frame_buffer_size_cap_rejects_oversized_frame`). If info-stage
+/// dimension validation is ever added, this test is the one that has to change,
+/// and it will say so instead of silently passing either way.
 #[test]
 fn test_gif_over_memory_limit() {
-    // 8001 * 8001 = 64,016,001 which is just over the 64MB limit
+    // 8001 * 8001 = 64,016,001, just past the gif crate's limit.
     let gif = create_valid_gif(8001, 8001);
 
     let mut ctx = create_context();
-    let result = ctx.add_copied_input_buffer(0, &gif);
+    ctx.add_copied_input_buffer(0, &gif).expect("8001x8001 GIF buffer should be accepted");
 
-    if result.is_ok() {
-        let info = ctx.get_unscaled_unrotated_image_info(0);
-        match info {
-            Ok(i) => {
-                // If we get here, dimension validation didn't reject it before allocation.
-                // The allocation is short-lived and freed quickly, but we'd prefer to reject early.
-                println!(
-                    "GIF over memory limit accepted: {}x{} ({} pixels, {} MB)",
-                    i.image_width,
-                    i.image_height,
-                    i.image_width as i64 * i.image_height as i64,
-                    (i.image_width as i64 * i.image_height as i64 * 4) / 1024 / 1024
-                );
-            }
-            Err(e) => println!("GIF 8001x8001 rejected at info stage: {:?}", e),
-        }
-    } else {
-        println!("GIF 8001x8001 rejected at buffer stage");
-    }
+    let info = ctx
+        .get_unscaled_unrotated_image_info(0)
+        .expect("info is header-only, so an oversized screen is currently reported, not rejected");
+    assert_eq!((8001, 8001), (info.image_width, info.image_height));
 }
 
 /// Create a valid GIF with specified dimensions
@@ -160,58 +140,52 @@ fn create_canvas_job(w: usize, h: usize) -> s::Build001 {
     }
 }
 
+/// The 100 MP default `max_frame_size` is inclusive: exactly 10000 x 10000 has
+/// to build, or the limit is off by one and every "over the limit" test below
+/// would pass for the wrong reason.
 #[test]
 fn test_bitmap_canvas_at_limit() {
     let mut ctx = create_context();
 
-    // max_frame_size default is 100 megapixels (10000x10000)
     let job = create_canvas_job(10000, 10000);
 
-    let result = ctx.build_1(job);
-    match result {
-        Ok(_) => {
-            println!("10000x10000 canvas: accepted (100MP, at limit)");
-        }
-        Err(e) => {
-            println!("10000x10000 canvas rejected: {:?}", e);
-        }
-    }
+    ctx.build_1(job).expect("10000x10000 (exactly 100MP) is at the limit and must be accepted");
 }
 
 #[test]
 fn test_bitmap_canvas_over_limit() {
     let mut ctx = create_context();
 
-    // 10001x10001 = 100,020,001 which is over 100MP limit
+    // 10001x10001 = 100,020,001 which is over the 100MP limit
     let job = create_canvas_job(10001, 10001);
 
-    let result = ctx.build_1(job);
-    match result {
-        Ok(_) => {
-            panic!("10001x10001 canvas accepted (should be over limit)");
-        }
-        Err(e) => {
-            println!("10001x10001 canvas properly rejected: {:?}", e);
-        }
-    }
+    // Asserting the kind matters: any setup failure would also produce an Err,
+    // and a bare `is_err()` could not tell the megapixel guard from, say, a
+    // color-parse failure that never reached the guard at all.
+    let message = expect_error_kind(ctx.build_1(job), ErrorKind::InvalidCoordinates);
+    assert!(
+        message.contains("cannot exceed 100 megapixels"),
+        "expected the megapixel guard to reject this, got: {}",
+        message
+    );
 }
 
 #[test]
 fn test_bitmap_canvas_i32_overflow() {
     let mut ctx = create_context();
 
-    // 46341 * 46341 = 2,147,488,281 which overflows i32
+    // 46341 * 46341 = 2,147,488,281, which overflows i32. It is caught by the
+    // same 100MP guard long before any product is computed — asserting the
+    // message keeps that visible, so if the guard is ever narrowed this test
+    // reports an overflow reaching further in rather than quietly passing.
     let job = create_canvas_job(46341, 46341);
 
-    let result = ctx.build_1(job);
-    match result {
-        Ok(_) => {
-            panic!("46341x46341 canvas accepted (would overflow i32 in product)");
-        }
-        Err(e) => {
-            println!("46341x46341 canvas properly rejected: {:?}", e);
-        }
-    }
+    let message = expect_error_kind(ctx.build_1(job), ErrorKind::InvalidCoordinates);
+    assert!(
+        message.contains("cannot exceed 100 megapixels"),
+        "expected the megapixel guard to reject this, got: {}",
+        message
+    );
 }
 
 // =============================================================================
@@ -347,15 +321,31 @@ fn run_gif_crash_repro(name: &str) -> imageflow_core::Result<s::JobResult> {
     run_gif_decode_encode(&gif, None)
 }
 
-/// Asserts the job failed with `kind`, and returns the rendered error message.
-fn expect_gif_error(result: imageflow_core::Result<s::JobResult>, kind: ErrorKind) -> String {
+/// Asserts `result` failed with exactly `kind`, and returns the rendered error
+/// message so the caller can pin the specific guard that fired.
+///
+/// Matching the kind (rather than `is_err()`, or a match arm broad enough to
+/// swallow anything) is what keeps a test honest: a job that dies during setup
+/// also returns `Err`, and a test that accepts any error cannot tell the failure
+/// it was written for from one that never reached the code under test.
+#[track_caller]
+fn expect_error_kind<T: std::fmt::Debug>(
+    result: imageflow_core::Result<T>,
+    kind: ErrorKind,
+) -> String {
     match result {
-        Ok(ok) => panic!("expected error kind {:?}, but the job succeeded: {:?}", kind, ok),
+        Ok(ok) => panic!("expected error kind {:?}, but the call succeeded: {:?}", kind, ok),
         Err(e) => {
             assert_eq!(kind, e.kind, "wrong error kind; full error: {}", e);
             format!("{}", e)
         }
     }
+}
+
+/// Asserts the job failed with `kind`, and returns the rendered error message.
+#[track_caller]
+fn expect_gif_error(result: imageflow_core::Result<s::JobResult>, kind: ErrorKind) -> String {
+    expect_error_kind(result, kind)
 }
 
 /// Asserts the job decoded and re-encoded to exactly `w` x `h`.
@@ -659,17 +649,13 @@ fn test_webp_oversized_riff_claim() {
     webp.extend_from_slice(&[0x00; 12]); // padding
 
     let mut ctx = create_context();
-    let _ = ctx.add_copied_input_buffer(0, &webp);
+    ctx.add_copied_input_buffer(0, &webp).expect("adding the buffer must succeed");
 
-    let result = ctx.get_unscaled_unrotated_image_info(0);
-    match result {
-        Ok(i) => {
-            println!("WebP with 256MB RIFF claim accepted as {}x{}", i.image_width, i.image_height);
-        }
-        Err(e) => {
-            println!("WebP rejected: {:?}", e);
-        }
-    }
+    // The RIFF header claims 256 MB but only ~30 bytes follow. The decoder must
+    // reject the truncated bitstream rather than trusting the size claim — and
+    // it must reject it as a *decoding* error, which is only observable if the
+    // buffer actually reached the WebP decoder.
+    expect_error_kind(ctx.get_unscaled_unrotated_image_info(0), ErrorKind::ImageDecodingError);
 }
 
 // =============================================================================
