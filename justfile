@@ -63,6 +63,11 @@ accept-ci platform branch="ci-speedup":
     done
     echo "Done. Review changes with: git diff $VISUALS/"
 
+# Run the exhaustive sizing double-rounding sweep (#[ignore]d; ~11s in release,
+# minutes in debug — which is why it is not part of the default run)
+test-sizing-exhaustive:
+    cargo test --release -p imageflow_riapi --lib test_double_rounding_errors_exhaustive -- --ignored --nocapture
+
 # Check the whole workspace
 check:
     cargo check --workspace
