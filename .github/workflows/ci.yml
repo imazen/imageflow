@@ -29,8 +29,9 @@ env:
     IMAGEFLOW_NET_VERSION: "*-*" # 0.13.2 # Ensure consistency
 
 jobs:
-  # Nothing else in CI runs clippy, which is how 121 warnings accumulated across
-  # ten crates and both build scripts before 2026-08-29. `-D warnings` on the whole
+  # Nothing else in CI ran clippy, and `just fmt` only linted
+  # `-p imageflow_core --tests`, which is how 125 warnings accumulated across seven
+  # crates and both build scripts before 2026-08-29. `-D warnings` on the whole
   # workspace, so a new one fails the build instead of being invisible.
   clippy:
     runs-on: ubuntu-24.04
@@ -90,16 +91,20 @@ jobs:
       # per test, so grep -q is enough.
       - name: "Verify the debug-only tests are present in this build"
         run: |
-          cargo nextest list --all --locked > debug-test-list.txt
-          cat debug-test-list.txt
+          cargo nextest list --all --locked > "$RUNNER_TEMP/debug-test-list.txt"
+          cat "$RUNNER_TEMP/debug-test-list.txt"
           for t in test_cancellation_token_stop_with_poll_countdown \
                    test_job_with_cancellation_at_every_point; do
-            grep -q "$t" debug-test-list.txt \
+            grep -q "$t" "$RUNNER_TEMP/debug-test-list.txt" \
               || { echo "::error::$t is missing from the debug test list"; exit 1; }
           done
 
+      # --status-level pass so every test that ran is named in the log. The `ci`
+      # nextest profile prints only slow and failing tests, which would make
+      # "did the debug-only tests actually execute?" unanswerable from the log —
+      # the question this whole job exists to answer.
       - name: "cargo nextest run --all --locked --profile ci"
-        run: cargo nextest run --all --locked --profile ci
+        run: cargo nextest run --all --locked --profile ci --status-level pass
         env:
           REGRESS_MANIFEST_DIR: ${{ github.workspace }}/.image-cache/manifests
 
