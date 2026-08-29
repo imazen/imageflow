@@ -2,13 +2,11 @@
 
 - [Introduction](introduction.md)
 - [Querystring API](querystring/introduction.md)
-    - [Introduction](querystring/introduction.md)
     - [Image Transforms](querystring/transforms.md)
     - [Image Filters](querystring/filters.md)
     - [Image Encoding](querystring/encoding.md)
     - [Examples](querystring/examples.md)
 - [JSON Reference](json/introduction.md)
-    - [Introduction](json/introduction.md)
     - [Security](json/security.md)
     - [Decode](json/decode.md)
     - [Encode](json/encode.md)
