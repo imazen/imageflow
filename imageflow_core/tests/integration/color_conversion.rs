@@ -245,14 +245,64 @@ fn test_brute_force_accuracy() {
         colorutils_off_by_more,
         colorutils_off_by_more as f64 / test_count as f64 * 100.0
     );
+
+    // The measurements above were only ever printed, so this test passed with
+    // any accuracy at all — including none. The bounds below are the contract
+    // the fastpow path is written to meet, with margin for the one place where
+    // platforms legitimately differ: `linear_to_srgb_exact` uses powf, and a
+    // 1-ULP difference there can move `exact_u8` across a rounding boundary.
+    // That can turn an off-by-one into an off-by-two for individual values, so
+    // the gate is the *rate* of large errors, not a single max.
+    //
+    // Measured 2026-08-29, release, aarch64-apple-darwin, 1,000,000 samples:
+    //   fastpow      max 1, mean 0.007737, off-by->1 0 (0.0000%)
+    //   colorutils   max 1, mean 0.000796, off-by->1 0 (0.0000%)
+    let current_mean = current_total_error as f64 / test_count as f64;
+    let current_large_error_rate = current_off_by_more as f64 / test_count as f64;
+
+    assert!(
+        current_max_error <= 2,
+        "floatspace_to_srgb is off by {current_max_error} levels somewhere; \
+         even at rounding boundaries it should never exceed 2"
+    );
+    assert!(
+        current_large_error_rate < 0.001,
+        "floatspace_to_srgb is off by more than one level for {current_off_by_more} of \
+         {test_count} values ({:.4}%); measured 0%, boundary noise alone cannot reach 0.1%",
+        current_large_error_rate * 100.0
+    );
+    assert!(
+        current_mean < 0.05,
+        "floatspace_to_srgb mean error {current_mean:.6} levels; measured 0.007737"
+    );
+
+    // colorutils-rs is the reference this path is compared against; if it
+    // regresses, the comparison above stops meaning anything.
+    assert!(
+        colorutils_max_error <= 2,
+        "colorutils-rs srgb_from_linear is off by {colorutils_max_error} levels"
+    );
 }
 
+/// Interpolated reverse-LUT lookup has to stay within a level of the exact
+/// conversion, and has to get monotonically better as the table grows.
+///
+/// Measured 2026-08-29, release, aarch64-apple-darwin, 1,000,000 samples per
+/// size — max error 1 level and zero off-by->1 at every size, with mean error
+///   256: 0.160405   512: 0.095788   1024: 0.058055
+///   4096: 0.015497  16384: 0.003995
+///
+/// Those numbers used to be printed and discarded, so a LUT that ignored its
+/// size argument, or interpolated wrongly, passed exactly the same. The
+/// monotonicity check is the part that catches "interpolation silently stopped
+/// depending on the table"; the per-size bounds catch it getting worse.
 #[test]
 fn test_lut_interpolation_accuracy() {
     println!("\n=== LUT Interpolation Accuracy Test ===\n");
 
     let lut_sizes = [256, 512, 1024, 4096, 16384];
     let test_count = 1_000_000u32;
+    let mut mean_errors: Vec<(usize, f64)> = Vec::new();
 
     for &lut_size in &lut_sizes {
         let (lut, _) = build_reverse_lut(lut_size);
@@ -297,7 +347,45 @@ fn test_lut_interpolation_accuracy() {
             off_by_more as f64 / test_count as f64 * 100.0
         );
         println!();
+
+        let mean_error = total_error as f64 / test_count as f64;
+        let large_error_rate = off_by_more as f64 / test_count as f64;
+
+        assert!(
+            max_error <= 2,
+            "LUT size {lut_size}: interpolated lookup is off by {max_error} levels; even at a \
+             powf rounding boundary it should never exceed 2"
+        );
+        assert!(
+            large_error_rate < 0.005,
+            "LUT size {lut_size}: off by more than one level for {off_by_more} of {test_count} \
+             values ({:.4}%); measured 0%",
+            large_error_rate * 100.0
+        );
+        mean_errors.push((lut_size, mean_error));
     }
+
+    // A bigger table must interpolate better. If it does not, the size argument
+    // is not reaching the lookup — which no per-size bound above would catch,
+    // because a 256-entry table's accuracy passes them all.
+    for pair in mean_errors.windows(2) {
+        let (small, small_err) = pair[0];
+        let (large, large_err) = pair[1];
+        assert!(
+            large_err < small_err,
+            "LUT size {large} has mean error {large_err:.6}, no better than size {small} at \
+             {small_err:.6}; a larger table must interpolate more accurately"
+        );
+    }
+
+    // The 4096-entry table is the size the module recommends; pin its accuracy
+    // so a regression there is visible rather than merely printed.
+    let (_, mean_4096) =
+        mean_errors.iter().find(|(size, _)| *size == 4096).expect("4096 is in lut_sizes");
+    assert!(
+        *mean_4096 < 0.03,
+        "4096-entry LUT mean error {mean_4096:.6} levels; measured 0.015497"
+    );
 }
 
 #[test]
