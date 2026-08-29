@@ -22,7 +22,14 @@ use imageflow_types::ImageInfo;
 use itertools::Itertools;
 
 /// Something of a god object (which is necessary for a reasonable FFI interface).
-/// 1025 bytes including 5 heap allocations as of Oct 2025. If on the stack, 312 bytes are taken up
+///
+/// Size budget, enforced by `test_context_size` / `test_thread_safe_context_size` /
+/// `test_calculate_context_heap_size` below: `Context` < 400 bytes on the stack,
+/// `ThreadSafeContext` <= 560 (it is `Context` + 184 bytes of locks and the token),
+/// and <= 1056 bytes / 6 allocations for stack + initial heap combined. Anything
+/// added here — or to any type embedded here, notably
+/// `imageflow_types::ExecutionSecurity` — is charged against that budget, so keep
+/// cold/optional state boxed.
 pub struct Context {
     pub debug_job_id: i32,
     pub next_stable_node_id: i32,
@@ -42,8 +49,10 @@ pub struct Context {
 
     pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>,
 
-    pub allocations: RefCell<AllocationContainer>,
-
+    // NOTE: there is deliberately no `allocations` container here. Caller-visible
+    // allocations (`imageflow_context_memory_allocate`/`_free`) are owned by
+    // `ThreadSafeContext::allocations`; a second, never-read `RefCell<AllocationContainer>`
+    // used to sit here and cost 32 bytes of the `Context` size budget above.
     /// Bitmap keys captured by CaptureBitmapKey nodes during graph execution.
     captured_bitmap_keys: Option<Box<std::collections::HashMap<i32, BitmapKey>>>,
 }
@@ -297,8 +306,6 @@ impl Context {
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
-            allocations: RefCell::new(AllocationContainer::new()),
-
             captured_bitmap_keys: None,
         }))
     }
@@ -320,8 +327,6 @@ impl Context {
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
-            allocations: RefCell::new(AllocationContainer::new()),
-
             captured_bitmap_keys: None,
         })
     }
@@ -342,8 +347,6 @@ impl Context {
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
-            allocations: RefCell::new(AllocationContainer::new()),
-
             captured_bitmap_keys: None,
         }))
     }

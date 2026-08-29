@@ -8,7 +8,8 @@
 //! As of ABI 3.1, calls are thread-safe.
 //!
 //! Don't worry about the performance of creating/destroying contexts.
-//! A context weighs only 1100 bytes (6 allocations) as of Oct 2025.
+//! A context weighs only ~1170 bytes (5 allocations) as of Aug 2026 — measured by
+//! `imageflow_core::context::test_calculate_context_heap_size`, which also caps it.
 //!
 //! # Thread Safety
 //!

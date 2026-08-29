@@ -1217,9 +1217,16 @@ pub struct ExecutionSecurity {
     /// each decode/encode stage. `None` = ambient/global pool.
     #[serde(default)]
     pub max_threads: Option<u32>,
+    // Boxed to stay inside the `Context` stack budget: `ExecutionSecurity` is stored
+    // inline in `imageflow_core::Context`, which is asserted at `< 400` bytes (and
+    // `ThreadSafeContext` at `<= 560`) by `imageflow_core::context::test_context_size`.
+    // Inline, this field cost 48 bytes in every context; the default is `None`, so the
+    // box costs 8 bytes and allocates only when a policy is actually configured.
+    // JSON is unchanged - serde, schemars and utoipa all treat `Box<T>` as `T`.
+    // Kept as a non-doc comment so it stays out of the published OpenAPI description.
     /// Optional memory-budget assertions (estimate-gated and/or tracked).
     #[serde(default)]
-    pub mem_budget_policy: Option<MemBudgetPolicy>,
+    pub mem_budget_policy: Option<Box<MemBudgetPolicy>>,
 }
 
 impl ExecutionSecurity {
