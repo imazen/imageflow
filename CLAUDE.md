@@ -33,6 +33,19 @@ Reference images: `imageflow_core/tests/integration/visuals/images/<suite>/`
 
 ## Known Bugs
 
+### OPEN (2026-11-03) — #737: JPEG with a CMYK ICC profile on YCbCr data fails to decode; reported IIS crash not reproduced
+*Reproduced 2026-11-03 with the reporter's two attachments* (500×500 3-component Photoshop CS6 JPEGs
+embedding the CMYK profile "U.S. Web Coated (SWOP) v2"). Decode fails with `ColorProfileError: ICC
+profile has CMYK color space but image data is RGB` (`moxcms_transform.rs:193` on main): the mozjpeg
+decoder falls back to sRGB for a GRAY profile on a color JPEG (`mozjpeg_decoder.rs:392`) but sends a
+CMYK profile on YCbCr data down the RGB transform path. Not a regression: 2.2.0-rc01, 2.1.2-rc03 and
+2.1.1-rc11 (lcms2) fail the same images with `Wrong input color space on transform`. Workaround:
+`ignore_icc_errors=true` (output byte-identical to the profile-stripped image). The reported app-pool
+crash did NOT reproduce with the reporter's verbatim C# on Imageflow.Net 0.15.1 + NativeRuntime
+2.3.1-rc01 + .NET Framework 4.8.1 (console x64/x86 with 256/512 KB stacks and 16 threads; IIS Express
+x64 and x86, 1,364 failing requests, up to 16 concurrent; memory and handles flat). Harness, results and
+the event-log entries to request: `benchmarks/issue-737-iis-repro_2026-11-03/`.
+
 ### FIXED (2026-07-19) — generic-quality double-mapping: ssim2 score was fed into the libjpeg-turbo-quality knob (WebP/JXL/AVIF)
 *Found & source-verified 2026-06-24; re-verified live and FIXED 2026-07-19.* `auto.rs` passed
 `generic_quality_ssim2(qp)` — an SSIMULACRA2 **score** — into `ZenEncoder::create_{webp,jxl,avif}`, which

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <OutputType>Library</OutputType>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Imageflow.Net" Version="0.15.1" />
+    <PackageReference Include="Imageflow.NativeRuntime.win-x86_64" Version="2.3.1-rc01" />
+    <PackageReference Include="Imageflow.NativeRuntime.win-x86" Version="2.3.1-rc01" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="System.Web" />
+  </ItemGroup>
+</Project>

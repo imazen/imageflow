@@ -1,0 +1,133 @@
+# Raw results for imazen/imageflow#737, 2026-11-03
+# Native: imageflow 0635e3863f950fa58c227eaec1d4b957e0f42fdc (tag v2.3.1-rc01), from NuGet Imageflow.NativeRuntime.* / Imageflow.NativeTool.* 2.3.1-rc01
+# Managed: Imageflow.Net 0.15.1 (netstandard2.0 build) on .NET Framework 4.8.1 (Release 533509), Windows 11 Pro 10.0.26300, IIS Express 10.0.26013
+# Input: the reporter's attachment e79947da-ce3c-46a7-8d96-6ad086bdc70e (cmyk_icc_on_rgb_1.jpg) unless noted
+# 'LOG:' lines (the caught ImageflowException, identical every iteration) are omitted after the first.
+
+## imageflow_tool 2.3.1-rc01 (linux-x64): v1/querystring --command 'width=100&mode=max'
+exit=65  ImageMalformed: ColorProfileError: ICC profile has CMYK color space but image data is RGB at imageflow_core/src/codecs/moxcms_transform.rs:188:24 <- mozjpeg_decoder.rs:397:35
+## same, older releases
+2.2.0-rc01: exit=65  Error 9: Wrong input color space on transform (ObjectCreationError)
+2.1.2-rc03: exit=65  Error 9: Wrong input color space on transform (ObjectCreationError)
+2.1.1-rc11: exit=65  Error 9: Wrong input color space on transform (ObjectCreationError)
+## workaround, 2.3.1-rc01
+width=100&mode=max&ignore_icc_errors=true -> exit=0, 100x100 JPEG, byte-identical (cmp) to the same image with its ICC profile stripped
+width=100&mode=max&ignoreicc=true         -> exit=0, byte-identical to the same image with its ICC profile stripped
+
+## python3 -I abi_loop.py libimageflow.so <img> 1000   (linux-x64, same ABI call sequence as Imageflow.Net)
+iter 1: rss=16704 kB (start 12756 kB) errors=1 ok=0
+iter 10: rss=16676 kB (start 12756 kB) errors=10 ok=0
+iter 100: rss=16676 kB (start 12756 kB) errors=100 ok=0
+iter 1000: rss=16676 kB (start 12756 kB) errors=1000 ok=0
+begin_terminate returned false: 0
+first error: ImageMalformed: ColorProfileError: ICC profile has CMYK color space but image data is RGB at | imageflow_core/src/codecs/moxcms_transform.rs:188:24 | https://github.com/imazen/imageflow/blob/0635e3863f950
+
+## console/Repro737.exe (win_x64_default)
+iter 1: result=null private=20196 KB handles=280 threads=9
+iter 2: result=null private=20532 KB handles=280 threads=9
+iter 3: result=null private=20380 KB handles=280 threads=9
+iter 25: result=null private=23640 KB handles=285 threads=10
+iter 50: result=null private=23652 KB handles=285 threads=10
+iter 75: result=null private=25112 KB handles=285 threads=10
+iter 100: result=null private=23660 KB handles=285 threads=10
+DONE logged=100
+Process: x64, CLR 4.0.30319.42000, stack=default, qs=width=100&mode=max
+
+## console/Repro737.exe (win_x86_stack0)
+iter 1: result=null private=16168 KB handles=299 threads=9
+iter 2: result=null private=16636 KB handles=299 threads=9
+iter 3: result=null private=16952 KB handles=299 threads=9
+iter 25: result=null private=17068 KB handles=304 threads=10
+iter 50: result=null private=17068 KB handles=304 threads=10
+DONE logged=50
+Process: x86, CLR 4.0.30319.42000, stack=default, qs=width=100&mode=max
+
+## console/Repro737.exe (win_x86_stack256)
+iter 1: result=null private=16460 KB handles=299 threads=10
+iter 2: result=null private=16468 KB handles=299 threads=10
+iter 3: result=null private=16596 KB handles=299 threads=10
+iter 25: result=null private=17304 KB handles=304 threads=11
+iter 50: result=null private=17304 KB handles=304 threads=11
+DONE logged=50
+Process: x86, CLR 4.0.30319.42000, stack=256 KB, qs=width=100&mode=max
+
+## console/Repro737.exe (win_x64_stack256)
+iter 1: result=null private=20852 KB handles=281 threads=10
+iter 2: result=null private=21256 KB handles=281 threads=10
+iter 3: result=null private=21016 KB handles=281 threads=10
+iter 25: result=null private=23848 KB handles=286 threads=11
+iter 50: result=null private=24904 KB handles=286 threads=11
+DONE logged=50
+Process: x64, CLR 4.0.30319.42000, stack=256 KB, qs=width=100&mode=max
+
+## console/Repro737.exe (win_x64_stack512)
+iter 1: result=null private=21108 KB handles=281 threads=10
+iter 2: result=null private=21508 KB handles=281 threads=10
+iter 3: result=null private=20732 KB handles=281 threads=10
+iter 25: result=null private=24196 KB handles=286 threads=11
+iter 50: result=null private=24136 KB handles=286 threads=11
+DONE logged=50
+Process: x64, CLR 4.0.30319.42000, stack=512 KB, qs=width=100&mode=max
+
+## console/Repro737.exe, 16 threads x 100 iterations, 256 KB stacks, images cycled: cmyk_icc_on_rgb_1, valid_widegamut, cmyk_icc_on_rgb_2, valid_noicc
+Process: x64, CLR 4.0.30319.42000, stack=256 KB, qs=width=100&mode=max, threads=16, images=4
+t0 iter 1: nulls=9 oks=16 private=80960 KB handles=358 threads=25
+t0 iter 2: nulls=49 oks=46 private=78552 KB handles=363 threads=26
+t0 iter 3: nulls=77 oks=77 private=74140 KB handles=363 threads=26
+t0 iter 25: nulls=272 oks=272 private=78352 KB handles=363 threads=26
+t0 iter 50: nulls=487 oks=486 private=73320 KB handles=363 threads=26
+t0 iter 75: nulls=708 oks=705 private=80144 KB handles=363 threads=26
+t0 iter 100: nulls=800 oks=800 private=50936 KB handles=359 threads=11
+DONE logged=800 nulls=800 oks=800
+
+Process: x86, CLR 4.0.30319.42000, stack=256 KB, qs=width=100&mode=max, threads=16, images=4
+t0 iter 1: nulls=10 oks=16 private=62340 KB handles=381 threads=26
+t0 iter 2: nulls=43 oks=39 private=65176 KB handles=382 threads=26
+t0 iter 3: nulls=73 oks=70 private=62120 KB handles=381 threads=26
+t0 iter 25: nulls=275 oks=276 private=64344 KB handles=381 threads=26
+t0 iter 50: nulls=500 oks=501 private=68948 KB handles=381 threads=26
+t0 iter 75: nulls=726 oks=725 private=69348 KB handles=382 threads=26
+t0 iter 100: nulls=800 oks=800 private=30556 KB handles=377 threads=11
+DONE logged=800 nulls=800 oks=800
+
+## workaround via Imageflow.Net (console, both bad images, qs=width=100&mode=max&ignore_icc_errors=true, 10 iterations)
+x64: DONE logged=0 nulls=0 oks=10
+x86: DONE logged=0 nulls=0 oks=10
+
+## IIS Express x64 (iisexpress.exe /path:<site> /port:3737 /clr:v4.0), handler = iis-express/ResizeHandler.cs
+# request 1: valid_widegamut.jpg; requests 2-31: sequential cmyk_icc_on_rgb_1.jpg with gc=1 (every 10th line shown)
+1 pid=59284 x64 img=valid_widegamut.jpg result=3290 bytes private=205780KB handles=808 threads=90
+2 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=209324KB handles=964 threads=121
+3 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=209060KB handles=964 threads=121
+4 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=209528KB handles=965 threads=121
+11 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=211816KB handles=972 threads=121
+21 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=212964KB handles=979 threads=121
+31 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=213732KB handles=979 threads=121
+# curl -Z --parallel-max 16 'resize?img=cmyk_icc_on_rgb_[1-2].jpg&i=[1-150]'  (300 failing requests), then one probe:
+332 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=238484KB handles=996 threads=121
+# curl -Z --parallel-max 16 'resize?img={cmyk_icc_on_rgb_1,valid_widegamut,cmyk_icc_on_rgb_2,valid_noicc}.jpg&i=[1-100]' (200 failing + 200 ok), then one probe:
+733 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=243500KB handles=997 threads=121
+# 200 sequential failing requests, every 50th shown:
+783 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=247520KB handles=996 threads=121
+833 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=247744KB handles=996 threads=121
+883 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=251604KB handles=996 threads=121
+933 pid=59284 x64 img=cmyk_icc_on_rgb_1.jpg result=null private=250524KB handles=996 threads=121
+934 pid=59284 x64 img=valid_noicc.jpg result=3101 bytes private=250652KB handles=997 threads=120
+# IIS Express log: 934 requests started, 934 'Response sent ... HTTP status 200.0'. Stopped afterwards with Ctrl+C (exit code not captured for this run).
+
+## IIS Express x86 (C:\Program Files (x86)\IIS Express\iisexpress.exe), same handler and load
+1 pid=58784 x86 img=valid_noicc.jpg result=3101 bytes private=73020KB handles=827 threads=90
+2 pid=58784 x86 img=cmyk_icc_on_rgb_1.jpg result=null private=73648KB handles=833 threads=91
+3 pid=58784 x86 img=cmyk_icc_on_rgb_1.jpg result=null private=74060KB handles=833 threads=91
+11 pid=58784 x86 img=cmyk_icc_on_rgb_1.jpg result=null private=75096KB handles=834 threads=91
+21 pid=58784 x86 img=cmyk_icc_on_rgb_1.jpg result=null private=76100KB handles=834 threads=91
+31 pid=58784 x86 img=cmyk_icc_on_rgb_1.jpg result=null private=77180KB handles=834 threads=91
+332 pid=58784 x86 img=cmyk_icc_on_rgb_1.jpg result=null private=99648KB handles=1015 threads=121
+733 pid=58784 x86 img=cmyk_icc_on_rgb_1.jpg result=null private=108380KB handles=1016 threads=121
+783 pid=58784 x86 img=cmyk_icc_on_rgb_1.jpg result=null private=109472KB handles=1016 threads=121
+833 pid=58784 x86 img=cmyk_icc_on_rgb_1.jpg result=null private=109652KB handles=1016 threads=121
+# IIS Express log: 833 requests started, 833 'Response sent ... HTTP status 200.0'. Stopped afterwards with Ctrl+C; iisexpress exit code 1.
+
+## Caught failures per IIS Express worker (lines in the handler's web-log.txt, all "ColorProfileError: ICC profile has CMYK color space but image data is RGB")
+    632 pid=58784   (x86)
+    732 pid=59284   (x64)
