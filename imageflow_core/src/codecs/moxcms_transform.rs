@@ -31,6 +31,49 @@ fn lut_transform_opts() -> TransformOptions {
         ..Default::default()
     }
 }
+
+/// Stack reserved for the thread that builds moxcms transforms.
+///
+/// moxcms builds LUT transforms (every CMYK profile, and RGB profiles with LUT
+/// tags) in `make_transformer_3x3_*` / `make_transformer_4x3_*`. With
+/// `BarycentricWeightScale::High`, moxcms 0.8.1 builds a 65,536-entry
+/// barycentric weight table (786,432 bytes) inside those frames, on the stack
+/// (0.9.1 has the same code). Host threads can be smaller: IIS reserves 512 KB
+/// per worker thread on x64 and 256 KB on x86, and a native stack overflow
+/// terminates the host process (imageflow#737). Building the CMYK transform
+/// needs more than 768 KB and at most 1 MB on x86_64 Linux. Transforms are
+/// cached, so a dedicated thread costs one spawn per cache miss.
+const TRANSFORM_BUILD_STACK_BYTES: usize = 4 * 1024 * 1024;
+
+/// `src.create_transform_8bit(..)` on a thread with [`TRANSFORM_BUILD_STACK_BYTES`]
+/// of stack, so building a transform never depends on the caller's stack size.
+/// A panic while building is resumed on the calling thread.
+fn create_transform_8bit_on_large_stack(
+    src: &ColorProfile,
+    src_layout: Layout,
+    dst: &ColorProfile,
+    dst_layout: Layout,
+    options: TransformOptions,
+) -> Result<Arc<Transform8BitExecutor>> {
+    std::thread::scope(|scope| {
+        let builder = std::thread::Builder::new()
+            .name("imageflow-cms-build".to_owned())
+            .stack_size(TRANSFORM_BUILD_STACK_BYTES);
+        let handle = builder
+            .spawn_scoped(scope, || src.create_transform_8bit(src_layout, dst, dst_layout, options))
+            .map_err(|e| {
+                nerror!(
+                    ErrorKind::InternalError,
+                    "could not start a thread to build a color transform: {}",
+                    e
+                )
+            })?;
+        handle
+            .join()
+            .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+            .map_err(|e| FlowError::from_cms_error(e).at(here!()))
+    })
+}
 use std::sync::Arc;
 
 /// Cached transforms keyed by hash of profile parameters.
@@ -206,9 +249,13 @@ impl MoxcmsTransformCache {
         if is_gray {
             // Gray ICC → RGBA: needs dedicated apply path because the frame
             // is BGRA (4 bpp) but the transform expects GrayAlpha input (2 bpp).
-            let transform = src
-                .create_transform_8bit(Layout::GrayAlpha, &dst, Layout::Rgba, opts)
-                .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+            let transform = create_transform_8bit_on_large_stack(
+                &src,
+                Layout::GrayAlpha,
+                &dst,
+                Layout::Rgba,
+                opts,
+            )?;
             Ok(CachedTransform::Gray(transform))
         } else {
             Self::create_transform_prefer_in_place(&src, &dst, opts)
@@ -269,16 +316,7 @@ impl MoxcmsTransformCache {
         let transform = if let Some(cached) = CMYK_TRANSFORMS.get(hash) {
             cached
         } else {
-            let src = ColorProfile::new_from_slice(icc_bytes)
-                .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
-            let dst = ColorProfile::new_srgb();
-            let mut opts = lut_transform_opts();
-            opts.rendering_intent = moxcms::RenderingIntent::Perceptual;
-            // CMYK ICC profiles use Layout::Rgba (4 channels) — moxcms maps channel
-            // semantics from the ICC profile's color space, not the Layout enum.
-            let t = src
-                .create_transform_8bit(Layout::Rgba, &dst, Layout::Rgba, opts)
-                .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+            let t = Self::create_cmyk_transform(icc_bytes)?;
             CMYK_TRANSFORMS.get_or_create(hash, || t)
         };
 
@@ -302,6 +340,18 @@ impl MoxcmsTransformCache {
         Ok(())
     }
 
+    /// Build an uncached CMYK ICC → sRGB transform (4 channels in, RGBA out).
+    fn create_cmyk_transform(icc_bytes: &[u8]) -> Result<Arc<Transform8BitExecutor>> {
+        let src = ColorProfile::new_from_slice(icc_bytes)
+            .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+        let dst = ColorProfile::new_srgb();
+        let mut opts = lut_transform_opts();
+        opts.rendering_intent = moxcms::RenderingIntent::Perceptual;
+        // CMYK ICC profiles use Layout::Rgba (4 channels) — moxcms maps channel
+        // semantics from the ICC profile's color space, not the Layout enum.
+        create_transform_8bit_on_large_stack(&src, Layout::Rgba, &dst, Layout::Rgba, opts)
+    }
+
     /// Try in-place first (works for matrix-shaper profiles), fall back to regular.
     fn create_transform_prefer_in_place(
         src: &ColorProfile,
@@ -312,9 +362,13 @@ impl MoxcmsTransformCache {
             Ok(t) => Ok(CachedTransform::InPlace(t)),
             Err(CmsError::UnsupportedProfileConnection) => {
                 // Fall back to regular transform for LUT-based profiles
-                let t = src
-                    .create_transform_8bit(Layout::Rgba, dst, Layout::Rgba, options)
-                    .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
+                let t = create_transform_8bit_on_large_stack(
+                    src,
+                    Layout::Rgba,
+                    dst,
+                    Layout::Rgba,
+                    options,
+                )?;
                 Ok(CachedTransform::Regular(t))
             }
             Err(e) => Err(FlowError::from_cms_error(e).at(here!())),
@@ -422,5 +476,34 @@ impl MoxcmsTransformCache {
             h.write(&v.to_ne_bytes());
         }
         h.finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The x86 IIS worker-thread stack reservation (imageflow#737).
+    const SMALL_HOST_STACK_BYTES: usize = 256 * 1024;
+
+    /// The SWOP profile the JPEG decoder falls back to for CMYK images.
+    static CMYK_ICC: &[u8] = include_bytes!("cmyk.icc");
+
+    /// Building a CMYK transform (moxcms's 4x3 LUT path) must not need a large
+    /// caller stack. This calls the uncached builder, so it does not depend on
+    /// what other tests in the process have already cached.
+    #[test]
+    fn cmyk_transform_builds_on_a_small_stack() {
+        std::thread::scope(|scope| {
+            std::thread::Builder::new()
+                .stack_size(SMALL_HOST_STACK_BYTES)
+                .spawn_scoped(scope, || {
+                    MoxcmsTransformCache::create_cmyk_transform(CMYK_ICC).map(|_| ())
+                })
+                .unwrap()
+                .join()
+                .unwrap()
+        })
+        .unwrap();
     }
 }

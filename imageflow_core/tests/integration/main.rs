@@ -9,6 +9,7 @@ mod encoders;
 mod png_color_management;
 mod robustness;
 mod schema;
+mod small_stack;
 mod sync;
 mod variation;
 mod visuals;
