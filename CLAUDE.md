@@ -33,18 +33,42 @@ Reference images: `imageflow_core/tests/integration/visuals/images/<suite>/`
 
 ## Known Bugs
 
-### OPEN (2026-11-03) — #737: JPEG with a CMYK ICC profile on YCbCr data fails to decode; reported IIS crash not reproduced
-*Reproduced 2026-11-03 with the reporter's two attachments* (500×500 3-component Photoshop CS6 JPEGs
-embedding the CMYK profile "U.S. Web Coated (SWOP) v2"). Decode fails with `ColorProfileError: ICC
-profile has CMYK color space but image data is RGB` (`moxcms_transform.rs:193` on main): the mozjpeg
-decoder falls back to sRGB for a GRAY profile on a color JPEG (`mozjpeg_decoder.rs:392`) but sends a
-CMYK profile on YCbCr data down the RGB transform path. Not a regression: 2.2.0-rc01, 2.1.2-rc03 and
-2.1.1-rc11 (lcms2) fail the same images with `Wrong input color space on transform`. Workaround:
-`ignore_icc_errors=true` (output byte-identical to the profile-stripped image). The reported app-pool
-crash did NOT reproduce with the reporter's verbatim C# on Imageflow.Net 0.15.1 + NativeRuntime
-2.3.1-rc01 + .NET Framework 4.8.1 (console x64/x86 with 256/512 KB stacks and 16 threads; IIS Express
-x64 and x86, 1,364 failing requests, up to 16 concurrent; memory and handles flat). Harness, results and
-the event-log entries to request: `benchmarks/issue-737-iis-repro_2026-11-03/`.
+### FIXED on main, unreleased (2026-11-03) — #737: 2.3.1-rc01 overflows small host stacks (IIS worker crash) building moxcms LUT transforms
+*Root-caused 2026-11-03 from the reporter's event log*: `w3wp.exe` died with `0xc00000fd` in
+`imageflow.dll` 2.3.1-rc01 at offset `0x4cec17`, which the release PDB resolves to `__chkstk`. The
+DLL's four largest frames (786,728 bytes each) are moxcms 0.8.1 `make_transformer_{3x3,4x3}_*`:
+with `BarycentricWeightScale::High` (set by `lut_transform_opts()` since 4d2f7e6a, first released in
+2.3.1-rc01) moxcms builds a 65,536-entry barycentric table on the stack. IIS threads have 512 KB (x64)
+or 256 KB (x86), so the first CMYK JPEG (with or without a profile) or RGB image with a LUT-only ICC
+profile in a worker process kills it, and Rapid-Fail Protection disables the pool. moxcms 0.9.1 has
+the same code; 2.2.0-rc01 (lcms2) runs the CMYK JPEG on 256 KB threads. **Fixed:** the three
+`create_transform_8bit` sites in `moxcms_transform.rs` run on a dedicated 4 MB thread
+(`create_transform_8bit_on_large_stack`). Regression tests: `small_stack.rs` (whole jobs on 256 KB
+threads; aborted before the fix) and `cmyk_transform_builds_on_a_small_stack`. All 158 visual-suite
+output images are byte-identical to unmodified main. Repro harness, symbolization and results:
+`benchmarks/issue-737-iis-repro_2026-11-03/`.
+
+### OPEN (2026-11-03) — #737: JPEG with a CMYK ICC profile on YCbCr data fails to decode
+The two images attached to #737 are 3-component JPEGs embedding the CMYK profile "U.S. Web Coated
+(SWOP) v2". Decode fails with `ColorProfileError: ICC profile has CMYK color space but image data is
+RGB` (`create_icc_transform` in `moxcms_transform.rs`): the mozjpeg decoder falls back to sRGB for a
+GRAY profile on a color JPEG (`mozjpeg_decoder.rs:392`) but sends a CMYK profile on YCbCr data down the
+RGB path. Not a regression: 2.2.0-rc01, 2.1.2-rc03 and 2.1.1-rc11 (lcms2) fail the same images with
+`Wrong input color space on transform`. Workaround: `ignore_icc_errors=true` (output byte-identical to
+the profile-stripped image). The exception is caught normally; it was not the cause of the crash above.
+
+### OPEN (2026-11-03) — visual checksum tests pass any mismatch on a checkout without local references (CI included)
+`check_visual_bitmap` (`tests/integration/common/mod.rs`) calls `save_reference_if_missing(actual)`
+before `check_hash_with_image`, and zensim-regress 0.3.1 `find_reference_image` returns the local
+`visuals/images/<module>/<test>_<detail>.png` before downloading the authoritative reference. That
+directory is gitignored and CI never populates it, so on a hash mismatch the output is compared with
+itself and the test passes as `WithinTolerance`. Verified 2026-11-03: unmodified main passed 250/250
+in a fresh jj workspace, while byte-identical outputs failed 18 tests in a checkout holding local
+references from 2026-03-30. Seven differ by at most 1 level (AdobeRGB, ProPhoto, `test_crop_exif`,
+WebP alpha scaling ×2, PNG matte, watermark pixel margins); the other eleven are watermark/alpha
+compositing and lossy WebP/PNG tests, up to Δ242 (zensim scores −31 to 95.6). Not yet checked:
+whether those 18 differ from their human-verified S3 references. Likely fix: save the local
+reference only after a `Match`.
 
 ### FIXED (2026-07-19) — generic-quality double-mapping: ssim2 score was fed into the libjpeg-turbo-quality knob (WebP/JXL/AVIF)
 *Found & source-verified 2026-06-24; re-verified live and FIXED 2026-07-19.* `auto.rs` passed
