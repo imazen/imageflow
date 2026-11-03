@@ -337,7 +337,7 @@ fn vary_number(v: i32, variation_kind: u8) -> Option<i32> {
         21 => Some(10),
         22 => Some((next_pow2(v as u32) / 2) as i32),
         23 => v.checked_add(66),
-        ::std::u8::MAX => Some(24), // Return the upper bound number of variations
+        u8::MAX => Some(24), // Return the upper bound number of variations
         _ => None,
     }
     .filter(|&v| v > 0)
