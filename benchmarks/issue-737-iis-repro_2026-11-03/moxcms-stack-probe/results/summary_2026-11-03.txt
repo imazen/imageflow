@@ -1,0 +1,42 @@
+cmyk: moxcms 0.8.1: color space Cmyk, A2B LUT yes, matrix/TRC no
+cmyk: moxcms 0.9.1: color space Cmyk, A2B LUT yes, matrix/TRC no
+cmyk: moxcms master@097dccf3a9: color space Cmyk, A2B LUT yes, matrix/TRC no
+rgb-lut: moxcms 0.8.1: color space Rgb, A2B LUT yes, matrix/TRC no
+rgb-lut: moxcms 0.9.1: color space Rgb, A2B LUT yes, matrix/TRC no
+rgb-lut: moxcms master@097dccf3a9: color space Rgb, A2B LUT yes, matrix/TRC no
+rgb-matrix: moxcms 0.8.1: color space Rgb, A2B LUT no, matrix/TRC yes
+rgb-matrix: moxcms 0.9.1: color space Rgb, A2B LUT no, matrix/TRC yes
+rgb-matrix: moxcms master@097dccf3a9: color space Rgb, A2B LUT no, matrix/TRC yes
+v0_8_1  cmyk       high  8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+v0_8_1  cmyk       low   8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+v0_8_1  cmyk       high 16-bit: largest failing stack none KiB, smallest passing 64 KiB
+v0_8_1  rgb-lut    high  8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+v0_8_1  rgb-lut    low   8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+v0_8_1  rgb-lut    high 16-bit: largest failing stack none KiB, smallest passing 64 KiB
+v0_8_1  rgb-matrix high  8-bit: largest failing stack none KiB, smallest passing 64 KiB
+v0_8_1  rgb-matrix low   8-bit: largest failing stack none KiB, smallest passing 64 KiB
+v0_8_1  rgb-matrix high 16-bit: largest failing stack none KiB, smallest passing 64 KiB
+v0_9_1  cmyk       high  8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+v0_9_1  cmyk       low   8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+v0_9_1  cmyk       high 16-bit: largest failing stack 256 KiB, smallest passing 320 KiB
+v0_9_1  rgb-lut    high  8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+v0_9_1  rgb-lut    low   8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+v0_9_1  rgb-lut    high 16-bit: largest failing stack 256 KiB, smallest passing 320 KiB
+v0_9_1  rgb-matrix high  8-bit: largest failing stack none KiB, smallest passing 64 KiB
+v0_9_1  rgb-matrix low   8-bit: largest failing stack none KiB, smallest passing 64 KiB
+v0_9_1  rgb-matrix high 16-bit: largest failing stack 256 KiB, smallest passing 320 KiB
+master  cmyk       high  8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+master  cmyk       low   8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+master  cmyk       high 16-bit: largest failing stack 256 KiB, smallest passing 320 KiB
+master  rgb-lut    high  8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+master  rgb-lut    low   8-bit: largest failing stack 768 KiB, smallest passing 800 KiB
+master  rgb-lut    high 16-bit: largest failing stack 256 KiB, smallest passing 320 KiB
+master  rgb-matrix high  8-bit: largest failing stack none KiB, smallest passing 64 KiB
+master  rgb-matrix low   8-bit: largest failing stack none KiB, smallest passing 64 KiB
+master  rgb-matrix high 16-bit: largest failing stack 256 KiB, smallest passing 320 KiB
+cmyk: moxcms 0.8.1: 8-bit High vs Low over 7311616 CMYK inputs: 0 pixels differ, max channel delta 0
+rgb-lut: moxcms 0.8.1: 8-bit High vs Low over 16777216 RGB inputs: 0 pixels differ, max channel delta 0
+cmyk: moxcms 0.9.1: 8-bit High vs Low over 7311616 CMYK inputs: 0 pixels differ, max channel delta 0
+rgb-lut: moxcms 0.9.1: 8-bit High vs Low over 16777216 RGB inputs: 0 pixels differ, max channel delta 0
+cmyk: moxcms master@097dccf3a9: 8-bit High vs Low over 7311616 CMYK inputs: 0 pixels differ, max channel delta 0
+rgb-lut: moxcms master@097dccf3a9: 8-bit High vs Low over 16777216 RGB inputs: 0 pixels differ, max channel delta 0

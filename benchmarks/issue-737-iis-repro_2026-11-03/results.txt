@@ -168,6 +168,8 @@ llvm-symbolizer --obj=imageflow.dll 0x1804cec17 (ImageBase 0x180000000 + 0x4cec1
   Box::new([BarycentricWeight::<f32>::default(); 65536]) (12-byte entries) is built on the stack, then boxed.
   create_binned is used when TransformOptions.barycentric_weight_scale is High, which imageflow sets in
   lut_transform_opts() since 4d2f7e6a (first released in v2.3.1-rc01). moxcms 0.9.1 still has the same code.
+  CORRECTION (Part 3): the frame is reserved whichever scale is selected; Low overflows the same way. The table
+  is compiled in by moxcms's `options` feature, which 4d2f7e6a enabled.
 imageflow.dll 2.2.0-rc01 (lcms2 CMS): largest frame 71,704 bytes.
 
 ## Test inputs for the LUT paths
@@ -208,3 +210,51 @@ Application Error 1000: faulting application iisexpress.exe 10.0.26013.1000, fau
 5 img=cmyk_swop.jpg  bigstack=4096 -> result=2494 bytes
 6 img=cmyk_swop.jpg  (request thread) -> result=2494 bytes: the CMYK transform was already cached by request 3, and
   only building a transform needs the large frame.
+
+# Part 3 (2026-11-03): does the latest moxcms need the same stack?
+
+moxcms-stack-probe/run.sh, imageflow 22d1e609, AMD Ryzen 9 7950X (WSL2) Linux x86_64, rustc 1.99.1, release
+build with fat LTO, moxcms features in_place + options (imageflow's), imageflow's lut_transform_opts()
+(Perceptual for CMYK). The profile is parsed on the main thread; only the transform build runs on the
+small thread. Every run: moxcms-stack-probe/results/sweep_2026-11-03.tsv.
+
+Versions: 0.8.1 (what imageflow uses), 0.9.1 (newest on crates.io, tagged 2026-09-15), master 097dccf3a9
+(2026-10-28, unreleased, 30 commits past 0.9.1). Master's 8272d7b5a2 (their PR #204, 2026-10-25) makes
+create_transform_8bit select BarycentricWeightScale::Low for every 8-bit transform.
+
+Inputs: cmyk = imageflow_core/src/codecs/cmyk.icc (what CMYK JPEGs use); rgb-lut = MarsRGB_v4_sYCC_8bit.jpg's
+profile (A2B LUT, no matrix/TRC); rgb-matrix = MarsRGB_tagged.jpg's profile (matrix/TRC, control).
+
+## Smallest thread stack on which the transform builds (KiB; sizes tried 64..4096)
+version  input       8-bit High  8-bit Low  16-bit High
+0.8.1    cmyk        800         800        64
+0.8.1    rgb-lut     800         800        64
+0.8.1    rgb-matrix  64          64         64
+0.9.1    cmyk        800         800        320
+0.9.1    rgb-lut     800         800        320
+0.9.1    rgb-matrix  64          64         320
+master   cmyk        800         800        320
+master   rgb-lut     800         800        320
+master   rgb-matrix  64          64         320
+Every 800 KiB entry overflowed at 768 KiB ("has overflowed its stack", SIGABRT). imageflow builds only 8-bit
+transforms. 64 means the smallest size tried passed.
+
+## Functions reserving 64 KiB or more of stack (objdump -d: sub $imm,%rsp / %r11 in each probe binary)
+0.8.1:  786432  make_transformer_{4x3,3x3}_{sse41,avx_fma}::<u8, 17|33, 8>                      (4 functions)
+0.9.1:  786432  make_transformer_4x3::<u8,17,8> and make_transformer_{4x3,3x3}_{sse41,avx_fma}  (5 functions)
+        262144  ColorProfile::build_gamma_table::<u16, 65536, 65536, 16>
+master: 786432  the same 5 functions, now ::<u8, 17|33, 8, 65536>
+        262144  ColorProfile::build_gamma_table::<u16, 65536, 65536, 16>
+786,432 = 65,536 x 12 bytes, one [BarycentricWeight<f32>; 65536]. On master the 8-bit path still instantiates
+the High arm with BINS = 65536 (create_transform_nbit::<u8, 8, 256, 4096, 65536>), so the frame keeps the table
+even though that arm never runs for 8-bit.
+
+## create_binned allocating on the heap (moxcms-stack-probe/create_binned-heap.patch, against 0.9.1)
+vec![..; 65536].into_boxed_slice().try_into() instead of Box::new([..; 65536]), in the f32 and i16 variants.
+Frames of 64 KiB or more: only build_gamma_table::<u16, ...> (262144) remains.
+cmyk and rgb-lut, 8-bit High and Low: overflow at 32 KiB, build on 48 KiB (results/sweep_heap_patch_2026-11-03.tsv).
+
+## 8-bit High vs Low output (probe diff mode)
+Every RGB input (16,777,216) through rgb-lut and every 5th value of each CMYK channel (7,311,616 inputs) through
+cmyk: 0 pixels differ in 0.8.1, 0.9.1, master and the heap-patched 0.9.1. The Low path's code is untouched by
+the patch, so patched output equals unpatched output.

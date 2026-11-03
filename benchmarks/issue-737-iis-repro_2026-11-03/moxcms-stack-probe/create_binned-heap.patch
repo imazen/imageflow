@@ -1,0 +1,26 @@
+--- a/src/conversions/interpolator.rs
++++ b/src/conversions/interpolator.rs
+@@ -105,7 +105,10 @@
+     #[cfg(feature = "options")]
+     pub(crate) fn create_binned<const GRID_SIZE: usize, const BINS: usize>()
+     -> Box<[BarycentricWeight<f32>; 65536]> {
+-        let mut weights = Box::new([BarycentricWeight::<f32>::default(); 65536]);
++        let mut weights: Box<[BarycentricWeight<f32>; 65536]> = vec![BarycentricWeight::<f32>::default(); 65536]
++            .into_boxed_slice()
++            .try_into()
++            .unwrap_or_else(|_| unreachable!());
+         let b_scale: f32 = 1.0 / (BINS - 1) as f32;
+         for (index, weight) in weights.iter_mut().enumerate().take(BINS) {
+             let x: i32 = (index as f32 * (GRID_SIZE as i32 - 1) as f32 * b_scale).floor() as i32;
+@@ -148,7 +151,10 @@
+     #[cfg(feature = "options")]
+     pub(crate) fn create_binned<const GRID_SIZE: usize, const BINS: usize>()
+     -> Box<[BarycentricWeight<i16>; 65536]> {
+-        let mut weights = Box::new([BarycentricWeight::<i16>::default(); 65536]);
++        let mut weights: Box<[BarycentricWeight<i16>; 65536]> = vec![BarycentricWeight::<i16>::default(); 65536]
++            .into_boxed_slice()
++            .try_into()
++            .unwrap_or_else(|_| unreachable!());
+         let b_scale: f32 = 1.0 / (BINS - 1) as f32;
+         for (index, weight) in weights.iter_mut().enumerate().take(BINS) {
+             let x: i32 = (index as f32 * (GRID_SIZE as i32 - 1) as f32 * b_scale).floor() as i32;

@@ -1,0 +1,40 @@
+# 2026-11-03T21:46:02Z cpu=AMD Ryzen 9 7950X 16-Core Processor Linux 6.18.40.1-microsoft-standard-WSL2 x86_64 rustc 1.99.1 (58cf8f9c3 2026-10-13)
+# imageflow 22d1e609bb
+# heap-patched 0.9.1 (create_binned-heap.patch applied to the crates.io 0.9.1 source), same host and toolchain
+version	input	scale	bits	stack_kib	result
+v0_9_1_heap	cmyk	high	8	16	overflow
+v0_9_1_heap	cmyk	high	8	24	overflow
+v0_9_1_heap	cmyk	high	8	32	overflow
+v0_9_1_heap	cmyk	high	8	48	ok
+v0_9_1_heap	cmyk	high	8	64	ok
+v0_9_1_heap	cmyk	high	8	96	ok
+v0_9_1_heap	cmyk	high	8	128	ok
+v0_9_1_heap	cmyk	high	8	192	ok
+v0_9_1_heap	cmyk	high	8	256	ok
+v0_9_1_heap	cmyk	low	8	16	overflow
+v0_9_1_heap	cmyk	low	8	24	overflow
+v0_9_1_heap	cmyk	low	8	32	overflow
+v0_9_1_heap	cmyk	low	8	48	ok
+v0_9_1_heap	cmyk	low	8	64	ok
+v0_9_1_heap	cmyk	low	8	96	ok
+v0_9_1_heap	cmyk	low	8	128	ok
+v0_9_1_heap	cmyk	low	8	192	ok
+v0_9_1_heap	cmyk	low	8	256	ok
+v0_9_1_heap	rgb-lut	high	8	16	overflow
+v0_9_1_heap	rgb-lut	high	8	24	overflow
+v0_9_1_heap	rgb-lut	high	8	32	overflow
+v0_9_1_heap	rgb-lut	high	8	48	ok
+v0_9_1_heap	rgb-lut	high	8	64	ok
+v0_9_1_heap	rgb-lut	high	8	96	ok
+v0_9_1_heap	rgb-lut	high	8	128	ok
+v0_9_1_heap	rgb-lut	high	8	192	ok
+v0_9_1_heap	rgb-lut	high	8	256	ok
+v0_9_1_heap	rgb-lut	low	8	16	overflow
+v0_9_1_heap	rgb-lut	low	8	24	overflow
+v0_9_1_heap	rgb-lut	low	8	32	overflow
+v0_9_1_heap	rgb-lut	low	8	48	ok
+v0_9_1_heap	rgb-lut	low	8	64	ok
+v0_9_1_heap	rgb-lut	low	8	96	ok
+v0_9_1_heap	rgb-lut	low	8	128	ok
+v0_9_1_heap	rgb-lut	low	8	192	ok
+v0_9_1_heap	rgb-lut	low	8	256	ok
