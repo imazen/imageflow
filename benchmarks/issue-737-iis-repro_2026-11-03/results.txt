@@ -131,3 +131,80 @@ x86: DONE logged=0 nulls=0 oks=10
 ## Caught failures per IIS Express worker (lines in the handler's web-log.txt, all "ColorProfileError: ICC profile has CMYK color space but image data is RGB")
     632 pid=58784   (x86)
     732 pid=59284   (x64)
+
+# ---------------------------------------------------------------------------
+# Part 2 (2026-11-03, later): the reporter's event log identifies the crash
+# ---------------------------------------------------------------------------
+
+## The reporter's event log (issue comment 6605679917; Windows Server, w3wp.exe 10.0.26100.1882, x64 pool)
+Application 1000 "Application Error" 03:33:28Z: faulting application w3wp.exe; faulting module imageflow.dll 0.0.0.0,
+  time stamp 0x69cb8665; exception code 0xc00000fd (STATUS_STACK_OVERFLOW); fault offset 0x00000000004cec17;
+  module path ...\www\bin\runtimes\win-x64\native\imageflow.dll
+Application 1301 "ASP.NET 4.0.30319.0" 03:33:28Z, same process: EventLogWebEventProvider failed to log an event, 0x80070057
+System 5011 "WAS" 03:30:49Z: worker pid 5756 suffered a fatal communication error, data 6D000780 (0x8007006D, ERROR_BROKEN_PIPE)
+System 5002 "WAS" 01:12:32Z: application pool automatically disabled due to a series of failures (Rapid-Fail Protection)
+Versions (screenshot, comment 6598151704): Imageflow.Net 0.15.1, Imageflow.NativeRuntime.win-x86 and win-x86_64 2.3.1-rc01
+
+## Symbolizing the fault offset
+imageflow.dll from Imageflow.NativeRuntime.win-x86_64 2.3.1-rc01: TimeDateStamp 0x69CB8665 (matches the event),
+  sha256 3a31f3f49e8848f485f8e3ea4249d8ee81518aeaa70e514e8052a3c0a26e0a64, identical to imageflow.dll in the GitHub
+  release asset imageflow-v2.3.1-rc01-0635e386-win-x86_64.zip
+imageflow.pdb from that zip: GUID {EDB80B1E-5DFF-4EA1-88D8-1DE4760D70AB} age 1, matching the DLL's debug directory
+llvm-symbolizer --obj=imageflow.dll 0x1804cec17 (ImageBase 0x180000000 + 0x4cec17):
+  _alloca_probe  (__chkstk)  vcstartup\src\misc\amd64\chkstk.asm:109
+  -> the stack probe for a function with a large frame; the event log cannot name that function.
+
+## Stack frames of 16 KB or more in imageflow.dll 2.3.1-rc01 (pe_frames.py on .pdata/.xdata unwind codes; names from the PDB)
+786728  moxcms::conversions::lut_transforms::make_transformer_3x3_avx_fma<u8,33,8>   (moxcms-0.8.1 lut_transforms.rs:167)
+786728  moxcms::conversions::lut_transforms::make_transformer_3x3_sse41<u8,33,8>
+786728  moxcms::conversions::lut_transforms::make_transformer_4x3_avx_fma<u8,17,8>   (lut_transforms.rs:234)
+786728  moxcms::conversions::lut_transforms::make_transformer_4x3_sse41<u8,17,8>
+ 70536  imageflow_core::json::endpoints::v1::impl$127::openapi
+ 48408  imagequant::hist::Histogram::quantize_internal
+ 46728  imageflow_types::impl$285::schemas
+ 39064  utoipa::openapi::path::PathsBuilder::path<alloc::string::String>
+ 36648  imageflow_types::impl$163::schemas
+786,432 of the 786,728 bytes are moxcms-0.8.1 interpolator.rs create_binned::<GRID, 65536>():
+  Box::new([BarycentricWeight::<f32>::default(); 65536]) (12-byte entries) is built on the stack, then boxed.
+  create_binned is used when TransformOptions.barycentric_weight_scale is High, which imageflow sets in
+  lut_transform_opts() since 4d2f7e6a (first released in v2.3.1-rc01). moxcms 0.9.1 still has the same code.
+imageflow.dll 2.2.0-rc01 (lcms2 CMS): largest frame 71,704 bytes.
+
+## Test inputs for the LUT paths
+cmyk_swop.jpg   = valid_noicc.jpg converted by PIL to 4-component CMYK, SWOP profile embedded (make_cmyk.py)
+cmyk_noicc.jpg  = same pixels, no profile (imageflow then uses its bundled cmyk.icc, which is the same SWOP profile:
+                  sha256 35f401731df11a4e... for both)
+cmyk_logo.jpg, MarsRGB_v4_sYCC_8bit.jpg, MarsRGB_tagged.jpg = the integration-test inputs of the same names
+  (icc_tags.py: MarsRGB_v4_sYCC_8bit has RGB A2B0/A2B1/A2B2 LUT tags and no matrix/TRC; MarsRGB_tagged is matrix/TRC;
+  cmyk_logo has no embedded profile)
+
+## console/Repro737.exe <img> <iterations> <stackKb> "width=100&height=100" (2.3.1-rc01 unless noted)
+cmyk_swop.jpg  x64  512 KB: Process is terminated due to StackOverflowException.
+cmyk_swop.jpg  x64  768 KB: Process is terminated due to StackOverflowException.
+cmyk_swop.jpg  x64 1024 KB: DONE oks=2      1536 KB: DONE oks=2      2048 KB: DONE oks=2      default (1 MB): DONE oks=2
+cmyk_swop.jpg  x86  256 KB: StackOverflowException, exit code -1073741571 (0xC00000FD)
+cmyk_swop.jpg  x86  512 KB: StackOverflowException, exit code -1073741571
+cmyk_swop.jpg  x86 1024 KB: DONE oks=2      2048 KB: DONE oks=2
+MarsRGB_v4_sYCC_8bit.jpg x64 512 KB: StackOverflowException, exit -1073741571;  1024 KB: DONE oks=1
+MarsRGB_tagged.jpg       x64 512 KB: DONE oks=1;                                1024 KB: DONE oks=1
+cmyk_logo.jpg            x64 512 KB: StackOverflowException, exit -1073741571;  1024 KB: DONE oks=1
+cmyk_noicc.jpg           x64 512 KB: StackOverflowException, exit -1073741571;  1024 KB: DONE oks=1
+2.2.0-rc01 imageflow.dll swapped in (same Imageflow.Net 0.15.1): cmyk_swop.jpg x64 256 KB: DONE oks=2; 512 KB: DONE oks=2
+Windows Application Error events for the 2.3.1-rc01 x64 console crashes:
+  faulting module imageflow.DLL, time stamp 0x69cb8665, exception code 0xc00000fd, fault offset 0x00000000004cec17
+
+## IIS Express x64, fresh worker process, handler on the IIS request thread
+1 pid=34048 x64 img=valid_noicc.jpg result=3101 bytes
+2 pid=34048 x64 img=cmyk_icc_on_rgb_1.jpg result=null              (the caught ColorProfileError)
+GET /resize?img=cmyk_swop.jpg&qs=width%3D100%26height%3D100 -> connection reset (curl rc=56)
+  iisexpress.exe: "Process is terminated due to StackOverflowException."; exit status 253 (low byte of 0xC00000FD)
+Application Error 1000: faulting application iisexpress.exe 10.0.26013.1000, faulting module imageflow.dll time stamp
+  0x69cb8665, exception code 0xc00000fd, fault offset 0x00000000004cec17, module path
+  ...\site\bin\runtimes\win-x64\native\imageflow.dll   (every field the reporter posted matches)
+
+## IIS Express x64, handler option bigstack=4096 (the job runs on a new 4 MB thread), one worker process
+3 img=cmyk_swop.jpg  bigstack=4096 -> result=2494 bytes
+4 img=cmyk_noicc.jpg bigstack=4096 -> result=2494 bytes
+5 img=cmyk_swop.jpg  bigstack=4096 -> result=2494 bytes
+6 img=cmyk_swop.jpg  (request thread) -> result=2494 bytes: the CMYK transform was already cached by request 3, and
+  only building a transform needs the large frame.

@@ -22,7 +22,20 @@ namespace Repro737Web
         {
             var img = Path.GetFileName(context.Request.QueryString["img"] ?? "cmyk_icc_on_rgb_1.jpg");
             var qs = context.Request.QueryString["qs"] ?? "width=100&mode=max";
-            var bytes = GetImageBytes(Path.Combine(Dir, img), qs);
+            // bigstack=<KB>: run the job on a dedicated thread with that stack size instead of
+            // the IIS request thread (512 KB on x64, 256 KB on x86).
+            int.TryParse(context.Request.QueryString["bigstack"], out var bigStackKb);
+            byte[] bytes = null;
+            if (bigStackKb > 0)
+            {
+                var t = new Thread(() => bytes = GetImageBytes(Path.Combine(Dir, img), qs), bigStackKb * 1024);
+                t.Start();
+                t.Join();
+            }
+            else
+            {
+                bytes = GetImageBytes(Path.Combine(Dir, img), qs);
+            }
             var n = Interlocked.Increment(ref _count);
             if (context.Request.QueryString["gc"] == "1") { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); }
             var p = Process.GetCurrentProcess();
