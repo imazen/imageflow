@@ -14,9 +14,15 @@ use moxcms::{
 ///
 /// - `allow_use_cicp_transfer: false` — honor the profile's own curv/para TRCs,
 ///   not any embedded CICP transfer characteristics.
-/// - `BarycentricWeightScale::High` — reduces LUT interpolation divergence vs
-///   lcms2 from max≤14 to max≤2 for standard ICC LUT profiles, at no measurable
-///   performance cost on modern hardware.
+/// - `BarycentricWeightScale::High` — no effect on the 8-bit transforms built
+///   here. moxcms maps an 8-bit sample `v` to bin `v * 257` of High's
+///   65,536-entry table, which holds the weight `Low` stores at entry `v`. Output
+///   was byte-identical to `Low` for every RGB input through a LUT RGB profile
+///   and every 5th CMYK value through the built-in CMYK profile, in moxcms 0.8.1,
+///   0.9.1 and master (benchmarks/issue-737-iis-repro_2026-11-03/moxcms-stack-probe).
+///   So the lcms2 divergence drop recorded in 4d2f7e6a (max≤14 → max≤2) is not
+///   from this setting; that commit also moved moxcms from 0.8.0-preview to 0.8.1
+///   and changed the interpolation.
 /// - `rendering_intent: RelativeColorimetric` — explicit. moxcms's default is
 ///   Perceptual, which is a different LUT (when present) and applies gamut
 ///   compression. For display output (JPEG/PNG/WebP → sRGB on a display),
@@ -35,14 +41,18 @@ fn lut_transform_opts() -> TransformOptions {
 /// Stack reserved for the thread that builds moxcms transforms.
 ///
 /// moxcms builds LUT transforms (every CMYK profile, and RGB profiles with LUT
-/// tags) in `make_transformer_3x3_*` / `make_transformer_4x3_*`. With
-/// `BarycentricWeightScale::High`, moxcms 0.8.1 builds a 65,536-entry
-/// barycentric weight table (786,432 bytes) inside those frames, on the stack
-/// (0.9.1 has the same code). Host threads can be smaller: IIS reserves 512 KB
-/// per worker thread on x64 and 256 KB on x86, and a native stack overflow
-/// terminates the host process (imageflow#737). Building the CMYK transform
-/// needs more than 768 KB and at most 1 MB on x86_64 Linux. Transforms are
-/// cached, so a dedicated thread costs one spawn per cache miss.
+/// tags) in `make_transformer_3x3_*` / `make_transformer_4x3_*`. With moxcms's
+/// `options` feature, which imageflow enables for `Tetrahedral` and `High`, the
+/// 8-bit instances of those functions reserve 786,432 bytes of stack: the
+/// 65,536-entry barycentric weight table that `create_binned` builds on the
+/// stack for the `High` arm. The space is reserved whichever
+/// `BarycentricWeightScale` is selected, in moxcms 0.8.1, 0.9.1 and master
+/// 097dccf3a9 (which selects `Low` for every 8-bit transform). Building the CMYK
+/// or a LUT RGB transform needs 800 KiB of stack on x86_64 Linux (768 KiB
+/// overflows). Host threads can be smaller: IIS reserves 512 KB per worker
+/// thread on x64 and 256 KB on x86, and a native stack overflow terminates the
+/// host process (imageflow#737). Transforms are cached, so a dedicated thread
+/// costs one spawn per cache miss.
 const TRANSFORM_BUILD_STACK_BYTES: usize = 4 * 1024 * 1024;
 
 /// `src.create_transform_8bit(..)` on a thread with [`TRANSFORM_BUILD_STACK_BYTES`]

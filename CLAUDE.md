@@ -36,12 +36,19 @@ Reference images: `imageflow_core/tests/integration/visuals/images/<suite>/`
 ### FIXED on main, unreleased (2026-11-03) — #737: 2.3.1-rc01 overflows small host stacks (IIS worker crash) building moxcms LUT transforms
 *Root-caused 2026-11-03 from the reporter's event log*: `w3wp.exe` died with `0xc00000fd` in
 `imageflow.dll` 2.3.1-rc01 at offset `0x4cec17`, which the release PDB resolves to `__chkstk`. The
-DLL's four largest frames (786,728 bytes each) are moxcms 0.8.1 `make_transformer_{3x3,4x3}_*`:
-with `BarycentricWeightScale::High` (set by `lut_transform_opts()` since 4d2f7e6a, first released in
-2.3.1-rc01) moxcms builds a 65,536-entry barycentric table on the stack. IIS threads have 512 KB (x64)
-or 256 KB (x86), so the first CMYK JPEG (with or without a profile) or RGB image with a LUT-only ICC
-profile in a worker process kills it, and Rapid-Fail Protection disables the pool. moxcms 0.9.1 has
-the same code; 2.2.0-rc01 (lcms2) runs the CMYK JPEG on 256 KB threads. **Fixed:** the three
+DLL's four largest frames (786,728 bytes each) are moxcms 0.8.1 `make_transformer_{3x3,4x3}_*`.
+Their 8-bit instances reserve the 786,432-byte, 65,536-entry barycentric table that moxcms's
+`create_binned` builds on the stack for the `BarycentricWeightScale::High` arm. That code exists only
+with moxcms's `options` feature, which 4d2f7e6a enabled (first released in 2.3.1-rc01), and the space
+is reserved whichever scale is selected: `Low` needs the same 800 KiB (768 KiB overflows, x86_64
+Linux). IIS threads have 512 KB (x64) or 256 KB (x86), so the first CMYK JPEG (with or without a
+profile) or RGB image with a LUT-only ICC profile in a worker process kills it, and Rapid-Fail
+Protection disables the pool. 2.2.0-rc01 (lcms2) runs the CMYK JPEG on 256 KB threads. *Latest moxcms
+(checked 2026-11-03):* 0.9.1, the newest release, and master 097dccf3a9 need the same 800 KiB; master
+selects `Low` for every 8-bit transform, which does not shrink the frame. Allocating the table on the
+heap (`create_binned-heap.patch`, 2 lines) cuts the need to 48 KiB with identical output. 8-bit `High`
+and `Low` output is byte-identical on all three versions. Probe and results:
+`benchmarks/issue-737-iis-repro_2026-11-03/moxcms-stack-probe/`. **Fixed:** the three
 `create_transform_8bit` sites in `moxcms_transform.rs` run on a dedicated 4 MB thread
 (`create_transform_8bit_on_large_stack`). Regression tests: `small_stack.rs` (whole jobs on 256 KB
 threads; aborted before the fix) and `cmyk_transform_builds_on_a_small_stack`. All 158 visual-suite
