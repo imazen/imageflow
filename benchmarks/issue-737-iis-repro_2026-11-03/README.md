@@ -106,9 +106,12 @@ On 0.8.1 and 0.9.1, 16-bit CMYK and LUT RGB need 16 and 288 KiB
 - **Output:** release-build output hashes match master for all 60 combinations of 5 profiles, 6
   depths, and `High`/`Low`. Inputs: every 8-bit RGB value, every 5th CMYK value, every gray value;
   2^20 pseudo-random pixels at other depths.
-- **Build time:** not slower. Median wall time of 150 alternating process runs, branch over
-  master: 0.96 (CMYK 8-bit), 0.99 (CMYK 16-bit), 0.91 (LUT RGB 8-bit), 0.98 (P3 16-bit), 0.98
-  (P3 f32).
+- **Speed** (`moxcms-stack-probe/results/perf_2026-11-03.txt`, `bench.py`, 11 transforms, branch
+  over master): run time per pixel is 0.99 to 1.01 on x86_64 and 0.88 to 1.00 on aarch64. Transform
+  build time is 0.98 to 1.00 on x86_64 and 0.96 to 1.01 on aarch64; the two aarch64 cases at 1.01 are
+  3 and 55 microseconds longer. The branch does not change the code that runs pixels, so the 0.88
+  (CMYK f32) is probably code layout, not a speedup. Peak RSS for 8-bit CMYK falls from 4,720 to
+  3,920 KB on x86_64.
 - **Windows** (`moxcms-stack-probe/results/windows_2026-11-03.tsv`, fat LTO, x64 and x86): master
   overflows at 768 KiB and passes at 832 KiB for 8-bit and f32 CMYK and LUT RGB, and overflows at 256
   KiB and passes at 512 KiB for 16-bit. The x64 branch build passes all 72 runs, from 64 KiB, the smallest size tried. The x86
@@ -189,6 +192,8 @@ nice -n19 moxcms-stack-probe/run.sh <out-dir>                     # master vs th
 VERSIONS="v0_8_1 v0_9_1" nice -n19 moxcms-stack-probe/run.sh <out-dir>
 nice -n19 moxcms-stack-probe/frames.sh <moxcms-checkout> <out.tsv> [min_bytes]
                                        # functions reserving that much stack, per target
+nice -n19 python3 -I moxcms-stack-probe/bench.py <probe-a> <probe-b> <cmyk.icc> <rgb-lut.jpg> [rounds]
+                                       # build and run time of two probe binaries
 ```
 
 In `moxcms-stack-probe/results/`, `sweep_2026-11-03.tsv`, `summary_2026-11-03.txt` and

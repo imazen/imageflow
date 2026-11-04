@@ -1,0 +1,46 @@
+# moxcms master 097dccf3a9 (a) vs branch heap-lookup-tables 6279765571 (b), probes built with fat LTO.
+# python3 -I moxcms-stack-probe/bench.py probe-master probe-patched cmyk.icc MarsRGB_v4_sYCC_8bit.jpg 30
+# Ratios are the median of per-round b/a. IQR is the spread of those per-round ratios, not a confidence interval.
+
+## x86_64: AMD Ryzen 9 7950X under WSL2, rustc 1.99.1, load about 6
+30 rounds; each process reports the median of 41 builds and of 41 runs over 65,536 pixels
+transform        build us a build us b                  b/a build   ns/px a   ns/px b                    b/a run
+cmyk 8               6363.9     6380.8    0.993 (IQR 0.972-1.017)    10.544    10.637    1.002 (IQR 0.978-1.072)
+cmyk 16             10669.1    10662.0    1.000 (IQR 0.989-1.022)    19.479    19.754    1.013 (IQR 0.964-1.041)
+cmyk f32             9312.0     9121.9    0.981 (IQR 0.956-1.000)    24.133    24.117    1.002 (IQR 0.987-1.018)
+rgb-lut 8            1606.8     1590.0    0.992 (IQR 0.982-1.004)     8.356     8.273    0.989 (IQR 0.976-1.002)
+rgb-lut 16           6454.4     6433.7    1.000 (IQR 0.973-1.033)    15.424    15.332    0.993 (IQR 0.981-1.027)
+rgb-lut f32          4231.6     4136.0    0.982 (IQR 0.956-1.001)    18.689    18.649    0.994 (IQR 0.972-1.029)
+display-p3 8          287.4      287.4    1.004 (IQR 0.981-1.020)     1.087     1.089    1.002 (IQR 0.984-1.017)
+display-p3 16        5163.3     5183.1    1.000 (IQR 0.987-1.020)     4.124     4.143    1.011 (IQR 0.967-1.044)
+display-p3 f32       2796.4     2788.6    0.998 (IQR 0.979-1.020)     2.841     2.832    1.004 (IQR 0.983-1.034)
+gray-2.2 8            306.6      299.5    0.988 (IQR 0.948-1.012)     0.469     0.474    1.042 (IQR 0.907-1.098)
+gray-2.2 16          9158.2     9174.7    1.004 (IQR 0.987-1.014)     0.559     0.552    0.986 (IQR 0.951-1.088)
+
+## x86_64 rerun of the widest run-time result
+gray-2.2 8 run, 400 rounds: master 0.4510 ns/px, patched 0.4520 ns/px, ratio of medians 1.002, median ratio 1.007 (IQR 0.940-1.069)
+
+## aarch64: Neoverse-N1 (CPU part 0xd0c), rustc 1.97.1, load about 7
+30 rounds; each process reports the median of 41 builds and of 41 runs over 65,536 pixels
+transform        build us a build us b                  b/a build   ns/px a   ns/px b                    b/a run
+cmyk 8               7269.4     7285.8    1.000 (IQR 0.996-1.007)    28.944    28.181    0.980 (IQR 0.907-1.015)
+cmyk 16             10408.1    10416.3    0.999 (IQR 0.990-1.006)    82.110    81.483    0.976 (IQR 0.943-1.022)
+cmyk f32            10433.9    10250.9    0.980 (IQR 0.970-1.003)    97.880    85.441    0.877 (IQR 0.845-0.901)
+rgb-lut 8            2072.4     2077.7    0.998 (IQR 0.975-1.013)    18.423    18.427    0.992 (IQR 0.978-1.010)
+rgb-lut 16           5889.7     5971.8    1.018 (IQR 1.001-1.035)    46.207    45.087    0.980 (IQR 0.945-1.017)
+rgb-lut f32          4505.6     4338.6    0.964 (IQR 0.950-0.975)    47.810    46.332    0.964 (IQR 0.928-1.010)
+display-p3 8          207.1      207.6    1.001 (IQR 0.959-1.024)     2.942     2.938    0.999 (IQR 0.993-1.007)
+display-p3 16        4751.1     4757.4    1.000 (IQR 0.995-1.006)     9.133     9.203    0.990 (IQR 0.942-1.058)
+display-p3 f32       2442.0     2453.2    0.997 (IQR 0.977-1.022)    13.953    13.011    0.943 (IQR 0.793-1.052)
+gray-2.2 8            210.4      219.4    1.040 (IQR 0.968-1.110)     1.048     1.052    1.004 (IQR 0.998-1.011)
+gray-2.2 16          5924.3     5942.3    0.999 (IQR 0.978-1.011)     1.500     1.493    0.997 (IQR 0.988-1.006)
+
+## aarch64 rerun of the two build-time results above 1.01
+gray-2.2 8 build, 400 rounds: master 209.6 us, patched 212.4 us, ratio of medians 1.013, median ratio 1.010 (IQR 0.967-1.065)
+rgb-lut 16 build, 150 rounds: master 5737.8 us, patched 5793.3 us, ratio of medians 1.010, median ratio 1.010 (IQR 1.003-1.019)
+
+## Peak RSS, KB (/usr/bin/time -f %M, probe build <cmyk.icc> 8192 high <depth> run)
+x86_64  cmyk 8:  master 4720  branch 3920
+x86_64  cmyk 16: master 5988  branch 5764
+aarch64 cmyk 8:  master 4564  branch 3796
+aarch64 cmyk 16: master 5716  branch 5460

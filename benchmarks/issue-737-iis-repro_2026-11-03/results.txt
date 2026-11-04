@@ -300,6 +300,10 @@ rgb-lut 8       master 3.62   branch 3.30
 display-p3 16   master 6.78   branch 6.63
 display-p3 f32  master 4.25   branch 4.15
 
+## Build and run time inside the process, 11 transforms (results/perf_2026-11-03.txt)
+Branch over master, run time per pixel: x86_64 0.99-1.01, aarch64 0.88-1.00. Build time: x86_64 0.98-1.00,
+aarch64 0.96-1.01. The process wall times above do not show the aarch64 cases at 1.01.
+
 ## Windows host (results/windows_2026-11-03.tsv)
 Master x64 and x86: 8-bit and f32 CMYK and LUT RGB overflow at 768 KiB and pass at 832; 16-bit overflows at
 256 and passes at 512; Display P3 f32 overflows at 128 and passes at 256; Display P3 8-bit passes at 64.

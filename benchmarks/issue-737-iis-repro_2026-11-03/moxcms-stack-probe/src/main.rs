@@ -7,6 +7,7 @@
 //! moxcms-stack-probe build  <profile> <stack_kib> <high|low> <depth> [run]
 //! moxcms-stack-probe diff   <profile>
 //! moxcms-stack-probe digest <profile> <depth>
+//! moxcms-stack-probe bench  <profile> <depth>
 //! ```
 //!
 //! `<profile>` is an ICC file, a JPEG with an embedded profile, `builtin:display-p3` or
@@ -18,7 +19,8 @@
 //! process, so run.sh runs one size per process. `diff` builds 8-bit High and Low transforms and
 //! compares their output on every RGB input, or on every 5th value of each CMYK channel.
 //! `digest` prints an FNV-1a hash of the High and the Low transform's output over a fixed set
-//! of inputs.
+//! of inputs. `bench` prints the median time to build the transform and the median time per pixel
+//! to run it over 65,536 pseudo-random pixels; bench.py compares versions across processes.
 
 #![forbid(unsafe_code)]
 
@@ -33,6 +35,10 @@ use moxcms_0_9_1 as moxcms;
 use moxcms_master as moxcms;
 #[cfg(feature = "patched")]
 use moxcms_patched as moxcms;
+
+use std::hint::black_box;
+use std::sync::Arc;
+use std::time::Instant;
 
 use moxcms::{
     BarycentricWeightScale, ColorProfile, DataColorSpace, InterpolationMethod, Layout,
@@ -318,6 +324,79 @@ fn digest(profile: &ColorProfile, depth_s: &str) {
     }
 }
 
+fn median(mut ns: Vec<u128>) -> u128 {
+    ns.sort_unstable();
+    ns[ns.len() / 2]
+}
+
+/// Prints the median of 41 builds and of 41 runs over `src`.
+fn time_transform<T: Copy + Default>(
+    make: impl Fn() -> Arc<dyn TransformExecutor<T> + Send + Sync>,
+    src: &[T],
+    ch: usize,
+) {
+    let pixels = src.len() / ch;
+    let mut build_ns = Vec::new();
+    for _ in 0..41 {
+        let start = Instant::now();
+        black_box(make());
+        build_ns.push(start.elapsed().as_nanos());
+    }
+    let t = make();
+    let mut out = vec![T::default(); pixels * 4];
+    let mut run_ns = Vec::new();
+    for _ in 0..41 {
+        let start = Instant::now();
+        t.transform(black_box(src), black_box(&mut out)).expect("run transform");
+        run_ns.push(start.elapsed().as_nanos());
+    }
+    println!(
+        "build_ns {} run_ns_per_px {:.3}",
+        median(build_ns),
+        median(run_ns) as f64 / pixels as f64
+    );
+}
+
+fn bench(profile: &ColorProfile, depth_s: &str) {
+    let cmyk = profile.color_space == DataColorSpace::Cmyk;
+    let dst = ColorProfile::new_srgb();
+    let opts = imageflow_opts(cmyk, BarycentricWeightScale::High);
+    let (layout, ch) = src_layout(profile);
+    let rgba = Layout::Rgba;
+    let src: Vec<u32> = samples(65_536 * ch).collect();
+    let ints =
+        |bits: u32| -> Vec<u16> { src.iter().map(|&v| (v & ((1 << bits) - 1)) as u16).collect() };
+    let floats: Vec<f32> = src.iter().map(|&v| (v >> 8) as f32 / 16_777_215.0).collect();
+    match parse_depth(depth_s) {
+        Depth::U8 => {
+            let input: Vec<u8> = src.iter().map(|&v| v as u8).collect();
+            let make = || profile.create_transform_8bit(layout, &dst, rgba, opts).expect("build");
+            time_transform(make, &input, ch);
+        }
+        Depth::U10 => {
+            let make = || profile.create_transform_10bit(layout, &dst, rgba, opts).expect("build");
+            time_transform(make, &ints(10), ch);
+        }
+        Depth::U12 => {
+            let make = || profile.create_transform_12bit(layout, &dst, rgba, opts).expect("build");
+            time_transform(make, &ints(12), ch);
+        }
+        Depth::U16 => {
+            let make = || profile.create_transform_16bit(layout, &dst, rgba, opts).expect("build");
+            time_transform(make, &ints(16), ch);
+        }
+        Depth::F32 => {
+            let make = || profile.create_transform_f32(layout, &dst, rgba, opts).expect("build");
+            time_transform(make, &floats, ch);
+        }
+        Depth::F64 => {
+            let input: Vec<f64> = floats.iter().map(|&v| v as f64).collect();
+            let make = || profile.create_transform_f64(layout, &dst, rgba, opts).expect("build");
+            time_transform(make, &input, ch);
+        }
+    }
+}
+
 fn diff(profile: &ColorProfile) {
     let cmyk = profile.color_space == DataColorSpace::Cmyk;
     let dst = ColorProfile::new_srgb();
@@ -399,11 +478,12 @@ fn main() {
         ),
         (Some("diff"), 3) => diff(&load_profile(&args[2])),
         (Some("digest"), 4) => digest(&load_profile(&args[2]), &args[3]),
+        (Some("bench"), 4) => bench(&load_profile(&args[2]), &args[3]),
         _ => {
             eprintln!(
                 "usage: moxcms-stack-probe info|diff <profile>\n       \
                  moxcms-stack-probe build <profile> <stack_kib> <high|low> <depth> [run]\n       \
-                 moxcms-stack-probe digest <profile> <depth>"
+                 moxcms-stack-probe digest|bench <profile> <depth>"
             );
             std::process::exit(64);
         }
