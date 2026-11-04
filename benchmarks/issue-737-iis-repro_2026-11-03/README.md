@@ -120,8 +120,12 @@ On 0.8.1 and 0.9.1, 16-bit CMYK and LUT RGB need 16 and 288 KiB
 - **Tests:** the new test `transforms_build_on_a_256_kib_thread_stack` overflows on master in debug
   builds and in release builds with `options`, and passes on the branch. moxcms's CI lists, run
   locally: x86_64 16 test and 17 clippy feature sets, aarch64 (Neoverse-N1) 13 and 9, and 28 build
-  and MSRV 1.89 commands. Not run: the powerpc build, the qemu-isolated test jobs, the x86_64
-  nightly clippy job and the fuzz jobs.
+  and MSRV 1.89 commands. The PR's own CI then ran the rest: powerpc, nightly clippy and fuzzing passed.
+- **Upstream:** moxcms issue 210 and PR 211. PR 211's two qemu-isolated jobs fail because of the runner, not
+  the patch. `ubuntu-latest` is now Ubuntu 26.04, where glibc requires x86-64-v3, so `/bin/true` itself dies under
+  `qemu-x86_64 -cpu Nehalem` and `-cpu Haswell-noTSX,avx2=on,fma=off`. On a fork-only run
+  ([41757527804](https://github.com/lilith/moxcms/actions/runs/41757527804)), both jobs fail every test on 26.04
+  for unmodified master (0 of 83) and the branch (0 of 84), and pass every test on 24.04 (83 of 83, 84 of 84).
 
 The first round of tests, with only the two attached images, found no crash:
 

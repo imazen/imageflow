@@ -318,5 +318,18 @@ with neon_luts in debug and with in_place,options in release. Branch on aarch64:
 
 ## moxcms CI lists on the branch
 x86_64: 16 of 16 test and 17 of 17 clippy feature sets. aarch64 Neoverse-N1 (nightly for tests, as CI does):
-13 of 13 and 9 of 9. 28 of 28 build and MSRV 1.89 commands. Not run: powerpc build, qemu-isolated tests,
-x86_64 nightly clippy, fuzz jobs.
+13 of 13 and 9 of 9. 28 of 28 build and MSRV 1.89 commands.
+
+## PR 211's CI, and the qemu-isolated jobs on two runner images
+PR 211: 11 of 13 checks pass, including powerpc, nightly clippy and fuzzing. The 2 qemu-isolated jobs fail.
+Fork-only run lilith/moxcms 41757527804, same test loops, tests passed:
+                     ubuntu-latest (26.04)   ubuntu-24.04
+master SSE           0 of 83                 83 of 83
+master AVX2          0 of 83                 83 of 83
+branch SSE           0 of 84                 84 of 84
+branch AVX2          0 of 84                 84 of 84
+System binaries with no moxcms involved:
+Ubuntu 26.04.1, qemu 10.2.1, glibc 2.43: /bin/true under -cpu Nehalem: signal 4 (Illegal instruction), rc 132
+                                         /bin/true under -cpu Haswell-noTSX,avx2=on,fma=off: "Fatal glibc error:
+                                         CPU does not support x86-64-v3", rc 127
+Ubuntu 24.04.5, qemu 8.2.2, glibc 2.39:  /bin/true rc 0 under both.

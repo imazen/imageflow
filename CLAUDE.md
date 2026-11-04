@@ -49,8 +49,8 @@ selects `Low` for every 8-bit transform, which does not shrink the frame. Alloca
 heap (`create_binned-heap.patch`, 2 lines) cuts the need to 48 KiB with identical output. 8-bit `High`
 and `Low` output is byte-identical on all three versions. Branch `heap-lookup-tables` of lilith/moxcms
 (`6279765571`) removes every instance of the pattern in moxcms: no frame of 16 KiB or more in optimized builds
-on 7 configurations, 16 KiB of stack or less in release, identical output. The 4 MB thread stays until a moxcms
-release carries that. Probe and results: `benchmarks/issue-737-iis-repro_2026-11-03/moxcms-stack-probe/`. **Fixed:** the three
+on 7 configurations, 16 KiB of stack or less in release, identical output. Upstream: moxcms issue 210 and PR 211 (open 2026-11-03). The 4 MB thread stays until a
+moxcms release carries that. Probe and results: `benchmarks/issue-737-iis-repro_2026-11-03/moxcms-stack-probe/`. **Fixed:** the three
 `create_transform_8bit` sites in `moxcms_transform.rs` run on a dedicated 4 MB thread
 (`create_transform_8bit_on_large_stack`). Regression tests: `small_stack.rs` (whole jobs on 256 KB
 threads; aborted before the fix) and `cmyk_transform_builds_on_a_small_stack`. All 158 visual-suite
