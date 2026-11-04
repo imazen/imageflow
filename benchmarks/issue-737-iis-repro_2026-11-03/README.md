@@ -121,12 +121,18 @@ On 0.8.1 and 0.9.1, 16-bit CMYK and LUT RGB need 16 and 288 KiB
   builds and in release builds with `options`, and passes on the branch. moxcms's CI lists, run
   locally: x86_64 16 test and 17 clippy feature sets, aarch64 (Neoverse-N1) 13 and 9, and 28 build
   and MSRV 1.89 commands. The PR's own CI then ran the rest: powerpc, nightly clippy and fuzzing passed.
-- **Upstream:** moxcms issue 210 and PR 211. PR 211's two qemu-isolated jobs first failed because of the
+- **Upstream:** moxcms issue 210 and PR 211, merged 2026-11-04 as `84104443`. PR 211's two qemu-isolated jobs first failed because of the
   runner, not the patch; a second commit (`a08c6f28`) pins them to `ubuntu-24.04`, and all checks then passed.
   `ubuntu-latest` is now Ubuntu 26.04, where glibc requires x86-64-v3, so `/bin/true` itself dies under
   `qemu-x86_64 -cpu Nehalem` and `-cpu Haswell-noTSX,avx2=on,fma=off`. On a fork-only run
   ([41757527804](https://github.com/lilith/moxcms/actions/runs/41757527804)), both jobs fail every test on 26.04
   for unmodified master (0 of 83) and the branch (0 of 84), and pass every test on 24.04 (83 of 83, 84 of 84).
+- **Pin** (`moxcms-0.8.1-vs-main/results_2026-11-04.txt`): imageflow now pins `84104443`. Against 0.8.1, 3 of 143
+  visual checks change output, all CMYK JPEGs, by 1 level on 1 to 35 pixels; 37,632 of 21,381,376 pixels of a CMYK
+  grid (17 values per channel) change, also by 1 level. Distance to lcms2 is unchanged. 8-bit CMYK and LUT RGB take 28%
+  and 33% less time to run and 25% and 43% less to build; 8-bit Display P3 takes 4% longer to build (268 to 279
+  microseconds). 16-bit LUT runs take 2.3 to 2.6 times as long, but imageflow builds only 8-bit transforms. With the 4 MB thread bypassed, the
+  small-stack tests pass on the pin and abort on 0.8.1. x86_64 only.
 
 The first round of tests, with only the two attached images, found no crash:
 

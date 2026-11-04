@@ -1,0 +1,107 @@
+# moxcms 0.8.1 (what imageflow locked before) vs main 841044439 (0.9.1 plus moxcms PR 211).
+# imageflow 3a584879 plus the pin. x86_64, AMD Ryzen 9 7950X under WSL2, rustc 1.99.1, 2026-11-04.
+
+## 1. Visual suite output hashes
+# REGRESS_MANIFEST_PATH=<file> cargo nextest run -p imageflow_core --test integration --locked --no-fail-fast
+# python3 manifest_cmp.py before.tsv after.tsv
+# Both runs: 256 tests, 236 passed, 20 failed, and the same 20. Those failures are local references that differ
+# from output on main (CLAUDE.md, visual checksum entry). The 3 changed inputs below are CMYK JPEGs.
+checks before 143 after 143 only-before [] only-after []
+identical output hash: 140  changed: 3
+codec/decode_cmyk_jpeg_logo_passthrough
+   before match     fixed-flow-fc22c03d15:sea
+   after  accepted  sea:7bb30e06c51fc913  zdsim=0.0128 tol=0.0500
+   score:98.7
+icc/test_icc_repro_libvips_icc_libvips_icc
+   before match     royal-trout-f7667ed9c5:sea
+   after  accepted  sea:f0cadca0ae53c190.png  zdsim=0.0064 tol=0.0300
+   score:99.4
+icc/test_icc_repro_pillow_icc_pillow_icc
+   before match     crisp-beam-c27b72ac42:sea
+   after  accepted  sea:8102c764b58dfd68.png  zdsim=0.0115 tol=0.0500
+   score:98.8
+status changes:
+  codec/decode_cmyk_jpeg_logo_passthrough match -> accepted
+  icc/test_icc_repro_libvips_icc_libvips_icc match -> accepted
+  icc/test_icc_repro_pillow_icc_pillow_icc match -> accepted
+
+## 2. Pixels, through imageflow
+# dump.rs on each version, for moxcms and lcms2; mkgrid.py for cmyk_grid17; python3 pxcmp.py <dir> <names>
+# cmyk_logo, pillow and libvips are the 3 changed inputs. mars_lut is the LUT RGB input.
+# Pixels changed from 0.8.1 to main, all by 1 level, alpha never:
+#   cmyk_logo 35 of 861,716; pillow 5 of 640,000; libvips 1 of 893,228; mars_lut 0 of 3,600;
+#   cmyk_grid17 37,632 of 21,381,376.
+# Output is deterministic: 3 more runs of libvips and cmyk_logo on main gave the same PNG hash.
+cmyk_logo 1174 x 734 lcms2 stable across versions: True
+  0.8.1 vs main  : changed   0.00%  max   1 per-ch [1, 1, 1]  mean|d| 0.000  p99 0  >2:0.00% >5:0.00%
+  0.8.1 vs lcms2 : changed  32.58%  max   2 per-ch [2, 2, 2]  mean|d| 0.211  p99 1  >2:0.00% >5:0.00%
+  main  vs lcms2 : changed  32.58%  max   2 per-ch [2, 2, 2]  mean|d| 0.211  p99 1  >2:0.00% >5:0.00%
+pillow 800 x 800 lcms2 stable across versions: True
+  0.8.1 vs main  : changed   0.00%  max   1 per-ch [1, 0, 0]  mean|d| 0.000  p99 0  >2:0.00% >5:0.00%
+  0.8.1 vs lcms2 : changed  59.54%  max   4 per-ch [3, 4, 4]  mean|d| 0.633  p99 3  >2:8.40% >5:0.00%
+  main  vs lcms2 : changed  59.54%  max   4 per-ch [3, 4, 4]  mean|d| 0.633  p99 3  >2:8.40% >5:0.00%
+libvips 2044 x 437 lcms2 stable across versions: True
+  0.8.1 vs main  : changed   0.00%  max   1 per-ch [1, 0, 1]  mean|d| 0.000  p99 0  >2:0.00% >5:0.00%
+  0.8.1 vs lcms2 : changed  76.82%  max   5 per-ch [2, 3, 5]  mean|d| 0.486  p99 2  >2:0.25% >5:0.00%
+  main  vs lcms2 : changed  76.82%  max   5 per-ch [2, 3, 5]  mean|d| 0.486  p99 2  >2:0.25% >5:0.00%
+mars_lut 60 x 60 lcms2 stable across versions: True
+  0.8.1 vs main  : changed   0.00%  max   0 per-ch [0, 0, 0]  mean|d| 0.000  p99 0  >2:0.00% >5:0.00%
+  0.8.1 vs lcms2 : changed 100.00%  max   3 per-ch [2, 3, 1]  mean|d| 2.000  p99 3  >2:100.00% >5:0.00%
+  main  vs lcms2 : changed 100.00%  max   3 per-ch [2, 3, 1]  mean|d| 2.000  p99 3  >2:100.00% >5:0.00%
+cmyk_grid17 4624 x 4624 lcms2 stable across versions: True
+  0.8.1 vs main  : changed   0.18%  max   1 per-ch [1, 1, 1]  mean|d| 0.001  p99 0  >2:0.00% >5:0.00%
+  0.8.1 vs lcms2 : changed  60.07%  max   5 per-ch [3, 5, 5]  mean|d| 0.294  p99 3  >2:1.09% >5:0.00%
+  main  vs lcms2 : changed  60.11%  max   5 per-ch [3, 5, 5]  mean|d| 0.294  p99 3  >2:1.09% >5:0.00%
+  centres 0.8.1 vs main : changed   0.18%  max   1 per-ch [1, 1, 1]  mean|d| 0.001  p99 0  >2:0.00% >5:0.00%
+  centres 0.8.1 vs lcms2: changed  60.07%  max   5 per-ch [3, 5, 5]  mean|d| 0.294  p99 3  >2:1.09% >5:0.00%
+  centres main  vs lcms2: changed  60.11%  max   5 per-ch [3, 5, 5]  mean|d| 0.294  p99 3  >2:1.09% >5:0.00%
+
+## 3. Probe output digests, moxcms alone
+# moxcms-stack-probe `digest`, features v0_8_1 and patched. patched is 6279765571, whose source matches 841044439
+# (they differ only in .github/workflows/build_push.yml). Inputs are every 8-bit RGB value, every 5th CMYK value
+# and every gray value, or 2^20 pseudo-random pixels at other depths. The CMYK grid above changes because its
+# values are not all multiples of 5. imageflow builds only 8-bit transforms.
+# fnv1a output digests, 0.8.1 vs main source; same inputs and imageflow options. High and Low scales.
+cmyk        8    same  0.8.1 high=e7d9bec3c0ed270a | main high=e7d9bec3c0ed270a
+cmyk        16   DIFF  0.8.1 high=a1e2c91dc2572def | main high=70e537cc77e3aa9e
+cmyk        f32  same  0.8.1 high=692b146640b2bd5d | main high=692b146640b2bd5d
+rgb-lut     8    same  0.8.1 high=1efec104c158b14f | main high=1efec104c158b14f
+rgb-lut     16   DIFF  0.8.1 high=fc5d42bd0d276a11 | main high=3a7895f57e0244de
+rgb-lut     f32  same  0.8.1 high=5fdc12a39572d264 | main high=5fdc12a39572d264
+rgb-matrix  8    same  0.8.1 high=4452b8726e840c6e | main high=4452b8726e840c6e
+rgb-matrix  16   same  0.8.1 high=d991300cf1ec1196 | main high=d991300cf1ec1196
+rgb-matrix  f32  same  0.8.1 high=adeeacb8c9594d20 | main high=adeeacb8c9594d20
+display-p3  8    same  0.8.1 high=5e4267dcd5be4e34 | main high=5e4267dcd5be4e34
+display-p3  16   same  0.8.1 high=59f6afad02105198 | main high=59f6afad02105198
+display-p3  f32  same  0.8.1 high=b2c0c8bf16e350a8 | main high=b2c0c8bf16e350a8
+gray-2.2    8    same  0.8.1 high=f7ce3f4d3e11e32f | main high=f7ce3f4d3e11e32f
+gray-2.2    16   same  0.8.1 high=598efaec2a403f5e | main high=598efaec2a403f5e
+gray-2.2    f32  same  0.8.1 high=cdf1eac43e0000fc | main high=cdf1eac43e0000fc
+13 same, 2 differ
+
+## 4. Speed, moxcms alone
+# python3 -I moxcms-stack-probe/bench.py probe-v0_8_1 probe-patched cmyk.icc MarsRGB_v4_sYCC_8bit.jpg 30, fat LTO.
+# a is 0.8.1, b is main. Peak load 3.71. A short Python script ran during the first row.
+# imageflow builds only 8-bit transforms. 16-bit LUT runs were already at this speed on master before PR 211
+# (perf_2026-11-03.txt: cmyk 16 at 19.5 ns/px, rgb-lut 16 at 15.4 ns/px); the cause was not investigated.
+30 rounds; each process reports the median of 41 builds and of 41 runs over 65,536 pixels
+transform        build us a build us b                  b/a build   ns/px a   ns/px b                    b/a run
+cmyk 8               8121.1     6096.3    0.749 (IQR 0.726-0.768)    14.179    10.239    0.724 (IQR 0.716-0.733)
+cmyk 16             20359.9    10253.2    0.502 (IQR 0.496-0.513)     8.309    19.084    2.296 (IQR 2.239-2.333)
+cmyk f32            13859.4     8866.4    0.639 (IQR 0.625-0.650)    24.040    23.399    0.973 (IQR 0.953-0.985)
+rgb-lut 8            2854.0     1627.6    0.567 (IQR 0.542-0.584)    12.186     8.213    0.674 (IQR 0.655-0.685)
+rgb-lut 16          15191.0     6249.1    0.406 (IQR 0.398-0.419)     5.880    15.125    2.579 (IQR 2.501-2.635)
+rgb-lut f32          8361.2     4066.4    0.491 (IQR 0.477-0.496)    20.050    18.012    0.898 (IQR 0.887-0.911)
+display-p3 8          268.1      279.0    1.040 (IQR 1.031-1.044)     1.071     1.070    1.000 (IQR 0.991-1.008)
+display-p3 16        4851.9     5004.2    1.029 (IQR 1.003-1.048)     3.957     3.986    1.014 (IQR 0.980-1.036)
+display-p3 f32       2610.1     2634.6    1.011 (IQR 1.001-1.023)     2.821     2.681    0.952 (IQR 0.937-0.958)
+gray-2.2 8            288.2      288.7    1.000 (IQR 0.996-1.005)     0.450     0.439    0.985 (IQR 0.937-1.024)
+gray-2.2 16          8871.0     8948.5    1.006 (IQR 0.993-1.019)     0.548     0.549    1.007 (IQR 0.951-1.091)
+
+## 5. Stack, with create_transform_8bit_on_large_stack temporarily calling moxcms directly
+# cargo nextest run -p imageflow_core --locked --no-fail-fast -E 'test(small_stack) | test(cmyk_transform_builds_on_a_small_stack)'
+moxcms main: 4 tests run, 4 passed
+moxcms 0.8.1: 4 tests run, 1 passed, 3 failed with SIGABRT:
+  small_stack::rgb_jpeg_with_lut_profile_on_small_stack
+  small_stack::cmyk_jpeg_on_small_stack
+  codecs::moxcms_transform::tests::cmyk_transform_builds_on_a_small_stack
