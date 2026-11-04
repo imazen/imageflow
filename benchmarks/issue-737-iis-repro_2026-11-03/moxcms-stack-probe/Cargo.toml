@@ -1,6 +1,7 @@
 # Measures how much thread stack moxcms needs to build the transforms imageflow asks it for
 # (imageflow#737). Each moxcms version is an optional, renamed dependency; build one at a time
-# with `--features v0_8_1`, `v0_9_1` or `master`. run.sh builds all three and sweeps stack sizes.
+# with `--features v0_8_1`, `v0_9_1`, `master` or `patched`. run.sh builds the ones in $VERSIONS
+# and sweeps stack sizes.
 [package]
 name = "moxcms-stack-probe"
 version = "0.0.0"
@@ -16,11 +17,14 @@ moxcms_0_8_1 = { package = "moxcms", version = "=0.8.1", features = ["in_place",
 moxcms_0_9_1 = { package = "moxcms", version = "=0.9.1", features = ["in_place", "options"], optional = true }
 # Upstream master on 2026-10-28, unreleased (its Cargo.toml still says 0.9.1).
 moxcms_master = { package = "moxcms", git = "https://github.com/awxkee/moxcms", rev = "097dccf3a9ab40811f23baa5da71cbfb985f8de8", features = ["in_place", "options"], optional = true }
+# That master with the large tables moved to the heap: branch heap-lookup-tables of lilith/moxcms.
+moxcms_patched = { package = "moxcms", git = "https://github.com/lilith/moxcms", rev = "6279765571d39230674cf5d40376330deaa07e35", features = ["in_place", "options"], optional = true }
 
 [features]
 v0_8_1 = ["dep:moxcms_0_8_1"]
 v0_9_1 = ["dep:moxcms_0_9_1"]
 master = ["dep:moxcms_master"]
+patched = ["dep:moxcms_patched"]
 
 # Codegen settings of imageflow's [profile.release]: opt-level 3, fat LTO.
 [profile.release]

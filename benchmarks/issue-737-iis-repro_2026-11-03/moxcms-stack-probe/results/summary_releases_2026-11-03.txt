@@ -1,0 +1,40 @@
+# 2026-11-04T01:03:16Z cpu=AMD Ryzen 9 7950X 16-Core Processor Linux 6.18.40.1-microsoft-standard-WSL2 x86_64 rustc 1.99.1 (58cf8f9c3 2026-10-13)
+# imageflow be45e0f079
+# Smallest thread stack (KiB, 16 KiB steps) on which the transform to sRGB builds and
+# transforms 4096 pixels; 16 means 16 or less.
+input      scale depth  v0_8_1-release    v0_8_1-debug  v0_9_1-release    v0_9_1-debug
+cmyk       high  8                 800            1072             800            1072
+cmyk       low   8                 800             384             800             384
+cmyk       high  10                800            1072             800            1072
+cmyk       high  12                800            1072             800            1072
+cmyk       high  16                 16            1072             288            1072
+cmyk       high  f32               800            1072             800            1072
+cmyk       high  f64               800            1072             800            1072
+rgb-lut    high  8                 800            1072             800            1072
+rgb-lut    low   8                 800             576             800             576
+rgb-lut    high  10                800            1072             800            1072
+rgb-lut    high  12                800            1072             800            1072
+rgb-lut    high  16                 16            1072             288            1072
+rgb-lut    high  f32               800            1072             800            1072
+rgb-lut    high  f64               800            1072             800            1072
+rgb-matrix high  8                  16             384              48             384
+rgb-matrix low   8                  16             384              48             384
+rgb-matrix high  10                 16             560              48             560
+rgb-matrix high  12                 16             560              80             560
+rgb-matrix high  16                 16             560             272             560
+rgb-matrix high  f32                16             624             144             624
+rgb-matrix high  f64                16             944             272             944
+display-p3 high  8                  16             384              48             384
+display-p3 low   8                  16             384              48             384
+display-p3 high  10                 16             560              48             560
+display-p3 high  12                 16             560              80             560
+display-p3 high  16                 16             560             272             560
+display-p3 high  f32                16             624             144             624
+display-p3 high  f64                16             944             272             944
+gray-2.2   high  8                  16             384              48             384
+gray-2.2   low   8                  16             384              48             384
+gray-2.2   high  10                 16             560              48             560
+gray-2.2   high  12                 16             560              80             560
+gray-2.2   high  16                 16             560             272             560
+gray-2.2   high  f32                16             624             144             624
+gray-2.2   high  f64                16             944             272             944

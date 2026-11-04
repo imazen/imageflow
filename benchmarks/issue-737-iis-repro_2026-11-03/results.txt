@@ -258,3 +258,60 @@ cmyk and rgb-lut, 8-bit High and Low: overflow at 32 KiB, build on 48 KiB (resul
 Every RGB input (16,777,216) through rgb-lut and every 5th value of each CMYK channel (7,311,616 inputs) through
 cmyk: 0 pixels differ in 0.8.1, 0.9.1, master and the heap-patched 0.9.1. The Low path's code is untouched by
 the patch, so patched output equals unpatched output.
+
+# Part 4 (2026-11-03): every instance of the pattern in moxcms, and a branch that removes them
+
+master 097dccf3a9 vs branch heap-lookup-tables of lilith/moxcms, 6279765571 (one commit on that master).
+rustc 1.99.1, x86_64 host, AMD Ryzen 9 7950X. Commands are in README.md, "Running the harness".
+
+## Functions reserving 16 KiB or more (results/frames_master_2026-11-03.tsv, frames_heap_2026-11-03.tsv)
+build                                        master             branch
+x86_64 Linux release, imageflow features     11 / 786,440       0
+x86_64 Linux release, all stable features    11 / 786,440       0
+x86_64 Linux release, fat LTO probe binary   26 / 786,648       0
+x86_64 Windows MSVC release                  11 / 786,600       0
+i686 Windows MSVC release                    11 / 786,456       0
+i686 Linux release                           11 / 786,476       0
+aarch64 Linux release                        35 / 786,512       0
+x86_64 Linux debug                           122 / 786,808      18 / 19,488
+The 18 debug frames left: AVX interpolators, Hypercube::tetra_vec3, new_from_slice_with_options.
+
+## Sites (master)
+Optimized builds: BarycentricWeight<f32 and i16>::create_binned, the [0f32; N] scratch in
+make_gamma_parametric_table (inlined into ToneReprCurve::build_gamma_table).
+Debug builds, also: passthrough_table, linear_forward_table, linear_lut_interpolate,
+linear_curve_parametric, linear_curve_parametric_s, make_gamma_linear_table, make_gamma_lut,
+make_gamma_pow_table, make_gamma_parametric_table's output table, the gamma_table_uint table in
+ToneReprCurve::build_gamma_table, TransferCharacteristics::make_linear_table and make_gamma_table,
+gray_linear2 in create_transform_nbit, make_gray_to_x, make_gray_to_gray_in_place, and the PQ and HLG
+tables (41,032 bytes in debug, 8,192 in release).
+
+## Smallest working stack, build and run (results/summary_master_vs_heap_2026-11-03.txt)
+Full table in that file and in README.md. Branch: 16 KiB or less in release, 48-64 KiB in debug, for
+all 35 combinations of 5 profiles and 7 scale/depth modes. run-heavy: 53 s, peak RSS 0.62 GiB.
+
+## Output (same file)
+60 of 60 release-build hash pairs match master; 0 differ; 0 errors.
+
+## Transform build time (median wall ms, 150 alternating process runs each)
+cmyk 8          master 9.15   branch 8.80
+cmyk 16         master 13.94  branch 13.84
+rgb-lut 8       master 3.62   branch 3.30
+display-p3 16   master 6.78   branch 6.63
+display-p3 f32  master 4.25   branch 4.15
+
+## Windows host (results/windows_2026-11-03.tsv)
+Master x64 and x86: 8-bit and f32 CMYK and LUT RGB overflow at 768 KiB and pass at 832; 16-bit overflows at
+256 and passes at 512; Display P3 f32 overflows at 128 and passes at 256; Display P3 8-bit passes at 64.
+Branch x64: 72 of 72 runs pass, including 64 KiB. Branch x86: 8-bit CMYK passes at 64, 128, 256 and 512 KiB; the
+other 68 launches returned exit code 5, almost certainly UAC installer detection (32-bit exe with "patch" in its
+name), so they measure nothing.
+
+## New test on master vs branch (transforms_build_on_a_256_kib_thread_stack)
+x86_64 master: overflows in debug with no default features, default features, options and any_to_any, and in
+release with options; passes in release with the other three. Branch: passes all 8. aarch64 master: overflows
+with neon_luts in debug and with in_place,options in release. Branch on aarch64: passes in all 13 test feature sets.
+
+## moxcms CI lists on the branch
+x86_64: 16 of 16 test and 17 of 17 clippy feature sets. aarch64 Neoverse-N1 (nightly for tests, as CI does):
+13 of 13 and 9 of 9. 28 of 28 build and MSRV 1.89 commands. Not run: powerpc build, qemu-isolated tests.

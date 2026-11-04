@@ -1,0 +1,214 @@
+# 2026-11-04T00:42:10Z moxcms 097dccf3a9 rustc 1.99.1 (58cf8f9c3 2026-10-13) min_bytes=16384
+target	profile	features	bytes	function
+x86_64-unknown-linux-gnu	release	imageflow	786440	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 65536>
+x86_64-unknown-linux-gnu	release	imageflow	786440	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 65536>
+x86_64-unknown-linux-gnu	release	imageflow	262304	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 65536, 16>
+x86_64-unknown-linux-gnu	release	imageflow	262232	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f64, 65536, 65536, 1>
+x86_64-unknown-linux-gnu	release	imageflow	131160	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f32, 65536, 32768, 1>
+x86_64-unknown-linux-gnu	release	imageflow	65704	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 16384, 12>
+x86_64-unknown-linux-gnu	release	imageflow	49160	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 4096>
+x86_64-unknown-linux-gnu	release	imageflow	49160	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 4096>
+x86_64-unknown-linux-gnu	release	imageflow	32936	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 8192, 10>
+x86_64-unknown-linux-gnu	release	imageflow	16552	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u8, 65536, 4096, 8>
+x86_64-unknown-linux-gnu	release	imageflow	16536	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 4092, 8>
+x86_64-unknown-linux-gnu	release	all	786440	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 65536>
+x86_64-unknown-linux-gnu	release	all	786440	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 65536>
+x86_64-unknown-linux-gnu	release	all	262304	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 65536, 16>
+x86_64-unknown-linux-gnu	release	all	262232	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f64, 65536, 65536, 1>
+x86_64-unknown-linux-gnu	release	all	131160	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f32, 65536, 32768, 1>
+x86_64-unknown-linux-gnu	release	all	65704	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 16384, 12>
+x86_64-unknown-linux-gnu	release	all	49160	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 4096>
+x86_64-unknown-linux-gnu	release	all	49160	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 4096>
+x86_64-unknown-linux-gnu	release	all	32936	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 8192, 10>
+x86_64-unknown-linux-gnu	release	all	16552	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u8, 65536, 4096, 8>
+x86_64-unknown-linux-gnu	release	all	16536	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 4092, 8>
+x86_64-unknown-linux-gnu	dev	all	786808	<moxcms::conversions::interpolator::BarycentricWeight<f32>>::create_binned::<17, 65536>
+x86_64-unknown-linux-gnu	dev	all	786808	<moxcms::conversions::interpolator::BarycentricWeight<f32>>::create_binned::<33, 65536>
+x86_64-unknown-linux-gnu	dev	all	786808	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 65536>
+x86_64-unknown-linux-gnu	dev	all	786808	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 65536>
+x86_64-unknown-linux-gnu	dev	all	786808	moxcms::trc::make_gamma_parametric_table::<f64, 65536, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	524968	moxcms::conversions::gray2rgb::make_gray_to_x::<f64, 65536>
+x86_64-unknown-linux-gnu	dev	all	524840	moxcms::conversions::gray2rgb::make_gray_to_gray_in_place::<f64, 65536>
+x86_64-unknown-linux-gnu	dev	all	524728	<moxcms::cicp::TransferCharacteristics>::make_gamma_table::<f64, 65536, 65536>
+x86_64-unknown-linux-gnu	dev	all	524728	moxcms::trc::make_gamma_pow_table::<f64, 65536, 65536>
+x86_64-unknown-linux-gnu	dev	all	524696	moxcms::trc::make_gamma_linear_table::<f64, 65536, 65536>
+x86_64-unknown-linux-gnu	dev	all	524600	moxcms::trc::make_gamma_lut::<f64, 65536, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	393592	moxcms::trc::make_gamma_parametric_table::<f32, 65536, 32768, 1>
+x86_64-unknown-linux-gnu	dev	all	393592	moxcms::trc::make_gamma_parametric_table::<u16, 65536, 65536, 16>
+x86_64-unknown-linux-gnu	dev	all	267720	<moxcms::profile::ColorProfile>::create_transform_nbit::<f32, 1, 65536, 32768, 65536>
+x86_64-unknown-linux-gnu	dev	all	267720	<moxcms::profile::ColorProfile>::create_transform_nbit::<f64, 1, 65536, 65536, 65536>
+x86_64-unknown-linux-gnu	dev	all	266360	<moxcms::profile::ColorProfile>::create_transform_nbit::<u16, 10, 65536, 8192, 1024>
+x86_64-unknown-linux-gnu	dev	all	266360	<moxcms::profile::ColorProfile>::create_transform_nbit::<u16, 12, 65536, 16384, 4096>
+x86_64-unknown-linux-gnu	dev	all	266360	<moxcms::profile::ColorProfile>::create_transform_nbit::<u16, 16, 65536, 65536, 65536>
+x86_64-unknown-linux-gnu	dev	all	266360	<moxcms::profile::ColorProfile>::create_transform_nbit::<u8, 8, 256, 4096, 65536>
+x86_64-unknown-linux-gnu	dev	all	262824	moxcms::conversions::gray2rgb::make_gray_to_x::<f32, 65536>
+x86_64-unknown-linux-gnu	dev	all	262696	moxcms::conversions::gray2rgb::make_gray_to_gray_in_place::<f32, 65536>
+x86_64-unknown-linux-gnu	dev	all	262584	<moxcms::cicp::TransferCharacteristics>::make_gamma_table::<f32, 65536, 32768>
+x86_64-unknown-linux-gnu	dev	all	262584	moxcms::trc::make_gamma_pow_table::<f32, 65536, 32768>
+x86_64-unknown-linux-gnu	dev	all	262552	moxcms::trc::make_gamma_linear_table::<f32, 65536, 32768>
+x86_64-unknown-linux-gnu	dev	all	262456	moxcms::trc::make_gamma_lut::<f32, 65536, 32768, 1>
+x86_64-unknown-linux-gnu	dev	all	262408	moxcms::trc::linear_curve_parametric::<f32, 65535, 1>
+x86_64-unknown-linux-gnu	dev	all	262408	moxcms::trc::linear_curve_parametric::<f32, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	262408	moxcms::trc::linear_curve_parametric::<f64, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	262408	moxcms::trc::linear_curve_parametric::<u16, 65536, 10>
+x86_64-unknown-linux-gnu	dev	all	262408	moxcms::trc::linear_curve_parametric::<u16, 65536, 12>
+x86_64-unknown-linux-gnu	dev	all	262408	moxcms::trc::linear_curve_parametric::<u16, 65536, 13>
+x86_64-unknown-linux-gnu	dev	all	262408	moxcms::trc::linear_curve_parametric::<u16, 65536, 16>
+x86_64-unknown-linux-gnu	dev	all	262392	moxcms::trc::linear_curve_parametric_s::<65536>
+x86_64-unknown-linux-gnu	dev	all	262312	moxcms::trc::linear_forward_table::<f32, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	262312	moxcms::trc::linear_forward_table::<f64, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	262312	moxcms::trc::linear_forward_table::<u16, 65536, 10>
+x86_64-unknown-linux-gnu	dev	all	262312	moxcms::trc::linear_forward_table::<u16, 65536, 12>
+x86_64-unknown-linux-gnu	dev	all	262312	moxcms::trc::linear_forward_table::<u16, 65536, 13>
+x86_64-unknown-linux-gnu	dev	all	262312	moxcms::trc::linear_forward_table::<u16, 65536, 16>
+x86_64-unknown-linux-gnu	dev	all	262296	moxcms::trc::linear_forward_table::<f32, 65535, 1>
+x86_64-unknown-linux-gnu	dev	all	262280	moxcms::trc::linear_lut_interpolate::<f32, 65535, 1>
+x86_64-unknown-linux-gnu	dev	all	262280	moxcms::trc::linear_lut_interpolate::<f32, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	262280	moxcms::trc::linear_lut_interpolate::<f64, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	262280	moxcms::trc::linear_lut_interpolate::<u16, 65536, 10>
+x86_64-unknown-linux-gnu	dev	all	262280	moxcms::trc::linear_lut_interpolate::<u16, 65536, 12>
+x86_64-unknown-linux-gnu	dev	all	262280	moxcms::trc::linear_lut_interpolate::<u16, 65536, 13>
+x86_64-unknown-linux-gnu	dev	all	262280	moxcms::trc::linear_lut_interpolate::<u16, 65536, 16>
+x86_64-unknown-linux-gnu	dev	all	262264	<moxcms::cicp::TransferCharacteristics>::make_linear_table::<f32, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	262264	<moxcms::cicp::TransferCharacteristics>::make_linear_table::<f64, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	262264	<moxcms::cicp::TransferCharacteristics>::make_linear_table::<u16, 65536, 10>
+x86_64-unknown-linux-gnu	dev	all	262264	<moxcms::cicp::TransferCharacteristics>::make_linear_table::<u16, 65536, 12>
+x86_64-unknown-linux-gnu	dev	all	262264	<moxcms::cicp::TransferCharacteristics>::make_linear_table::<u16, 65536, 16>
+x86_64-unknown-linux-gnu	dev	all	262248	moxcms::trc::passthrough_table::<f32, 65535, 1>
+x86_64-unknown-linux-gnu	dev	all	262248	moxcms::trc::passthrough_table::<f32, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	262248	moxcms::trc::passthrough_table::<f64, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	262248	moxcms::trc::passthrough_table::<u16, 65536, 10>
+x86_64-unknown-linux-gnu	dev	all	262248	moxcms::trc::passthrough_table::<u16, 65536, 12>
+x86_64-unknown-linux-gnu	dev	all	262248	moxcms::trc::passthrough_table::<u16, 65536, 13>
+x86_64-unknown-linux-gnu	dev	all	262248	moxcms::trc::passthrough_table::<u16, 65536, 16>
+x86_64-unknown-linux-gnu	dev	all	196984	moxcms::trc::make_gamma_parametric_table::<u16, 65536, 16384, 12>
+x86_64-unknown-linux-gnu	dev	all	164216	moxcms::trc::make_gamma_parametric_table::<u16, 65536, 8192, 10>
+x86_64-unknown-linux-gnu	dev	all	147816	moxcms::trc::make_gamma_parametric_table::<u16, 65536, 4092, 8>
+x86_64-unknown-linux-gnu	dev	all	132440	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f64, 65536, 65536, 1>
+x86_64-unknown-linux-gnu	dev	all	132440	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 65536, 16>
+x86_64-unknown-linux-gnu	dev	all	131752	moxcms::conversions::gray2rgb::make_gray_to_x::<u16, 65536>
+x86_64-unknown-linux-gnu	dev	all	131624	moxcms::conversions::gray2rgb::make_gray_to_gray_in_place::<u16, 65536>
+x86_64-unknown-linux-gnu	dev	all	131512	<moxcms::cicp::TransferCharacteristics>::make_gamma_table::<u16, 65536, 16384>
+x86_64-unknown-linux-gnu	dev	all	131512	<moxcms::cicp::TransferCharacteristics>::make_gamma_table::<u16, 65536, 4092>
+x86_64-unknown-linux-gnu	dev	all	131512	<moxcms::cicp::TransferCharacteristics>::make_gamma_table::<u16, 65536, 65536>
+x86_64-unknown-linux-gnu	dev	all	131512	<moxcms::cicp::TransferCharacteristics>::make_gamma_table::<u16, 65536, 8192>
+x86_64-unknown-linux-gnu	dev	all	131512	moxcms::trc::make_gamma_pow_table::<u16, 65536, 16384>
+x86_64-unknown-linux-gnu	dev	all	131512	moxcms::trc::make_gamma_pow_table::<u16, 65536, 4092>
+x86_64-unknown-linux-gnu	dev	all	131512	moxcms::trc::make_gamma_pow_table::<u16, 65536, 65536>
+x86_64-unknown-linux-gnu	dev	all	131512	moxcms::trc::make_gamma_pow_table::<u16, 65536, 8192>
+x86_64-unknown-linux-gnu	dev	all	131480	moxcms::trc::make_gamma_linear_table::<u16, 65536, 16384>
+x86_64-unknown-linux-gnu	dev	all	131480	moxcms::trc::make_gamma_linear_table::<u16, 65536, 4092>
+x86_64-unknown-linux-gnu	dev	all	131480	moxcms::trc::make_gamma_linear_table::<u16, 65536, 65536>
+x86_64-unknown-linux-gnu	dev	all	131480	moxcms::trc::make_gamma_linear_table::<u16, 65536, 8192>
+x86_64-unknown-linux-gnu	dev	all	131384	moxcms::trc::make_gamma_lut::<u16, 65536, 16384, 12>
+x86_64-unknown-linux-gnu	dev	all	131384	moxcms::trc::make_gamma_lut::<u16, 65536, 4092, 8>
+x86_64-unknown-linux-gnu	dev	all	131384	moxcms::trc::make_gamma_lut::<u16, 65536, 65536, 16>
+x86_64-unknown-linux-gnu	dev	all	131384	moxcms::trc::make_gamma_lut::<u16, 65536, 8192, 10>
+x86_64-unknown-linux-gnu	dev	all	131320	moxcms::trc::linear_curve_parametric_s::<32768>
+x86_64-unknown-linux-gnu	dev	all	82296	moxcms::trc::make_gamma_parametric_table::<u8, 65536, 4096, 8>
+x86_64-unknown-linux-gnu	dev	all	66904	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f32, 65536, 32768, 1>
+x86_64-unknown-linux-gnu	dev	all	66184	moxcms::conversions::gray2rgb::make_gray_to_x::<u8, 256>
+x86_64-unknown-linux-gnu	dev	all	66056	moxcms::conversions::gray2rgb::make_gray_to_gray_in_place::<u8, 256>
+x86_64-unknown-linux-gnu	dev	all	65960	<moxcms::cicp::TransferCharacteristics>::make_gamma_table::<u8, 65536, 4096>
+x86_64-unknown-linux-gnu	dev	all	65960	moxcms::trc::make_gamma_pow_table::<u8, 65536, 4096>
+x86_64-unknown-linux-gnu	dev	all	65928	moxcms::trc::make_gamma_linear_table::<u8, 65536, 4096>
+x86_64-unknown-linux-gnu	dev	all	65816	moxcms::trc::make_gamma_lut::<u8, 65536, 4096, 8>
+x86_64-unknown-linux-gnu	dev	all	65784	moxcms::trc::linear_curve_parametric_s::<16384>
+x86_64-unknown-linux-gnu	dev	all	65640	moxcms::trc::passthrough_table::<f32, 16384, 1>
+x86_64-unknown-linux-gnu	dev	all	49528	<moxcms::conversions::interpolator::BarycentricWeight<f32>>::create_binned::<17, 4096>
+x86_64-unknown-linux-gnu	dev	all	49528	<moxcms::conversions::interpolator::BarycentricWeight<f32>>::create_binned::<33, 4096>
+x86_64-unknown-linux-gnu	dev	all	49528	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 4096>
+x86_64-unknown-linux-gnu	dev	all	49528	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 4096>
+x86_64-unknown-linux-gnu	dev	all	41032	<std::sync::once_lock::OnceLock<[u16; 4096]>>::initialize::<<std::sync::once_lock::OnceLock<[u16; 4096]>>::get_or_init<moxcms::defaults::hlg_built_curve::{closure#0}>::{closure#0}, !>::{closure#0}
+x86_64-unknown-linux-gnu	dev	all	41032	<std::sync::once_lock::OnceLock<[u16; 4096]>>::initialize::<<std::sync::once_lock::OnceLock<[u16; 4096]>>::get_or_init<moxcms::defaults::pq_built_curve::{closure#0}>::{closure#0}, !>::{closure#0}
+x86_64-unknown-linux-gnu	dev	all	34136	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 16384, 12>
+x86_64-unknown-linux-gnu	dev	all	33016	moxcms::trc::linear_curve_parametric_s::<8192>
+x86_64-unknown-linux-gnu	dev	all	19488	<moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxQ0_15Double<17>>::interpolate::<u16, 1024, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	19488	<moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxQ0_15Double<17>>::interpolate::<u16, 4096, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	19488	<moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxQ0_15Double<17>>::interpolate::<u16, 65536, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	19488	<moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxQ0_15Double<17>>::interpolate::<u8, 256, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	19352	<moxcms::nd_array::Hypercube>::tetra_vec3
+x86_64-unknown-linux-gnu	dev	all	19328	<moxcms::conversions::avx::interpolator::TetrahedralAvxFmaDouble<17>>::interpolate::<u16, 1024, moxcms::conversions::avx::interpolator::TetrahedralAvxFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	19328	<moxcms::conversions::avx::interpolator::TetrahedralAvxFmaDouble<17>>::interpolate::<u16, 4096, moxcms::conversions::avx::interpolator::TetrahedralAvxFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	19328	<moxcms::conversions::avx::interpolator::TetrahedralAvxFmaDouble<17>>::interpolate::<u16, 65536, moxcms::conversions::avx::interpolator::TetrahedralAvxFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	19328	<moxcms::conversions::avx::interpolator::TetrahedralAvxFmaDouble<17>>::interpolate::<u8, 256, moxcms::conversions::avx::interpolator::TetrahedralAvxFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	19128	<moxcms::profile::ColorProfile>::new_from_slice_with_options
+x86_64-unknown-linux-gnu	dev	all	18656	<moxcms::conversions::avx::interpolator_q0_15::PyramidAvxFmaQ0_15Double<17>>::interpolate::<u16, 1024, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxSseFetchVector<17>, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxSseFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	18656	<moxcms::conversions::avx::interpolator_q0_15::PyramidAvxFmaQ0_15Double<17>>::interpolate::<u16, 4096, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxSseFetchVector<17>, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxSseFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	18656	<moxcms::conversions::avx::interpolator_q0_15::PyramidAvxFmaQ0_15Double<17>>::interpolate::<u16, 65536, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxSseFetchVector<17>, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxSseFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	18656	<moxcms::conversions::avx::interpolator_q0_15::PyramidAvxFmaQ0_15Double<17>>::interpolate::<u8, 256, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxSseFetchVector<17>, moxcms::conversions::avx::interpolator_q0_15::TetrahedralAvxSseFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	17752	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 8192, 10>
+x86_64-unknown-linux-gnu	dev	all	16864	<moxcms::conversions::avx::interpolator::PyramidAvxFmaDouble<17>>::interpolate::<u16, 1024, moxcms::conversions::avx::interpolator::TetrahedralAvxSseFetchVector<17>, moxcms::conversions::avx::interpolator::TetrahedralAvxSseFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	16864	<moxcms::conversions::avx::interpolator::PyramidAvxFmaDouble<17>>::interpolate::<u16, 4096, moxcms::conversions::avx::interpolator::TetrahedralAvxSseFetchVector<17>, moxcms::conversions::avx::interpolator::TetrahedralAvxSseFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	16864	<moxcms::conversions::avx::interpolator::PyramidAvxFmaDouble<17>>::interpolate::<u16, 65536, moxcms::conversions::avx::interpolator::TetrahedralAvxSseFetchVector<17>, moxcms::conversions::avx::interpolator::TetrahedralAvxSseFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	16864	<moxcms::conversions::avx::interpolator::PyramidAvxFmaDouble<17>>::interpolate::<u8, 256, moxcms::conversions::avx::interpolator::TetrahedralAvxSseFetchVector<17>, moxcms::conversions::avx::interpolator::TetrahedralAvxSseFetchVector<17>>
+x86_64-unknown-linux-gnu	dev	all	16632	moxcms::trc::linear_curve_parametric_s::<4096>
+x86_64-unknown-linux-gnu	dev	all	16616	moxcms::trc::linear_curve_parametric_s::<4092>
+x86_64-pc-windows-msvc	release	all	786600	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 65536>
+x86_64-pc-windows-msvc	release	all	786600	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 65536>
+x86_64-pc-windows-msvc	release	all	262432	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 65536, 16>
+x86_64-pc-windows-msvc	release	all	262416	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f64, 65536, 65536, 1>
+x86_64-pc-windows-msvc	release	all	131352	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f32, 65536, 32768, 1>
+x86_64-pc-windows-msvc	release	all	65832	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 16384, 12>
+x86_64-pc-windows-msvc	release	all	49320	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 4096>
+x86_64-pc-windows-msvc	release	all	49320	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 4096>
+x86_64-pc-windows-msvc	release	all	33064	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 8192, 10>
+x86_64-pc-windows-msvc	release	all	16680	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u8, 65536, 4096, 8>
+x86_64-pc-windows-msvc	release	all	16664	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 4092, 8>
+i686-pc-windows-msvc	release	all	786456	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 65536>
+i686-pc-windows-msvc	release	all	786456	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 65536>
+i686-pc-windows-msvc	release	all	262304	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 65536, 16>
+i686-pc-windows-msvc	release	all	262248	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f64, 65536, 65536, 1>
+i686-pc-windows-msvc	release	all	131176	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f32, 65536, 32768, 1>
+i686-pc-windows-msvc	release	all	65696	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 16384, 12>
+i686-pc-windows-msvc	release	all	49176	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 4096>
+i686-pc-windows-msvc	release	all	49176	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 4096>
+i686-pc-windows-msvc	release	all	32928	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 8192, 10>
+i686-pc-windows-msvc	release	all	16544	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u8, 65536, 4096, 8>
+i686-pc-windows-msvc	release	all	16528	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 4092, 8>
+i686-unknown-linux-gnu	release	all	786476	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 65536>
+i686-unknown-linux-gnu	release	all	786476	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 65536>
+i686-unknown-linux-gnu	release	all	262300	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 65536, 16>
+i686-unknown-linux-gnu	release	all	262236	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f64, 65536, 65536, 1>
+i686-unknown-linux-gnu	release	all	131164	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f32, 65536, 32768, 1>
+i686-unknown-linux-gnu	release	all	65692	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 16384, 12>
+i686-unknown-linux-gnu	release	all	49196	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 4096>
+i686-unknown-linux-gnu	release	all	49196	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 4096>
+i686-unknown-linux-gnu	release	all	32924	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 8192, 10>
+i686-unknown-linux-gnu	release	all	16556	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u8, 65536, 4096, 8>
+i686-unknown-linux-gnu	release	all	16524	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 4092, 8>
+aarch64-unknown-linux-gnu	release	all	786512	<moxcms::conversions::neon::lut4_to_3::NeonLut4x3Factory as moxcms::conversions::lut_transforms::Lut4x3Factory>::make_transform_4x3::<f32, 0, 17, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786512	<moxcms::conversions::neon::lut4_to_3::NeonLut4x3Factory as moxcms::conversions::lut_transforms::Lut4x3Factory>::make_transform_4x3::<f32, 1, 17, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786512	<moxcms::conversions::neon::lut4_to_3::NeonLut4x3Factory as moxcms::conversions::lut_transforms::Lut4x3Factory>::make_transform_4x3::<f64, 0, 17, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786512	<moxcms::conversions::neon::lut4_to_3::NeonLut4x3Factory as moxcms::conversions::lut_transforms::Lut4x3Factory>::make_transform_4x3::<f64, 1, 17, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786512	<moxcms::conversions::neon::lut4_to_3::NeonLut4x3Factory as moxcms::conversions::lut_transforms::Lut4x3Factory>::make_transform_4x3::<u8, 0, 17, 8, 65536>
+aarch64-unknown-linux-gnu	release	all	786512	<moxcms::conversions::neon::lut4_to_3::NeonLut4x3Factory as moxcms::conversions::lut_transforms::Lut4x3Factory>::make_transform_4x3::<u8, 1, 17, 8, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<f32, 0, 0, 33, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<f32, 0, 1, 33, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<f32, 1, 0, 33, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<f32, 1, 1, 33, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<f64, 0, 0, 33, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<f64, 0, 1, 33, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<f64, 1, 0, 33, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<f64, 1, 1, 33, 1, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<u8, 0, 0, 33, 8, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<u8, 0, 1, 33, 8, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<u8, 1, 0, 33, 8, 65536>
+aarch64-unknown-linux-gnu	release	all	786464	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<u8, 1, 1, 33, 8, 65536>
+aarch64-unknown-linux-gnu	release	all	786432	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 65536>
+aarch64-unknown-linux-gnu	release	all	786432	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 65536>
+aarch64-unknown-linux-gnu	release	all	262208	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f64, 65536, 65536, 1>
+aarch64-unknown-linux-gnu	release	all	262208	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 65536, 16>
+aarch64-unknown-linux-gnu	release	all	131136	<moxcms::trc::ToneReprCurve>::build_gamma_table::<f32, 65536, 32768, 1>
+aarch64-unknown-linux-gnu	release	all	65600	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 16384, 12>
+aarch64-unknown-linux-gnu	release	all	49232	<moxcms::conversions::neon::lut4_to_3::NeonLut4x3Factory as moxcms::conversions::lut_transforms::Lut4x3Factory>::make_transform_4x3::<u16, 0, 17, 12, 4096>
+aarch64-unknown-linux-gnu	release	all	49232	<moxcms::conversions::neon::lut4_to_3::NeonLut4x3Factory as moxcms::conversions::lut_transforms::Lut4x3Factory>::make_transform_4x3::<u16, 1, 17, 12, 4096>
+aarch64-unknown-linux-gnu	release	all	49184	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<u16, 0, 0, 33, 12, 4096>
+aarch64-unknown-linux-gnu	release	all	49184	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<u16, 0, 1, 33, 12, 4096>
+aarch64-unknown-linux-gnu	release	all	49184	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<u16, 1, 0, 33, 12, 4096>
+aarch64-unknown-linux-gnu	release	all	49184	<moxcms::conversions::neon::t_lut3_to_3::NeonLut3x3Factory as moxcms::conversions::lut_transforms::Lut3x3Factory>::make_transform_3x3::<u16, 1, 1, 33, 12, 4096>
+aarch64-unknown-linux-gnu	release	all	49152	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<17, 4096>
+aarch64-unknown-linux-gnu	release	all	49152	<moxcms::conversions::interpolator::BarycentricWeight<i16>>::create_binned::<33, 4096>
+aarch64-unknown-linux-gnu	release	all	32832	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 8192, 10>
+aarch64-unknown-linux-gnu	release	all	16384	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u16, 65536, 4092, 8>
+aarch64-unknown-linux-gnu	release	all	16384	<moxcms::trc::ToneReprCurve>::build_gamma_table::<u8, 65536, 4096, 8>

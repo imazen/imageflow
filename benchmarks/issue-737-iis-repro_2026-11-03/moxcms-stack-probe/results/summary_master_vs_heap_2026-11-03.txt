@@ -1,0 +1,173 @@
+# 2026-11-04T01:05:12Z cpu=AMD Ryzen 9 7950X 16-Core Processor Linux 6.18.40.1-microsoft-standard-WSL2 x86_64 rustc 1.99.1 (58cf8f9c3 2026-10-13)
+# imageflow be45e0f079
+# Smallest thread stack (KiB, 16 KiB steps) on which the transform to sRGB builds and
+# transforms 4096 pixels; 16 means 16 or less.
+input      scale depth  master-release    master-debug patched-release   patched-debug
+cmyk       high  8                 800             384              16              64
+cmyk       low   8                 800             384              16              64
+cmyk       high  10                 64             464              16              64
+cmyk       high  12                 96             480              16              64
+cmyk       high  16                288            1072              16              64
+cmyk       high  f32               800            1072              16              64
+cmyk       high  f64               800            1072              16              64
+rgb-lut    high  8                 800             576              16              64
+rgb-lut    low   8                 800             576              16              64
+rgb-lut    high  10                 64             576              16              64
+rgb-lut    high  12                 96             576              16              64
+rgb-lut    high  16                288            1072              16              64
+rgb-lut    high  f32               800            1072              16              64
+rgb-lut    high  f64               800            1072              16              64
+rgb-matrix high  8                  48             384              16              48
+rgb-matrix low   8                  48             384              16              48
+rgb-matrix high  10                 48             560              16              48
+rgb-matrix high  12                 80             560              16              48
+rgb-matrix high  16                272             560              16              48
+rgb-matrix high  f32               144             624              16              48
+rgb-matrix high  f64               272             944              16              48
+display-p3 high  8                  48             384              16              48
+display-p3 low   8                  48             384              16              48
+display-p3 high  10                 48             560              16              48
+display-p3 high  12                 80             560              16              48
+display-p3 high  16                272             560              16              48
+display-p3 high  f32               144             624              16              48
+display-p3 high  f64               272             944              16              48
+gray-2.2   high  8                  48             384              16              48
+gray-2.2   low   8                  48             384              16              48
+gray-2.2   high  10                 48             560              16              48
+gray-2.2   high  12                 80             560              16              48
+gray-2.2   high  16                272             560              16              48
+gray-2.2   high  f32               144             624              16              48
+gray-2.2   high  f64               272             944              16              48
+
+# Output digests (release builds); every version must print the same hashes.
+cmyk depth 8 high: 7311616 input pixels, fnv1a e7d9bec3c0ed270a [master: same]
+cmyk depth 8 low: 7311616 input pixels, fnv1a e7d9bec3c0ed270a [master: same]
+cmyk depth 8 high: 7311616 input pixels, fnv1a e7d9bec3c0ed270a [patched: same]
+cmyk depth 8 low: 7311616 input pixels, fnv1a e7d9bec3c0ed270a [patched: same]
+cmyk depth 10 high: 1048576 input pixels, fnv1a 8e69d29ab3c6232d [master: same]
+cmyk depth 10 low: 1048576 input pixels, fnv1a e085e6a0d7744011 [master: same]
+cmyk depth 10 high: 1048576 input pixels, fnv1a 8e69d29ab3c6232d [patched: same]
+cmyk depth 10 low: 1048576 input pixels, fnv1a e085e6a0d7744011 [patched: same]
+cmyk depth 12 high: 1048576 input pixels, fnv1a d69259aeaeb25538 [master: same]
+cmyk depth 12 low: 1048576 input pixels, fnv1a e6af55432a314118 [master: same]
+cmyk depth 12 high: 1048576 input pixels, fnv1a d69259aeaeb25538 [patched: same]
+cmyk depth 12 low: 1048576 input pixels, fnv1a e6af55432a314118 [patched: same]
+cmyk depth 16 high: 1048576 input pixels, fnv1a 70e537cc77e3aa9e [master: same]
+cmyk depth 16 low: 1048576 input pixels, fnv1a dbd30e19daf1397c [master: same]
+cmyk depth 16 high: 1048576 input pixels, fnv1a 70e537cc77e3aa9e [patched: same]
+cmyk depth 16 low: 1048576 input pixels, fnv1a dbd30e19daf1397c [patched: same]
+cmyk depth f32 high: 1048576 input pixels, fnv1a 692b146640b2bd5d [master: same]
+cmyk depth f32 low: 1048576 input pixels, fnv1a f865859ed457ddd4 [master: same]
+cmyk depth f32 high: 1048576 input pixels, fnv1a 692b146640b2bd5d [patched: same]
+cmyk depth f32 low: 1048576 input pixels, fnv1a f865859ed457ddd4 [patched: same]
+cmyk depth f64 high: 1048576 input pixels, fnv1a 58b35f710c7c3736 [master: same]
+cmyk depth f64 low: 1048576 input pixels, fnv1a 8ce6940b7ed52d76 [master: same]
+cmyk depth f64 high: 1048576 input pixels, fnv1a 58b35f710c7c3736 [patched: same]
+cmyk depth f64 low: 1048576 input pixels, fnv1a 8ce6940b7ed52d76 [patched: same]
+rgb-lut depth 8 high: 16777216 input pixels, fnv1a 1efec104c158b14f [master: same]
+rgb-lut depth 8 low: 16777216 input pixels, fnv1a 1efec104c158b14f [master: same]
+rgb-lut depth 8 high: 16777216 input pixels, fnv1a 1efec104c158b14f [patched: same]
+rgb-lut depth 8 low: 16777216 input pixels, fnv1a 1efec104c158b14f [patched: same]
+rgb-lut depth 10 high: 1048576 input pixels, fnv1a 76cc23e5fa7756be [master: same]
+rgb-lut depth 10 low: 1048576 input pixels, fnv1a 9628f34458197b2f [master: same]
+rgb-lut depth 10 high: 1048576 input pixels, fnv1a 76cc23e5fa7756be [patched: same]
+rgb-lut depth 10 low: 1048576 input pixels, fnv1a 9628f34458197b2f [patched: same]
+rgb-lut depth 12 high: 1048576 input pixels, fnv1a 6b07afec2de10e7e [master: same]
+rgb-lut depth 12 low: 1048576 input pixels, fnv1a f453409101617289 [master: same]
+rgb-lut depth 12 high: 1048576 input pixels, fnv1a 6b07afec2de10e7e [patched: same]
+rgb-lut depth 12 low: 1048576 input pixels, fnv1a f453409101617289 [patched: same]
+rgb-lut depth 16 high: 1048576 input pixels, fnv1a 3a7895f57e0244de [master: same]
+rgb-lut depth 16 low: 1048576 input pixels, fnv1a 4c89363fe5b3d02d [master: same]
+rgb-lut depth 16 high: 1048576 input pixels, fnv1a 3a7895f57e0244de [patched: same]
+rgb-lut depth 16 low: 1048576 input pixels, fnv1a 4c89363fe5b3d02d [patched: same]
+rgb-lut depth f32 high: 1048576 input pixels, fnv1a 5fdc12a39572d264 [master: same]
+rgb-lut depth f32 low: 1048576 input pixels, fnv1a 9bc74078c26b0114 [master: same]
+rgb-lut depth f32 high: 1048576 input pixels, fnv1a 5fdc12a39572d264 [patched: same]
+rgb-lut depth f32 low: 1048576 input pixels, fnv1a 9bc74078c26b0114 [patched: same]
+rgb-lut depth f64 high: 1048576 input pixels, fnv1a 54c21179c42634ba [master: same]
+rgb-lut depth f64 low: 1048576 input pixels, fnv1a dec0ac47041b3eab [master: same]
+rgb-lut depth f64 high: 1048576 input pixels, fnv1a 54c21179c42634ba [patched: same]
+rgb-lut depth f64 low: 1048576 input pixels, fnv1a dec0ac47041b3eab [patched: same]
+rgb-matrix depth 8 high: 16777216 input pixels, fnv1a 4452b8726e840c6e [master: same]
+rgb-matrix depth 8 low: 16777216 input pixels, fnv1a 4452b8726e840c6e [master: same]
+rgb-matrix depth 8 high: 16777216 input pixels, fnv1a 4452b8726e840c6e [patched: same]
+rgb-matrix depth 8 low: 16777216 input pixels, fnv1a 4452b8726e840c6e [patched: same]
+rgb-matrix depth 10 high: 1048576 input pixels, fnv1a e2358a0ba176922a [master: same]
+rgb-matrix depth 10 low: 1048576 input pixels, fnv1a e2358a0ba176922a [master: same]
+rgb-matrix depth 10 high: 1048576 input pixels, fnv1a e2358a0ba176922a [patched: same]
+rgb-matrix depth 10 low: 1048576 input pixels, fnv1a e2358a0ba176922a [patched: same]
+rgb-matrix depth 12 high: 1048576 input pixels, fnv1a 45a5d1778aa6d42d [master: same]
+rgb-matrix depth 12 low: 1048576 input pixels, fnv1a 45a5d1778aa6d42d [master: same]
+rgb-matrix depth 12 high: 1048576 input pixels, fnv1a 45a5d1778aa6d42d [patched: same]
+rgb-matrix depth 12 low: 1048576 input pixels, fnv1a 45a5d1778aa6d42d [patched: same]
+rgb-matrix depth 16 high: 1048576 input pixels, fnv1a d991300cf1ec1196 [master: same]
+rgb-matrix depth 16 low: 1048576 input pixels, fnv1a d991300cf1ec1196 [master: same]
+rgb-matrix depth 16 high: 1048576 input pixels, fnv1a d991300cf1ec1196 [patched: same]
+rgb-matrix depth 16 low: 1048576 input pixels, fnv1a d991300cf1ec1196 [patched: same]
+rgb-matrix depth f32 high: 1048576 input pixels, fnv1a adeeacb8c9594d20 [master: same]
+rgb-matrix depth f32 low: 1048576 input pixels, fnv1a adeeacb8c9594d20 [master: same]
+rgb-matrix depth f32 high: 1048576 input pixels, fnv1a adeeacb8c9594d20 [patched: same]
+rgb-matrix depth f32 low: 1048576 input pixels, fnv1a adeeacb8c9594d20 [patched: same]
+rgb-matrix depth f64 high: 1048576 input pixels, fnv1a 42a350d48507e537 [master: same]
+rgb-matrix depth f64 low: 1048576 input pixels, fnv1a 42a350d48507e537 [master: same]
+rgb-matrix depth f64 high: 1048576 input pixels, fnv1a 42a350d48507e537 [patched: same]
+rgb-matrix depth f64 low: 1048576 input pixels, fnv1a 42a350d48507e537 [patched: same]
+display-p3 depth 8 high: 16777216 input pixels, fnv1a 5e4267dcd5be4e34 [master: same]
+display-p3 depth 8 low: 16777216 input pixels, fnv1a 5e4267dcd5be4e34 [master: same]
+display-p3 depth 8 high: 16777216 input pixels, fnv1a 5e4267dcd5be4e34 [patched: same]
+display-p3 depth 8 low: 16777216 input pixels, fnv1a 5e4267dcd5be4e34 [patched: same]
+display-p3 depth 10 high: 1048576 input pixels, fnv1a 416068b2491e5129 [master: same]
+display-p3 depth 10 low: 1048576 input pixels, fnv1a 416068b2491e5129 [master: same]
+display-p3 depth 10 high: 1048576 input pixels, fnv1a 416068b2491e5129 [patched: same]
+display-p3 depth 10 low: 1048576 input pixels, fnv1a 416068b2491e5129 [patched: same]
+display-p3 depth 12 high: 1048576 input pixels, fnv1a 16aea8f09af72802 [master: same]
+display-p3 depth 12 low: 1048576 input pixels, fnv1a 16aea8f09af72802 [master: same]
+display-p3 depth 12 high: 1048576 input pixels, fnv1a 16aea8f09af72802 [patched: same]
+display-p3 depth 12 low: 1048576 input pixels, fnv1a 16aea8f09af72802 [patched: same]
+display-p3 depth 16 high: 1048576 input pixels, fnv1a 59f6afad02105198 [master: same]
+display-p3 depth 16 low: 1048576 input pixels, fnv1a 59f6afad02105198 [master: same]
+display-p3 depth 16 high: 1048576 input pixels, fnv1a 59f6afad02105198 [patched: same]
+display-p3 depth 16 low: 1048576 input pixels, fnv1a 59f6afad02105198 [patched: same]
+display-p3 depth f32 high: 1048576 input pixels, fnv1a b2c0c8bf16e350a8 [master: same]
+display-p3 depth f32 low: 1048576 input pixels, fnv1a b2c0c8bf16e350a8 [master: same]
+display-p3 depth f32 high: 1048576 input pixels, fnv1a b2c0c8bf16e350a8 [patched: same]
+display-p3 depth f32 low: 1048576 input pixels, fnv1a b2c0c8bf16e350a8 [patched: same]
+display-p3 depth f64 high: 1048576 input pixels, fnv1a 2ef1330751b0f632 [master: same]
+display-p3 depth f64 low: 1048576 input pixels, fnv1a 2ef1330751b0f632 [master: same]
+display-p3 depth f64 high: 1048576 input pixels, fnv1a 2ef1330751b0f632 [patched: same]
+display-p3 depth f64 low: 1048576 input pixels, fnv1a 2ef1330751b0f632 [patched: same]
+gray-2.2 depth 8 high: 256 input pixels, fnv1a f7ce3f4d3e11e32f [master: same]
+gray-2.2 depth 8 low: 256 input pixels, fnv1a f7ce3f4d3e11e32f [master: same]
+gray-2.2 depth 8 high: 256 input pixels, fnv1a f7ce3f4d3e11e32f [patched: same]
+gray-2.2 depth 8 low: 256 input pixels, fnv1a f7ce3f4d3e11e32f [patched: same]
+gray-2.2 depth 10 high: 1048576 input pixels, fnv1a 7ce10ba936981562 [master: same]
+gray-2.2 depth 10 low: 1048576 input pixels, fnv1a 7ce10ba936981562 [master: same]
+gray-2.2 depth 10 high: 1048576 input pixels, fnv1a 7ce10ba936981562 [patched: same]
+gray-2.2 depth 10 low: 1048576 input pixels, fnv1a 7ce10ba936981562 [patched: same]
+gray-2.2 depth 12 high: 1048576 input pixels, fnv1a dc7528caa9af2d44 [master: same]
+gray-2.2 depth 12 low: 1048576 input pixels, fnv1a dc7528caa9af2d44 [master: same]
+gray-2.2 depth 12 high: 1048576 input pixels, fnv1a dc7528caa9af2d44 [patched: same]
+gray-2.2 depth 12 low: 1048576 input pixels, fnv1a dc7528caa9af2d44 [patched: same]
+gray-2.2 depth 16 high: 1048576 input pixels, fnv1a 598efaec2a403f5e [master: same]
+gray-2.2 depth 16 low: 1048576 input pixels, fnv1a 598efaec2a403f5e [master: same]
+gray-2.2 depth 16 high: 1048576 input pixels, fnv1a 598efaec2a403f5e [patched: same]
+gray-2.2 depth 16 low: 1048576 input pixels, fnv1a 598efaec2a403f5e [patched: same]
+gray-2.2 depth f32 high: 1048576 input pixels, fnv1a cdf1eac43e0000fc [master: same]
+gray-2.2 depth f32 low: 1048576 input pixels, fnv1a cdf1eac43e0000fc [master: same]
+gray-2.2 depth f32 high: 1048576 input pixels, fnv1a cdf1eac43e0000fc [patched: same]
+gray-2.2 depth f32 low: 1048576 input pixels, fnv1a cdf1eac43e0000fc [patched: same]
+gray-2.2 depth f64 high: 1048576 input pixels, fnv1a b48e9f04148af71f [master: same]
+gray-2.2 depth f64 low: 1048576 input pixels, fnv1a b48e9f04148af71f [master: same]
+gray-2.2 depth f64 high: 1048576 input pixels, fnv1a b48e9f04148af71f [patched: same]
+gray-2.2 depth f64 low: 1048576 input pixels, fnv1a b48e9f04148af71f [patched: same]
+
+cmyk: moxcms master@097dccf3a9: color space Cmyk, A2B LUT yes, matrix/TRC no
+cmyk: moxcms patched: color space Cmyk, A2B LUT yes, matrix/TRC no
+rgb-lut: moxcms master@097dccf3a9: color space Rgb, A2B LUT yes, matrix/TRC no
+rgb-lut: moxcms patched: color space Rgb, A2B LUT yes, matrix/TRC no
+rgb-matrix: moxcms master@097dccf3a9: color space Rgb, A2B LUT no, matrix/TRC yes
+rgb-matrix: moxcms patched: color space Rgb, A2B LUT no, matrix/TRC yes
+display-p3: moxcms master@097dccf3a9: color space Rgb, A2B LUT no, matrix/TRC yes
+display-p3: moxcms patched: color space Rgb, A2B LUT no, matrix/TRC yes
+gray-2.2: moxcms master@097dccf3a9: color space Gray, A2B LUT no, matrix/TRC no
+gray-2.2: moxcms patched: color space Gray, A2B LUT no, matrix/TRC no
