@@ -46,8 +46,7 @@ fn decoded_pixels(bytes: &[u8]) -> Vec<u8> {
     let mut bitmap = bitmaps.try_borrow_mut(key).unwrap();
     let mut window = bitmap.get_window_u8().unwrap();
     window.normalize_unused_alpha().unwrap();
-    let pixels = window.scanlines().flat_map(|line| line.row().to_vec()).collect();
-    pixels
+    window.scanlines().flat_map(|line| line.row().to_vec()).collect()
 }
 
 fn assert_profile_is_ignored(jpeg: &[u8]) {
