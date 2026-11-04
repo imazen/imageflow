@@ -21,8 +21,8 @@ All integration tests live in `imageflow_core/tests/integration/` as a single bi
 ```bash
 just test              # run all tests with nextest
 just test-filter NAME  # run tests matching NAME
-just test-update       # run tests, auto-accept checksums within tolerance
-just test-replace      # reset all checksum baselines to current output
+just test-update       # currently the same as just test: global_manager ignores UPDATE_CHECKSUMS
+just test-replace      # alias of test-update
 just test-list         # list all test names
 just test-build        # compile-check tests without running
 ```
@@ -76,18 +76,36 @@ because of the checksum self-comparison below. zenresize 0.3.1 (and its master, 
 `AlphaMode::Premultiplied` on f32 output; imageflow now requests and handles straight alpha. Tests:
 `composite_tests` in `scaling.rs` check blended values numerically.
 
-### OPEN (2026-11-03) — visual checksum tests pass any mismatch on a checkout without local references (CI included)
-`check_visual_bitmap` (`tests/integration/common/mod.rs`) calls `save_reference_if_missing(actual)`
-before `check_hash_with_image`, and zensim-regress 0.3.1 `find_reference_image` returns the local
-`visuals/images/<module>/<test>_<detail>.png` before downloading the authoritative reference. That
-directory is gitignored and CI never populates it, so on a hash mismatch the output is compared with
-itself and the test passes as `WithinTolerance`. Verified 2026-11-03: unmodified main passed 250/250
-in a fresh jj workspace, while byte-identical outputs failed 18 tests in a checkout holding local
-references from 2026-03-30. Seven differ by at most 1 level (AdobeRGB, ProPhoto, `test_crop_exif`,
-WebP alpha scaling ×2, PNG matte, watermark pixel margins); the other eleven are watermark/alpha
-compositing and lossy WebP/PNG tests, up to Δ242 (zensim scores −31 to 95.6). Not yet checked:
-whether those 18 differ from their human-verified S3 references. Likely fix: save the local
-reference only after a `Match`.
+### OPEN (2026-11-04) — visual checksum tests pass any mismatch on a checkout without local references (CI included)
+`check_visual_bitmap` and `check_visual_bytes` call `save_reference_if_missing(actual)` before
+`check_hash_with_image`, and zensim-regress 0.3.1 `find_reference_image` returns the local
+`visuals/images/<module>/<test>_<detail>.png` before downloading the authoritative reference. That directory
+is gitignored and CI never populates it, so on a hash mismatch the output is compared with itself and the test
+passes. This hid the compositing regression above for six months. **Fix ready, not on main:** branch
+`visual-checks-authoritative-reference` (2f69e35d) saves the reference only after a match or a new baseline.
+With it, 25 tests fail on x86_64-avx512 against the authoritative references (triage 2026-11-04, on a5e0de2c).
+Every one of them matched its baseline, or passed within tolerance, before bc752d9f:
+- **13, rounding from the zenresize move (bc752d9f), just outside tolerance, maxΔ 1-4:** `test_icc_adobe_rgb_resize`,
+  `test_icc_prophoto_resize`, `test_matte_transparent_png`, `test_crop_exif`, `test_jpeg_rotation`,
+  `webp_{lossless,lossy}_alpha_decode_and_scale`, `test_watermark_image`, `_command_string`,
+  `_command_string_with_bgcolor`, `_on_png`, `_pixel_margins`, `test_watermark_jpeg_over_pnga`.
+- **5, no reference on S3, so no comparison is possible:** `test_jpeg_crop`, `test_crop_with_preshrink`,
+  `test_icc_p3_crop_and_resize`, `test_watermark_alpha_on_{alpha,jpeg}`. Baselines from a142ff97 and 59b0ceb7 were
+  never uploaded. Output is within 3 levels of the 2.3.1-rc01 tool.
+- **3, reference PNG has alpha 0 on most pixels:** `test_rot_90_and_red_dot`, `_command_string`,
+  `test_watermark_image_small`. RGB is within 2 levels; scores of -319 to -451 come from the stale alpha.
+- **3, lossy encoders amplifying the rounding:** `test_problematic_png_lossy` (Δ71), `test_webp_to_webp_quality` (Δ51),
+  `test_transparent_png_to_jpeg_constrain` (Δ5). Before encoding, output is within 1 level of the 2.3.1-rc01 tool.
+- **1, the deliberate rendering-intent change (a142ff97):** `test_jpeg_icc4_color_profile`, maxΔ 3 against a limit of 2.
+  Reverting that change at 4e2a13f5 restores the baseline hash.
+
+Landing it needs new baselines for these tests and uploading the references to S3 (`just upload`, which needs S3
+write access). Local references from before a change stay stale and cause false failures; on lilith-wsl the
+491 from March-April are parked in `.image-cache/stale-visual-references-2026-11-04/`.
+
+Also verified: CI sets `REGRESS_MANIFEST_DIR`, but `with_manifest_from_env` reads `REGRESS_MANIFEST_PATH`, so CI
+writes no manifests and its manifest steps skip. `global_manager` passes `update_mode = false`, so
+`UPDATE_CHECKSUMS=1` has no effect.
 
 ### FIXED (2026-07-19) — generic-quality double-mapping: ssim2 score was fed into the libjpeg-turbo-quality knob (WebP/JXL/AVIF)
 *Found & source-verified 2026-06-24; re-verified live and FIXED 2026-07-19.* `auto.rs` passed
