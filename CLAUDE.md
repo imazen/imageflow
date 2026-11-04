@@ -99,9 +99,19 @@ At bc752d9f^, 24 of them still matched their baseline hash; the 25th is the rend
 - **1, the deliberate rendering-intent change (a142ff97):** `test_jpeg_icc4_color_profile`, maxΔ 3 against a limit of 2.
   Reverting that change at 4e2a13f5 restores the baseline hash.
 
-Landing it needs new baselines for these tests and uploading the references to S3 (`just upload`, which needs S3
-write access). Local references from before a change stay stale and cause false failures; on lilith-wsl the
-491 from March-April are parked in `.image-cache/stale-visual-references-2026-11-04/`.
+The same 25 fail on all 12 CI test jobs (run 41879365130, on 2f69e35d). Five more fail on some platforms, whose
+output hash differs from x86_64-avx512, and each failure is a reference problem rather than a pixel comparison:
+- `test_icc_repro_{libvips,pillow}_icc`: reference missing from S3. Of 162 baselines, 15 have no S3 reference, and 2 hold
+  an encoded file instead of a PNG: `only-moth-16f9a2d875` (`test_icc_p3_to_webp`) is WebP, and `fair-peach-0372a89301`
+  (`test_icc_p3_to_jpeg_roundtrip`, the third extra failure) is JPEG.
+- `test_trim_whitespace_with_padding`, `_no_resize`: both tests share one reference, and zensim-regress 0.3.1
+  `CachedFetcher::ensure` downloads straight to the cache path with `curl -o`, so a second process sees a partial file
+  (`CRC error`, `unexpected end of file`). It should download to a temporary file and rename.
+
+Landing the fix needs new baselines for these tests, uploading the missing references to S3 (`just upload`, which
+needs S3 write access), replacing the 2 non-PNG references, and the download fix. Local references from before a
+change stay stale and cause false failures; on lilith-wsl the 491 from March-April are parked in
+`.image-cache/stale-visual-references-2026-11-04/`.
 
 Also verified: CI sets `REGRESS_MANIFEST_DIR`, but `with_manifest_from_env` reads `REGRESS_MANIFEST_PATH`, so CI
 writes no manifests and its manifest steps skip. `global_manager` passes `update_mode = false`, so
