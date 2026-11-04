@@ -84,7 +84,7 @@ because of the checksum self-comparison below. zenresize 0.3.1 (and its master, 
 `visuals/images/<module>/<test>_<detail>.png` before downloading the authoritative reference. That directory
 is gitignored and CI never populates it, so on a hash mismatch the output is compared with itself and the test
 passes. This hid the compositing regression above for six months. **Fix ready, not on main:** branch
-`visual-checks-authoritative-reference` (2f69e35d) saves the reference only after a match or a new baseline.
+`visual-checks-authoritative-reference` (78b89eac) saves the reference only after a match or a new baseline.
 With it, 25 tests fail on x86_64-avx512 against the authoritative references (triage 2026-11-04, on a5e0de2c).
 At bc752d9f^, 24 of them still matched their baseline hash; the 25th is the rendering-intent change below:
 - **13, rounding from the zenresize move (bc752d9f), just outside tolerance, maxΔ 1-4:** `test_icc_adobe_rgb_resize`,
@@ -109,6 +109,11 @@ output hash differs from x86_64-avx512, and each failure is a reference problem 
 - `test_trim_whitespace_with_padding`, `_no_resize`: both tests share one reference, and zensim-regress 0.3.1
   `CachedFetcher::ensure` downloads straight to the cache path with `curl -o`, so a second process sees a partial file
   (`CRC error`, `unexpected end of file`). It should download to a temporary file and rename.
+
+On the moxcms pin (run 41907543236), no comparison newly exceeds its tolerance on any of the 12 jobs. moxcms main changes
+the output of both `test_icc_repro` CMYK tests above, so they now also fail with `no reference image` on the 6 x86 jobs
+where they used to match. `decode_cmyk_jpeg` also changes output and still passes. The only other difference is which job
+loses the trim download race.
 
 Landing the fix needs new baselines for these tests, uploading the missing references to S3 (`just upload`, which
 needs S3 write access), replacing the 2 non-PNG references, and the download fix. Local references from before a

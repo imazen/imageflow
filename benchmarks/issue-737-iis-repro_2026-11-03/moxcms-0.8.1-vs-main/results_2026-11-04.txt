@@ -105,3 +105,22 @@ moxcms 0.8.1: 4 tests run, 1 passed, 3 failed with SIGABRT:
   small_stack::rgb_jpeg_with_lut_profile_on_small_stack
   small_stack::cmyk_jpeg_on_small_stack
   codecs::moxcms_transform::tests::cmyk_transform_builds_on_a_small_stack
+
+## 6. All CI test jobs, compared by tolerance rather than hash
+# Branch visual-checks-authoritative-reference on the pin (run 41907543236), against the same harness before the pin
+# (run 41879365130). This harness compares a mismatched hash with the authoritative reference, so a failure list shows
+# whether a platform crossed a tolerance. It cannot show changes inside a tolerance, or in tests already failing there.
+job                       before  after  newly failing
+cargo nextest run --all       25     28  test_icc_repro_libvips_icc, test_icc_repro_pillow_icc, trim no_resize
+linux-x64-ubuntu-24           25     27  test_icc_repro_libvips_icc, test_icc_repro_pillow_icc
+cross linux-x64               25     27  test_icc_repro_libvips_icc, test_icc_repro_pillow_icc
+win-x86-2022                  25     27  test_icc_repro_libvips_icc, test_icc_repro_pillow_icc
+win-x64-2022                  26     27  test_icc_repro_libvips_icc, test_icc_repro_pillow_icc (trim no_resize no longer fails)
+cross linux-musl-x64          26     27  test_icc_repro_libvips_icc, test_icc_repro_pillow_icc (trim with_padding no longer fails)
+cross linux-musl-arm64        28     28  none
+cross linux-arm64-ubuntu-22   28     28  none
+osx-arm64-14                  28     28  none
+win-arm64-11                  27     27  none
+osx-x64-15                    27     27  none
+# The two ICC failures read "FAIL (no reference image, vs royal-trout-f7667ed9c5:sea)" and likewise for
+# crisp-beam-c27b72ac42: both objects are missing from S3. The trim failure is the download race.
