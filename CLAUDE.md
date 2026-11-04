@@ -57,14 +57,24 @@ threads; aborted before the fix) and `cmyk_transform_builds_on_a_small_stack`. A
 output images are byte-identical to unmodified main. Repro harness, symbolization and results:
 `benchmarks/issue-737-iis-repro_2026-11-03/`.
 
-### OPEN (2026-11-03) — #737: JPEG with a CMYK ICC profile on YCbCr data fails to decode
+### FIXED on main, unreleased (2026-11-04) — #737: JPEG with a CMYK ICC profile on YCbCr data failed to decode
 The two images attached to #737 are 3-component JPEGs embedding the CMYK profile "U.S. Web Coated
-(SWOP) v2". Decode fails with `ColorProfileError: ICC profile has CMYK color space but image data is
-RGB` (`create_icc_transform` in `moxcms_transform.rs`): the mozjpeg decoder falls back to sRGB for a
-GRAY profile on a color JPEG (`mozjpeg_decoder.rs:392`) but sends a CMYK profile on YCbCr data down the
-RGB path. Not a regression: 2.2.0-rc01, 2.1.2-rc03 and 2.1.1-rc11 (lcms2) fail the same images with
-`Wrong input color space on transform`. Workaround: `ignore_icc_errors=true` (output byte-identical to
-the profile-stripped image). The exception is caught normally; it was not the cause of the crash above.
+(SWOP) v2". Decode failed with `ColorProfileError: ICC profile has CMYK color space but image data is
+RGB` on 2.3.1-rc01. 2.2.0-rc01, 2.1.2-rc03 and 2.1.1-rc11 (lcms2) failed the same images with `Wrong
+input color space on transform`.
+**Fixed (809441a4):** `cms::transform_to_srgb` ignores a CMYK profile on non-CMYK data, for every decoder
+and backend, so these images decode as if they had no profile. Both attachments now produce the same
+PNG with and without `ignore_icc_errors=true`. Tests: `icc_mismatch.rs`, `test_png_cmyk_iccp_is_ignored`.
+
+### FIXED on main, unreleased (2026-11-04) — translucent compositing regressed by the zenresize move (bc752d9f)
+From bc752d9f (2026-04-20) until a5e0de2c, `resize_and_composite` blended translucent images wrongly: 50%
+gray over black gave 128 instead of 93. Watermark tests differed from their human-verified references by
+up to 217 levels; 2.1.2-rc01, 2.2.0-rc01 and 2.3.1-rc01 stay within 3, so no release has it. Causes:
+zenresize's `next_output_row_f32` always un-premultiplies straight-alpha input whatever the output
+descriptor asks for, and the code read the canvas's `alpha_meaningful` from the source. CI stayed green
+because of the checksum self-comparison below. zenresize 0.3.1 (and its master, e3975fb) still ignores
+`AlphaMode::Premultiplied` on f32 output; imageflow now requests and handles straight alpha. Tests:
+`composite_tests` in `scaling.rs` check blended values numerically.
 
 ### OPEN (2026-11-03) — visual checksum tests pass any mismatch on a checkout without local references (CI included)
 `check_visual_bitmap` (`tests/integration/common/mod.rs`) calls `save_reference_if_missing(actual)`
