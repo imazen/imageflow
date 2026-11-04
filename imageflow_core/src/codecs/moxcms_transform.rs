@@ -53,6 +53,11 @@ fn lut_transform_opts() -> TransformOptions {
 /// thread on x64 and 256 KB on x86, and a native stack overflow terminates the
 /// host process (imageflow#737). Transforms are cached, so a dedicated thread
 /// costs one spawn per cache miss.
+///
+/// moxcms main builds that table on the heap (moxcms PR 211), and the workspace
+/// pins that commit in `[patch.crates-io]`. With the pin, `small_stack.rs` passes
+/// on 256 KB threads without this thread. It stays until a moxcms release carries
+/// the fix.
 const TRANSFORM_BUILD_STACK_BYTES: usize = 4 * 1024 * 1024;
 
 /// `src.create_transform_8bit(..)` on a thread with [`TRANSFORM_BUILD_STACK_BYTES`]

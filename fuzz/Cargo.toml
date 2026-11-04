@@ -25,6 +25,7 @@ imageflow_riapi = { path = "../imageflow_riapi" }
 [patch.crates-io]
 libpng-sys = { git = "https://github.com/imazen/rust-libpng-sys" }
 lcms2-sys = { git = "https://github.com/imazen/rust-lcms2-sys", branch = "update-lcms2-2.18" }
+moxcms = { git = "https://github.com/awxkee/moxcms", rev = "841044439077ec1ec67a71b2db979ab51d304fcf" }
 
 [[bin]]
 name = "fuzz_decode"

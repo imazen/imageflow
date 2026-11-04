@@ -1299,7 +1299,7 @@ dependencies = [
  "exr",
  "gif",
  "image-webp",
- "moxcms",
+ "moxcms 0.8.1",
  "num-traits",
  "png",
  "qoi",
@@ -1396,7 +1396,7 @@ dependencies = [
  "libwebp-sys",
  "libz-sys",
  "lodepng",
- "moxcms",
+ "moxcms 0.9.1",
  "mozjpeg",
  "mozjpeg-rs",
  "mozjpeg-sys",
@@ -1900,6 +1900,15 @@ name = "moxcms"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb85c154ba489f01b25c0d36ae69a87e4a1c73a72631fc6c0eb6dde34a73e44b"
+dependencies = [
+ "num-traits",
+ "pxfm",
+]
+
+[[package]]
+name = "moxcms"
+version = "0.9.1"
+source = "git+https://github.com/awxkee/moxcms?rev=841044439077ec1ec67a71b2db979ab51d304fcf#841044439077ec1ec67a71b2db979ab51d304fcf"
 dependencies = [
  "num-traits",
  "pxfm",
