@@ -96,6 +96,50 @@ fn create_baselines_mode() -> bool {
     *MODE.get_or_init(|| std::env::var("CREATE_BASELINES").is_ok_and(|v| v == "1" || v == "true"))
 }
 
+/// Check `actual` against the stored baselines. Returns true on pass, panics on fail.
+///
+/// On a hash mismatch the manager compares `actual` with the local reference if one exists,
+/// and otherwise with the authoritative reference from remote storage. `actual` is therefore
+/// saved as the local reference only after it matches a baseline hash or becomes a new
+/// baseline. Saving it any earlier would compare it with itself and pass any mismatch.
+fn check_against_baselines(
+    manager: &ChecksumManager,
+    identity: &TestIdentity,
+    detail: &str,
+    hash: &str,
+    actual: &impl zensim::ImageSource,
+    tolerance: &Tolerance,
+) -> bool {
+    let result = manager.check_hash_with_image(
+        identity.module,
+        identity.func_name,
+        detail,
+        hash,
+        actual,
+        Some(tolerance),
+    );
+    let passed = handle_check_result(&result);
+    // In CREATE_BASELINES mode, write the entry for brand-new tests
+    if passed && let Ok(CheckResult::NoBaseline { .. }) = &result {
+        manager
+            .accept(
+                identity.module,
+                identity.func_name,
+                detail,
+                hash,
+                None,
+                None,
+                None,
+                "new-baseline",
+            )
+            .expect("Failed to write new baseline entry");
+    }
+    if passed && matches!(result, Ok(CheckResult::Match { .. } | CheckResult::NoBaseline { .. })) {
+        manager.save_reference_if_missing(identity.module, identity.func_name, detail, actual);
+    }
+    passed
+}
+
 /// Handle a `CheckResult` — return true on pass, panic on fail.
 fn handle_check_result(result: &Result<CheckResult, zensim_regress::RegressError>) -> bool {
     match result {
@@ -689,36 +733,7 @@ pub fn check_visual_bitmap(
     )
     .expect("BGRA bitmap invalid for zensim");
 
-    // Ensure reference image exists (for pixel comparison fallback on new platforms).
-    // The manager only saves references on hash mismatch; this covers the hash-match case.
-    let manager = global_manager();
-    manager.save_reference_if_missing(identity.module, identity.func_name, detail, &actual_img);
-
-    let result = manager.check_hash_with_image(
-        identity.module,
-        identity.func_name,
-        detail,
-        &hash,
-        &actual_img,
-        Some(tolerance),
-    );
-    let passed = handle_check_result(&result);
-    // In CREATE_BASELINES mode, write the entry for brand-new tests
-    if passed && let Ok(CheckResult::NoBaseline { .. }) = &result {
-        manager
-            .accept(
-                identity.module,
-                identity.func_name,
-                detail,
-                &hash,
-                None,
-                None,
-                None,
-                "new-baseline",
-            )
-            .expect("Failed to write new baseline entry");
-    }
-    passed
+    check_against_baselines(global_manager(), identity, detail, &hash, &actual_img, tolerance)
 }
 
 /// Check encoded bytes against known baselines via `ChecksumManagerV2`.
@@ -757,35 +772,7 @@ pub fn check_visual_bytes(
     )
     .expect("BGRA bitmap invalid for zensim");
 
-    // Ensure reference image exists (for pixel comparison fallback on new platforms).
-    let manager = global_manager();
-    manager.save_reference_if_missing(identity.module, identity.func_name, detail, &actual_img);
-
-    let result = manager.check_hash_with_image(
-        identity.module,
-        identity.func_name,
-        detail,
-        &hash,
-        &actual_img,
-        Some(tolerance),
-    );
-    let passed = handle_check_result(&result);
-    // In CREATE_BASELINES mode, write the entry for brand-new tests
-    if passed && let Ok(CheckResult::NoBaseline { .. }) = &result {
-        manager
-            .accept(
-                identity.module,
-                identity.func_name,
-                detail,
-                &hash,
-                None,
-                None,
-                None,
-                "new-baseline",
-            )
-            .expect("Failed to write new baseline entry");
-    }
-    passed
+    check_against_baselines(global_manager(), identity, detail, &hash, &actual_img, tolerance)
 }
 
 /// Test identity: (module_name, function_name) derived from test context.
@@ -869,5 +856,59 @@ pub fn default_graph_recording(debug: bool) -> Option<imageflow_types::Build001G
         Some(s::Build001GraphRecording::debug_defaults())
     } else {
         None
+    }
+}
+
+mod baseline_check_tests {
+    use super::*;
+    use std::panic::AssertUnwindSafe;
+
+    const IDENTITY: TestIdentity = TestIdentity { module: "harness", func_name: "visual_check" };
+    const PIXELS: [u8; 16 * 16 * 4] = [128; 16 * 16 * 4];
+
+    /// A manager with one baseline for `baseline_hash` and no reference images or remote storage.
+    fn manager_with_baseline(test: &str, baseline_hash: &str) -> (ChecksumManager, PathBuf) {
+        let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("baseline_check_tests").join(test);
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let manager = ChecksumManager::with_modes(&dir, false);
+        manager
+            .accept(
+                IDENTITY.module,
+                IDENTITY.func_name,
+                "",
+                baseline_hash,
+                None,
+                None,
+                None,
+                "test",
+            )
+            .unwrap();
+        (manager, dir)
+    }
+
+    fn check(manager: &ChecksumManager, hash: &str) -> std::thread::Result<bool> {
+        let actual =
+            zensim::StridedBytes::try_new(&PIXELS, 16, 16, 16 * 4, zensim::PixelFormat::Srgb8Bgra)
+                .unwrap();
+        panic::catch_unwind(AssertUnwindSafe(|| {
+            check_against_baselines(manager, &IDENTITY, "", hash, &actual, &Tolerance::exact())
+        }))
+    }
+
+    #[test]
+    fn hash_mismatch_without_a_reference_fails_and_saves_nothing() {
+        let (manager, dir) =
+            manager_with_baseline("mismatch", &checksum_bytes(b"the accepted output"));
+        assert!(check(&manager, &checksum_bytes(b"a different output")).is_err());
+        assert!(!dir.join("images").exists(), "a failing output became a reference");
+    }
+
+    #[test]
+    fn hash_match_saves_the_local_reference() {
+        let hash = checksum_bytes(b"the accepted output");
+        let (manager, dir) = manager_with_baseline("match", &hash);
+        assert!(check(&manager, &hash).unwrap());
+        assert!(dir.join("images").join(IDENTITY.module).join("visual_check.png").exists());
     }
 }
