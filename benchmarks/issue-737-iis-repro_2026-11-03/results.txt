@@ -333,3 +333,5 @@ Ubuntu 26.04.1, qemu 10.2.1, glibc 2.43: /bin/true under -cpu Nehalem: signal 4 
                                          /bin/true under -cpu Haswell-noTSX,avx2=on,fma=off: "Fatal glibc error:
                                          CPU does not support x86-64-v3", rc 127
 Ubuntu 24.04.5, qemu 8.2.2, glibc 2.39:  /bin/true rc 0 under both.
+With a08c6f28 pinning those 2 jobs to ubuntu-24.04, PR 211's run 41761844226 passes every check; the SSE job ran
+84 tests, including transforms_build_on_a_256_kib_thread_stack.
