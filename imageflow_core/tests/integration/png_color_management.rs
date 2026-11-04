@@ -990,3 +990,17 @@ fn test_png_near_srgb_primaries_round_to_srgb() {
     );
     assert_noop("near_srgb_primaries_round", &input, &png);
 }
+
+/// A CMYK profile cannot describe RGB samples, so it is ignored (imageflow#737).
+#[test]
+fn test_png_cmyk_iccp_is_ignored() {
+    let input = test_gradient();
+    let plain = build_test_png(4, 4, &input, &[]);
+    let tagged = build_test_png(
+        4,
+        4,
+        &input,
+        &[PngColorChunk::Iccp(include_bytes!("../../src/codecs/cmyk.icc").to_vec())],
+    );
+    assert_eq!(decode_both(&tagged), decode_both(&plain));
+}

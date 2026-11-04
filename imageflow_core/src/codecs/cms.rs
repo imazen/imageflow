@@ -65,8 +65,10 @@ impl CmsBackend {
 /// Dispatch a source profile → sRGB transform to the selected backend.
 ///
 /// If the profile is sRGB, this is a no-op regardless of backend.
+/// So is a CMYK ICC profile on non-CMYK data: the profile is ignored, and the image decodes
+/// as it does without one.
 pub fn transform_to_srgb(frame: &mut BitmapWindowMut<u8>, profile: &SourceProfile) -> Result<()> {
-    if profile.is_srgb() {
+    if profile.is_srgb() || profile.is_cmyk_icc_on_non_cmyk_data() {
         return Ok(());
     }
 

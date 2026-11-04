@@ -242,7 +242,7 @@ impl MoxcmsTransformCache {
             .map_err(|e| FlowError::from_cms_error(e).at(here!()))?;
 
         // Reject CMYK ICC profiles in the RGB path — they should use CmykIcc variant.
-        // This catches mismatched files (e.g., RGB JPEG with CMYK ICC profile embedded).
+        // cms::transform_to_srgb ignores these profiles before they reach this builder.
         if !is_gray && src.color_space == DataColorSpace::Cmyk {
             return Err(nerror!(
                 ErrorKind::ColorProfileError,

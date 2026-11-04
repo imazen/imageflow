@@ -261,6 +261,19 @@ impl SourceProfile {
         matches!(self, SourceProfile::Srgb)
     }
 
+    /// True for an embedded CMYK ICC profile on image data that is not CMYK.
+    ///
+    /// CMYK images use [`SourceProfile::CmykIcc`], so a CMYK profile in the RGB or gray
+    /// variants cannot describe the samples.
+    pub(crate) fn is_cmyk_icc_on_non_cmyk_data(&self) -> bool {
+        match self {
+            SourceProfile::IccProfile(bytes) | SourceProfile::IccProfileGray(bytes) => {
+                bytes.get(16..20) == Some(b"CMYK".as_slice())
+            }
+            _ => false,
+        }
+    }
+
     /// Discard gAMA+cHRM information, treating it as absent.
     /// Returns `Srgb` if this profile was derived from gAMA+cHRM chunks;
     /// other profile types (ICC, CICP, etc.) are passed through unchanged.
