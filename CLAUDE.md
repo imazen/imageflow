@@ -84,7 +84,7 @@ is gitignored and CI never populates it, so on a hash mismatch the output is com
 passes. This hid the compositing regression above for six months. **Fix ready, not on main:** branch
 `visual-checks-authoritative-reference` (2f69e35d) saves the reference only after a match or a new baseline.
 With it, 25 tests fail on x86_64-avx512 against the authoritative references (triage 2026-11-04, on a5e0de2c).
-Every one of them matched its baseline, or passed within tolerance, before bc752d9f:
+At bc752d9f^, 24 of them still matched their baseline hash; the 25th is the rendering-intent change below:
 - **13, rounding from the zenresize move (bc752d9f), just outside tolerance, maxΔ 1-4:** `test_icc_adobe_rgb_resize`,
   `test_icc_prophoto_resize`, `test_matte_transparent_png`, `test_crop_exif`, `test_jpeg_rotation`,
   `webp_{lossless,lossy}_alpha_decode_and_scale`, `test_watermark_image`, `_command_string`,
