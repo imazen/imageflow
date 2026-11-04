@@ -147,7 +147,7 @@ fn resize_with_matte(
     drain_resize_u8(input, &mut stream, canvas, alpha_meaningful)
 }
 
-/// Resize to premultiplied linear f32, then composite over existing canvas.
+/// Resize to linear f32, then composite over existing canvas.
 fn resize_and_composite(
     input: &BitmapWindowMut<u8>,
     canvas: &mut BitmapWindowMut<u8>,
@@ -157,9 +157,11 @@ fn resize_and_composite(
     alpha_meaningful: bool,
 ) -> Result<(), FlowError> {
     let in_desc = pixel_desc(alpha_meaningful);
-    // Output premultiplied linear f32 so we can composite in linear space
+    let canvas_alpha_meaningful = canvas.info().alpha_meaningful();
+    // Output linear f32 so we can composite in linear space. `next_output_row_f32` undoes the
+    // resizer's internal premultiplication, so rows with meaningful alpha arrive straight.
     let out_desc = if alpha_meaningful {
-        PixelDescriptor::RGBAF32_LINEAR.with_alpha(Some(AlphaMode::Premultiplied))
+        PixelDescriptor::RGBAF32_LINEAR.with_alpha(Some(AlphaMode::Straight))
     } else {
         // No meaningful alpha → treat as 4-channel without alpha semantics
         PixelDescriptor::RGBAF32_LINEAR.with_alpha(None)
@@ -191,7 +193,13 @@ fn resize_and_composite(
             .map_err(|e| nerror!(ErrorKind::InvalidState, "push_row failed: {}", e))?;
         while let Some(f32_row) = stream.next_output_row_f32() {
             let canvas_row = canvas.row_mut(out_y).unwrap();
-            composite_premul_f32_over_srgb_u8(&cc, f32_row, canvas_row, alpha_meaningful);
+            composite_f32_over_srgb_u8(
+                &cc,
+                f32_row,
+                canvas_row,
+                alpha_meaningful,
+                canvas_alpha_meaningful,
+            );
             out_y += 1;
         }
     }
@@ -201,7 +209,13 @@ fn resize_and_composite(
             .next_output_row_f32()
             .ok_or_else(|| nerror!(ErrorKind::InvalidState, "finish promised rows but got none"))?;
         let canvas_row = canvas.row_mut(out_y).unwrap();
-        composite_premul_f32_over_srgb_u8(&cc, f32_row, canvas_row, alpha_meaningful);
+        composite_f32_over_srgb_u8(
+            &cc,
+            f32_row,
+            canvas_row,
+            alpha_meaningful,
+            canvas_alpha_meaningful,
+        );
         out_y += 1;
     }
     Ok(())
@@ -250,22 +264,34 @@ fn drain_resize_u8<B: zenresize::Background>(
     Ok(())
 }
 
-/// Composite a premultiplied linear f32 row (BGRA order) over a sRGB u8 canvas row.
-fn composite_premul_f32_over_srgb_u8(
+/// Composite a linear f32 row (BGRA order, straight alpha) over a sRGB u8 canvas row.
+///
+/// When the source has no meaningful alpha its pixels replace the canvas. When the canvas has
+/// none it is opaque, whatever value its unused alpha byte holds.
+fn composite_f32_over_srgb_u8(
     cc: &ColorContext,
     src: &[f32],
     canvas: &mut [u8],
-    alpha_meaningful: bool,
+    src_alpha_meaningful: bool,
+    canvas_alpha_meaningful: bool,
 ) {
-    let dest_alpha_coeff = if alpha_meaningful { 1.0f32 / 255.0f32 } else { 0.0f32 };
-    let dest_alpha_offset = if alpha_meaningful { 0.0f32 } else { 1.0f32 };
+    let dest_alpha_coeff = if canvas_alpha_meaningful { 1.0f32 / 255.0f32 } else { 0.0f32 };
+    let dest_alpha_offset = if canvas_alpha_meaningful { 0.0f32 } else { 1.0f32 };
 
     for (src_px, canvas_px) in src.as_chunks::<4>().0.iter().zip(canvas.as_chunks_mut::<4>().0) {
-        let src_a = src_px[3];
-        if src_a > 0.994f32 || !alpha_meaningful {
+        if !src_alpha_meaningful {
             canvas_px[0] = cc.floatspace_to_srgb(src_px[0]);
             canvas_px[1] = cc.floatspace_to_srgb(src_px[1]);
             canvas_px[2] = cc.floatspace_to_srgb(src_px[2]);
+            canvas_px[3] = 255;
+            continue;
+        }
+        let src_a = src_px[3];
+        let [src_b, src_g, src_r] = [src_px[0] * src_a, src_px[1] * src_a, src_px[2] * src_a];
+        if src_a > 0.994f32 {
+            canvas_px[0] = cc.floatspace_to_srgb(src_b);
+            canvas_px[1] = cc.floatspace_to_srgb(src_g);
+            canvas_px[2] = cc.floatspace_to_srgb(src_r);
             canvas_px[3] = 255;
         } else {
             let dest_a = canvas_px[3];
@@ -273,13 +299,13 @@ fn composite_premul_f32_over_srgb_u8(
                 (1.0f32 - src_a) * (dest_alpha_coeff * dest_a as i32 as f32 + dest_alpha_offset);
             let final_alpha = src_a + dest_coeff;
             canvas_px[0] = cc.floatspace_to_srgb(
-                (src_px[0] + dest_coeff * cc.srgb_to_floatspace(canvas_px[0])) / final_alpha,
+                (src_b + dest_coeff * cc.srgb_to_floatspace(canvas_px[0])) / final_alpha,
             );
             canvas_px[1] = cc.floatspace_to_srgb(
-                (src_px[1] + dest_coeff * cc.srgb_to_floatspace(canvas_px[1])) / final_alpha,
+                (src_g + dest_coeff * cc.srgb_to_floatspace(canvas_px[1])) / final_alpha,
             );
             canvas_px[2] = cc.floatspace_to_srgb(
-                (src_px[2] + dest_coeff * cc.srgb_to_floatspace(canvas_px[2])) / final_alpha,
+                (src_r + dest_coeff * cc.srgb_to_floatspace(canvas_px[2])) / final_alpha,
             );
             canvas_px[3] = uchar_clamp_ff(final_alpha * 255_f32);
         }
@@ -337,5 +363,104 @@ fn map_filter(f: crate::graphics::weights::Filter) -> ZenFilter {
         Filter::NCubic => ZenFilter::NCubic,
         Filter::NCubicSharp => ZenFilter::NCubicSharp,
         Filter::LegacyIDCTFilter => ZenFilter::LegacyIDCTFilter,
+    }
+}
+
+#[cfg(test)]
+mod composite_tests {
+    use super::*;
+    use crate::graphics::bitmaps::{BitmapsContainer, ColorSpace};
+
+    const SIZE: u32 = 4;
+    /// 50% opaque mid gray. A source channel of 0 or 255 would hide premultiplication errors.
+    const HALF_GRAY: [u8; 4] = [128, 128, 128, 128];
+    const WHITE: [u8; 4] = [255, 255, 255, 255];
+
+    /// Draw a solid `source` over a solid `canvas` at the same size, returning a canvas pixel.
+    fn composite(
+        (source, source_alpha_meaningful): ([u8; 4], bool),
+        (canvas, canvas_alpha_meaningful): ([u8; 4], bool),
+    ) -> [u8; 4] {
+        let mut bitmaps = BitmapsContainer::with_capacity(2);
+        let mut create = |pixel: [u8; 4], alpha_meaningful, compose| {
+            let key = bitmaps
+                .create_bitmap_u8(
+                    SIZE,
+                    SIZE,
+                    PixelLayout::BGRA,
+                    false,
+                    alpha_meaningful,
+                    ColorSpace::StandardRGB,
+                    compose,
+                )
+                .unwrap();
+            let mut bitmap = bitmaps.try_borrow_mut(key).unwrap();
+            let mut window = bitmap.get_window_u8().unwrap();
+            for y in 0..SIZE as usize {
+                window.row_mut(y).unwrap().as_chunks_mut::<4>().0.fill(pixel);
+            }
+            drop(bitmap);
+            key
+        };
+        let source = create(source, source_alpha_meaningful, BitmapCompositing::ReplaceSelf);
+        let canvas = create(canvas, canvas_alpha_meaningful, BitmapCompositing::BlendWithSelf);
+
+        let mut source = bitmaps.try_borrow_mut(source).unwrap();
+        let mut canvas = bitmaps.try_borrow_mut(canvas).unwrap();
+        let params = ScaleAndRenderParams {
+            x: 0,
+            y: 0,
+            w: SIZE,
+            h: SIZE,
+            sharpen_percent_goal: 0.0,
+            interpolation_filter: crate::graphics::weights::Filter::Robidoux,
+            scale_in_colorspace: WorkingFloatspace::LinearRGB,
+        };
+        scale_and_render(source.get_window_u8().unwrap(), canvas.get_window_u8().unwrap(), &params)
+            .unwrap();
+        let mut window = canvas.get_window_u8().unwrap();
+        let row = window.row_mut(0).unwrap();
+        [row[0], row[1], row[2], row[3]]
+    }
+
+    /// Blend a source channel over a canvas channel in linear light, returning sRGB.
+    fn expected_over_opaque(source: u8, source_alpha: u8, canvas: u8) -> u8 {
+        let cc = ColorContext::new(WorkingFloatspace::LinearRGB, 0f32);
+        let alpha = source_alpha as f32 / 255.0;
+        cc.floatspace_to_srgb(
+            cc.srgb_to_floatspace(source) * alpha + cc.srgb_to_floatspace(canvas) * (1.0 - alpha),
+        )
+    }
+
+    fn assert_close(actual: [u8; 4], expected: [u8; 4]) {
+        for (a, e) in actual.iter().zip(expected) {
+            assert!(a.abs_diff(e) <= 1, "got {actual:?}, expected {expected:?}");
+        }
+    }
+
+    #[test]
+    fn translucent_source_blends_over_an_opaque_canvas() {
+        let gray = expected_over_opaque(128, 128, 0);
+        assert_close(composite((HALF_GRAY, true), ([0, 0, 0, 255], true)), [gray, gray, gray, 255]);
+    }
+
+    /// A JPEG canvas has no meaningful alpha, and its unused alpha byte can be 0.
+    #[test]
+    fn canvas_without_meaningful_alpha_is_opaque_whatever_its_alpha_byte() {
+        let gray = expected_over_opaque(128, 128, 255);
+        assert_close(
+            composite((HALF_GRAY, true), ([255, 255, 255, 0], false)),
+            [gray, gray, gray, 255],
+        );
+    }
+
+    #[test]
+    fn translucent_source_over_a_transparent_canvas_keeps_its_color_and_alpha() {
+        assert_close(composite((HALF_GRAY, true), ([0, 0, 0, 0], true)), HALF_GRAY);
+    }
+
+    #[test]
+    fn source_without_meaningful_alpha_replaces_the_canvas() {
+        assert_close(composite(([10, 20, 30, 0], false), (WHITE, true)), [10, 20, 30, 255]);
     }
 }
