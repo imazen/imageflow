@@ -314,4 +314,5 @@ with neon_luts in debug and with in_place,options in release. Branch on aarch64:
 
 ## moxcms CI lists on the branch
 x86_64: 16 of 16 test and 17 of 17 clippy feature sets. aarch64 Neoverse-N1 (nightly for tests, as CI does):
-13 of 13 and 9 of 9. 28 of 28 build and MSRV 1.89 commands. Not run: powerpc build, qemu-isolated tests.
+13 of 13 and 9 of 9. 28 of 28 build and MSRV 1.89 commands. Not run: powerpc build, qemu-isolated tests,
+x86_64 nightly clippy, fuzz jobs.

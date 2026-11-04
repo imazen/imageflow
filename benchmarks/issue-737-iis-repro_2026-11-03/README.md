@@ -117,7 +117,8 @@ On 0.8.1 and 0.9.1, 16-bit CMYK and LUT RGB need 16 and 288 KiB
 - **Tests:** the new test `transforms_build_on_a_256_kib_thread_stack` overflows on master in debug
   builds and in release builds with `options`, and passes on the branch. moxcms's CI lists, run
   locally: x86_64 16 test and 17 clippy feature sets, aarch64 (Neoverse-N1) 13 and 9, and 28 build
-  and MSRV 1.89 commands. Not run: the powerpc build and the qemu-isolated test jobs.
+  and MSRV 1.89 commands. Not run: the powerpc build, the qemu-isolated test jobs, the x86_64
+  nightly clippy job and the fuzz jobs.
 
 The first round of tests, with only the two attached images, found no crash:
 
