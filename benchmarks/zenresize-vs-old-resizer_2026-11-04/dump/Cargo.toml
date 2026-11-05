@@ -1,0 +1,8 @@
+[package]
+name = "dump"
+version = "0.0.0"
+edition = "2021"
+publish = false
+[workspace]
+[dependencies]
+zenresize = { path = "../zenresize", features = ["std"] }

@@ -1,0 +1,142 @@
+waterhouse 2048 1153
+
+photo /2  2048x1153 -> 1024x576 opaque; reference level<32 on 18% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear      4.809    1  -0.0058    17.343        1
+  zenresize F32 path (f16 cache)    F32            4.570    1   0.0027    16.407        1
+  zenresize F32 path, f32 cache     F32            4.417    1   0.0003    16.412        1
+  F32 path, old 16K encoder         F32            2.509    1  -0.0207     9.374        1
+  F32 path, exact encoder           F32            0.556    1   0.0031     0.092        1
+  F32, f32 cache, exact encoder     F32            0.089    1   0.0009     0.089        1
+  old stages (bit-exact with old)   F32            2.384    1  -0.0238     9.437        1
+
+photo /2.56  2048x1153 -> 800x450 opaque; reference level<32 on 18% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear      4.595    1  -0.0068    16.957        1
+  zenresize F32 path (f16 cache)    F32            4.467    1   0.0021    16.473        1
+  zenresize F32 path, f32 cache     F32            4.329    1  -0.0003    16.483        1
+  F32 path, old 16K encoder         F32            2.478    1  -0.0205     9.607        1
+  F32 path, exact encoder           F32            0.533    1   0.0033     0.089        1
+  F32, f32 cache, exact encoder     F32            0.087    1   0.0009     0.092        1
+  old stages (bit-exact with old)   F32            2.370    1  -0.0237     9.658        1
+
+photo /3  2048x1153 -> 683x384 opaque; reference level<32 on 17% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 F32            4.450    1   0.0025    16.637        1
+  zenresize F32 path (f16 cache)    F32            4.450    1   0.0025    16.637        1
+  zenresize F32 path, f32 cache     F32            4.309    1   0.0001    16.641        1
+  F32 path, old 16K encoder         F32            2.384    1  -0.0198     9.366        1
+  F32 path, exact encoder           F32            0.515    1   0.0033     0.094        1
+  F32, f32 cache, exact encoder     F32            0.091    1   0.0009     0.091        1
+  old stages (bit-exact with old)   F32            2.303    1  -0.0230     9.437        1
+darkened photo: linear x0.02, max level 39
+
+dark photo /2  2048x1153 -> 1024x576 opaque; reference level<32 on 81% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear     10.743    1   0.0082    12.530        1
+  zenresize F32 path (f16 cache)    F32            9.310    1   0.0180    10.751        1
+  zenresize F32 path, f32 cache     F32            9.324    1   0.0181    10.763        1
+  F32 path, old 16K encoder         F32            4.609    1  -0.0461     5.363        1
+  F32 path, exact encoder           F32            0.111    1   0.0008     0.121        1
+  F32, f32 cache, exact encoder     F32            0.104    1   0.0010     0.108        1
+  old stages (bit-exact with old)   F32            4.691    1  -0.0469     5.455        1
+
+dark photo /2.56  2048x1153 -> 800x450 opaque; reference level<32 on 81% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear     11.128    1   0.0069    12.934        1
+  zenresize F32 path (f16 cache)    F32            9.783    1   0.0191    11.212        1
+  zenresize F32 path, f32 cache     F32            9.805    1   0.0193    11.233        1
+  F32 path, old 16K encoder         F32            4.822    1  -0.0482     5.562        1
+  F32 path, exact encoder           F32            0.115    1   0.0009     0.125        1
+  F32, f32 cache, exact encoder     F32            0.115    1   0.0011     0.119        1
+  old stages (bit-exact with old)   F32            4.910    1  -0.0491     5.661        1
+
+dark ramp 0-24 with noise /2  1024x1024 -> 512x512 opaque; reference level<32 on 100% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear     21.124    1  -0.0041    21.124        1
+  zenresize F32 path (f16 cache)    F32           17.406    1   0.0122    17.406        1
+  zenresize F32 path, f32 cache     F32           17.421    1   0.0125    17.421        1
+  F32 path, old 16K encoder         F32            9.698    1  -0.0970     9.698        1
+  F32 path, exact encoder           F32            0.134    1   0.0011     0.134        1
+  F32, f32 cache, exact encoder     F32            0.142    1   0.0014     0.142        1
+  old stages (bit-exact with old)   F32            9.801    1  -0.0980     9.801        1
+
+dark ramp 0-24 with noise /2.56  1024x1024 -> 400x400 opaque; reference level<32 on 100% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear     20.574    1  -0.0048    20.574        1
+  zenresize F32 path (f16 cache)    F32           17.469    1   0.0118    17.469        1
+  zenresize F32 path, f32 cache     F32           17.477    1   0.0121    17.477        1
+  F32 path, old 16K encoder         F32            9.667    1  -0.0967     9.667        1
+  F32 path, exact encoder           F32            0.125    1   0.0011     0.125        1
+  F32, f32 cache, exact encoder     F32            0.134    1   0.0013     0.134        1
+  old stages (bit-exact with old)   F32            9.774    1  -0.0977     9.774        1
+
+black/white binary noise /2  1024x1024 -> 512x512 opaque; reference level<32 on 0% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear      1.303    1   0.0014    10.345        1
+  zenresize F32 path (f16 cache)    F32            1.108    1  -0.0017     8.621        1
+  zenresize F32 path, f32 cache     F32            1.108    1  -0.0017     8.621        1
+  F32 path, old 16K encoder         F32            0.529    1  -0.0053     0.000        0
+  F32 path, exact encoder           F32            0.001    1  -0.0000     0.000        0
+  F32, f32 cache, exact encoder     F32            0.001    1  -0.0000     0.000        0
+  old stages (bit-exact with old)   F32            0.529    1  -0.0053     0.000        0
+
+black/white binary noise /2.56  1024x1024 -> 400x400 opaque; reference level<32 on 0% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear      1.176    1  -0.0002     0.000        0
+  zenresize F32 path (f16 cache)    F32            1.071    1  -0.0015    33.333        1
+  zenresize F32 path, f32 cache     F32            1.071    1  -0.0015    33.333        1
+  F32 path, old 16K encoder         F32            0.506    1  -0.0051    33.333        1
+  F32 path, exact encoder           F32            0.002    1  -0.0000     0.000        0
+  F32, f32 cache, exact encoder     F32            0.002    1  -0.0000     0.000        0
+  old stages (bit-exact with old)   F32            0.506    1  -0.0051    33.333        1
+
+2px checker /2  1024x1024 -> 512x512 opaque; reference level<32 on 0% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear      0.000    0   0.0000     0.000        0
+  zenresize F32 path (f16 cache)    F32            0.000    0   0.0000     0.000        0
+  zenresize F32 path, f32 cache     F32            0.000    0   0.0000     0.000        0
+  F32 path, old 16K encoder         F32            0.000    0   0.0000     0.000        0
+  F32 path, exact encoder           F32            0.000    0   0.0000     0.000        0
+  F32, f32 cache, exact encoder     F32            0.000    0   0.0000     0.000        0
+  old stages (bit-exact with old)   F32            0.000    0   0.0000     0.000        0
+
+2px checker /2.56  1024x1024 -> 400x400 opaque; reference level<32 on 0% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear      0.960    1   0.0096     0.000        0
+  zenresize F32 path (f16 cache)    F32            2.450    1  -0.0053     0.000        0
+  zenresize F32 path, f32 cache     F32            2.450    1  -0.0053     0.000        0
+  F32 path, old 16K encoder         F32            0.000    0   0.0000     0.000        0
+  F32 path, exact encoder           F32            0.000    0   0.0000     0.000        0
+  F32, f32 cache, exact encoder     F32            0.000    0   0.0000     0.000        0
+  old stages (bit-exact with old)   F32            0.000    0   0.0000     0.000        0
+
+thin white lines on near-black /2  1024x1024 -> 512x512 opaque; reference level<32 on 75% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear      0.000    0   0.0000     0.000        0
+  zenresize F32 path (f16 cache)    F32            0.000    0   0.0000     0.000        0
+  zenresize F32 path, f32 cache     F32            0.000    0   0.0000     0.000        0
+  F32 path, old 16K encoder         F32            0.000    0   0.0000     0.000        0
+  F32 path, exact encoder           F32            0.000    0   0.0000     0.000        0
+  F32, f32 cache, exact encoder     F32            0.000    0   0.0000     0.000        0
+  old stages (bit-exact with old)   F32            0.000    0   0.0000     0.000        0
+
+thin white lines on near-black /2.56  1024x1024 -> 400x400 opaque; reference level<32 on 64% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 I16Linear      0.000    0   0.0000     0.000        0
+  zenresize F32 path (f16 cache)    F32            0.000    0   0.0000     0.000        0
+  zenresize F32 path, f32 cache     F32            0.000    0   0.0000     0.000        0
+  F32 path, old 16K encoder         F32            0.000    0   0.0000     0.000        0
+  F32 path, exact encoder           F32            0.000    0   0.0000     0.000        0
+  F32, f32 cache, exact encoder     F32            0.000    0   0.0000     0.000        0
+  old stages (bit-exact with old)   F32            0.000    0   0.0000     0.000        0
+
+transparent png /2.56  500x500 -> 195x195 alpha; reference level<32 on 2% of channels
+  path                              format      % ch off  max     bias dark %off dark max
+  zenresize default                 F32            5.161    1  -0.0162     8.616        1
+  zenresize F32 path (f16 cache)    F32            5.161    1  -0.0162     8.616        1
+  zenresize F32 path, f32 cache     F32            5.150    1  -0.0167     8.616        1
+  F32 path, old 16K encoder         F32            1.973    1  -0.0195     4.613        1
+  F32 path, exact encoder           F32            5.161    1  -0.0162     8.616        1
+  F32, f32 cache, exact encoder     F32            5.150    1  -0.0167     8.616        1
+  old stages (bit-exact with old)   F32            2.181    1  -0.0218     4.700        1

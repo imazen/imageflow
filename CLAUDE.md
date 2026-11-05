@@ -115,6 +115,13 @@ the output of both `test_icc_repro` CMYK tests above, so they now also fail with
 where they used to match. `decode_cmyk_jpeg` also changes output and still passes. The only other difference is which job
 loses the trim download race.
 
+**Cause of the 24 that changed at bc752d9f, measured 2026-11-04:** moxcms is 0.8.1 on both sides, so these are not moxcms
+version changes. zenresize's internals differ from the old resizer: a 4096-entry sRGB encoder table instead of 16384
+entries, an f16 row cache instead of f32, a 12-bit integer path for opaque images below 3x with Robidoux, and smaller
+differences in decode, weights, kernels and unpremultiply. Swapping the old stages back makes 52 of the 57 changed checks
+bit-exact, including 19 of these 24; the other 5 go through compositing. See the next entry and
+`benchmarks/zenresize-vs-old-resizer_2026-11-04/`.
+
 Landing the fix needs new baselines for these tests, uploading the missing references to S3 (`just upload`, which
 needs S3 write access), replacing the 2 non-PNG references, and the download fix. Local references from before a
 change stay stale and cause false failures; on lilith-wsl the 491 from March-April are parked in
@@ -123,6 +130,14 @@ change stay stale and cause false failures; on lilith-wsl the 491 from March-Apr
 Also verified: CI sets `REGRESS_MANIFEST_DIR`, but `with_manifest_from_env` reads `REGRESS_MANIFEST_PATH`, so CI
 writes no manifests and its manifest steps skip. `global_manager` passes `update_mode = false`, so
 `UPDATE_CHECKSUMS=1` has no effect.
+
+### OPEN (2026-11-04) — zenresize output is further from exact than the resizer it replaced (bc752d9f, unreleased)
+Against an f64 reference, at 2.56x with Robidoux, imageflow's output is off by 1 level on 4.60% of channels on a photo and
+20.57% on a dark ramp. The old resizer, in 2.3.1-rc01, is off on 2.37% and 9.77%. No path exceeds 1 level on any input
+tried. The old code is more biased, though: mean error -0.0237 and -0.0977 levels against -0.0068 and -0.0048. The final
+sRGB encoder accounts for most of this: linear-srgb's 4096-entry table is too coarse in the darks. The float path with an
+exact encoder is off on 0.53% and 0.13%. Accepting today's output as baselines would lock this in, and an encoder fix would
+then need a second round of baselines. Measurements: `benchmarks/zenresize-vs-old-resizer_2026-11-04/`.
 
 ### FIXED (2026-07-19) — generic-quality double-mapping: ssim2 score was fed into the libjpeg-turbo-quality knob (WebP/JXL/AVIF)
 *Found & source-verified 2026-06-24; re-verified live and FIXED 2026-07-19.* `auto.rs` passed

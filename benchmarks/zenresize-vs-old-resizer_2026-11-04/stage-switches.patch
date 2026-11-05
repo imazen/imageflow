@@ -1,0 +1,288 @@
+diff -ruN '--exclude=old_lut.rs' '--exclude=target' '--exclude=Cargo.lock' zr-clean/src/color.rs zenresize/src/color.rs
+--- zr-clean/src/color.rs	2026-04-23 02:03:19.000000000 -0600
++++ zenresize/src/color.rs	2026-11-04 18:27:41.762060754 -0700
+@@ -28,8 +28,12 @@
+ ) {
+     debug_assert_eq!(input.len(), output.len());
+ 
+-    // Batch LUT conversion: all channels including alpha go through sRGB curve
+-    linear_srgb::default::srgb_u8_to_linear_slice(input, output);
++    if crate::oldstage::on("ZR_OLD_DECODE") {
++        let t = crate::oldstage::decode_table();
++        for (i, o) in input.iter().zip(output.iter_mut()) { *o = t[*i as usize]; }
++    } else {
++        linear_srgb::default::srgb_u8_to_linear_slice(input, output);
++    }
+ 
+     // Fix alpha: should be linear scale (v/255), not sRGB curve
+     if has_alpha && channels == 4 {
+@@ -50,13 +54,22 @@
+ ) {
+     debug_assert_eq!(input.len(), output.len());
+ 
+-    // LUT batch conversion: all channels including alpha go through sRGB curve
+-    linear_srgb::default::linear_to_srgb_u8_slice(input, output);
++    if crate::oldstage::on("ZR_EXACT_ENCODE") {
++        for (i, o) in input.iter().zip(output.iter_mut()) {
++            let v = (*i as f64).max(0.0).min(1.0);
++            let e = if v <= 0.0031308 { 12.92 * v } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 };
++            *o = (e * 255.0 + 0.5).floor() as u8;
++        }
++    } else if crate::oldstage::on("ZR_OLD_ENCODE") {
++        for (i, o) in input.iter().zip(output.iter_mut()) { *o = crate::oldstage::encode(*i); }
++    } else {
++        linear_srgb::default::linear_to_srgb_u8_slice(input, output);
++    }
+ 
+     // Fix alpha: should be linear scale (v*255+0.5), not sRGB curve
+     if has_alpha && channels == 4 {
+         for (chunk_in, chunk_out) in input.chunks_exact(4).zip(output.chunks_exact_mut(4)) {
+-            chunk_out[3] = (chunk_in[3] * 255.0 + 0.5) as u8;
++            chunk_out[3] = if crate::oldstage::on("ZR_OLD_ENCODE") { crate::oldstage::alpha(chunk_in[3] * 255.0f32) } else { (chunk_in[3] * 255.0 + 0.5) as u8 };
+         }
+     }
+ }
+diff -ruN '--exclude=old_lut.rs' '--exclude=target' '--exclude=Cargo.lock' zr-clean/src/lib.rs zenresize/src/lib.rs
+--- zr-clean/src/lib.rs	2026-04-23 02:03:19.000000000 -0600
++++ zenresize/src/lib.rs	2026-11-04 18:21:38.924117115 -0700
+@@ -93,3 +93,27 @@
+ 
+ // Re-export whereat types for downstream consumers
+ pub use whereat::{At, ResultAtExt};
++
++// resize-why experiment: swap one stage of the float path for the code imageflow had before bc752d9f.
++#[allow(dead_code)]
++mod old_lut;
++pub(crate) mod oldstage {
++    pub(crate) fn on(name: &str) -> bool { std::env::var_os(name).is_some() }
++    pub(crate) fn decode_table() -> &'static [f32; 256] {
++        static T: std::sync::OnceLock<[f32; 256]> = std::sync::OnceLock::new();
++        T.get_or_init(|| {
++            let mut t = [0f32; 256];
++            for n in 0..256 {
++                let s: f32 = n as u8 as f32 * (1.0f32 / 255.0f32);
++                t[n] = if s <= 0.04045f32 { s / 12.92f32 } else { f32::powf((s + 0.055f32) / (1_f32 + 0.055f32), 2.4f32) };
++            }
++            t
++        })
++    }
++    pub(crate) fn encode(v: f32) -> u8 { crate::old_lut::linear_to_srgb_lut(v) }
++    pub(crate) fn alpha(clr: f32) -> u8 {
++        let mut result: u16 = (clr as f64 + 0.5f64) as i16 as u16;
++        if result as i32 > 255_i32 { result = if clr < 0_i32 as f32 { 0_i32 } else { 255_i32 } as u16 }
++        result as u8
++    }
++}
+diff -ruN '--exclude=old_lut.rs' '--exclude=target' '--exclude=Cargo.lock' zr-clean/src/simd/mod.rs zenresize/src/simd/mod.rs
+--- zr-clean/src/simd/mod.rs	2026-04-23 02:03:19.000000000 -0600
++++ zenresize/src/simd/mod.rs	2026-11-04 18:21:38.924635164 -0700
+@@ -51,11 +51,33 @@
+     weights: &F32WeightTable,
+     channels: usize,
+ ) {
++    if crate::oldstage::on("ZR_OLD_KERNELS") {
++        for out_x in 0..weights.len() {
++            let left = weights.left[out_x] as usize;
++            let out_offset = out_x * channels;
++            for c in 0..channels { output[out_offset + c] = 0.0; }
++            for (t, &weight) in weights.weights(out_x).iter().enumerate() {
++                let in_offset = (left + t) * channels;
++                for c in 0..channels { output[out_offset + c] += input[in_offset + c] * weight; }
++            }
++        }
++        return;
++    }
+     archmage::incant!(filter_h_row_f32(input, output, weights, channels))
+ }
+ 
+ /// Vertically filter accumulated rows into one output row.
+ pub(crate) fn filter_v_row_f32(rows: &[&[f32]], output: &mut [f32], weights: &[f32]) {
++    if crate::oldstage::on("ZR_OLD_KERNELS") {
++        let width = output.len();
++        for v in output.iter_mut() { *v = 0.0; }
++        for (row, &weight) in rows.iter().zip(weights.iter()) {
++            if (weight as f64).abs() > 0.00000002f64 {
++                for x in 0..width { output[x] += row[x] * weight; }
++            }
++        }
++        return;
++    }
+     archmage::incant!(filter_v_row_f32(rows, output, weights))
+ }
+ 
+@@ -76,6 +98,13 @@
+ 
+ /// Unpremultiply alpha in-place on RGBA f32 row.
+ pub(crate) fn unpremultiply_alpha_row(row: &mut [f32]) {
++    if crate::oldstage::on("ZR_OLD_UNPREMUL") {
++        for p in row.chunks_exact_mut(4) {
++            let a = p[3];
++            if a > 0.0 { p[0] /= a; p[1] /= a; p[2] /= a; }
++        }
++        return;
++    }
+     archmage::incant!(unpremultiply_alpha_row(row))
+ }
+ 
+diff -ruN '--exclude=old_lut.rs' '--exclude=target' '--exclude=Cargo.lock' zr-clean/src/streaming.rs zenresize/src/streaming.rs
+--- zr-clean/src/streaming.rs	2026-04-23 02:03:19.000000000 -0600
++++ zenresize/src/streaming.rs	2026-11-04 18:24:09.164911535 -0700
+@@ -199,6 +199,10 @@
+     }
+ }
+ 
++std::thread_local! {
++    static OLD_F32_CACHE: std::cell::RefCell<Vec<Vec<f32>>> = const { std::cell::RefCell::new(Vec::new()) };
++}
++
+ /// Build V-filter row references from a ring buffer cache.
+ ///
+ /// Uses a 128-slot stack array for the common case (up to ~21× downscale with
+@@ -694,6 +698,15 @@
+             }
+             StreamingPath::F32 => StreamingPath::F32,
+         };
++        // resize-why experiment: optional forced float path and a log of the chosen path.
++        let path = if std::env::var_os("ZENRESIZE_FORCE_F32").is_some() { StreamingPath::F32 } else { path };
++        if let Some(log) = std::env::var_os("ZENRESIZE_PATH_LOG") {
++            use std::io::Write;
++            if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(log) {
++                let n = match path { StreamingPath::F32 => "F32", StreamingPath::I16Srgb => "I16Srgb", StreamingPath::I16Linear => "I16Linear" };
++                let _ = writeln!(f, "{} {}x{} {}x{} {}", n, resize_in_w, resize_in_h, config.out_width, config.out_height, std::env::var("NEXTEST_TEST_NAME").unwrap_or_default());
++            }
++        }
+ 
+         let extra_slack = if batch_hint > 0 {
+             batch_hint as usize + 2
+@@ -1269,10 +1282,18 @@
+         // when channels == 4, needs_premul, and sRGB transfer.
+         let tf = self.config.effective_input_transfer();
+         if tf == TransferFunction::Srgb && self.needs_premul && self.channels == 4 {
+-            linear_srgb::default::srgb_u8_to_linear_premultiply_rgba_slice(
++            if crate::oldstage::on("ZR_OLD_DECODE") {
++                let t = crate::oldstage::decode_table();
++                for (i, o) in (pixel_data).chunks_exact(4).zip((&mut self.temp_input_f32[..pixel_len]).chunks_exact_mut(4)) {
++                    let al = i[3] as f32 / 255.0;
++                    o[0] = al * t[i[0] as usize]; o[1] = al * t[i[1] as usize]; o[2] = al * t[i[2] as usize]; o[3] = al;
++                }
++            } else {
++                linear_srgb::default::srgb_u8_to_linear_premultiply_rgba_slice(
+                 pixel_data,
+                 &mut self.temp_input_f32[..pixel_len],
+             );
++            };
+         } else {
+             match tf {
+                 TransferFunction::Srgb => {
+@@ -2252,6 +2273,25 @@
+         // Now safe because linear-srgb uses the same 1/1024 alpha threshold
+         // as zenresize's SIMD unpremultiply.
+         if needs_premul && tf == TransferFunction::Srgb && channels == 4 {
++            if crate::oldstage::on("ZR_OLD_ENCODE") || crate::oldstage::on("ZR_OLD_UNPREMUL") {
++                let old_enc = crate::oldstage::on("ZR_OLD_ENCODE");
++                for (i, o) in src.chunks_exact(4).zip(dst.chunks_exact_mut(4)) {
++                    let a = i[3];
++                    let c = if crate::oldstage::on("ZR_OLD_UNPREMUL") {
++                        if a > 0.0 { [i[0] / a, i[1] / a, i[2] / a] } else { [i[0], i[1], i[2]] }
++                    } else if a > 1.0 / 1024.0 {
++                        let inv = 1.0 / a;
++                        [i[0] * inv, i[1] * inv, i[2] * inv]
++                    } else {
++                        [i[0], i[1], i[2]]
++                    };
++                    for k in 0..3 {
++                        o[k] = if old_enc { crate::oldstage::encode(c[k]) } else { linear_srgb::default::linear_to_srgb_u8(c[k]) };
++                    }
++                    o[3] = if old_enc { crate::oldstage::alpha(a * 255.0f32) } else { (a * 255.0 + 0.5) as u8 };
++                }
++                return;
++            }
+             linear_srgb::default::unpremultiply_linear_to_srgb_u8_rgba_slice(src, dst);
+             return;
+         }
+@@ -2369,6 +2409,16 @@
+         let out_row_len = self.config.out_width as usize * self.channels;
+ 
+         // Step 1: V-filter from f16 v_cache into temp_v_output (f32, in_width-wide)
++        if crate::oldstage::on("ZR_OLD_F32CACHE") {
++            let cache_size = self.cache_size;
++            let out = &mut self.temp_v_output[..in_row_len];
++            OLD_F32_CACHE.with(|c| {
++                let c = c.borrow();
++                with_v_rows(&c[..], cache_size, left, tap_count, resize_in_h, in_row_len, |rows| {
++                    simd::filter_v_row_f32(rows, &mut *out, weights)
++                });
++            });
++        } else {
+         with_v_rows(
+             &self.v_cache,
+             self.cache_size,
+@@ -2378,6 +2428,7 @@
+             in_row_len,
+             |rows| simd::filter_v_row_f16(rows, &mut self.temp_v_output[..in_row_len], weights),
+         );
++        }
+ 
+         // Step 2: H-filter from temp_v_output into temp_output_f32 (out_width-wide)
+         // temp_v_output has h_padding zeros beyond in_row_len for SIMD safety
+@@ -2623,6 +2674,14 @@
+ 
+         let cache_slot = self.cache_write_idx % self.cache_size;
+         let pixel_len = self.config.resize_in_width() as usize * self.channels;
++        if crate::oldstage::on("ZR_OLD_F32CACHE") {
++            OLD_F32_CACHE.with(|c| {
++                let mut c = c.borrow_mut();
++                if c.len() <= cache_slot { c.resize(cache_slot + 1, Vec::new()); }
++                c[cache_slot].clear();
++                c[cache_slot].extend_from_slice(&self.temp_input_f32[..pixel_len]);
++            });
++        }
+         simd::f32_to_f16_row(
+             &self.temp_input_f32[..pixel_len],
+             &mut self.v_cache[cache_slot][..pixel_len],
+diff -ruN '--exclude=old_lut.rs' '--exclude=target' '--exclude=Cargo.lock' zr-clean/src/weights.rs zenresize/src/weights.rs
+--- zr-clean/src/weights.rs	2026-04-23 02:03:19.000000000 -0600
++++ zenresize/src/weights.rs	2026-11-04 18:21:38.925113552 -0700
+@@ -113,6 +113,42 @@
+             None => (0.0, false),
+         };
+ 
++        if crate::oldstage::on("ZR_OLD_WEIGHTS") && !apply_lobe_adj {
++            let mut rows: Vec<(i32, Vec<f32>)> = Vec::with_capacity(out_size as usize);
++            let mut max_taps = 0usize;
++            for u in 0..out_size {
++                let center: f64 = (u as f64 + 0.5f64) / scale - 0.5f64;
++                let le = (center - filter.window / downscale_factor - 0.0001).ceil() as i32;
++                let re = (center + filter.window / downscale_factor + 0.0001).floor() as i32;
++                let l = 0i32.max(le) as u32;
++                let r = re.min(in_size as i32 - 1) as u32;
++                let mut total = 0f64;
++                let mut w: Vec<f32> = Vec::new();
++                for ix in l..=r {
++                    let mut add = filter.filter(downscale_factor * (ix as f64 - center));
++                    if add.abs() <= 2e-8f64 { add = 0.0 }
++                    w.push(add as f32);
++                    total += add;
++                }
++                let factor = (1.0f64 / total) as f32;
++                for v in w.iter_mut() { *v *= factor; }
++                while w.last() == Some(&0f32) { w.pop(); }
++                let mut left = l;
++                while w.first() == Some(&0f32) { w.remove(0); left += 1; }
++                max_taps = max_taps.max(w.len());
++                rows.push((left as i32, w));
++            }
++            let mut weights_flat = vec![0.0f32; out_size as usize * max_taps];
++            let mut all_left = Vec::new();
++            let mut all_tap_counts = Vec::new();
++            for (i, (left, w)) in rows.iter().enumerate() {
++                all_left.push(*left);
++                all_tap_counts.push(w.len() as u16);
++                weights_flat[i * max_taps..i * max_taps + w.len()].copy_from_slice(w);
++            }
++            return Self { left: all_left, weights_flat, tap_counts: all_tap_counts, max_taps };
++        }
++
+         // First pass: compute weights and find max_taps
+         let mut temp_weights: Vec<f64> = Vec::new();
+         let mut all_left: Vec<i32> = Vec::with_capacity(out_size as usize);

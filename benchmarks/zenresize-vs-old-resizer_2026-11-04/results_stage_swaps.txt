@@ -1,0 +1,25 @@
+checks in both 143 ; differ from pre-zenresize on zenresize 57
+control              match pre  86/143  of the 57 changed, restored   0  status {'match': 85, 'accepted': 33, 'failed': 25}
+control2             match pre  86/143  of the 57 changed, restored   0  status {'match': 85, 'accepted': 33, 'failed': 25}
+f32                  match pre  86/143  of the 57 changed, restored   0  status {'match': 85, 'accepted': 33, 'failed': 25}
+all                  match pre 138/143  of the 57 changed, restored  52  status {'match': 152, 'failed': 3, 'accepted': 3}
+only_DECODE          match pre  86/143  of the 57 changed, restored   0  status {'match': 85, 'accepted': 36, 'failed': 22}
+only_ENCODE          match pre  86/143  of the 57 changed, restored   0  status {'match': 85, 'accepted': 59, 'failed': 14}
+only_UNPREMUL        match pre  86/143  of the 57 changed, restored   0  status {'match': 85, 'accepted': 36, 'failed': 22}
+only_WEIGHTS         match pre  86/143  of the 57 changed, restored   0  status {'match': 85, 'accepted': 36, 'failed': 22}
+only_KERNELS         match pre  86/143  of the 57 changed, restored   0  status {'match': 85, 'accepted': 36, 'failed': 22}
+only_F32CACHE        match pre  86/143  of the 57 changed, restored   0  status {'match': 85, 'accepted': 38, 'failed': 20}
+without_DECODE       match pre  89/143  of the 57 changed, restored   3  status {'match': 88, 'accepted': 58, 'failed': 12}
+without_ENCODE       match pre  88/143  of the 57 changed, restored   2  status {'match': 87, 'accepted': 39, 'failed': 17}
+without_UNPREMUL     match pre 133/143  of the 57 changed, restored  47  status {'match': 147, 'failed': 6, 'accepted': 5}
+without_WEIGHTS      match pre 121/143  of the 57 changed, restored  35  status {'match': 133, 'accepted': 20, 'failed': 5}
+without_KERNELS      match pre 125/143  of the 57 changed, restored  39  status {'match': 139, 'accepted': 15, 'failed': 4}
+without_F32CACHE     match pre  86/143  of the 57 changed, restored   0  status {'match': 85, 'accepted': 59, 'failed': 14}
+all_no_force_f32     match pre 127/143  of the 57 changed, restored  41  status {'match': 141, 'accepted': 7, 'failed': 10}
+
+still differing with every stage swapped: 5
+   composition/test_watermark_alpha_on_alpha_dice_on_shirt_70pct failed -
+   composition/test_watermark_alpha_on_jpeg_dice_center_50pct_opacity failed -
+   watermark/test_watermark_image_dice_fitcrop_90pct accepted 0.0071
+   watermark/test_watermark_image_command_string_dice_fitcrop_90pct accepted 0.0071
+   watermark/test_watermark_image_command_string_with_bgcolor_dice_aaeeff accepted 0.0080
