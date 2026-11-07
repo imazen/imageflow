@@ -11,8 +11,9 @@ instead of D50 computed from xy (0.3457, 0.3585), about (0.96429, 1, 0.82510). E
 already use the PCS white, so on 0.9.2 their white maps to sRGB white. Built-in to built-in
 transforms (Display P3, gray) are unchanged. Blue rises on average.
 
-**Size.** At most 1 level per channel on every input tried, except 2 levels in blue on one CMYK
-JPEG with an embedded profile. Alpha never changes. 51 of 140 visual checks change hash.
+**Size.** Decoded without resizing, each of the 14 inputs moves by at most 1 level per channel,
+except 2 levels in blue on one CMYK JPEG with an embedded profile. Alpha never changes. 51 of 140
+visual checks change hash; their per-check deltas between the versions were not measured.
 
 **Against lcms2.** 0.9.2 is closer to lcms2 (lower mean error, or the same mean error on fewer
 pixels) on 7 of 14 inputs (Adobe RGB: 17.33% of

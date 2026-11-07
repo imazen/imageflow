@@ -49,15 +49,16 @@ selects `Low` for every 8-bit transform, which does not shrink the frame. Alloca
 heap (`create_binned-heap.patch`, 2 lines) cuts the need to 48 KiB with identical output. 8-bit `High`
 and `Low` output is byte-identical on all three versions. Branch `heap-lookup-tables` of lilith/moxcms
 (`6279765571`) removes every instance of the pattern in moxcms: no frame of 16 KiB or more in optimized builds
-on 7 configurations, 16 KiB of stack or less in release, identical output. Upstream: moxcms issue 210 and PR 211, merged 2026-11-04 as 84104443. The workspace pins that commit in
-`[patch.crates-io]`; on it `small_stack.rs` passes with the 4 MB thread bypassed, and on 0.8.1 the same bypass aborts 3
-of those 4 tests. The 4 MB thread stays until a moxcms release carries the fix. The move from 0.8.1 changes 3 of 143 visual
-outputs, all CMYK JPEGs, by 1 level on 1 to 35 pixels (`benchmarks/issue-737-iis-repro_2026-11-03/moxcms-0.8.1-vs-main/`). Probe and results: `benchmarks/issue-737-iis-repro_2026-11-03/moxcms-stack-probe/`. **Fixed:** the three
-`create_transform_8bit` sites in `moxcms_transform.rs` run on a dedicated 4 MB thread
-(`create_transform_8bit_on_large_stack`). Regression tests: `small_stack.rs` (whole jobs on 256 KB
-threads; aborted before the fix) and `cmyk_transform_builds_on_a_small_stack`. All 158 visual-suite
-output images are byte-identical to unmodified main. Repro harness, symbolization and results:
-`benchmarks/issue-737-iis-repro_2026-11-03/`.
+on 7 configurations, 16 KiB of stack or less in release, identical output. Upstream: moxcms issue 210 and PR 211, merged 2026-11-04 as 84104443 and
+released in 0.9.2 (2026-11-07). **Fixed:** `imageflow_core` requires moxcms 0.9.2 (34ed0482). On 0.9.2 every
+transform the stack probe tries builds and runs in 16 KiB of stack or less in release (48-64 KiB in debug), and no
+function in any of 6 optimized builds reserves 16 KiB or more (`moxcms-stack-probe/results/*_2026-11-07.*`). Earlier
+fixes, now gone: from 8a2ebd2e to 66ef5612 the three `create_transform_8bit` sites ran on a dedicated 4 MB thread, and
+from 96ac239b to 34ed0482 the workspace pinned moxcms main in `[patch.crates-io]`. Regression tests: `small_stack.rs`
+(whole jobs on 256 KB threads; on 0.8.1 without the thread, 3 of those 4 tests abort) and
+`cmyk_transform_builds_on_a_small_stack`. Output: the pin changed 3 of 143 visual outputs, all CMYK JPEGs, by 1 level on
+1 to 35 pixels (`benchmarks/issue-737-iis-repro_2026-11-03/moxcms-0.8.1-vs-main/`); 0.9.2 changes more (visual checksum
+entry below). Repro harness, symbolization and results: `benchmarks/issue-737-iis-repro_2026-11-03/`.
 
 ### FIXED on main, unreleased (2026-11-04) — #737: JPEG with a CMYK ICC profile on YCbCr data failed to decode
 The two images attached to #737 are 3-component JPEGs embedding the CMYK profile "U.S. Web Coated
@@ -114,6 +115,16 @@ On the moxcms pin (run 41907543236), no comparison newly exceeds its tolerance o
 the output of both `test_icc_repro` CMYK tests above, so they now also fail with `no reference image` on the 6 x86 jobs
 where they used to match. `decode_cmyk_jpeg` also changes output and still passes. The only other difference is which job
 loses the trim download race.
+
+**moxcms 0.9.2 (34ed0482), measured 2026-11-07 on x86_64:** its "fixed d50 adaptation" adapts built-in profiles, including
+the sRGB destination of every transform, to the ICC PCS white (0.9642, 1, 0.8249) instead of D50 from xy. 51 of 140
+checks change hash. Decoded without resizing, 14 test inputs move by at most 1 level per channel (2 in blue on one CMYK
+JPEG), alpha never; and against lcms2, output is closer on 7 of them, equal on 4 and further on 3. Per-check deltas
+between the two versions were not measured. 4 more tests exceed their tolerance against this machine's local
+references, by small margins: `test_transparent_png_to_png_rounded_corners` (max delta 1, but on more than the 100
+bytes it allows), `test_icc_display_p3_resize_filter` (0.0214 against 0.02), `test_icc_repro_libvips_icc` (0.0310 against 0.03)
+and `test_icc_repro_sharp_icc` (0.0128 against 0.01). New baselines must be made on 0.9.2 or later.
+`benchmarks/moxcms-0.9.2_2026-11-07/`.
 
 **Cause of the 24 that changed at bc752d9f, measured 2026-11-04:** moxcms is 0.8.1 on both sides, so these are not moxcms
 version changes. zenresize's internals differ from the old resizer: a 4096-entry sRGB encoder table instead of 16384
