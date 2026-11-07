@@ -1,7 +1,7 @@
 name: "Test/Release" # Reminder, to test locally, https://sanjulaganepola.github.io/github-local-actions-docs/
 on:
   # `branches: ["**"]` ran the full 10-cell matrix — including `macos-15-intel`
-  # and `macos-14`, the two scarcest runners — on every push to every branch,
+  # and the macOS ARM64 runner, the two scarcest runners — on every push to every branch,
   # and, because `pull_request` is also listed, twice over for any branch with
   # an open PR. Nothing here publishes on a push: `ALLOW_PUBLISH` (set below,
   # and the gate on every S3 / GitHub-release / Docker-push step) is
@@ -229,9 +229,11 @@ jobs:
             target: x86_64-apple-darwin
             mac: 'true'
 
-          - name: osx-arm64-14
+          # macos-latest is ARM64. GitHub stopped accepting `macos-14` by 2026-11-07
+          # ("The configuration 'macos-14-arm64-us-default' is not supported").
+          - name: osx-arm64
             package-suffix: osx-arm64
-            os: macos-14
+            os: macos-latest
             target-cpu: apple-m1
             nuget-rid: osx-arm64
             target: aarch64-apple-darwin
