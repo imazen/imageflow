@@ -47,6 +47,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "moxcms"
+version = "0.9.1"
+source = "git+https://github.com/awxkee/moxcms?rev=841044439077ec1ec67a71b2db979ab51d304fcf#841044439077ec1ec67a71b2db979ab51d304fcf"
+dependencies = [
+ "num-traits",
+ "pxfm",
+]
+
+[[package]]
+name = "moxcms"
+version = "0.9.2"
+source = "git+https://github.com/awxkee/moxcms?rev=7678ef70f6a7abcf5df7492dd76af3ebb3e85e53#7678ef70f6a7abcf5df7492dd76af3ebb3e85e53"
+dependencies = [
+ "num-traits",
+ "pxfm",
+]
+
+[[package]]
 name = "moxcms-stack-probe"
 version = "0.0.0"
 dependencies = [
@@ -54,6 +72,8 @@ dependencies = [
  "moxcms 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "moxcms 0.9.1 (git+https://github.com/awxkee/moxcms?rev=097dccf3a9ab40811f23baa5da71cbfb985f8de8)",
  "moxcms 0.9.1 (git+https://github.com/lilith/moxcms?rev=6279765571d39230674cf5d40376330deaa07e35)",
+ "moxcms 0.9.1 (git+https://github.com/awxkee/moxcms?rev=841044439077ec1ec67a71b2db979ab51d304fcf)",
+ "moxcms 0.9.2",
 ]
 
 [[package]]

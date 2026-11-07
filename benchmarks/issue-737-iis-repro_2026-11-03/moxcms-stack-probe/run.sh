@@ -5,7 +5,7 @@
 #
 #   benchmarks/issue-737-iis-repro_2026-11-03/moxcms-stack-probe/run.sh <out-dir>
 #
-# VERSIONS may also name v0_8_1 and v0_9_1. Writes <out-dir>/sweep.tsv (one row per transform:
+# VERSIONS may also name v0_8_1, v0_9_1, v0_9_2 and pin. Writes <out-dir>/sweep.tsv (one row per transform:
 # every stack size tried, in KiB, and its result), <out-dir>/summary.txt, and downloads the two
 # test JPEGs into <out-dir>.
 set -euo pipefail

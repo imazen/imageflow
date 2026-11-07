@@ -24,17 +24,28 @@
 
 #![forbid(unsafe_code)]
 
-#[cfg(not(any(feature = "v0_8_1", feature = "v0_9_1", feature = "master", feature = "patched")))]
-compile_error!("enable one of the features v0_8_1, v0_9_1, master, patched");
+#[cfg(not(any(
+    feature = "v0_8_1",
+    feature = "v0_9_1",
+    feature = "v0_9_2",
+    feature = "master",
+    feature = "pin",
+    feature = "patched"
+)))]
+compile_error!("enable one of the features v0_8_1, v0_9_1, v0_9_2, master, pin, patched");
 
 #[cfg(feature = "v0_8_1")]
 use moxcms_0_8_1 as moxcms;
 #[cfg(feature = "v0_9_1")]
 use moxcms_0_9_1 as moxcms;
+#[cfg(feature = "v0_9_2")]
+use moxcms_0_9_2 as moxcms;
 #[cfg(feature = "master")]
 use moxcms_master as moxcms;
 #[cfg(feature = "patched")]
 use moxcms_patched as moxcms;
+#[cfg(feature = "pin")]
+use moxcms_pin as moxcms;
 
 use std::hint::black_box;
 use std::sync::Arc;
