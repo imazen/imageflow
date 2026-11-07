@@ -38,8 +38,6 @@ zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
 # Local zenwebp with push_frame stride fix for strided input (imageflow
 # bitmaps are SIMD-aligned with stride > width*bpp).
 zenwebp = { git = "https://github.com/imazen/zenwebp", branch = "main" }
-# moxcms main until a release builds its large lookup tables on the heap (#737, moxcms PR 211).
-moxcms = { git = "https://github.com/awxkee/moxcms", rev = "841044439077ec1ec67a71b2db979ab51d304fcf" }
 # zenresize 0.3.0 published to crates.io (fused decode+premultiply, linear-srgb 0.6.11 threshold fix)
 # load_image.git = "https://gitlab.com/lilith6/load_image.git"
 # TODO(rgb-0.8.91): Uncomment when rgb 0.8.91+ is published to crates.io

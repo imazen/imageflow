@@ -67,7 +67,9 @@ enough = { version = "0.4", features = ["std"] }
 garb = "0.2.5"
 # Used (zen-codecs only) to bound a job's codec parallelism via a sized pool.
 rayon = { version = "1", optional = true }
-moxcms = { version = ">=0.8.1, <0.10", features = ["in_place", "options"] }
+# 0.9.2 is the first release that builds its large lookup tables on the heap; earlier
+# versions overflow small host thread stacks building LUT transforms (#737).
+moxcms = { version = "0.9.2", features = ["in_place", "options"] }
 
 # Used for schema generation if feature enabled
 utoipa = { version = "5.3.1", features = [], optional = true }

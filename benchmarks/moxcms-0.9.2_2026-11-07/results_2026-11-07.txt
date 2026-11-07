@@ -1,0 +1,307 @@
+# moxcms git main 841044439 (imageflow's pin, 2026-11-04) vs crates.io 0.9.2 (2026-11-07, packaged from 7678ef70f6).
+# imageflow 395cdf2279, then the same tree with moxcms 0.9.2. x86_64, AMD Ryzen 9 7950X under WSL2, rustc 1.99.1 (58cf8f9c3 2026-10-13), 2026-11-07.
+# 0.9.2 = the pin + 'fix f32 clipping' (d273f95, float samples only) + 'fixed d50 adaptation' (c6ab52f).
+
+## 1. Visual suite output hashes
+# REGRESS_MANIFEST_PATH=<file> cargo nextest run -p imageflow_core --test integration --locked --no-fail-fast
+# python3 manifest_cmp.py before.tsv after.tsv
+# Pin: 256 tests, 236 passed, 20 failed. 0.9.2: 232 passed, 24 failed: the same 20 plus
+# test_transparent_png_to_png (rounded_corners), test_icc_display_p3_resize_filter, test_icc_repro_libvips_icc and
+# test_icc_repro_sharp_icc, each just over its tolerance against this machine's local reference (see 'failed' below).
+# The 20 are local references that differ from output on main (CLAUDE.md, visual checksum entry).
+# The 3 'only-before' checks are in test_jpeg_rotation, which stops at its first failing check: Landscape_7 on the
+# pin, Landscape_4 on 0.9.2 (zdsim 0.1546, tolerance 0.15). That test is among the 20.
+checks before 143 after 140 only-before ['orientation/test_jpeg_rotation_Landscape_5', 'orientation/test_jpeg_rotation_Landscape_6', 'orientation/test_jpeg_rotation_Landscape_7'] only-after []
+identical output hash: 89  changed: 51
+codec/decode_cmyk_jpeg_logo_passthrough
+   before accepted  sea:7bb30e06c51fc913
+   after  accepted  sea:02df2702749e5c6f  zdsim=0.0129 tol=0.0500
+   score:98.7
+codec/test_encode_gradients_png32_passthrough
+   before match     odd-ore-da1ac7d3f2:sea
+   after  accepted  sea:a7edf5ca3ab87d25.png  zdsim=0.0041 tol=0.0100
+   score:99.6
+codec/test_matte_transparent_png_shirt_300x300_white_matte
+   before failed    sea:41c96cd5a7eb708a.png
+   after  failed    sea:0c2927928ed6d11c.png  zdsim=0.0282 tol=0.0100
+   score:97.2
+codec/test_transparent_png_to_jpeg_constrain_300x300_mozjpeg
+   before failed    sea:062ee9136ba39f9e.jpg
+   after  failed    sea:09c9c8790270cd52.jpg  zdsim=0.0499 tol=0.0300
+   score:95.0
+codec/test_transparent_png_to_jpeg_shirt
+   before accepted  sea:735be0552efff3f1.jpg
+   after  accepted  sea:9b1f25aaf130298f.jpg  zdsim=0.0787 tol=0.1500
+   score:92.1
+codec/test_transparent_png_to_png_rounded_corners_shirt_cropped
+   before match     next-flock-5c9d9d9c01:sea
+   after  failed    sea:71bcd7c228dd98e8.png  zdsim=0.0070 tol=0.0100
+   score:99.3
+codec/test_transparent_png_to_png_shirt
+   before match     lazy-disc-329f73dcff:sea
+   after  accepted  sea:8b5186c02b5532f8.png  zdsim=0.0074 tol=0.0100
+   score:99.3
+composition/test_watermark_alpha_on_alpha_dice_on_shirt_70pct
+   before accepted  sea:25eaba7ba8f4e42c
+   after  accepted  sea:74753b4cd105fd8a  zdsim=0.0071 tol=0.1500
+   score:99.3
+icc/test_icc_adobe_rgb_constrain_adobergb_constrain_300
+   before accepted  sea:7aba9b6a056b05ea.png
+   after  accepted  sea:7bb4da99cf7b8d3d.png  zdsim=0.0175 tol=0.0200
+   score:98.2
+icc/test_icc_adobe_rgb_decode_1_adobergb_decode
+   before match     stiff-mace-cc9e75a12a:sea
+   after  accepted  sea:7e7f5e6aa827b5eb.png  zdsim=0.0116 tol=0.0200
+   score:98.8
+icc/test_icc_adobe_rgb_decode_2_adobergb_decode
+   before match     plush-marsh-8328b491ed:sea
+   after  accepted  sea:f72e3dbfb9cb554e.png  zdsim=0.0108 tol=0.0200
+   score:98.9
+icc/test_icc_adobe_rgb_resize_adobergb_resize_400
+   before failed    sea:3122c08f2148ec28.png
+   after  failed    sea:76df62f48da88379.png  zdsim=0.0243 tol=0.0200
+   score:97.6
+icc/test_icc_display_p3_decode_1_p3_decode
+   before match     silly-coal-233b8b0277:sea
+   after  accepted  sea:99ce7bbf9b4528a8.png  zdsim=0.0167 tol=0.0200
+   score:98.3
+icc/test_icc_display_p3_decode_2_p3_decode
+   before match     keen-sage-075119cbeb:sea
+   after  accepted  sea:091ec0b91d60967c.png  zdsim=0.0090 tol=0.0300
+   score:99.1
+icc/test_icc_display_p3_decode_3_p3_decode
+   before match     known-crane-9ca529bf17:sea
+   after  accepted  sea:1596b89c7fef24ee.png  zdsim=0.0132 tol=0.0300
+   score:98.7
+icc/test_icc_display_p3_resize_filter_p3_robidoux_300x300
+   before accepted  sea:0dda93f65a27a004.png
+   after  failed    sea:316ee20c7189a647.png  zdsim=0.0214 tol=0.0200
+   score:97.9
+icc/test_icc_display_p3_resize_p3_resize_400
+   before accepted  sea:9a07bc07a2b9f9c6.png
+   after  accepted  sea:bc649b7ad2e36f94.png  zdsim=0.0198 tol=0.0200
+   score:98.0
+icc/test_icc_p3_crop_and_resize_p3_crop_500x500
+   before accepted  sea:96372be1fe897d9c.png
+   after  accepted  sea:e1bc8723af46d5af.png  zdsim=0.0113 tol=0.0300
+   score:98.9
+icc/test_icc_p3_to_jpeg_roundtrip_p3_to_jpeg_q85
+   before match     fair-peach-0372a89301:sea
+   after  accepted  sea:4e61b02e95485b06.jpg  zdsim=0.0714 tol=0.3000
+   score:92.9
+icc/test_icc_p3_to_webp_p3_to_webp_q80
+   before match     only-moth-16f9a2d875:sea
+   after  accepted  sea:f108f78de00c5602.webp  zdsim=0.1525 tol=0.2500
+   score:84.8
+icc/test_icc_prophoto_decode_prophoto_decode
+   before match     moist-shore-4dc03e0370:sea
+   after  accepted  sea:577885b5dd64b795.png  zdsim=0.0100 tol=0.0300
+   score:99.0
+icc/test_icc_prophoto_resize_prophoto_resize_400
+   before failed    sea:cedb4ab9619512e8.png
+   after  failed    sea:999b1454e4dcef92.png  zdsim=0.0313 tol=0.0200
+   score:96.9
+icc/test_icc_rec2020_decode_1_rec2020_decode
+   before match     extra-heron-36faf97a2c:sea
+   after  accepted  sea:58ae7881cfe2e371.png  zdsim=0.0091 tol=0.0300
+   score:99.1
+icc/test_icc_rec2020_decode_2_rec2020_decode
+   before match     able-ash-684f3036b9:sea
+   after  accepted  sea:46466b4d8b1fbc25.png  zdsim=0.0136 tol=0.0400
+   score:98.6
+icc/test_icc_repro_imagemagick_icc_imagemagick_icc
+   before match     round-tiger-41e2b79c30:sea
+   after  accepted  sea:10083357c2db8680.png  zdsim=0.0069 tol=0.0200
+   score:99.3
+icc/test_icc_repro_libvips_icc_libvips_icc
+   before accepted  sea:f0cadca0ae53c190.png
+   after  failed    sea:6186d25d4875dc4b.png  zdsim=0.0310 tol=0.0300
+   score:96.9
+icc/test_icc_repro_pillow_icc_pillow_icc
+   before accepted  sea:8102c764b58dfd68.png
+   after  accepted  sea:2e4c519022d2c401.png  zdsim=0.0137 tol=0.0500
+   score:98.6
+icc/test_icc_repro_sharp_icc_sharp_icc
+   before match     cold-cod-fbd1704ac1:sea
+   after  failed    sea:029e58634bb92cb2.png  zdsim=0.0128 tol=0.0100
+   score:98.7
+orientation/test_crop_exif_landscape_2
+   before failed    sea:05f93446355d2fdb
+   after  failed    sea:a193e3b0646e5fb4  zdsim=0.1567 tol=0.1500
+   score:84.3
+orientation/test_fit_pad_exif_landscape_2
+   before accepted  sea:5924b285308b0611
+   after  accepted  sea:4a5909e1dbabdb65  zdsim=0.0174 tol=0.1500
+   score:98.3
+orientation/test_fit_pad_exif_landscape_3
+   before accepted  sea:b65593e1839a3d85
+   after  accepted  sea:07bb7c9ef2d2ed00  zdsim=0.0175 tol=0.1500
+   score:98.2
+orientation/test_fit_pad_exif_landscape_4
+   before accepted  sea:deebdb0c0171b670
+   after  accepted  sea:53e11460b59f8d95  zdsim=0.0167 tol=0.1500
+   score:98.3
+orientation/test_fit_pad_exif_landscape_5
+   before accepted  sea:ec59748cf4ca3a0a
+   after  accepted  sea:246cd74cd1b83e03  zdsim=0.0185 tol=0.1500
+   score:98.1
+orientation/test_fit_pad_exif_landscape_6
+   before accepted  sea:a143699ba49814de
+   after  accepted  sea:683e2bd0026701e7  zdsim=0.0186 tol=0.1500
+   score:98.1
+orientation/test_fit_pad_exif_landscape_7
+   before accepted  sea:3deaadb1781e5f5d
+   after  accepted  sea:bed72bcc17e0906f  zdsim=0.0174 tol=0.1500
+   score:98.3
+orientation/test_fit_pad_exif_landscape_8
+   before accepted  sea:ab16ebba06a31620
+   after  accepted  sea:24a08b80caa732f4  zdsim=0.0175 tol=0.1500
+   score:98.2
+orientation/test_jpeg_rotation_Landscape_2
+   before accepted  sea:1c25290f53d71211
+   after  accepted  sea:333da76d3d9beb50  zdsim=0.1355 tol=0.1500
+   score:86.5
+orientation/test_jpeg_rotation_Landscape_3
+   before accepted  sea:e279d3ae1c16c7a3
+   after  accepted  sea:8c1a26c96a9fa292  zdsim=0.1497 tol=0.1500
+   score:85.0
+orientation/test_jpeg_rotation_Landscape_4
+   before accepted  sea:8808fb656094a745
+   after  failed    sea:9a995a613267684c  zdsim=0.1546 tol=0.1500
+   score:84.5
+orientation/test_jpeg_rotation_cropped_portrait_2
+   before match     first-yak-62deeb98c0:sea
+   after  accepted  sea:e47a3926048d0763  zdsim=0.0111 tol=0.0300
+   score:98.9
+orientation/test_jpeg_rotation_cropped_portrait_3
+   before match     false-sand-c727844d06:sea
+   after  accepted  sea:94138fff6f17eadb  zdsim=0.0104 tol=0.0300
+   score:99.0
+orientation/test_jpeg_rotation_cropped_portrait_4
+   before match     near-fish-b0e0a30fae:sea
+   after  accepted  sea:1f14a91c5c37ceee  zdsim=0.0109 tol=0.0300
+   score:98.9
+orientation/test_jpeg_rotation_cropped_portrait_5
+   before match     edgy-lily-154cfb9e35:sea
+   after  accepted  sea:aa5d7f7921656d98  zdsim=0.0104 tol=0.0300
+   score:99.0
+orientation/test_jpeg_rotation_cropped_portrait_6
+   before match     north-raven-4a9b78e8ca:sea
+   after  accepted  sea:223ec46b65555752  zdsim=0.0111 tol=0.0300
+   score:98.9
+orientation/test_jpeg_rotation_cropped_portrait_7
+   before match     lone-bay-0011aac3a6:sea
+   after  accepted  sea:99fd2761a6074414  zdsim=0.0105 tol=0.0300
+   score:98.9
+orientation/test_jpeg_rotation_cropped_portrait_8
+   before match     like-lamb-c0899bd64e:sea
+   after  accepted  sea:cfc3c68aa58e9ea3  zdsim=0.0107 tol=0.0300
+   score:98.9
+scaling/test_jpeg_icc2_color_profile_mars_robidoux_400x300
+   before match     edgy-bud-3c5ab5c483:sea
+   after  accepted  sea:3dae9245da8b10e2  zdsim=0.0161 tol=0.1500
+   score:98.4
+scaling/test_jpeg_icc4_color_profile_mars_v4_robidoux_400x300
+   before failed    sea:91c6918f5aeebfe1
+   after  failed    sea:519f791f770c71ae  zdsim=0.0203 tol=0.2000
+   score:98.0
+trim/test_trim_whitespace_transparent_shirt
+   before match     sheer-grain-9ff014ad22:sea
+   after  accepted  sea:e40bb025da44d912.png  zdsim=0.0075 tol=0.0100
+   score:99.2
+watermark/test_watermark_image_on_png_shirt_with_webp
+   before failed    sea:7ecb344c20b7a40a
+   after  failed    sea:496fdccf14629d3b  zdsim=0.0215 tol=0.1500
+   score:97.8
+watermark/test_watermark_jpeg_over_pnga_gamma_test_30pct
+   before failed    sea:37bc58980b2fcdb6
+   after  failed    sea:38498a1654c5ae14  zdsim=0.0192 tol=0.1500
+   score:98.1
+status changes:
+  codec/test_encode_gradients_png32_passthrough match -> accepted
+  codec/test_transparent_png_to_png_rounded_corners_shirt_cropped match -> failed
+  codec/test_transparent_png_to_png_shirt match -> accepted
+  icc/test_icc_adobe_rgb_decode_1_adobergb_decode match -> accepted
+  icc/test_icc_adobe_rgb_decode_2_adobergb_decode match -> accepted
+  icc/test_icc_display_p3_decode_1_p3_decode match -> accepted
+  icc/test_icc_display_p3_decode_2_p3_decode match -> accepted
+  icc/test_icc_display_p3_decode_3_p3_decode match -> accepted
+  icc/test_icc_display_p3_resize_filter_p3_robidoux_300x300 accepted -> failed
+  icc/test_icc_p3_to_jpeg_roundtrip_p3_to_jpeg_q85 match -> accepted
+  icc/test_icc_p3_to_webp_p3_to_webp_q80 match -> accepted
+  icc/test_icc_prophoto_decode_prophoto_decode match -> accepted
+  icc/test_icc_rec2020_decode_1_rec2020_decode match -> accepted
+  icc/test_icc_rec2020_decode_2_rec2020_decode match -> accepted
+  icc/test_icc_repro_imagemagick_icc_imagemagick_icc match -> accepted
+  icc/test_icc_repro_libvips_icc_libvips_icc accepted -> failed
+  icc/test_icc_repro_sharp_icc_sharp_icc match -> failed
+  orientation/test_jpeg_rotation_Landscape_4 accepted -> failed
+  orientation/test_jpeg_rotation_cropped_portrait_2 match -> accepted
+  orientation/test_jpeg_rotation_cropped_portrait_3 match -> accepted
+  orientation/test_jpeg_rotation_cropped_portrait_4 match -> accepted
+  orientation/test_jpeg_rotation_cropped_portrait_5 match -> accepted
+  orientation/test_jpeg_rotation_cropped_portrait_6 match -> accepted
+  orientation/test_jpeg_rotation_cropped_portrait_7 match -> accepted
+  orientation/test_jpeg_rotation_cropped_portrait_8 match -> accepted
+  scaling/test_jpeg_icc2_color_profile_mars_robidoux_400x300 match -> accepted
+  trim/test_trim_whitespace_transparent_shirt match -> accepted
+
+## 2. Pixels, through imageflow (format=png, no resize)
+# ./fetch.sh <inputs>; ./run.sh <dump-pin> <dump-0.9.2> <inputs> <out>   (dump.rs built on each version)
+# old = pin, new = 0.9.2; lcms2 output is the same in both builds.
+adobe_rgb 1024x576  lcms2 same in both builds: True
+  old vs new    : changed   2.40%  max   1 per-ch [1, 0, 1]  mean|d| 0.008  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [-0.013, 0.0, 0.011]
+  old vs lcms2  : changed  17.33%  max   1 per-ch [1, 1, 1]  mean|d| 0.064  >1: 0.00%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed  16.32%  max   1 per-ch [1, 1, 1]  mean|d| 0.060  >1: 0.00%  >2: 0.00%  alpha-changed 0
+display_p3 1024x771  lcms2 same in both builds: True
+  old vs new    : changed   4.94%  max   1 per-ch [1, 0, 1]  mean|d| 0.016  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [-0.004, 0.0, 0.046]
+  old vs lcms2  : changed  10.14%  max   1 per-ch [1, 1, 1]  mean|d| 0.035  >1: 0.00%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed   8.49%  max   1 per-ch [1, 1, 1]  mean|d| 0.029  >1: 0.00%  >2: 0.00%  alpha-changed 0
+display_p3_b 771x1024  lcms2 same in both builds: True
+  old vs new    : changed   4.34%  max   1 per-ch [1, 0, 1]  mean|d| 0.014  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [-0.008, 0.0, 0.035]
+  old vs lcms2  : changed   9.60%  max   1 per-ch [1, 1, 1]  mean|d| 0.033  >1: 0.00%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed   9.55%  max   1 per-ch [1, 1, 1]  mean|d| 0.033  >1: 0.00%  >2: 0.00%  alpha-changed 0
+prophoto 1024x683  lcms2 same in both builds: True
+  old vs new    : changed   0.54%  max   1 per-ch [1, 0, 1]  mean|d| 0.002  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [-0.001, 0.0, 0.004]
+  old vs lcms2  : changed  46.70%  max   2 per-ch [2, 1, 1]  mean|d| 0.188  >1: 0.00%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed  46.70%  max   2 per-ch [2, 1, 1]  mean|d| 0.188  >1: 0.00%  >2: 0.00%  alpha-changed 0
+rec2020 1023x569  lcms2 same in both builds: True
+  old vs new    : changed   0.46%  max   1 per-ch [0, 0, 1]  mean|d| 0.002  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [0.0, 0.0, 0.005]
+  old vs lcms2  : changed  43.81%  max   2 per-ch [2, 1, 1]  mean|d| 0.185  >1: 0.08%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed  43.89%  max   2 per-ch [2, 1, 1]  mean|d| 0.186  >1: 0.08%  >2: 0.00%  alpha-changed 0
+gray 1024x683  lcms2 same in both builds: True
+  old vs new    : changed   0.00%  max   0 per-ch [0, 0, 0]  mean|d| 0.000  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [0.0, 0.0, 0.0]
+  old vs lcms2  : changed   7.37%  max   1 per-ch [1, 1, 1]  mean|d| 0.074  >1: 0.00%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed   7.37%  max   1 per-ch [1, 1, 1]  mean|d| 0.074  >1: 0.00%  >2: 0.00%  alpha-changed 0
+srgb_ref 800x537  lcms2 same in both builds: True
+  old vs new    : changed   0.00%  max   0 per-ch [0, 0, 0]  mean|d| 0.000  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [0.0, 0.0, 0.0]
+  old vs lcms2  : changed   0.00%  max   0 per-ch [0, 0, 0]  mean|d| 0.000  >1: 0.00%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed   0.00%  max   0 per-ch [0, 0, 0]  mean|d| 0.000  >1: 0.00%  >2: 0.00%  alpha-changed 0
+mars_tagged 60x60  lcms2 same in both builds: True
+  old vs new    : changed 100.00%  max   1 per-ch [1, 0, 0]  mean|d| 0.333  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [-1.0, 0.0, 0.0]
+  old vs lcms2  : changed   0.00%  max   0 per-ch [0, 0, 0]  mean|d| 0.000  >1: 0.00%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed 100.00%  max   1 per-ch [1, 0, 0]  mean|d| 0.333  >1: 0.00%  >2: 0.00%  alpha-changed 0
+mars_lut 60x60  lcms2 same in both builds: True
+  old vs new    : changed 100.00%  max   1 per-ch [0, 0, 1]  mean|d| 0.333  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [0.0, 0.0, 1.0]
+  old vs lcms2  : changed 100.00%  max   3 per-ch [2, 3, 1]  mean|d| 2.000  >1:100.00%  >2:100.00%  alpha-changed 0
+  new vs lcms2  : changed 100.00%  max   3 per-ch [2, 3, 2]  mean|d| 2.333  >1:100.00%  >2:100.00%  alpha-changed 0
+sharp 1441x647  lcms2 same in both builds: True
+  old vs new    : changed   0.41%  max   1 per-ch [1, 0, 1]  mean|d| 0.001  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [-0.0, 0.0, 0.004]
+  old vs lcms2  : changed  14.62%  max   1 per-ch [1, 1, 1]  mean|d| 0.066  >1: 0.00%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed  14.25%  max   1 per-ch [1, 1, 1]  mean|d| 0.065  >1: 0.00%  >2: 0.00%  alpha-changed 0
+libvips 2044x437  lcms2 same in both builds: True
+  old vs new    : changed  62.65%  max   2 per-ch [1, 0, 2]  mean|d| 0.209  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [-0.0, 0.0, 0.626]
+  old vs lcms2  : changed  76.82%  max   5 per-ch [2, 3, 5]  mean|d| 0.486  >1: 1.96%  >2: 0.25%  alpha-changed 0
+  new vs lcms2  : changed  77.27%  max   5 per-ch [2, 3, 5]  mean|d| 0.286  >1: 1.67%  >2: 0.25%  alpha-changed 0
+shirt 500x500  lcms2 same in both builds: True
+  old vs new    : changed   1.10%  max   1 per-ch [1, 0, 1]  mean|d| 0.004  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [-0.001, 0.0, 0.01]
+  old vs lcms2  : changed  13.00%  max   1 per-ch [1, 1, 1]  mean|d| 0.048  >1: 0.00%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed  12.16%  max   1 per-ch [1, 1, 1]  mean|d| 0.046  >1: 0.00%  >2: 0.00%  alpha-changed 0
+landscape_2 600x450  lcms2 same in both builds: True
+  old vs new    : changed   1.45%  max   1 per-ch [1, 1, 1]  mean|d| 0.005  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [-0.004, 0.002, 0.009]
+  old vs lcms2  : changed  13.97%  max   1 per-ch [1, 1, 1]  mean|d| 0.050  >1: 0.00%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed  13.91%  max   1 per-ch [1, 1, 1]  mean|d| 0.050  >1: 0.00%  >2: 0.00%  alpha-changed 0
+cmyk_logo 1174x734  lcms2 same in both builds: True
+  old vs new    : changed   0.00%  max   1 per-ch [0, 0, 1]  mean|d| 0.000  >1: 0.00%  >2: 0.00%  alpha-changed 0   mean signed new-old per-ch [0.0, 0.0, 0.0]
+  old vs lcms2  : changed  32.58%  max   2 per-ch [2, 2, 2]  mean|d| 0.211  >1: 0.19%  >2: 0.00%  alpha-changed 0
+  new vs lcms2  : changed  32.58%  max   2 per-ch [2, 2, 2]  mean|d| 0.211  >1: 0.19%  >2: 0.00%  alpha-changed 0

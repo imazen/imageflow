@@ -1,0 +1,15 @@
+# name	path under https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/	profile
+adobe_rgb	wide-gamut/adobe-rgb/flickr_083f5c58e82b1640.jpg	embedded Adobe RGB (matrix/TRC)
+display_p3	wide-gamut/display-p3/flickr_403aa5efb8efe6e8.jpg	embedded Display P3 (matrix/TRC)
+display_p3_b	wide-gamut/display-p3/flickr_47b2cd2c048f29b3.jpg	embedded Display P3 (matrix/TRC)
+prophoto	wide-gamut/prophoto-rgb/flickr_6c6ab0d50486564a.jpg	embedded ProPhoto (matrix/TRC)
+rec2020	wide-gamut/rec-2020-pq/flickr_2a68670c58131566.jpg	embedded Rec.2020
+gray	wide-gamut/gray-gamma-22/flickr_2f4bbf638f18ebea.jpg	embedded gray gamma 2.2
+srgb_ref	wide-gamut/srgb-reference/canon_eos_5d_mark_iv/wmc_81b268fc64ea796c.jpg	sRGB reference
+mars_tagged	MarsRGB_tagged.jpg	embedded matrix/TRC
+mars_lut	MarsRGB_v4_sYCC_8bit.jpg	embedded LUT-only v4
+sharp	repro-icc/sharp/1323_115925293-3319d700-a481-11eb-8083-66b5188ee1da.png	PNG, embedded ICC
+libvips	repro-icc/libvips/1063_44146319-5742eab6-a08f-11e8-911a-2aaef2a42540.jpg	embedded CMYK
+shirt	shirt_transparent.png	PNG
+landscape_2	orientation/Landscape_2.jpg	EXIF orientation 2
+cmyk_logo	cmyk_logo.jpg	CMYK, no profile (built-in SWOP)

@@ -1396,7 +1396,7 @@ dependencies = [
  "libwebp-sys",
  "libz-sys",
  "lodepng",
- "moxcms 0.9.1",
+ "moxcms 0.9.2",
  "mozjpeg",
  "mozjpeg-rs",
  "mozjpeg-sys",
@@ -1907,8 +1907,9 @@ dependencies = [
 
 [[package]]
 name = "moxcms"
-version = "0.9.1"
-source = "git+https://github.com/awxkee/moxcms?rev=841044439077ec1ec67a71b2db979ab51d304fcf#841044439077ec1ec67a71b2db979ab51d304fcf"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "561875e11b3d8618524f974f85e4bbd05a64a112b8f7541ffcc236b5166c0564"
 dependencies = [
  "num-traits",
  "pxfm",
