@@ -449,7 +449,7 @@ $AllRids = @(
     "linux-arm64",
     # "linux-musl-x64", # Removed as per user feedback
     # "linux-musl-arm64", # Removed as per user feedback
-    "osx-x64",
+    # "osx-x64", # macOS ARM64 only; Intel CI runner removed
     "osx-arm64"
     # Add/remove RIDs as needed
 )

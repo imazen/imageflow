@@ -38,7 +38,6 @@
     <ProjectReference Include="..\native\Imageflow.NativeRuntime.win-arm64.csproj" />
     <ProjectReference Include="..\native\Imageflow.NativeRuntime.linux-x64.csproj" />
     <ProjectReference Include="..\native\Imageflow.NativeRuntime.linux-arm64.csproj" />
-    <ProjectReference Include="..\native\Imageflow.NativeRuntime.osx-x64.csproj" />
     <ProjectReference Include="..\native\Imageflow.NativeRuntime.osx-arm64.csproj" />
 </ItemGroup>
 
