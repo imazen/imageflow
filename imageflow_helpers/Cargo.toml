@@ -48,7 +48,7 @@ uuid = { version = "*", features= ["v4", "v5"]}
 # regex
 regex-lite = { version = "0.1.6" } #, features = ["pattern"]
 rand = "*"
-rgb = "0.8"
+rgb = "0.8.53"
 
 base64 = "0.22"
 
