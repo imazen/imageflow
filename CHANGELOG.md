@@ -40,6 +40,7 @@ All notable changes to Imageflow are documented here. Format follows [Keep a Cha
 - ROADMAP.md plus README announcements for imageflow 3 and imageflow 4 (796ce1c4).
 
 ### Changed
+- deps: upgrade `archmage` floor in `imageflow_core` and lockfile entries for `archmage`, `archmage-macros`, and `magetypes` from 0.9.32 to 0.9.33 (6fb4652a).
 - deps: update `/bindings` npm devDependencies (`@openapitools/openapi-generator-cli` 2.42.2, `axios` 1.21.1, `brace-expansion` 5.0.13, `follow-redirects` 1.16.3, `form-data` 4.0.6, `ip-address` 10.7.6, `shell-quote` 1.12.0), resolving Dependabot PRs #726, #731, #734, #735, #739, and #740 (f21428a7).
 - CI: remove the `macos-15-intel` (`osx-x64-15`) matrix job and drop `osx-x64` from the NuGet packing solution/script so macOS builds target ARM64 only on `macos-latest` (536351f2).
 - deps: bump compatible workspace dependency floors (`archmage` 0.9.32, `enough` 0.4.5, `garb` 0.2.8, `zenresize` 0.3.1, `zenbench` 0.1.11, `imgref` 1.12.3, `rgb` 0.8.53, `bytemuck` 1.25.2, `png` 0.18.1) and lockfile updates (`magetypes` 0.9.32, `serde` 1.0.229, `serde_json` 1.0.154, `thiserror` 2.0.21, `hashbrown` 0.17.2, `zerocopy` 0.8.64) while preserving patched `zenjpeg`/`zenwebp` and MSRV 1.93 compatibility (8a7ec1f8).
