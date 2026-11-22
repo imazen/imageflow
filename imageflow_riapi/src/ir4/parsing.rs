@@ -1412,9 +1412,9 @@ where
         let changeset = Changeset::new(&text1, &text2, "\n");
 
         let mut last_same = false;
-        for i in 0..changeset.diffs.len() {
-            match changeset.diffs[i] {
-                Difference::Same(ref x) => {
+        for diff in &changeset.diffs {
+            match diff {
+                Difference::Same(x) => {
                     if !last_same {
                         if collapse_same {
                             t.push_str("...\n");
@@ -1424,11 +1424,11 @@ where
                         last_same = true;
                     }
                 }
-                Difference::Add(ref x) => {
+                Difference::Add(x) => {
                     t.push_str(&format!("+{}\n", x));
                     last_same = false;
                 }
-                Difference::Rem(ref x) => {
+                Difference::Rem(x) => {
                     t.push_str(&format!("-{}\n", x));
                     last_same = false;
                 }
