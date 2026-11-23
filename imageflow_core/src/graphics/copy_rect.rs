@@ -97,15 +97,11 @@ pub fn copy_rectangle(
         Ok(())
         // The next branch is for 24->32 (of any type)
     } else if input_fmt == PixelFormat::Bgr24 && canvas_layout == PixelLayout::BGRA {
-        for mut row in
-            from_window.scanlines_bgra().unwrap().zip(to_window.scanlines_bgra().unwrap())
-        {
-            for (from, to) in row.0.row().iter().zip(row.1.row_mut()) {
-                to.a = 0xff;
-                to.r = from.r;
-                to.g = from.g;
-                to.b = from.b;
-            }
+        for mut row in from_window.scanlines().zip(to_window.scanlines()) {
+            // Bgr24 [B, G, R] -> Bgra32 [B, G, R, 255] uses the exact same 3->4 append-0xff layout as rgb_to_rgba.
+            garb::bytes::rgb_to_rgba(row.0.row(), row.1.row_mut()).map_err(|e| {
+                nerror!(crate::ErrorKind::InvalidOperation, "Bgr24 -> Bgra32 copy failed: {:?}", e)
+            })?;
         }
         Ok(())
     } else {
@@ -115,5 +111,58 @@ pub fn copy_rectangle(
             input_fmt,
             canvas_fmt
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::graphics::bitmaps::{BitmapCompositing, ColorSpace};
+
+    #[test]
+    fn copy_rectangle_bgr24_to_bgra32_preserves_bgr_and_sets_alpha_ff() {
+        let mut src = Bitmap::create_u8(
+            4,
+            2,
+            PixelLayout::BGR,
+            false,
+            false,
+            ColorSpace::StandardRGB,
+            BitmapCompositing::ReplaceSelf,
+        )
+        .unwrap();
+        {
+            let mut win = src.get_window_u8().unwrap();
+            let bgr_rows = [
+                [10u8, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120],
+                [15u8, 25, 35, 45, 55, 65, 75, 85, 95, 105, 115, 125],
+            ];
+            for (y, mut row) in win.scanlines().enumerate() {
+                row.row_mut().copy_from_slice(&bgr_rows[y]);
+            }
+        }
+        let mut dst = Bitmap::create_u8(
+            4,
+            2,
+            PixelLayout::BGRA,
+            true,
+            true,
+            ColorSpace::StandardRGB,
+            BitmapCompositing::ReplaceSelf,
+        )
+        .unwrap();
+
+        copy_rectangle(&mut src, &mut dst, 0, 0, 0, 0, 4, 2).unwrap();
+
+        let mut win = dst.get_window_u8().unwrap();
+        let rows: Vec<Vec<u8>> = win.scanlines().map(|r| r.row().to_vec()).collect();
+        assert_eq!(
+            rows[0],
+            vec![10, 20, 30, 255, 40, 50, 60, 255, 70, 80, 90, 255, 100, 110, 120, 255]
+        );
+        assert_eq!(
+            rows[1],
+            vec![15, 25, 35, 255, 45, 55, 65, 255, 75, 85, 95, 255, 105, 115, 125, 255]
+        );
     }
 }

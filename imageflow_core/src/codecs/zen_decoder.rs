@@ -430,25 +430,33 @@ impl ZenDecoder {
 /// Convert one row of arbitrary U8 pixels into BGRA.
 #[inline]
 fn row_to_bgra(dst: &mut [u8], src: &[u8], width: usize, channels: usize) {
-    for x in 0..width {
-        let si = x * channels;
-        let di = x * 4;
-        if channels >= 4 {
-            dst[di] = src[si + 2]; // B
-            dst[di + 1] = src[si + 1]; // G
-            dst[di + 2] = src[si]; // R
-            dst[di + 3] = src[si + 3]; // A
-        } else if channels >= 3 {
-            dst[di] = src[si + 2]; // B
-            dst[di + 1] = src[si + 1]; // G
-            dst[di + 2] = src[si]; // R
-            dst[di + 3] = 255;
-        } else {
-            let v = src[si];
-            dst[di] = v;
-            dst[di + 1] = v;
-            dst[di + 2] = v;
-            dst[di + 3] = 255;
+    match channels {
+        4 => {
+            garb::bytes::rgba_to_bgra(&src[..width * 4], &mut dst[..width * 4]).unwrap();
+        }
+        3 => {
+            garb::bytes::rgb_to_bgra(&src[..width * 3], &mut dst[..width * 4]).unwrap();
+        }
+        1 => {
+            garb::bytes::gray_to_rgba(&src[..width], &mut dst[..width * 4]).unwrap();
+        }
+        _ => {
+            for x in 0..width {
+                let si = x * channels;
+                let di = x * 4;
+                if channels >= 4 {
+                    dst[di] = src[si + 2]; // B
+                    dst[di + 1] = src[si + 1]; // G
+                    dst[di + 2] = src[si]; // R
+                    dst[di + 3] = src[si + 3]; // A
+                } else {
+                    let v = src[si];
+                    dst[di] = v;
+                    dst[di + 1] = v;
+                    dst[di + 2] = v;
+                    dst[di + 3] = 255;
+                }
+            }
         }
     }
 }

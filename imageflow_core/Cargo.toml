@@ -57,7 +57,6 @@ uuid = { version = "1", features = ["v4"] }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
-multiversion = "0.8"
 archmage = { version = "0.9.33", features = ["macros"] }
 safe_unaligned_simd = "0.2"
 zenresize = { version = "0.3.1", features = ["std"] }
@@ -177,4 +176,9 @@ harness = false
 [[bench]]
 name = "bench_codecs"
 path = "benches/bench_codecs.rs"
+harness = false
+
+[[bench]]
+name = "whitespace_and_swizzle"
+path = "benches/whitespace_and_swizzle.rs"
 harness = false

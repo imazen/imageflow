@@ -360,8 +360,6 @@ fn check_region(
 
         for window_row in 0..vertical_windows {
             for window_column in 0..horizontal_windows {
-                let mut buf = Buffer::default();
-
                 // Set up default overlapping windows. These may be shrunk or shifted later
                 buf.x = x1 + ((window_width - 2) * window_column);
                 buf.y = y1 + ((window_height - 2) * window_row);
@@ -410,9 +408,9 @@ fn check_region(
                     }
                 }
 
-                fill_grayscale_buffer_from_bitmap(&mut buf, b);
+                fill_grayscale_buffer_from_bitmap(buf, b);
 
-                sobel_scharr_detect(&buf, search);
+                sobel_scharr_detect(buf, search);
             }
         }
     }

@@ -1427,7 +1427,6 @@ dependencies = [
  "mozjpeg",
  "mozjpeg-rs",
  "mozjpeg-sys",
- "multiversion",
  "petgraph",
  "png",
  "rand 0.10.1",
@@ -1991,28 +1990,6 @@ dependencies = [
  "dunce",
  "libc",
  "nasm-rs",
-]
-
-[[package]]
-name = "multiversion"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7edb7f0ff51249dfda9ab96b5823695e15a052dc15074c9dbf3d118afaf2c201"
-dependencies = [
- "multiversion-macros",
- "target-features",
-]
-
-[[package]]
-name = "multiversion-macros"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b093064383341eb3271f42e381cb8f10a01459478446953953c75d24bd339fc0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.118",
- "target-features",
 ]
 
 [[package]]
@@ -3042,12 +3019,6 @@ dependencies = [
  "objc2-io-kit",
  "windows 0.61.3",
 ]
-
-[[package]]
-name = "target-features"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1bbb9f3c5c463a01705937a24fdabc5047929ac764b2d5b9cf681c1f5041ed5"
 
 [[package]]
 name = "tempfile"
@@ -4122,7 +4093,7 @@ dependencies = [
  "zencodec",
  "zenpixels",
  "zenpixels-convert",
- "zenyuv 0.1.3 (git+https://github.com/imazen/zenjpeg?branch=main)",
+ "zenyuv",
 ]
 
 [[package]]
@@ -4373,20 +4344,7 @@ dependencies = [
  "zencodec",
  "zenpixels",
  "zenpixels-convert",
- "zenyuv 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "zenyuv"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6eca8f745696b57918b5529772fa7d0c112a07c86269277928bae2fd1d7aabae"
-dependencies = [
- "archmage",
- "libm",
- "linear-srgb",
- "magetypes",
- "safe_unaligned_simd",
+ "zenyuv",
 ]
 
 [[package]]

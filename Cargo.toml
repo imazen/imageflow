@@ -35,6 +35,7 @@ lcms2-sys = { git = "https://github.com/imazen/rust-lcms2-sys", branch = "update
 # zenpixels 0.2.14 (published — CMYK plumbing landed) resolves from crates.io;
 # its old main-patch was removed. zenjpeg github main until CMYK8 is published.
 zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
+zenyuv = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
 # Local zenwebp with push_frame stride fix for strided input (imageflow
 # bitmaps are SIMD-aligned with stride > width*bpp).
 zenwebp = { git = "https://github.com/imazen/zenwebp", branch = "main" }
