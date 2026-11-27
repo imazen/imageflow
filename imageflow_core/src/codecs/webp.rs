@@ -242,9 +242,6 @@ impl Decoder for WebPDecoder {
     fn has_more_frames(&mut self) -> Result<bool> {
         Ok(false) // TODO: support webp animation
     }
-    fn as_any(&self) -> &dyn Any {
-        self as &dyn Any
-    }
 }
 
 pub struct WebPEncoder {
@@ -282,44 +279,24 @@ impl Drop for AnimEncoderState {
 /// and whether that decoder still has frames to produce. Defaults to 100 ms /
 /// false when no input decoder exposes frame timing.
 fn input_frame_info(c: &Context, decoder_io_ids: &[i32]) -> (i32, bool) {
+    let (delay_ms, _) = super::input_animation_info(c, decoder_io_ids);
+    let mut more = false;
     for io_id in decoder_io_ids {
         if let Ok(mut codec) = c.get_codec(*io_id)
             && let Ok(decoder) = codec.get_decoder()
         {
-            let more = decoder.has_more_frames().unwrap_or(false);
-            let mut delay_ms = 100;
-            if let Some(gif) = decoder.as_any().downcast_ref::<super::gif::GifDecoder>()
-                && let Some(frame) = gif.current_frame()
-            {
-                // GIF delays are in centiseconds
-                delay_ms = i32::from(frame.delay) * 10;
-            }
-            #[cfg(feature = "zen-codecs")]
-            if let Some(zd) = decoder.as_any().downcast_ref::<super::zen_decoder::ZenDecoder>()
-                && let Some(d) = zd.last_frame_delay()
-            {
-                delay_ms = d as i32 * 10;
-            }
-            return (delay_ms.max(0), more);
+            more = decoder.has_more_frames().unwrap_or(false);
+            break;
         }
     }
-    (100, false)
+    let delay = delay_ms.unwrap_or(100).min(i32::MAX as u32) as i32;
+    (delay, more)
 }
 
-/// Loop count for the animation, from the first GIF input decoder (0 = infinite).
+/// Loop count for the animation, from the first input decoder exposing one (0 = infinite).
 fn input_loop_count(c: &Context, decoder_io_ids: &[i32]) -> i32 {
-    for io_id in decoder_io_ids {
-        if let Ok(mut codec) = c.get_codec(*io_id)
-            && let Ok(decoder) = codec.get_decoder()
-            && let Some(gif) = decoder.as_any().downcast_ref::<super::gif::GifDecoder>()
-        {
-            return match gif.get_repeat() {
-                Some(::gif::Repeat::Finite(n)) => i32::from(n),
-                _ => 0,
-            };
-        }
-    }
-    0
+    let (_, loop_count) = super::input_animation_info(c, decoder_io_ids);
+    loop_count.unwrap_or(0).min(i32::MAX as u32) as i32
 }
 
 impl WebPEncoder {

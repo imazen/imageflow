@@ -132,7 +132,4 @@ impl Decoder for JpegDecoder {
     fn has_more_frames(&mut self) -> Result<bool> {
         Ok(false)
     }
-    fn as_any(&self) -> &dyn Any {
-        self as &dyn Any
-    }
 }

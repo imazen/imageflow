@@ -9,12 +9,11 @@ use std::io::Write;
 
 use zc::encode::{DynAnimationFrameEncoder, DynEncoderConfig, EncodeOutput};
 use zc::how_far::StopOnly;
+use zc::CodecErrorExt as _;
 use zc::{Pulse, SharedPulse};
 use zenpixels::{PixelFormat as ZenPixelFormat, PixelView};
 
-use super::zen_decoder::{
-    build_pool, check_stage_memory, encode_limits_capped, install_pooled, run_pooled, ZenDecoder,
-};
+use super::zen_decoder::{build_pool, check_stage_memory, encode_limits_capped, install_pooled};
 
 /// Encoding strategy — native JPEG path for backward compat, zencodec for everything else.
 enum EncodeMode {
@@ -42,9 +41,14 @@ pub struct ZenEncoder {
     // Cached max_threads-sized rayon pool, reused across animation frames + finish
     // so the codec's par_iter is bounded without re-spawning a pool per frame.
     thread_pool: Option<rayon::ThreadPool>,
-    // Cancellation pulse persisted at animation-encoder setup so the final
-    // finish() (in into_io, which has no Context) still honors cancellation.
+    thread_pool_threads: Option<u32>,
+    // Cancellation pulse persisted at setup so animation frames and the final
+    // finish() (in into_io, which has no Context) share one token and honor cancellation.
     pulse: Option<SharedPulse>,
+    // Whether the active animation frame encoder accepts BGRX8_SRGB directly.
+    // Some codecs (e.g. zenwebp) list BGRX8_SRGB for single-frame encode but only
+    // accept BGRA8_SRGB in their animation frame encoder.
+    anim_accepts_bgrx: bool,
 }
 
 impl ZenEncoder {
@@ -65,7 +69,9 @@ impl ZenEncoder {
             preferred_extension,
             preferred_mime_type,
             thread_pool: None,
+            thread_pool_threads: None,
             pulse: None,
+            anim_accepts_bgrx: true,
         }
     }
 
@@ -123,7 +129,9 @@ impl ZenEncoder {
             preferred_extension: "jpg",
             preferred_mime_type: "image/jpeg",
             thread_pool: None,
+            thread_pool_threads: None,
             pulse: None,
+            anim_accepts_bgrx: true,
         })
     }
 
@@ -179,7 +187,9 @@ impl ZenEncoder {
             preferred_extension: "jpg",
             preferred_mime_type: "image/jpeg",
             thread_pool: None,
+            thread_pool_threads: None,
             pulse: None,
+            anim_accepts_bgrx: true,
         })
     }
 
@@ -370,7 +380,59 @@ impl ZenEncoder {
     }
 }
 
+/// Negotiate the encoder's preferred 4bpp pixel view for an imageflow BGRA bitmap.
+///
+/// - When `make_opaque && allow_bgrx` and the encoder advertises `BGRX8_SRGB`,
+///   passes `BGRX8_SRGB` directly without running an alpha-fill pass.
+/// - Otherwise selects `BGRA8_SRGB` if supported, or swizzles in place to
+///   `RGBA8_SRGB` (e.g. `mozjpeg-rs`), filling alpha to `0xFF` when `make_opaque`
+///   and the codec has native alpha support.
+fn prepare_pixel_view<'a>(
+    config: &dyn DynEncoderConfig,
+    slice: &'a mut [u8],
+    w: u32,
+    h: u32,
+    stride: usize,
+    make_opaque: bool,
+    allow_bgrx: bool,
+) -> Result<PixelView<'a>> {
+    let supported = config.supported_pixel_formats();
+    let fmt: &'static ZenPixelFormat =
+        if make_opaque && allow_bgrx && supported.contains(&ZenPixelFormat::BGRX8_SRGB) {
+            &zenpixels::formats::BGRX8_SRGB
+        } else if supported.contains(&ZenPixelFormat::BGRA8_SRGB) {
+            if make_opaque && config.capabilities().native_alpha() {
+                let _ = garb::bytes::fill_alpha_bgra_strided(slice, w as usize, h as usize, stride);
+            }
+            &zenpixels::formats::BGRA8_SRGB
+        } else {
+            let _ =
+                garb::bytes::bgra_to_rgba_inplace_strided(slice, w as usize, h as usize, stride);
+            if make_opaque && config.capabilities().native_alpha() {
+                let _ = garb::bytes::fill_alpha_rgba_strided(slice, w as usize, h as usize, stride);
+            }
+            &zenpixels::formats::RGBA8_SRGB
+        };
+    PixelView::new(slice, w, h, stride, fmt)
+        .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "pixel view error: {}", e))
+}
+
 impl ZenEncoder {
+    /// Lazily build or update the cached `max_threads`-sized rayon pool.
+    fn ensure_thread_pool(&mut self, max_threads: Option<u32>) {
+        if self.thread_pool_threads != max_threads {
+            self.thread_pool = build_pool(max_threads);
+            self.thread_pool_threads = max_threads;
+        }
+    }
+
+    /// Reuse one `SharedPulse` across all frames and `finish()`.
+    fn ensure_pulse(&mut self, c: &Context) -> SharedPulse {
+        self.pulse
+            .get_or_insert_with(|| SharedPulse::new(StopOnly::new(c.cancellation_token())))
+            .clone()
+    }
+
     /// Write encoded output to the IoProxy. Uses zero-copy swap for empty
     /// memory-backed output buffers; falls back to write_all otherwise.
     fn write_output(io: &mut IoProxy, output: EncodeOutput) -> Result<()> {
@@ -415,7 +477,7 @@ impl Encoder for ZenEncoder {
                 .map_err(|e| e.at(here!()))?;
             bitmap.set_alpha_meaningful(false);
 
-            let mut window = bitmap.get_window_u8().unwrap();
+            let window = bitmap.get_window_u8().unwrap();
 
             let pixel_layout = match window.pixel_format() {
                 PixelFormat::Bgra32 => zenjpeg::encoder::PixelLayout::Bgra8Srgb,
@@ -424,34 +486,90 @@ impl Encoder for ZenEncoder {
                 PixelFormat::Gray8 => zenjpeg::encoder::PixelLayout::Gray8Srgb,
             };
 
-            let w = window.w() as usize;
-            let h = window.h() as usize;
+            let w = window.w();
+            let h = window.h();
             let src_stride = window.info().t_stride() as usize;
+            let row_bytes = w as usize * window.pixel_format().bytes();
 
-            let mut encoder =
-                config.encode_from_bytes(w as u32, h as u32, pixel_layout).map_err(|e| {
+            // Pre-flight encode memory gate matching the Zencodec arm.
+            if let Some(policy) = c.security.mem_budget_policy.as_ref() {
+                let e = zenjpeg::heuristics::estimate_encode(w, h, &config);
+                let mut env = zc::estimate::ComputeEnvironment::host();
+                if let Some(n) = c.security.max_threads {
+                    env = env.with_cores(n as usize);
+                }
+                let est =
+                    zc::estimate::ResourceEstimate::new(e.peak_memory_bytes, e.time_ms as u64)
+                        .with_peak_memory_bytes_max(e.peak_memory_bytes_max)
+                        .with_threading(zenjpeg::heuristics::encode_threading_info())
+                        .at_cores(env.cores());
+                if let Err((name, limit, actual)) = check_stage_memory(policy, &est, w, h) {
+                    return Err(nerror!(
+                        ErrorKind::ImageEncodingError,
+                        "encode memory budget {} exceeded: estimated {} bytes >= limit {} bytes",
+                        name,
+                        actual,
+                        limit
+                    ));
+                }
+            }
+
+            // Enforce dimension / pixel / memory caps matching the Zencodec arm.
+            let jpeg_limits = if let Some(limits) = encode_limits_capped(&c.security, w, h) {
+                limits.check_dimensions(w, h).map_err(|e| {
+                    FlowError::from_codec_error(ErrorKind::ImageEncodingError, "zenjpeg limits", &e)
+                })?;
+                let mut jl = zenjpeg::encoder::Limits::default();
+                if let Some(max_pixels) = limits.max_pixels {
+                    jl = jl.max_pixels(max_pixels);
+                }
+                if let Some(max_memory) = limits.max_memory_bytes {
+                    jl = jl.max_memory(max_memory);
+                }
+                if let Some(max_output) = limits.max_output_bytes {
+                    jl = jl.max_output(max_output);
+                }
+                Some(jl)
+            } else {
+                None
+            };
+
+            self.ensure_thread_pool(c.security.max_threads);
+            let pixels = window.get_slice();
+            let stop = c.cancellation_token();
+            let jpeg_bytes = install_pooled(&self.thread_pool, move || -> Result<Vec<u8>> {
+                let mut req = config.request();
+                if let Some(jl) = jpeg_limits {
+                    req = req.limits(jl);
+                }
+                let mut encoder = req.encode_from_bytes(w, h, pixel_layout).map_err(|e| {
                     FlowError::from_codec_error(ErrorKind::ImageEncodingError, "zenjpeg config", &e)
                 })?;
-
-            let stop = c.stop();
-            if w * window.pixel_format().bytes() == src_stride {
-                encoder.push_packed(window.get_slice(), stop).map_err(|e| {
-                    FlowError::from_codec_error(ErrorKind::ImageEncodingError, "zenjpeg encode", &e)
-                })?;
-            } else {
-                for line in window.scanlines() {
-                    encoder.push_packed(line.row(), stop).map_err(|e| {
+                if row_bytes == src_stride {
+                    encoder.push_packed(pixels, &stop).map_err(|e| {
                         FlowError::from_codec_error(
                             ErrorKind::ImageEncodingError,
                             "zenjpeg encode",
                             &e,
                         )
                     })?;
+                } else {
+                    for y in 0..h as usize {
+                        let start = y * src_stride;
+                        encoder.push_packed(&pixels[start..start + row_bytes], &stop).map_err(
+                            |e| {
+                                FlowError::from_codec_error(
+                                    ErrorKind::ImageEncodingError,
+                                    "zenjpeg encode",
+                                    &e,
+                                )
+                            },
+                        )?;
+                    }
                 }
-            }
-
-            let jpeg_bytes = encoder.finish().map_err(|e| {
-                FlowError::from_codec_error(ErrorKind::ImageEncodingError, "zenjpeg finish", &e)
+                encoder.finish().map_err(|e| {
+                    FlowError::from_codec_error(ErrorKind::ImageEncodingError, "zenjpeg finish", &e)
+                })
             })?;
 
             if self.io.can_swap_output() {
@@ -517,6 +635,9 @@ impl Encoder for ZenEncoder {
             }
         }
 
+        self.ensure_thread_pool(c.security.max_threads);
+        let shared_pulse = self.ensure_pulse(c);
+
         // Create frame encoder on first call for animation-capable formats
         if self.supports_animation && self.frame_enc.is_none() {
             let config = match &self.mode {
@@ -524,32 +645,13 @@ impl Encoder for ZenEncoder {
                 _ => unreachable!(),
             };
             let mut job = config.dyn_job();
-            let shared_pulse = SharedPulse::new(StopOnly::new(c.cancellation_token()));
             job.set_pulse(shared_pulse.clone());
             if let Some(limits) = encode_limits_capped(&c.security, w, h) {
                 job.set_limits(limits);
             }
 
-            // Try to get loop count from decoder and set on the job
-            for io_id in decoder_io_ids {
-                if let Ok(mut codec) = c.get_codec(*io_id)
-                    && let Ok(decoder) = codec.get_decoder()
-                {
-                    if let Some(d) = decoder.as_any().downcast_ref::<ZenDecoder>() {
-                        if let Some(lc) = d.get_loop_count() {
-                            job.set_loop_count(Some(lc));
-                        }
-                        break;
-                    }
-                    if let Some(gif) = decoder.as_any().downcast_ref::<super::gif::GifDecoder>() {
-                        let lc = match gif.get_repeat() {
-                            Some(::gif::Repeat::Finite(n)) => u32::from(n),
-                            _ => 0,
-                        };
-                        job.set_loop_count(Some(lc));
-                        break;
-                    }
-                }
+            if let (_, Some(lc)) = super::input_animation_info(c, decoder_io_ids) {
+                job.set_loop_count(Some(lc));
             }
 
             let frame_enc = job.into_animation_frame_encoder().map_err(|e| {
@@ -561,90 +663,66 @@ impl Encoder for ZenEncoder {
             })?;
 
             self.frame_enc = Some(frame_enc);
-            // Bound this format's per-frame par_iter to max_threads — spawned once
-            // and reused for every push_frame + the final finish().
-            self.thread_pool = build_pool(c.security.max_threads);
-            // Persist a cancellation pulse so finish() (into_io has no Context)
-            // can still honor cancellation, mirroring the per-frame push below.
-            self.pulse = Some(shared_pulse);
         }
 
         // Animation frame path.
-        //
-        // Pick the encoder's preferred 4bpp layout: BGRA if the encoder lists
-        // it (zenpng/zenwebp/zengif/zenjxl/zenavif all do), else RGBA with a
-        // one-pass in-place swizzle (mozjpeg-rs only lists RGB8/RGBA8/Gray8).
-        //
-        // Alpha handling when make_opaque is set:
-        //   - native_alpha codecs (PNG/WebP/GIF/JXL/AVIF) compress whatever
-        //     alpha bytes we pass into the output alpha channel. Garbage
-        //     bytes = garbage output. Fill to 0xFF so the encoded alpha is
-        //     valid and highly compressible.
-        //   - !native_alpha codecs (JPEG) discard alpha entirely; filling is
-        //     wasted work.
-        // We don't set AlphaMode::Undefined/Opaque because zen codecs use
-        // exact-format equality (fmt == BGRA8_SRGB) and reject variants.
         if let Some(frame_enc) = self.frame_enc.as_mut() {
+            let duration = super::input_frame_duration(c, decoder_io_ids)
+                .unwrap_or_else(|| zc::animation::FrameDuration::from_millis(100));
+
             let config = match &self.mode {
-                EncodeMode::Zencodec(config) => config,
+                EncodeMode::Zencodec(config) => config.as_ref(),
                 _ => unreachable!(),
             };
-            let use_bgra = config.supported_pixel_formats().contains(&ZenPixelFormat::BGRA8_SRGB);
-            let needs_alpha_fill = make_opaque && config.capabilities().native_alpha();
-            let fmt: &'static ZenPixelFormat = if use_bgra {
-                if needs_alpha_fill {
-                    let _ =
-                        garb::bytes::fill_alpha_bgra_strided(slice, w as usize, h as usize, stride);
-                }
-                &zenpixels::formats::BGRA8_SRGB
-            } else {
-                let _ = garb::bytes::bgra_to_rgba_inplace_strided(
-                    slice, w as usize, h as usize, stride,
-                );
-                if needs_alpha_fill {
-                    let _ =
-                        garb::bytes::fill_alpha_rgba_strided(slice, w as usize, h as usize, stride);
-                }
-                &zenpixels::formats::RGBA8_SRGB
+            let push_res = {
+                let ps = prepare_pixel_view(
+                    config,
+                    slice,
+                    w,
+                    h,
+                    stride,
+                    make_opaque,
+                    self.anim_accepts_bgrx,
+                )?;
+                let used_bgrx = *ps.format() == ZenPixelFormat::BGRX8_SRGB;
+                let pulse = shared_pulse.clone();
+                let fe = &mut **frame_enc;
+                let res = install_pooled(&self.thread_pool, move || {
+                    fe.push_frame_timed(ps, duration, Some(&pulse as &dyn Pulse))
+                });
+                (res, used_bgrx)
             };
 
-            let mut delay_ms = 100u32;
-            for io_id in decoder_io_ids {
-                if let Ok(mut codec) = c.get_codec(*io_id)
-                    && let Ok(decoder) = codec.get_decoder()
+            match push_res {
+                (Ok(_), _) => {}
+                (Err(e), true)
+                    if e.unsupported_operation()
+                        == Some(&zc::UnsupportedOperation::PixelFormat) =>
                 {
-                    if let Some(d) = decoder.as_any().downcast_ref::<ZenDecoder>() {
-                        if let Some(d) = d.last_frame_delay() {
-                            delay_ms = d as u32 * 10;
-                        }
-                        break;
-                    }
-                    if let Some(gif) = decoder.as_any().downcast_ref::<super::gif::GifDecoder>() {
-                        if let Some(frame) = gif.current_frame() {
-                            delay_ms = u32::from(frame.delay) * 10;
-                        }
-                        break;
-                    }
+                    // Some codecs advertise BGRX8_SRGB for still encode while their
+                    // animation encoder accepts only BGRA8_SRGB; remember that and retry.
+                    self.anim_accepts_bgrx = false;
+                    let ps = prepare_pixel_view(config, slice, w, h, stride, make_opaque, false)?;
+                    let pulse = shared_pulse;
+                    install_pooled(&self.thread_pool, move || {
+                        frame_enc.push_frame_timed(ps, duration, Some(&pulse as &dyn Pulse))
+                    })
+                    .map_err(|e| {
+                        FlowError::from_codec_error(
+                            ErrorKind::ImageEncodingError,
+                            &format!("{} frame encode", self.preferred_extension),
+                            &*e,
+                        )
+                    })?;
+                }
+                (Err(e), _) => {
+                    return Err(FlowError::from_codec_error(
+                        ErrorKind::ImageEncodingError,
+                        &format!("{} frame encode", self.preferred_extension),
+                        &*e,
+                    ));
                 }
             }
-
-            let ps = PixelView::new(slice, w, h, stride, fmt)
-                .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "pixel view error: {}", e))?;
-
-            // Thread the per-call pulse: animation frame encoders honor only this
-            // argument, not the job pulse, so None would leave animated encode
-            // uncancellable.
-            let pulse = StopOnly::new(c.cancellation_token());
-            install_pooled(&self.thread_pool, move || {
-                frame_enc.push_frame(ps, delay_ms, Some(&pulse as &dyn Pulse))
-            })
-            .map_err(|e| {
-                FlowError::from_codec_error(
-                    ErrorKind::ImageEncodingError,
-                    &format!("{} frame encode", self.preferred_extension),
-                    &*e,
-                )
-            })?;
 
             return Ok(EncodeResult {
                 w: w as i32,
@@ -656,30 +734,15 @@ impl Encoder for ZenEncoder {
             });
         }
 
-        // Single-frame encode. Same pixel format negotiation and alpha rules as
-        // the animation path above.
+        // Single-frame encode.
         let config = match &self.mode {
             EncodeMode::Zencodec(config) => config,
             EncodeMode::NativeJpeg { .. } => unreachable!(),
         };
-        let use_bgra = config.supported_pixel_formats().contains(&ZenPixelFormat::BGRA8_SRGB);
-        let needs_alpha_fill = make_opaque && config.capabilities().native_alpha();
-        let fmt: &'static ZenPixelFormat = if use_bgra {
-            if needs_alpha_fill {
-                let _ = garb::bytes::fill_alpha_bgra_strided(slice, w as usize, h as usize, stride);
-            }
-            &zenpixels::formats::BGRA8_SRGB
-        } else {
-            let _ =
-                garb::bytes::bgra_to_rgba_inplace_strided(slice, w as usize, h as usize, stride);
-            if needs_alpha_fill {
-                let _ = garb::bytes::fill_alpha_rgba_strided(slice, w as usize, h as usize, stride);
-            }
-            &zenpixels::formats::RGBA8_SRGB
-        };
+        let ps = prepare_pixel_view(config.as_ref(), slice, w, h, stride, make_opaque, true)?;
 
         let mut job = config.dyn_job();
-        job.set_pulse(SharedPulse::new(StopOnly::new(c.cancellation_token())));
+        job.set_pulse(shared_pulse);
         if let Some(limits) = encode_limits_capped(&c.security, w, h) {
             job.set_limits(limits);
         }
@@ -691,11 +754,9 @@ impl Encoder for ZenEncoder {
             )
         })?;
 
-        let ps = PixelView::new(slice, w, h, stride, fmt)
-            .map_err(|e| nerror!(ErrorKind::ImageEncodingError, "pixel view error: {}", e))?;
         // Bound the encoder's rayon parallelism to the job's max_threads.
         let output =
-            run_pooled(c.security.max_threads, move || encoder.encode(ps)).map_err(|e| {
+            install_pooled(&self.thread_pool, move || encoder.encode(ps)).map_err(|e| {
                 FlowError::from_codec_error(
                     ErrorKind::ImageEncodingError,
                     &format!("{} encode", self.preferred_extension),

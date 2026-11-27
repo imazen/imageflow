@@ -215,8 +215,4 @@ impl Decoder for ImagePngDecoder {
     fn has_more_frames(&mut self) -> Result<bool> {
         Ok(false)
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
 }

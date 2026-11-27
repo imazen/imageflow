@@ -1,4 +1,5 @@
 #![allow(non_camel_case_types)]
+#![allow(clippy::upper_case_acronyms)]
 use imageflow_types::PixelFormat;
 use mozjpeg_sys::{c_long, c_void};
 use std::os::raw::c_char;

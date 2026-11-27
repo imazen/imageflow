@@ -1,10 +1,10 @@
-pub use crate::ffi::EdgeKind;
-pub use crate::ffi::PixelFormat;
 use crate::flow::nodes;
 use crate::flow::nodes::*;
 use crate::graphics::bitmaps::BitmapKey;
 use crate::internal_prelude::works_everywhere::*;
 use crate::Context;
+pub use imageflow_types::EdgeKind;
+pub use imageflow_types::PixelFormat;
 use std::any::Any;
 
 pub type Graph = Dag<Node, EdgeKind>;
@@ -43,10 +43,10 @@ impl FlowError {
         self
     }
 
-    pub fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex) -> FlowError {
+    pub(crate) fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex) -> FlowError {
         self.try_add_node_info(NodeDebugInfo::from_ctx(ctx, ix))
     }
-    pub fn with_ctx_mut(self, ctx: &OpCtxMut, ix: NodeIndex) -> FlowError {
+    pub(crate) fn with_ctx_mut(self, ctx: &OpCtxMut, ix: NodeIndex) -> FlowError {
         self.try_add_node_info(NodeDebugInfo::from_ctx_mut(ctx, ix))
     }
 }

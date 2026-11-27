@@ -2342,8 +2342,8 @@ impl Response001 {
         }
     }
 }
-//#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
-pub fn rtf<'de, T>(value: T) -> usize
+#[cfg(test)]
+fn rtf<'de, T>(value: T) -> usize
 where
     T: serde::Serialize,
     T: serde::Deserialize<'de>,
@@ -2397,10 +2397,9 @@ fn decode_graph() {
     assert_eq!(obj, expected);
 }
 
+#[cfg(test)]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
-#[cfg_attr(feature = "schema-export", derive(ToSchema))]
-pub enum TestEnum {
+enum TestEnum {
     A,
     B { c: i32 },
 }
@@ -2448,6 +2447,7 @@ fn error_from_value() {
     // We cannot recreate the original location AFAICT
 }
 
+#[cfg(test)]
 mod key_casing {
 
     fn collect_keys(list: &mut Vec<String>, from: &serde_json::Value) {

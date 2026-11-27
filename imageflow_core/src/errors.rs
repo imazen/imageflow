@@ -50,28 +50,22 @@ macro_rules! loc {
 #[macro_export]
 macro_rules! nerror {
     ($kind:expr) => (
-        $crate::FlowError{
-            kind: $kind,
-            message: String::new(), // If .message() is needed after all, then crate_enum_derive on ErrorKind and switch message to Cow<>
-            at: ::smallvec::SmallVec::new(),
-            node: None
-        }.at(here!())
+        $crate::FlowError::without_location(
+            $kind,
+            String::new(), // If .message() is needed after all, then crate_enum_derive on ErrorKind and switch message to Cow<>
+        ).at(here!())
     );
     ($kind:expr, $fmt:expr) => (
-        $crate::FlowError{
-            kind: $kind,
-            message:  format!(concat!("{:?}: ",$fmt ), $kind,),
-            at: ::smallvec::SmallVec::new(),
-            node: None
-        }.at(here!())
+        $crate::FlowError::without_location(
+            $kind,
+            format!(concat!("{:?}: ",$fmt ), $kind,),
+        ).at(here!())
     );
     ($kind:expr, $fmt:expr, $($arg:tt)*) => (
-        $crate::FlowError{
-            kind: $kind,
-            message:  format!(concat!("{:?}: ", $fmt), $kind, $($arg)*),
-            at: ::smallvec::SmallVec::new(),
-            node: None
-        }.at(here!())
+        $crate::FlowError::without_location(
+            $kind,
+            format!(concat!("{:?}: ", $fmt), $kind, $($arg)*),
+        ).at(here!())
     );
 }
 
@@ -79,21 +73,14 @@ macro_rules! nerror {
 #[macro_export]
 macro_rules! unimpl {
     () => {
-        $crate::FlowError {
-            kind: $crate::ErrorKind::MethodNotImplemented,
-            message: String::new(),
-            at: ::smallvec::SmallVec::new(),
-            node: None,
-        }
-        .at(here!())
+        $crate::FlowError::without_location($crate::ErrorKind::MethodNotImplemented, String::new())
+            .at(here!())
     };
     ($fmt:expr) => {
-        $crate::FlowError {
-            kind: $crate::ErrorKind::MethodNotImplemented,
-            message: format!(concat!("{:?}: ", $fmt), $crate::ErrorKind::MethodNotImplemented),
-            at: ::smallvec::SmallVec::new(),
-            node: None,
-        }
+        $crate::FlowError::without_location(
+            $crate::ErrorKind::MethodNotImplemented,
+            format!(concat!("{:?}: ", $fmt), $crate::ErrorKind::MethodNotImplemented),
+        )
         .at(here!())
     };
 }
@@ -102,21 +89,14 @@ macro_rules! unimpl {
 #[macro_export]
 macro_rules! cancelled {
     () => {
-        $crate::FlowError {
-            kind: $crate::ErrorKind::OperationCancelled,
-            message: String::new(),
-            at: ::smallvec::SmallVec::new(),
-            node: None,
-        }
-        .at(here!())
+        $crate::FlowError::without_location($crate::ErrorKind::OperationCancelled, String::new())
+            .at(here!())
     };
     ($fmt:expr) => {
-        $crate::FlowError {
-            kind: $crate::ErrorKind::OperationCancelled,
-            message: format!(concat!("{:?}: ", $fmt), $crate::ErrorKind::OperationCancelled),
-            at: ::smallvec::SmallVec::new(),
-            node: None,
-        }
+        $crate::FlowError::without_location(
+            $crate::ErrorKind::OperationCancelled,
+            format!(concat!("{:?}: ", $fmt), $crate::ErrorKind::OperationCancelled),
+        )
         .at(here!())
     };
 }
@@ -135,13 +115,8 @@ macro_rules! return_if_cancelled {
 #[macro_export]
 macro_rules! err_oom {
     () => {
-        $crate::FlowError {
-            kind: $crate::ErrorKind::AllocationFailed,
-            message: String::new(),
-            at: ::smallvec::SmallVec::new(),
-            node: None,
-        }
-        .at(here!())
+        $crate::FlowError::without_location($crate::ErrorKind::AllocationFailed, String::new())
+            .at(here!())
     };
 }
 
@@ -290,7 +265,7 @@ pub struct FlowError {
     pub kind: ErrorKind,
     pub message: String,
     pub at: ::smallvec::SmallVec<[CodeLocation; 1]>,
-    pub node: Option<Box<crate::flow::definitions::NodeDebugInfo>>,
+    pub(crate) node: Option<Box<crate::flow::definitions::NodeDebugInfo>>,
 }
 
 impl From<::gif::DecodingError> for FlowError {

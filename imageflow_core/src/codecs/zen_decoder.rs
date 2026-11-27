@@ -7,11 +7,11 @@ use crate::codecs::source_profile::SourceProfile;
 use crate::graphics::bitmaps::{BitmapCompositing, ColorSpace};
 use crate::io::IoProxy;
 use imageflow_types::PixelLayout;
-use std::any::Any;
 use std::borrow::Cow;
 
 use zc::decode::{DecodeRowSink, DynAnimationFrameDecoder, DynDecoderConfig, RowStrip, SinkError};
 use zc::how_far::StopOnly;
+use zc::CodecErrorExt as _;
 use zc::ImageFormat as ZenFormat;
 use zc::ImageInfo as ZenImageInfo;
 use zc::{OwnedAnimationFrame, Pulse, SharedPulse};
@@ -38,14 +38,6 @@ fn always_use_frame_decoder(fmt: ZenFormat) -> bool {
     matches!(fmt, ZenFormat::Gif)
 }
 
-/// Whether the format's buffered Decode::decode is faster than push_decode.
-///
-/// Previously true for JPEG because push_decode used sequential ScanlineReader.
-/// Now false: zenjpeg's push_decode routes through `push_decoder_direct` →
-/// `decode_into()` which uses the fused streaming BGRA path and writes
-/// directly into the bitmap sink — zero intermediate buffer, zero extra copy.
-/// The old `into_decoder().decode()` path allocated its own output buffer then
-/// memcpy'd into the bitmap, costing an extra 64 MB at 4096².
 /// Whether the format's buffered Decode::decode is faster than push_decode.
 ///
 /// True for JPEG: push_decoder_direct has stride/output issues that cause
@@ -76,8 +68,10 @@ pub struct ZenDecoder {
     frame_index: u32,
     // Peeked next frame (used for has_more_frames detection)
     peeked_frame: Option<OwnedAnimationFrame>,
-    // Animation metadata from last decoded frame
-    last_delay_ms: u32,
+    // Deferred error encountered while peeking the next animation frame
+    peek_error: Option<FlowError>,
+    // Exact rational duration from last decoded animation frame (None = unknown / still)
+    last_frame_duration: Option<zc::animation::FrameDuration>,
     loop_count: Option<u32>,
     // Decoder options
     ignore_color_profile: bool,
@@ -86,9 +80,10 @@ pub struct ZenDecoder {
     resource_limits: Option<zc::ResourceLimits>,
     // Cooperative cancellation pulse threaded into every decode job
     pulse: Option<SharedPulse>,
-    // Cached max_threads-sized rayon pool, reused across animation frames so the
-    // codec's internal par_iter is bounded without re-spawning a pool per frame.
+    // Cached max_threads-sized rayon pool, reused across decode calls and animation frames
+    // so the codec's internal par_iter is bounded without re-spawning a pool per frame.
     thread_pool: Option<rayon::ThreadPool>,
+    thread_pool_threads: Option<u32>,
     // Image format (provides extension, mime type, animation support)
     format: ZenFormat,
     // Whether has_more_frames is known
@@ -224,6 +219,7 @@ impl ZenDecoder {
         io: IoProxy,
         format: ZenFormat,
     ) -> Self {
+        let max_threads = c.security.max_threads;
         ZenDecoder {
             config,
             io,
@@ -232,16 +228,28 @@ impl ZenDecoder {
             frame_dec: None,
             frame_index: 0,
             peeked_frame: None,
-            last_delay_ms: 0,
+            peek_error: None,
+            last_frame_duration: None,
             loop_count: None,
             ignore_color_profile: false,
             ignore_color_profile_errors: false,
             resource_limits: decode_limits_from_security(&c.security),
             pulse: Some(SharedPulse::new(StopOnly::new(c.cancellation_token()))),
-            thread_pool: build_pool(c.security.max_threads),
+            thread_pool: build_pool(max_threads),
+            thread_pool_threads: max_threads,
             format,
             has_more: None,
             target_frame: None,
+        }
+    }
+
+    /// Keep the cached rayon pool aligned with `c.security.max_threads` (which may
+    /// be updated via `Context::configure_security` after `add_input_*` created the
+    /// decoder).
+    fn ensure_thread_pool(&mut self, max_threads: Option<u32>) {
+        if self.thread_pool_threads != max_threads {
+            self.thread_pool = build_pool(max_threads);
+            self.thread_pool_threads = max_threads;
         }
     }
 
@@ -412,24 +420,47 @@ impl ZenDecoder {
         SourceProfile::Srgb
     }
 
-    /// Create a DynDecodeJob for pixel decoding with resource limits and pulse applied.
-    ///
-    /// Disables ICC attachment on the pixel-decode job (`allow_icc = false`):
-    /// `ensure_info_probed()` already extracted `source_color.icc_profile` for
-    /// imageflow's CMS stage (`cms::transform_to_srgb`), which owns policy for
-    /// `DiscardColorProfile`, `IgnoreColorProfileErrors`, and ignoring mismatched
-    /// profiles such as CMYK ICC on YCbCr/grayscale JPEGs (imageflow#737).
+    /// Create a DynDecodeJob for pixel decoding with resource limits, pulse, and
+    /// ICC policy applied via [`configure_job`].
     fn make_job(&self) -> Box<dyn zc::decode::DynDecodeJob<'_> + '_> {
         let mut job = self.config.dyn_job();
-        if let Some(ref limits) = self.resource_limits {
-            job.set_limits(*limits);
-        }
-        if let Some(ref pulse) = self.pulse {
-            job.set_pulse(pulse.clone());
-        }
-        let _ = job.try_set_policy(zc::decode::DecodePolicy::none().with_allow_icc(false));
+        configure_job(&mut *job, self.resource_limits, self.pulse.clone());
         job
     }
+}
+
+/// Apply resource limits, cancellation pulse, and ICC policy to a pixel-decode job.
+///
+/// Disables ICC attachment on the pixel-decode job (`allow_icc = false`):
+/// `ensure_info_probed()` already extracted `source_color.icc_profile` for
+/// imageflow's CMS stage (`cms::transform_to_srgb`), which owns policy for
+/// `DiscardColorProfile`, `IgnoreColorProfileErrors`, and ignoring mismatched
+/// profiles such as CMYK ICC on YCbCr/grayscale JPEGs (imageflow#737).
+fn configure_job(
+    job: &mut dyn zc::decode::DynDecodeJob<'_>,
+    limits: Option<zc::ResourceLimits>,
+    pulse: Option<SharedPulse>,
+) {
+    if let Some(l) = limits {
+        job.set_limits(l);
+    }
+    if let Some(p) = pulse {
+        job.set_pulse(p);
+    }
+    let _ = job.try_set_policy(zc::decode::DecodePolicy::none().with_allow_icc(false));
+}
+
+/// Convert a zencodec error into a `FlowError`, preserving cancellation as
+/// `ErrorKind::OperationCancelled`.
+#[track_caller]
+fn decode_error_to_flow(
+    context: &str,
+    e: &(dyn std::error::Error + Send + Sync + 'static),
+) -> FlowError {
+    if let Some(zc::ErrorCategory::Stopped(reason)) = e.error_category() {
+        return FlowError::from(reason);
+    }
+    FlowError::from_codec_error(ErrorKind::ImageDecodingError, context, e)
 }
 
 /// Convert one row of arbitrary U8 pixels into BGRA.
@@ -544,6 +575,8 @@ struct BitmapRowSink<'a> {
     is_4bpp: bool,
     /// True if output is RGBA and needs BGRA swizzle in finish().
     needs_swizzle: bool,
+    /// True if `begin()` rejected a non-U8 pixel format (signals fallback to `into_decoder`).
+    rejected_format: bool,
     /// Metadata of the previous non-4bpp strip (for deferred conversion).
     prev_strip: Option<StripMeta>,
 }
@@ -566,6 +599,7 @@ impl BitmapRowSink<'_> {
             temp: Vec::new(),
             is_4bpp: false,
             needs_swizzle: false,
+            rejected_format: false,
             prev_strip: None,
         }
     }
@@ -598,6 +632,7 @@ impl DecodeRowSink for BitmapRowSink<'_> {
         format: PixelFormat,
     ) -> std::result::Result<(), SinkError> {
         if format.layout.sample != SampleType::U8 {
+            self.rejected_format = true;
             return Err(format!("BitmapRowSink requires U8 channels, got {:?}", format).into());
         }
         self.width = width;
@@ -686,21 +721,6 @@ impl DecodeRowSink for BitmapRowSink<'_> {
 
 // ─── Decoder trait impl ──────────────────────────────────────────────────────
 
-impl ZenDecoder {
-    /// Get frame delay in centiseconds (GIF convention) from milliseconds.
-    pub fn last_frame_delay(&self) -> Option<u16> {
-        if self.last_delay_ms > 0 {
-            Some((self.last_delay_ms / 10) as u16)
-        } else {
-            None
-        }
-    }
-
-    pub fn get_loop_count(&self) -> Option<u32> {
-        self.loop_count
-    }
-}
-
 impl Decoder for ZenDecoder {
     fn initialize(&mut self, _c: &Context) -> Result<()> {
         Ok(())
@@ -709,6 +729,24 @@ impl Decoder for ZenDecoder {
     fn get_unscaled_image_info(&mut self, _c: &Context) -> Result<s::ImageInfo> {
         self.ensure_info_probed()?;
         let info = self.cached_info.as_ref().unwrap();
+        let lossless =
+            info.source_encoding_details().map(|d| d.is_lossless()).unwrap_or_else(|| {
+                matches!(
+                    self.format,
+                    ZenFormat::Png
+                        | ZenFormat::Gif
+                        | ZenFormat::Bmp
+                        | ZenFormat::Pnm
+                        | ZenFormat::Qoi
+                        | ZenFormat::Tga
+                        | ZenFormat::Farbfeld
+                )
+            });
+        let multiple_frames = matches!(
+            info.sequence,
+            zc::ImageSequence::Animation { frame_count: None, .. }
+                | zc::ImageSequence::Animation { frame_count: Some(2..), .. }
+        );
         Ok(s::ImageInfo {
             frame_decodes_into: if info.has_alpha {
                 s::PixelFormat::Bgra32
@@ -719,8 +757,8 @@ impl Decoder for ZenDecoder {
             image_height: info.height as i32,
             preferred_mime_type: self.format.mime_type().to_owned(),
             preferred_extension: self.format.extension().to_owned(),
-            lossless: false,
-            multiple_frames: self.format.supports_animation(),
+            lossless,
+            multiple_frames,
         })
     }
 
@@ -768,6 +806,11 @@ impl Decoder for ZenDecoder {
 
     fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
         return_if_cancelled!(c);
+        if let Some(err) = self.peek_error.take() {
+            return Err(err);
+        }
+        self.ensure_thread_pool(c.security.max_threads);
+        self.resource_limits = decode_limits_from_security(&c.security);
         self.ensure_data_available()?;
         self.ensure_info_probed()?;
 
@@ -817,7 +860,7 @@ impl Decoder for ZenDecoder {
         // upstream, not something to silently paper over here.
         // (CMYK JPEGs with CmykHandling::Passthrough still emit CmykInverted and
         // bypass this negotiation — handled as a special case downstream.)
-        let preferred = [PixelFormat::BGRA8_SRGB];
+        let preferred: &[PixelFormat] = &[PixelFormat::BGRA8_SRGB];
 
         // Animation path: use persistent full-frame decoder
         let is_animated = matches!(info.sequence, zc::ImageSequence::Animation { .. });
@@ -835,9 +878,8 @@ impl Decoder for ZenDecoder {
                 if let Some(t) = target {
                     job.set_start_frame_index(t);
                 }
-                let frame_dec = job
-                    .into_animation_frame_decoder(Cow::Owned(data), &preferred)
-                    .map_err(|e| {
+                let frame_dec =
+                    job.into_animation_frame_decoder(Cow::Owned(data), preferred).map_err(|e| {
                         FlowError::from_codec_error(
                             ErrorKind::ImageDecodingError,
                             &format!("{} frame decoder", self.format.extension()),
@@ -857,19 +899,17 @@ impl Decoder for ZenDecoder {
                 // Thread the per-call pulse: the animation frame decoders for
                 // GIF/WebP/AVIF drop the job pulse and honor ONLY this argument,
                 // so passing None here leaves animated decode uncancellable.
-                let pulse = StopOnly::new(c.cancellation_token());
+                let pulse = self.pulse.clone();
                 install_pooled(&self.thread_pool, move || {
-                    frame_dec.render_next_frame_owned(Some(&pulse as &dyn Pulse))
+                    frame_dec.render_next_frame_owned(pulse.as_ref().map(|p| p as &dyn Pulse))
                 })
-                .map_err(|e| {
-                    FlowError::from_codec_error(ErrorKind::ImageDecodingError, "frame decode", &*e)
-                })?
+                .map_err(|e| decode_error_to_flow("frame decode", &*e))?
             };
 
             let frame = frame
                 .ok_or_else(|| nerror!(ErrorKind::InvalidOperation, "No more frames available"))?;
 
-            self.last_delay_ms = frame_duration_to_ms(frame.duration());
+            self.last_frame_duration = Some(frame.duration());
             self.frame_index += 1;
 
             let ps = frame.pixels();
@@ -919,9 +959,9 @@ impl Decoder for ZenDecoder {
                 self.has_more = Some(false);
             } else {
                 let frame_dec = self.frame_dec.as_mut().unwrap();
-                let pulse = StopOnly::new(c.cancellation_token());
+                let pulse = self.pulse.clone();
                 match install_pooled(&self.thread_pool, move || {
-                    frame_dec.render_next_frame_owned(Some(&pulse as &dyn Pulse))
+                    frame_dec.render_next_frame_owned(pulse.as_ref().map(|p| p as &dyn Pulse))
                 }) {
                     Ok(Some(next)) => {
                         self.peeked_frame = Some(next);
@@ -930,7 +970,8 @@ impl Decoder for ZenDecoder {
                     Ok(None) => {
                         self.has_more = Some(false);
                     }
-                    Err(_) => {
+                    Err(e) => {
+                        self.peek_error = Some(decode_error_to_flow("frame peek", &*e));
                         self.has_more = Some(false);
                     }
                 }
@@ -941,7 +982,8 @@ impl Decoder for ZenDecoder {
 
         // ── Single-frame path ──
         // Try push_decode with BitmapRowSink. If begin() rejects the format
-        // (non-U8), fall back to into_decoder which does format negotiation.
+        // (non-U8) or the codec does not support push_decode, fall back to
+        // into_decoder which does format negotiation.
         let data = self.data_slice();
         let w = info.width;
         let h = info.height;
@@ -964,75 +1006,72 @@ impl Decoder for ZenDecoder {
         // into_decoder().decode() directly. push_decode still runs row-by-row
         // sequentially regardless of image size; for JPEG that costs ~2.5× at
         // 4096² and is only marginally cheaper at smaller sizes.
-        let push_result: std::result::Result<_, zc::decode::SinkError> =
-            if prefers_buffered_decode(self.format) {
-                Err("skip push_decode; format prefers buffered decode".into())
-            } else {
-                let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
-                let mut window = bitmap.get_window_u8().unwrap();
-                let dst_stride = window.info().t_stride() as usize;
-                let dst = window.slice_mut();
+        let needs_buffered_fallback = if prefers_buffered_decode(self.format) {
+            true
+        } else {
+            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
+            let mut window = bitmap.get_window_u8().unwrap();
+            let dst_stride = window.info().t_stride() as usize;
+            let dst = window.slice_mut();
 
-                let mut sink = BitmapRowSink::new(dst, dst_stride);
-                let job = self.make_job();
-                job.push_decode(Cow::Borrowed(data), &mut sink, &preferred)
-                    .map_err(|e| -> zc::decode::SinkError { format!("{e}").into() })
-            };
-
-        match push_result {
-            Ok(_) => { /* sink.finish() was called by codec — swizzle done */ }
-            Err(_) => {
-                // Format rejected, codec error, or buffered-decode-preferred — use into_decoder.
-                // Build the job + decoder + run decode entirely INSIDE the pool:
-                // the `!Send` DynDecodeJob/DynDecoder never cross the thread
-                // boundary (they're local to the closure); only `config`
-                // (Send+Sync), `data`, `preferred` (Send) are captured and the
-                // `DecodeOutput` (Send) is returned. Bounds the rayon-parallel
-                // decode to max_threads.
-                let ext = self.format.extension();
-                let config = &self.config;
-                let limits = self.resource_limits;
-                let pulse = self.pulse.clone();
-                let output = run_pooled(c.security.max_threads, move || {
+            let ext = self.format.extension();
+            let config = &self.config;
+            let limits = self.resource_limits;
+            let pulse = self.pulse.clone();
+            let (push_result, sink_rejected_format) =
+                install_pooled(&self.thread_pool, move || {
+                    let mut sink = BitmapRowSink::new(dst, dst_stride);
                     let mut job = config.dyn_job();
-                    if let Some(l) = limits {
-                        job.set_limits(l);
-                    }
-                    if let Some(p) = pulse {
-                        job.set_pulse(p);
-                    }
-                    let _ =
-                        job.try_set_policy(zc::decode::DecodePolicy::none().with_allow_icc(false));
-                    job.into_decoder(Cow::Borrowed(data), &preferred)?.decode()
-                })
-                .map_err(|e| {
-                    FlowError::from_codec_error(
-                        ErrorKind::ImageDecodingError,
-                        &format!("{ext} decode"),
-                        &*e,
-                    )
-                })?;
-                let ps = output.pixels();
-
-                // Verify decoded dimensions match what we allocated
-                if ps.width() != w || ps.height() != h {
-                    return Err(nerror!(
-                        ErrorKind::ImageDecodingError,
-                        "{} decoded {}x{} but info reported {}x{}",
-                        self.format.extension(),
-                        ps.width(),
-                        ps.height(),
-                        w,
-                        h
-                    ));
+                    configure_job(&mut *job, limits, pulse);
+                    let res = job.push_decode(Cow::Borrowed(data), &mut sink, preferred);
+                    (res, sink.rejected_format)
+                });
+            match push_result {
+                Ok(_) => false, // sink.finish() was called by codec — swizzle done
+                Err(e) if sink_rejected_format || e.unsupported_operation().is_some() => true,
+                Err(e) => {
+                    return Err(decode_error_to_flow(&format!("{ext} decode"), &*e));
                 }
-
-                let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
-                let mut window = bitmap.get_window_u8().unwrap();
-                let dst_stride = window.info().t_stride() as usize;
-                let dst = window.slice_mut();
-                copy_pixel_slice_to_bitmap(dst, dst_stride, &ps);
             }
+        };
+
+        if needs_buffered_fallback {
+            // Format rejected by sink, push_decode unsupported, or buffered-decode-preferred —
+            // use into_decoder. Build the job + decoder + run decode entirely INSIDE the pool:
+            // the `!Send` DynDecodeJob/DynDecoder never cross the thread boundary (they're
+            // local to the closure); only `config` (Send+Sync), `data`, `preferred` (Send)
+            // are captured and the `DecodeOutput` (Send) is returned. Bounds the
+            // rayon-parallel decode to max_threads.
+            let ext = self.format.extension();
+            let config = &self.config;
+            let limits = self.resource_limits;
+            let pulse = self.pulse.clone();
+            let output = install_pooled(&self.thread_pool, move || {
+                let mut job = config.dyn_job();
+                configure_job(&mut *job, limits, pulse);
+                job.into_decoder(Cow::Borrowed(data), preferred)?.decode()
+            })
+            .map_err(|e| decode_error_to_flow(&format!("{ext} decode"), &*e))?;
+            let ps = output.pixels();
+
+            // Verify decoded dimensions match what we allocated
+            if ps.width() != w || ps.height() != h {
+                return Err(nerror!(
+                    ErrorKind::ImageDecodingError,
+                    "{} decoded {}x{} but info reported {}x{}",
+                    self.format.extension(),
+                    ps.width(),
+                    ps.height(),
+                    w,
+                    h
+                ));
+            }
+
+            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).map_err(|e| e.at(here!()))?;
+            let mut window = bitmap.get_window_u8().unwrap();
+            let dst_stride = window.info().t_stride() as usize;
+            let dst = window.slice_mut();
+            copy_pixel_slice_to_bitmap(dst, dst_stride, &ps);
         }
 
         // Apply CMS transform if needed
@@ -1052,10 +1091,129 @@ impl Decoder for ZenDecoder {
     }
 
     fn has_more_frames(&mut self) -> Result<bool> {
+        if let Some(err) = self.peek_error.take() {
+            return Err(err);
+        }
         Ok(self.has_more.unwrap_or(true))
     }
 
-    fn as_any(&self) -> &dyn Any {
-        self as &dyn Any
+    fn frame_delay_ms(&self) -> Option<u32> {
+        self.last_frame_duration.map(frame_duration_to_ms)
+    }
+
+    fn frame_duration(&self) -> Option<zc::animation::FrameDuration> {
+        self.last_frame_duration
+    }
+
+    fn loop_count(&self) -> Option<u32> {
+        self.loop_count
+    }
+
+    fn estimate_decode_memory(&self, c: &Context, w: u32, h: u32) -> (u64, u64) {
+        let mut env = zc::estimate::ComputeEnvironment::host();
+        if let Some(n) = c.security.max_threads {
+            env = env.with_cores(n as usize);
+        }
+        let est = self.estimate_decode(&env, w, h);
+        let avg = est.peak_memory_bytes_est().unwrap_or(0);
+        (avg, est.peak_memory_bytes_max().unwrap_or(avg))
+    }
+}
+
+#[cfg(all(test, feature = "zen-codecs"))]
+mod zen_redesign_tests {
+    use super::*;
+    use crate::codecs::NamedDecoders;
+
+    const PNG_1X1_RGBA: &[u8] = &[
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+
+    fn make_2frame_gif(delay_cs: u16) -> Vec<u8> {
+        let mut buf = Vec::new();
+        {
+            let mut enc = ::gif::Encoder::new(&mut buf, 2, 2, &[]).unwrap();
+            enc.set_repeat(::gif::Repeat::Finite(3)).unwrap();
+            for rgb in [[255u8, 0, 0, 255], [0, 255, 0, 255]] {
+                let mut px = rgb.repeat(4);
+                let mut frame = ::gif::Frame::from_rgba(2, 2, &mut px);
+                frame.delay = delay_cs;
+                enc.write_frame(&frame).unwrap();
+            }
+        }
+        buf
+    }
+
+    #[test]
+    fn zen_decoder_image_info_reports_static_vs_animated_and_lossless() {
+        // Static PNG: multiple_frames = false, lossless = true
+        let mut ctx = Context::create().unwrap();
+        ctx.enabled_codecs.prefer_decoder(NamedDecoders::ZenPngDecoder);
+        ctx.add_copied_input_buffer(0, PNG_1X1_RGBA).unwrap();
+        let png_info = ctx.get_unscaled_unrotated_image_info(0).unwrap();
+        assert!(!png_info.multiple_frames, "static PNG must report multiple_frames=false");
+        assert!(png_info.lossless, "PNG must report lossless=true");
+
+        // Animated 2-frame GIF via ZenGifDecoder: multiple_frames = true, lossless = true
+        let mut ctx_gif = Context::create().unwrap();
+        ctx_gif.enabled_codecs.prefer_decoder(NamedDecoders::ZenGifDecoder);
+        ctx_gif.add_input_vector(0, make_2frame_gif(0)).unwrap();
+        let gif_info = ctx_gif.get_unscaled_unrotated_image_info(0).unwrap();
+        assert!(gif_info.multiple_frames, "2-frame GIF must report multiple_frames=true");
+        assert!(gif_info.lossless, "GIF must report lossless=true");
+
+        // Read first frame of 0cs-delay GIF: frame_delay_ms() is Some(0), NOT None!
+        {
+            let mut codec = ctx_gif.get_codec(0).unwrap();
+            let dec = codec.get_decoder().unwrap();
+            let _key = dec.read_frame(&ctx_gif).unwrap();
+            assert_eq!(dec.frame_delay_ms(), Some(0));
+            assert_eq!(dec.frame_duration(), Some(zc::animation::FrameDuration::from_millis(0)));
+        }
+    }
+
+    #[test]
+    fn native_jpeg_enforces_mem_budget_policy() {
+        let mut ctx = Context::create().unwrap();
+        // Use ImageRsPngDecoder so the budget gate triggers specifically on NativeJpeg encode.
+        ctx.enabled_codecs.prefer_decoder(NamedDecoders::ImageRsPngDecoder);
+        ctx.enabled_codecs.prefer_encoder(crate::codecs::NamedEncoders::ZenJpegEncoder);
+        #[cfg(feature = "c-codecs")]
+        ctx.enabled_codecs.disable_encoder(crate::codecs::NamedEncoders::MozJpegEncoder);
+        ctx.add_copied_input_buffer(0, PNG_1X1_RGBA).unwrap();
+        ctx.add_output_buffer(1).unwrap();
+
+        let mut policy = s::MemBudgetPolicy::default();
+        policy.require_est_bytes_below = Some(1); // 1 byte — must reject!
+        let mut sec = s::ExecutionSecurity::unspecified();
+        sec.mem_budget_policy = Some(Box::new(policy));
+
+        let err = ctx
+            .execute_1(s::Execute001 {
+                graph_recording: None,
+                security: Some(sec),
+                job_options: None,
+                framewise: s::Framewise::Steps(vec![
+                    s::Node::Decode { io_id: 0, commands: None },
+                    s::Node::Encode {
+                        io_id: 1,
+                        preset: s::EncoderPreset::Mozjpeg {
+                            quality: Some(80),
+                            progressive: Some(true),
+                            matte: None,
+                        },
+                    },
+                ]),
+            })
+            .unwrap_err();
+        assert!(
+            err.message.contains("encode memory budget"),
+            "expected NativeJpeg encode memory budget rejection, got: {}",
+            err.message
+        );
     }
 }

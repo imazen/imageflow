@@ -188,7 +188,7 @@ impl Decoder for GifDecoder {
             // We would have to read in the entire GIF to know!
             preferred_mime_type: "image/gif".to_owned(),
             preferred_extension: "gif".to_owned(),
-            lossless: false,
+            lossless: true,
             multiple_frames: self.is_animated().unwrap_or(false), //false if we didn't read any frames yet
         })
     }
@@ -303,8 +303,17 @@ impl Decoder for GifDecoder {
         }
         Ok(self.next_frame.is_some())
     }
-    fn as_any(&self) -> &dyn Any {
-        self as &dyn Any
+    fn frame_delay_ms(&self) -> Option<u32> {
+        self.last_frame.as_ref().map(|f| u32::from(f.delay) * 10)
+    }
+    fn loop_count(&self) -> Option<u32> {
+        self.get_repeat().map(|r| match r {
+            ::gif::Repeat::Finite(n) => u32::from(n),
+            ::gif::Repeat::Infinite => 0,
+        })
+    }
+    fn frame_needs_user_input(&self) -> bool {
+        self.last_frame.as_ref().is_some_and(|f| f.needs_user_input)
     }
 }
 
@@ -434,24 +443,16 @@ impl Encoder for GifEncoder {
         bitmap_key: BitmapKey,
         decoder_io_ids: &[i32],
     ) -> Result<s::EncodeResult> {
-        let mut decoded_frame = None;
-        let mut repeat = None;
+        let (delay_ms, loop_count) = super::input_animation_info(c, decoder_io_ids);
+        let mut needs_user_input = false;
         for io_id in decoder_io_ids {
             let mut codec = c.get_codec(*io_id).map_err(|e| e.at(here!()))?;
-            let gif_decoder = codec
-                .get_decoder()
-                .map_err(|e| e.at(here!()))?
-                .as_any()
-                .downcast_ref::<GifDecoder>();
-
-            if let Some(d) = gif_decoder {
-                repeat = d.get_repeat();
-                decoded_frame = d.last_frame.clone(); //TODO: clones local palette; expensive, not used
+            let decoder = codec.get_decoder().map_err(|e| e.at(here!()))?;
+            if decoder.frame_needs_user_input() {
+                needs_user_input = true;
                 break;
             }
         }
-
-        //        eprintln!("decoders: {:?}, found_frame: {}", decoder_io_ids, decoded_frame.is_some() );
 
         let bitmaps = c.borrow_bitmaps().map_err(|e| e.at(here!()))?;
 
@@ -477,10 +478,11 @@ impl Encoder for GifEncoder {
             )),
         }?;
 
-        if let Some(from) = decoded_frame {
-            f.delay = from.delay;
-            f.needs_user_input = from.needs_user_input;
+        if let Some(ms) = delay_ms {
+            // GIF delays are encoded in centiseconds (10 ms ticks).
+            f.delay = (ms.saturating_add(5) / 10).min(u32::from(u16::MAX)) as u16;
         }
+        f.needs_user_input = needs_user_input;
         // Every frame is written as a full, already-composited canvas, and its
         // transparent index means "nothing here". With the default Keep
         // disposal a transparent pixel would reveal the previous frame; clear
@@ -489,8 +491,12 @@ impl Encoder for GifEncoder {
         f.dispose = ::gif::DisposalMethod::Background;
         if self.frame_ix == 0 {
             // Only write before any frames
-            if let Some(r) = repeat {
-                //                    eprintln!("Writing repeat");
+            if let Some(lc) = loop_count {
+                let r = if lc == 0 {
+                    ::gif::Repeat::Infinite
+                } else {
+                    ::gif::Repeat::Finite(lc.min(u32::from(u16::MAX)) as u16)
+                };
                 self.encoder
                     .as_mut()
                     .ok_or_else(|| {
@@ -498,8 +504,6 @@ impl Encoder for GifEncoder {
                     })?
                     .write_extension(::gif::ExtensionData::Repetitions(r))
                     .map_err(|e| FlowError::from(e).at(here!()))?;
-            } else {
-                //                    eprintln!("Skipping repeat");
             }
         }
 

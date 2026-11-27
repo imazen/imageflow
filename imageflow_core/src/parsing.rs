@@ -3,14 +3,14 @@ use crate::flow::nodes;
 use crate::internal_prelude::works_everywhere::*;
 use crate::{Context, IoProxy};
 #[derive(Default)]
-pub struct GraphTranslator {}
+pub(crate) struct GraphTranslator {}
 
 impl GraphTranslator {
-    pub fn new() -> GraphTranslator {
+    pub(crate) fn new() -> GraphTranslator {
         GraphTranslator {}
     }
 
-    pub fn translate_framewise(&self, framewise: s::Framewise) -> Result<Graph> {
+    pub(crate) fn translate_framewise(&self, framewise: s::Framewise) -> Result<Graph> {
         let graph = match framewise {
             s::Framewise::Graph(g) => g,
             s::Framewise::Steps(s) => self.steps_to_graph(s),
@@ -29,7 +29,7 @@ impl GraphTranslator {
         s::Graph { nodes, edges }
     }
 
-    pub fn translate_graph(&self, from: s::Graph) -> Result<Graph> {
+    pub(crate) fn translate_graph(&self, from: s::Graph) -> Result<Graph> {
         const MAX_GRAPH_NODES: usize = 2048;
         if from.nodes.len() > MAX_GRAPH_NODES {
             return Err(nerror!(
@@ -81,9 +81,9 @@ impl GraphTranslator {
     }
 }
 
-pub struct IoTranslator;
+pub(crate) struct IoTranslator;
 impl IoTranslator {
-    pub fn add_all(&self, c: &mut Context, io_vec: Vec<s::IoObject>) -> Result<()> {
+    pub(crate) fn add_all(&self, c: &mut Context, io_vec: Vec<s::IoObject>) -> Result<()> {
         for io_obj in io_vec {
             //TODO: add format!("Failed to create IO for {:?}", &io_obj)
             self.add(c, io_obj.io_id, io_obj.io, io_obj.direction)?;

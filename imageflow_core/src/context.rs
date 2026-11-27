@@ -32,22 +32,22 @@ use itertools::Itertools;
 /// cold/optional state boxed.
 pub struct Context {
     pub debug_job_id: i32,
-    pub next_stable_node_id: i32,
-    pub next_graph_version: i32,
-    pub max_calc_flatten_execute_passes: i32,
-    pub graph_recording: s::Build001GraphRecording,
+    pub(crate) next_stable_node_id: i32,
+    pub(crate) next_graph_version: i32,
+    pub(crate) max_calc_flatten_execute_passes: i32,
+    pub(crate) graph_recording: s::Build001GraphRecording,
     cancellation_token: CancellationToken,
 
     /// Codecs, which in turn connect to I/O instances.
-    pub codecs: AddRemoveSet<CodecInstanceContainer>, // This loans out exclusive mutable references to items, bounding the ownership lifetime to Context
+    pub(crate) codecs: AddRemoveSet<CodecInstanceContainer>, // This loans out exclusive mutable references to items, bounding the ownership lifetime to Context
     /// A list of io_ids already in use
-    pub io_id_list: RefCell<Vec<i32>>,
+    pub(crate) io_id_list: RefCell<Vec<i32>>,
 
     pub enabled_codecs: EnabledCodecs,
 
     pub security: imageflow_types::ExecutionSecurity,
 
-    pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>,
+    pub(crate) bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>,
 
     // NOTE: there is deliberately no `allocations` container here. Caller-visible
     // allocations (`imageflow_context_memory_allocate`/`_free`) are owned by
@@ -449,7 +449,7 @@ impl Context {
     }
 
     /// Insert a captured BitmapKey (called by CaptureBitmapKey node during execution).
-    pub fn insert_captured_bitmap_key(&mut self, capture_id: i32, key: BitmapKey) {
+    pub(crate) fn insert_captured_bitmap_key(&mut self, capture_id: i32, key: BitmapKey) {
         self.captured_bitmap_keys
             .get_or_insert_with(|| Box::new(std::collections::HashMap::new()))
             .insert(capture_id, key);
@@ -584,7 +584,7 @@ impl Context {
             .map_err(|e| e.at(here!()))
     }
 
-    pub fn get_codec(&self, io_id: i32) -> Result<RefMut<'_, CodecInstanceContainer>> {
+    pub(crate) fn get_codec(&self, io_id: i32) -> Result<RefMut<'_, CodecInstanceContainer>> {
         let mut borrow_errors = 0;
         for item_result in self.codecs.iter_mut() {
             if let Ok(container) = item_result {
@@ -668,6 +668,12 @@ impl Context {
         }
         if s.max_total_file_pixels.is_some() {
             self.security.max_total_file_pixels = s.max_total_file_pixels;
+        }
+        if s.max_threads.is_some() {
+            self.security.max_threads = s.max_threads;
+        }
+        if s.mem_budget_policy.is_some() {
+            self.security.mem_budget_policy = s.mem_budget_policy;
         }
     }
 
@@ -1041,4 +1047,69 @@ fn test_cancellation_token_stop_with_poll_countdown() {
     assert_eq!(token.check(), Ok(()));
     assert_eq!(token.check(), Err(StopReason::Cancelled));
     assert!(token.should_stop());
+}
+
+#[test]
+fn test_configure_security_populates_all_fields_from_json_execute() {
+    let png_bytes: Vec<u8> = vec![
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+    let execute_json = r#"{
+        "security": {
+            "max_decode_size": { "w": 4096, "h": 4096, "megapixels": 16.0 },
+            "max_frame_size": { "w": 2048, "h": 2048, "megapixels": 4.0 },
+            "max_encode_size": { "w": 1024, "h": 1024, "megapixels": 1.0 },
+            "max_input_file_bytes": 1048576,
+            "max_json_bytes": 524288,
+            "max_total_file_pixels": 50000000,
+            "max_threads": 2,
+            "mem_budget_policy": {
+                "require_est_bytes_below": 33554432,
+                "require_est_max_bytes_below": 67108864,
+                "require_tracked_bytes_below": 134217728
+            }
+        },
+        "framewise": {
+            "steps": [
+                { "decode": { "io_id": 0 } },
+                { "encode": { "io_id": 1, "preset": { "lodepng": {} } } }
+            ]
+        }
+    }"#;
+
+    let parsed: s::Execute001 = serde_json::from_str(execute_json).unwrap();
+    let mut ctx = Context::create().unwrap();
+    ctx.add_input_vector(0, png_bytes).unwrap();
+    ctx.add_output_buffer(1).unwrap();
+    ctx.execute_1(parsed).unwrap();
+
+    assert_eq!(
+        ctx.security.max_decode_size,
+        Some(s::FrameSizeLimit { w: 4096, h: 4096, megapixels: 16.0 })
+    );
+    assert_eq!(
+        ctx.security.max_frame_size,
+        Some(s::FrameSizeLimit { w: 2048, h: 2048, megapixels: 4.0 })
+    );
+    assert_eq!(
+        ctx.security.max_encode_size,
+        Some(s::FrameSizeLimit { w: 1024, h: 1024, megapixels: 1.0 })
+    );
+    assert_eq!(ctx.security.max_input_file_bytes, Some(1_048_576));
+    assert_eq!(ctx.security.max_json_bytes, Some(524_288));
+    assert_eq!(ctx.security.max_total_file_pixels, Some(50_000_000));
+    assert_eq!(ctx.security.max_threads, Some(2));
+
+    let policy = ctx
+        .security
+        .mem_budget_policy
+        .as_ref()
+        .expect("mem_budget_policy must be populated by configure_security");
+    assert_eq!(policy.require_est_bytes_below, Some(33_554_432));
+    assert_eq!(policy.require_est_max_bytes_below, Some(67_108_864));
+    assert_eq!(policy.require_tracked_bytes_below, Some(134_217_728));
 }

@@ -715,12 +715,16 @@ fn zencodec_generic_quality(qp: &QualityProfile) -> f32 {
     approximate_quality_profile(Some(*qp))
 }
 
+/// NaN-suppressing float clamp (`f32::clamp` propagates NaN; `max`/`min` suppresses it).
+#[inline]
+#[allow(clippy::manual_clamp)]
+fn clamp_f32_nan_safe(v: f32, lo: f32, hi: f32) -> f32 {
+    v.max(lo).min(hi)
+}
+
 fn interpolate_value(ratio: f32, a: f32, b: f32) -> f32 {
-    // panic if b1-a1 is <= 0, or cursor is not between a1 and b1, or b2-a2 is <= 0
-    if b - a <= 0.0 {
-        panic!("Invalid interpolation values");
-    }
-    a + ratio * (b - a)
+    let t = clamp_f32_nan_safe(ratio, 0.0, 1.0);
+    a + t * (b - a)
 }
 fn get_quality_hints_with_dpr(qp: &QualityProfile, dpr: Option<f32>) -> QualityProfileHints {
     let hints = get_quality_hints(qp);
@@ -736,20 +740,23 @@ fn get_quality_hints_with_dpr(qp: &QualityProfile, dpr: Option<f32>) -> QualityP
     // Example: <img src="i.jpg?w=800&qp=good&qp-dpr=2" width="400" >
     // We want to increase quality when dpr < 3, and decrease it when dpr > 3.
 
-    let quality_factor = 3.0 / dpr.unwrap().clamp(0.1, 12.0);
+    let quality_factor = 3.0 / clamp_f32_nan_safe(dpr.unwrap(), 0.1, 12.0);
     // We'll use the ssim2 value to adjust the quality factor.
     // We can go with a quality value that is half the ssim2 value if the dpi is double
     // No sense going below 10.0 or above 90.0
-    let target_ssim2 = (hints.ssim2 * quality_factor).clamp(10.0, 90.0);
+    let target_ssim2 = clamp_f32_nan_safe(hints.ssim2 * quality_factor, 10.0, 90.0);
 
     get_quality_hints_by_ssim2(target_ssim2)
 }
 fn get_quality_hints(qp: &QualityProfile) -> QualityProfileHints {
     match qp {
         QualityProfile::Percent(v) => {
-            let percent = v.clamp(0.0, 100.0);
+            let percent = clamp_f32_nan_safe(*v, 0.0, 100.0);
             // find next highest value
-            let higher = QUALITY_HINTS.iter().find(|q| q.p >= percent).unwrap();
+            let higher = QUALITY_HINTS
+                .iter()
+                .find(|q| q.p >= percent)
+                .unwrap_or(&QUALITY_HINTS[QUALITY_HINTS.len() - 1]);
             if higher.p == percent {
                 return *higher;
             }
@@ -758,10 +765,11 @@ fn get_quality_hints(qp: &QualityProfile) -> QualityProfileHints {
                 .rev()
                 .find(|q| q.p < percent)
                 .unwrap_or(&ABSOLUTE_LOWEST_HINTS);
-            if lower.p >= higher.p || percent < lower.p || percent > higher.p {
-                panic!("Invalid interpolation values");
+            let span = higher.p - lower.p;
+            if span <= 0.0 || percent < lower.p || percent > higher.p {
+                return *higher;
             }
-            let interpolation_ratio = (percent - lower.p) / (higher.p - lower.p);
+            let interpolation_ratio = (percent - lower.p) / span;
             QualityProfileHints {
                 profile: Some(QualityProfile::Percent(percent)),
                 p: percent,
@@ -770,15 +778,21 @@ fn get_quality_hints(qp: &QualityProfile) -> QualityProfileHints {
                 jpegli: interpolate_value(interpolation_ratio, lower.jpegli, higher.jpegli),
                 webp: interpolate_value(interpolation_ratio, lower.webp, higher.webp),
                 avif: interpolate_value(interpolation_ratio, lower.avif, higher.avif),
-                jxl: interpolate_value(interpolation_ratio, higher.jxl, lower.jxl), // distance is inverse
-                png: interpolate_value(interpolation_ratio, lower.png as f32, higher.png as f32)
-                    .clamp(0.0, 100.0) as u8,
-                png_max: interpolate_value(
-                    interpolation_ratio,
-                    lower.png_max as f32,
-                    higher.png_max as f32,
-                )
-                .clamp(0.0, 100.0) as u8,
+                jxl: interpolate_value(interpolation_ratio, lower.jxl, higher.jxl),
+                png: clamp_f32_nan_safe(
+                    interpolate_value(interpolation_ratio, lower.png as f32, higher.png as f32),
+                    0.0,
+                    100.0,
+                ) as u8,
+                png_max: clamp_f32_nan_safe(
+                    interpolate_value(
+                        interpolation_ratio,
+                        lower.png_max as f32,
+                        higher.png_max as f32,
+                    ),
+                    0.0,
+                    100.0,
+                ) as u8,
                 png_s: higher.png_s,
                 jxl_e: higher.jxl_e,
                 webp_m: higher.webp_m,
@@ -792,31 +806,45 @@ fn get_quality_hints(qp: &QualityProfile) -> QualityProfileHints {
 }
 
 fn get_quality_hints_by_ssim2(ssim2: f32) -> QualityProfileHints {
-    let percent = ssim2.clamp(0.0, 100.0);
+    let target_ssim2 = clamp_f32_nan_safe(ssim2, 0.0, 100.0);
     // find next highest value
-    let higher = QUALITY_HINTS.iter().find(|q| q.ssim2 >= percent).unwrap();
-    if higher.ssim2 == percent {
+    let higher = QUALITY_HINTS
+        .iter()
+        .find(|q| q.ssim2 >= target_ssim2)
+        .unwrap_or(&QUALITY_HINTS[QUALITY_HINTS.len() - 1]);
+    if higher.ssim2 == target_ssim2 {
         return *higher;
     }
-    let lower =
-        QUALITY_HINTS.iter().rev().find(|q| q.ssim2 < percent).unwrap_or(&ABSOLUTE_LOWEST_HINTS);
-    if lower.ssim2 >= higher.ssim2 || percent < lower.ssim2 || percent > higher.ssim2 {
-        panic!("Invalid interpolation values");
+    let lower = QUALITY_HINTS
+        .iter()
+        .rev()
+        .find(|q| q.ssim2 < target_ssim2)
+        .unwrap_or(&ABSOLUTE_LOWEST_HINTS);
+    let span = higher.ssim2 - lower.ssim2;
+    if span <= 0.0 || target_ssim2 < lower.ssim2 || target_ssim2 > higher.ssim2 {
+        return *higher;
     }
-    let interpolation_ratio = (percent - lower.p) / (higher.p - lower.p);
+    let interpolation_ratio = (target_ssim2 - lower.ssim2) / span;
+    let p = interpolate_value(interpolation_ratio, lower.p, higher.p);
     QualityProfileHints {
-        profile: Some(QualityProfile::Percent(percent)),
-        p: percent,
+        profile: Some(QualityProfile::Percent(p)),
+        p,
         ssim2: interpolate_value(interpolation_ratio, lower.ssim2, higher.ssim2),
         moz: interpolate_value(interpolation_ratio, lower.moz, higher.moz),
         jpegli: interpolate_value(interpolation_ratio, lower.jpegli, higher.jpegli),
         webp: interpolate_value(interpolation_ratio, lower.webp, higher.webp),
         avif: interpolate_value(interpolation_ratio, lower.avif, higher.avif),
-        jxl: interpolate_value(interpolation_ratio, higher.jxl, lower.jxl), // distance is inverse
-        png: interpolate_value(interpolation_ratio, lower.png as f32, higher.png as f32)
-            .clamp(0.0, 100.0) as u8,
-        png_max: interpolate_value(interpolation_ratio, lower.png_max as f32, higher.png_max as f32)
-            .clamp(0.0, 100.0) as u8,
+        jxl: interpolate_value(interpolation_ratio, lower.jxl, higher.jxl),
+        png: clamp_f32_nan_safe(
+            interpolate_value(interpolation_ratio, lower.png as f32, higher.png as f32),
+            0.0,
+            100.0,
+        ) as u8,
+        png_max: clamp_f32_nan_safe(
+            interpolate_value(interpolation_ratio, lower.png_max as f32, higher.png_max as f32),
+            0.0,
+            100.0,
+        ) as u8,
         png_s: higher.png_s,
         jxl_e: higher.jxl_e,
         webp_m: higher.webp_m,
@@ -1008,10 +1036,10 @@ fn create_png_auto(
                 }
                 #[cfg(not(feature = "c-codecs"))]
                 {
-                    return Err(nerror!(
+                    Err(nerror!(
                         ErrorKind::CodecDisabledError,
                         "Libpng encoder requires the 'c-codecs' feature"
-                    ));
+                    ))
                 }
             }
             PngEncoderStyle::Pngquant | PngEncoderStyle::Default if !lossless => {
@@ -1261,6 +1289,50 @@ fn format_auto_select(details: &AutoEncoderDetails) -> Option<OutputImageFormat>
     }
 
     None
+}
+
+#[cfg(test)]
+mod ssim2_interpolation_tests {
+    use super::*;
+
+    #[test]
+    fn get_quality_hints_by_ssim2_interpolates_in_ssim2_space() {
+        // Midpoint between Low (p=20, ssim2=30, moz=20, webp=20, avif=34, jxl=7.4, png=0, png_max=20)
+        // and MediumLow (p=34, ssim2=50, moz=34, webp=34, avif=45, jxl=4.3, png=0, png_max=35).
+        // Previously ratio used `(40 - 20) / (34 - 20) = 1.428` (mixing ssim2 with percent!),
+        // overshooting the higher anchor and panicking on equal png=0..0.
+        let mid = get_quality_hints_by_ssim2(40.0);
+        assert!((mid.ssim2 - 40.0).abs() < 1e-4, "ssim2 expected 40.0, got {}", mid.ssim2);
+        assert!((mid.p - 27.0).abs() < 1e-4, "p expected 27.0, got {}", mid.p);
+        assert!((mid.moz - 27.0).abs() < 1e-4, "moz expected 27.0, got {}", mid.moz);
+        assert!((mid.webp - 27.0).abs() < 1e-4, "webp expected 27.0, got {}", mid.webp);
+        assert!((mid.avif - 39.5).abs() < 1e-4, "avif expected 39.5, got {}", mid.avif);
+        assert!((mid.jxl - 5.85).abs() < 1e-4, "jxl expected 5.85, got {}", mid.jxl);
+        assert_eq!(mid.png, 0);
+        assert_eq!(mid.png_max, 27);
+
+        // Midpoint between Good (p=73, ssim2=70, moz=73, webp=76, jxl=2.58, png=50, png_max=100)
+        // and High (p=91, ssim2=85, moz=91, webp=93, jxl=1.0, png=80, png_max=100).
+        let hi = get_quality_hints_by_ssim2(77.5);
+        assert!((hi.ssim2 - 77.5).abs() < 1e-4);
+        assert!((hi.p - 82.0).abs() < 1e-4);
+        assert!((hi.moz - 82.0).abs() < 1e-4);
+        assert!((hi.webp - 84.5).abs() < 1e-4);
+        assert!((hi.jxl - 1.79).abs() < 1e-4);
+        assert_eq!(hi.png, 65);
+        assert_eq!(hi.png_max, 100);
+
+        // Exact anchor returns anchor verbatim, and every intermediate ssim2 is monotonic.
+        let exact = get_quality_hints_by_ssim2(70.0);
+        assert_eq!(exact.profile, Some(QualityProfile::Good));
+        assert_eq!(exact.p, 73.0);
+
+        // NaN and out-of-range inputs are safely bounded without panicking.
+        let low = get_quality_hints_by_ssim2(-10.0);
+        assert!(low.p >= 0.0 && low.p <= 100.0);
+        let nan_hints = get_quality_hints_by_ssim2(f32::NAN);
+        assert!(nan_hints.p.is_finite() && nan_hints.ssim2.is_finite());
+    }
 }
 
 #[cfg(all(test, feature = "zen-codecs"))]

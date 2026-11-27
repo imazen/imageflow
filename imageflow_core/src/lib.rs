@@ -11,7 +11,10 @@ extern crate imageflow_c_components;
 
 #[macro_use]
 pub mod errors;
-pub use crate::errors::*;
+pub use crate::errors::{
+    CategorizedError, CodeLocation, ErrorCategory, ErrorKind, FlowError, OutwardErrorBuffer,
+    PanicFormatter, Result,
+};
 
 mod codecs;
 mod context;
@@ -31,7 +34,7 @@ pub use imageflow_types::IoDirection;
 mod allocation_container;
 pub mod clients;
 pub mod ffi;
-pub mod parsing;
+pub(crate) mod parsing;
 pub mod test_helpers;
 
 use petgraph::graph::NodeIndex;
@@ -41,8 +44,8 @@ use std::fmt;
 pub use crate::graphics::bitmaps::BitmapKey;
 pub use enough::{Stop, StopReason, Unstoppable};
 
-pub mod helpers {
-    pub use crate::codecs::write_png;
+pub(crate) mod helpers {
+    pub(crate) use crate::codecs::write_png;
 }
 #[doc(hidden)]
 mod internal_prelude {

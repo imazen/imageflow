@@ -105,9 +105,6 @@ impl Decoder for LibPngDecoder {
     fn has_more_frames(&mut self) -> Result<bool> {
         Ok(false)
     }
-    fn as_any(&self) -> &dyn Any {
-        self as &dyn Any
-    }
 }
 
 struct PngDec {

@@ -48,10 +48,10 @@ pub(crate) mod zen_encoder;
 
 use crate::graphics::bitmaps::BitmapKey;
 
-pub trait DecoderFactory {
+pub(crate) trait DecoderFactory {
     fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<dyn Decoder>>>;
 }
-pub trait Decoder: Any {
+pub(crate) trait Decoder {
     fn initialize(&mut self, c: &Context) -> Result<()>;
     fn get_unscaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>;
     fn get_scaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>;
@@ -59,9 +59,29 @@ pub trait Decoder: Any {
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()>;
     fn read_frame(&mut self, c: &Context) -> Result<BitmapKey>;
     fn has_more_frames(&mut self) -> Result<bool>;
-    fn as_any(&self) -> &dyn Any;
+    /// Duration of the most recently read frame in milliseconds (`None` if unknown / still).
+    fn frame_delay_ms(&self) -> Option<u32> {
+        None
+    }
+    /// Exact rational duration of the most recently read frame (`None` if unknown / still).
+    #[cfg(feature = "bmp")]
+    fn frame_duration(&self) -> Option<zc::animation::FrameDuration> {
+        self.frame_delay_ms().map(zc::animation::FrameDuration::from_millis)
+    }
+    /// Animation loop count (`Some(0)` = infinite, `Some(n)` = finite, `None` = unspecified / still).
+    fn loop_count(&self) -> Option<u32> {
+        None
+    }
+    /// GIF user-input flag from the most recently read frame, if applicable.
+    fn frame_needs_user_input(&self) -> bool {
+        false
+    }
+    /// Estimated codec working-set memory `(avg_bytes, max_bytes)` for decoding into `w×h`.
+    fn estimate_decode_memory(&self, _c: &Context, _w: u32, _h: u32) -> (u64, u64) {
+        (0, 0)
+    }
 }
-pub trait Encoder {
+pub(crate) trait Encoder {
     // GIF encoder will need to know if transparency is required (we could guess based on first input frame)
     // If not required, we can do frame shrinking and delta encoding. Otherwise we have to
     // encode entire frames and enable transparency (default)
@@ -74,6 +94,43 @@ pub trait Encoder {
     ) -> Result<s::EncodeResult>;
 
     fn into_io(self: Box<Self>) -> Result<IoProxy>;
+}
+
+/// Animation timing `(frame_delay_ms, loop_count)` from the first input decoder
+/// that exposes either field.
+pub(crate) fn input_animation_info(
+    c: &Context,
+    decoder_io_ids: &[i32],
+) -> (Option<u32>, Option<u32>) {
+    for io_id in decoder_io_ids {
+        if let Ok(mut codec) = c.get_codec(*io_id)
+            && let Ok(decoder) = codec.get_decoder()
+        {
+            let delay = decoder.frame_delay_ms();
+            let loops = decoder.loop_count();
+            if delay.is_some() || loops.is_some() {
+                return (delay, loops);
+            }
+        }
+    }
+    (None, None)
+}
+
+/// Exact rational frame duration from the first input decoder that exposes one.
+#[cfg(feature = "zen-codecs")]
+pub(crate) fn input_frame_duration(
+    c: &Context,
+    decoder_io_ids: &[i32],
+) -> Option<zc::animation::FrameDuration> {
+    for io_id in decoder_io_ids {
+        if let Ok(mut codec) = c.get_codec(*io_id)
+            && let Ok(decoder) = codec.get_decoder()
+            && let Some(dur) = decoder.frame_duration()
+        {
+            return Some(dur);
+        }
+    }
+    None
 }
 
 enum CodecKind {
@@ -237,7 +294,7 @@ impl NamedDecoders {
         }
     }
 
-    pub fn create(&self, c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>> {
+    pub(crate) fn create(&self, c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>> {
         return_if_cancelled!(c);
         match self {
             #[cfg(feature = "c-codecs")]
@@ -523,7 +580,7 @@ impl EnabledCodecs {
             self.first_encoder(pred)
         }
     }
-    pub fn create_decoder_for_magic_bytes(
+    pub(crate) fn create_decoder_for_magic_bytes(
         &self,
         bytes: &[u8],
         c: &Context,
@@ -565,8 +622,8 @@ enum OutputBufferState {
 }
 
 // We need a rust-friendly codec instance, codec definition, and a way to wrap C codecs
-pub struct CodecInstanceContainer {
-    pub io_id: i32,
+pub(crate) struct CodecInstanceContainer {
+    pub(crate) io_id: i32,
     codec: CodecKind,
     output_state: OutputBufferState,
 }

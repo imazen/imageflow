@@ -8,10 +8,10 @@
 //! Overlaps in naming are artifacts from restructuring
 //!
 
-pub use imageflow_types::EdgeKind;
-pub use imageflow_types::Filter;
-pub use imageflow_types::IoDirection;
-pub use imageflow_types::PixelFormat;
+pub(crate) use imageflow_types::EdgeKind;
+pub(crate) use imageflow_types::Filter;
+pub(crate) use imageflow_types::IoDirection;
+pub(crate) use imageflow_types::PixelFormat;
 
 // These are reused in the external ABI, but only as opaque pointers
 ///
@@ -52,4 +52,4 @@ pub enum BitmapCompositingMode {
 mod c_interop;
 
 #[cfg(feature = "c-codecs")]
-pub use c_interop::*;
+pub(crate) use c_interop::*;

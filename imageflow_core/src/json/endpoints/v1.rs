@@ -334,26 +334,15 @@ pub(super) fn estimate(context: &mut Context, data: EstimateEncode001) -> Result
     // estimate_*_resources. Decode side is wired (via the probed input decoder);
     // the encode side (`data.format`) layers on with the #728 per-format dry-run
     // config builder.
-    #[cfg(feature = "bmp")]
     let (codec_avg, codec_max): (u64, u64) = {
         if let Ok(mut codec) = context.get_codec(data.io_id)
             && let Ok(decoder) = codec.get_decoder()
-            && let Some(zd) =
-                decoder.as_any().downcast_ref::<crate::codecs::zen_decoder::ZenDecoder>()
         {
-            let mut env = zc::estimate::ComputeEnvironment::host();
-            if let Some(n) = context.security.max_threads {
-                env = env.with_cores(n as usize);
-            }
-            let est = zd.estimate_decode(&env, w, h);
-            let avg = est.peak_memory_bytes_est().unwrap_or(0);
-            (avg, est.peak_memory_bytes_max().unwrap_or(avg))
+            decoder.estimate_decode_memory(context, w, h)
         } else {
             (0, 0)
         }
     };
-    #[cfg(not(feature = "bmp"))]
-    let (codec_avg, codec_max): (u64, u64) = (0, 0);
     let _ = &data.format;
     Ok(EncodeEstimate {
         width: w,

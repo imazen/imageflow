@@ -685,7 +685,7 @@ impl Bitmap {
     pub fn is_cropped(&self) -> bool {
         self.cropped
     }
-    pub fn frame_info(&self) -> crate::flow::definitions::FrameInfo {
+    pub(crate) fn frame_info(&self) -> crate::flow::definitions::FrameInfo {
         crate::flow::definitions::FrameInfo {
             w: self.w() as i32,
             h: self.h() as i32,
