@@ -30,16 +30,30 @@ opt-level = 2
 #  libwebp-sys = { git = "https://github.com/imazen/libwebp-sys" }
 libpng-sys = { git = "https://github.com/imazen/rust-libpng-sys" }
 lcms2-sys = { git = "https://github.com/imazen/rust-lcms2-sys", branch = "update-lcms2-2.18" }
-# zencodec 0.1.24 (AllocPreference + estimate_decode_resources) resolves from
-# crates.io — published 2026-06-21; the temporary local path ref is no longer needed.
-# zenpixels 0.2.14 (published — CMYK plumbing landed) resolves from crates.io;
-# its old main-patch was removed. zenjpeg github main until CMYK8 is published.
-zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
-zenyuv = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
-# Local zenwebp with push_frame stride fix for strided input (imageflow
-# bitmaps are SIMD-aligned with stride > width*bpp).
-zenwebp = { git = "https://github.com/imazen/zenwebp", branch = "main" }
-# zenresize 0.3.0 published to crates.io (fused decode+premultiply, linear-srgb 0.6.11 threshold fix)
+# zenpixels 0.5 + zencodec 0.3 + updated zen codec cohort pins
+zenpixels = { git = "https://github.com/imazen/zenpixels", rev = "7fa068834f8074c2630a352b25f355f7c90751f8" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", rev = "7fa068834f8074c2630a352b25f355f7c90751f8" }
+zencodec = { git = "https://github.com/imazen/zencodec", rev = "5d4f6c473404c09c95f404543f8a16a1e3cb8477" }
+zenmeta = { git = "https://github.com/imazen/zencodec", rev = "5d4f6c473404c09c95f404543f8a16a1e3cb8477" }
+zenresize = { git = "https://github.com/imazen/zenresize", rev = "e6c077561dcb426b23d8e7c3da1ca0e12cc13c5f" }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "80dac328d0b9279413d037c0291477c8df6ae53b" }
+zenyuv = { git = "https://github.com/imazen/zenjpeg", rev = "80dac328d0b9279413d037c0291477c8df6ae53b" }
+zenpng = { git = "https://github.com/imazen/zenpng", rev = "af5d24b89d91efb3db91a632047a0e0c835fe007" }
+zenwebp = { git = "https://github.com/imazen/zenwebp", rev = "82cd643dbe7950f7a5c69afe8d5bf69652dd4aef" }
+zengif = { git = "https://github.com/imazen/zengif", rev = "edbbd1a1a30f15018a41079fcd54683cf875bef9" }
+zenavif = { git = "https://github.com/imazen/zenavif", rev = "8868bc5ebeeed6ba55ec2e94eb8f1c6cb425e7ac" }
+zenavif-serialize = { git = "https://github.com/imazen/zenavif", rev = "8868bc5ebeeed6ba55ec2e94eb8f1c6cb425e7ac" }
+jxl-encoder = { git = "https://github.com/imazen/jxl-encoder", rev = "7fdd3ea2839b5a0ccd73dd61c9a99b8fe95857fe" }
+zenjxl = { git = "https://github.com/imazen/zenjxl", rev = "27a69d531938d1781777fd99ec7d7f74b805abdf" }
+zenbitmaps = { git = "https://github.com/imazen/zenbitmaps", rev = "e50a9037a3583f18ab7ef45ca5bd086401a35299" }
+mozjpeg-rs = { git = "https://github.com/imazen/mozjpeg-rs", rev = "d72187417cab8de44216ab3c09057111386d8197" }
+ultrahdr-core = { git = "https://github.com/imazen/ultrahdr", rev = "76e9aad431e1faf7782b0654857325246b15c28b" }
+zensim = { git = "https://github.com/imazen/zensimx", rev = "6da0e710bafafa474b6b63f3cf6a476e43bbe799" }
+zensim-regress = { git = "https://github.com/imazen/zensimx", rev = "6da0e710bafafa474b6b63f3cf6a476e43bbe799" }
+garb = { git = "https://github.com/imazen/garb", rev = "457ff8b9153e9d675a39dc098052b2ffeb6206fa" }
+linear-srgb = { git = "https://github.com/imazen/linear-srgb", rev = "ae83f19426737635fee3dd16f228681019f52585" }
+zenflate = { git = "https://github.com/imazen/zenflate", rev = "7270e38faca9cdbae793938fa229d40ac4fe4c39" }
+zenjxl-decoder = { git = "https://github.com/imazen/zenjxl-decoder", rev = "e1c366b089b29511ef66f1b5af5d9e208dbff5d1" }
 # load_image.git = "https://gitlab.com/lilith6/load_image.git"
 # TODO(rgb-0.8.91): Uncomment when rgb 0.8.91+ is published to crates.io
 # This enables: root-level BGR8/BGRA8/RGB8/RGBA8 exports, Gray_v09 compat type,

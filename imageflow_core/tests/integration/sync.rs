@@ -90,7 +90,7 @@ fn backfill_diff_stats() {
     let cache_dir = checksums_dir.join(".remote-cache");
     let base_url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums";
 
-    let zensim = zensim::Zensim::new(zensim::ZensimProfile::latest());
+    let zensim = zensim::Zensim::new(zensim_regress::profile::legacy_linear());
     let mut total = 0;
     let mut updated = 0;
     let mut failed = 0;

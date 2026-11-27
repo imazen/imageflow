@@ -384,7 +384,7 @@ impl Context {
     }
 
     /// An owned, cloneable cancellation token for codec jobs that take ownership
-    /// of a stop signal (zencodec `set_stop` stores a `StopToken` for the
+    /// of a stop signal (zencodec `set_pulse` stores a `SharedPulse` for the
     /// duration of decode/encode). Shares the same flag as [`Context::stop`].
     #[cfg(feature = "bmp")]
     #[inline]

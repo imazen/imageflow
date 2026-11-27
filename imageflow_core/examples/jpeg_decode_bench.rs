@@ -67,9 +67,9 @@ fn jpeg_fixture(w: u32, h: u32) -> Vec<u8> {
 }
 
 /// 1. mozjpeg-sys direct FFI, output BGRA via the `mozjpeg` safe crate
-/// (which imageflow already depends on for version 0.10). Requests
-/// JCS_EXT_BGRA directly so no post-decode swizzle is needed — this is
-/// what imageflow's `mozjpeg_decoder` does internally.
+///    (which imageflow already depends on for version 0.10). Requests
+///    JCS_EXT_BGRA directly so no post-decode swizzle is needed — this is
+///    what imageflow's `mozjpeg_decoder` does internally.
 fn decode_mozjpeg_ffi(data: &[u8]) -> (u32, u32, Vec<u8>) {
     use mozjpeg::{ColorSpace, Decompress};
     let d = Decompress::new_mem(data).unwrap();
@@ -82,8 +82,8 @@ fn decode_mozjpeg_ffi(data: &[u8]) -> (u32, u32, Vec<u8>) {
 }
 
 /// 2. zenjpeg native Decoder API, no zencodec involvement. Decodes
-/// directly to packed BGRA — matches imageflow's internal bitmap layout
-/// so no post-decode swizzle is needed.
+///    directly to packed BGRA — matches imageflow's internal bitmap layout
+///    so no post-decode swizzle is needed.
 fn decode_zenjpeg_native(data: &[u8]) -> (u32, u32, Vec<u8>) {
     use enough::Unstoppable;
     use zenjpeg::decoder::{Decoder, PixelFormat};
@@ -100,24 +100,24 @@ fn decode_zenjpeg_native(data: &[u8]) -> (u32, u32, Vec<u8>) {
 /// 3. zenjpeg via zencodec `Decode::decode` — buffered path.
 fn decode_zenjpeg_zc_buffered(data: &[u8]) -> (u32, u32, Vec<u8>) {
     use zc::decode::DynDecoderConfig;
-    use zenpixels::PixelDescriptor;
+    use zenpixels::PixelFormat;
     let config =
         zenjpeg::JpegDecoderConfig::new().cmyk_handling(zenjpeg::CmykHandling::Passthrough);
     let cfg_box: Box<dyn DynDecoderConfig> = Box::new(config);
     let job = cfg_box.dyn_job();
     let preferred = [
-        PixelDescriptor::BGRA8_SRGB,
-        PixelDescriptor::RGBA8_SRGB,
-        PixelDescriptor::RGB8_SRGB,
-        PixelDescriptor::GRAY8_SRGB,
+        PixelFormat::BGRA8_SRGB,
+        PixelFormat::RGBA8_SRGB,
+        PixelFormat::RGB8_SRGB,
+        PixelFormat::GRAY8_SRGB,
     ];
     let dec = job.into_decoder(Cow::Borrowed(data), &preferred).expect("zc into_decoder");
     let out = dec.decode().expect("zc decode");
     let ps = out.pixels();
     let w = ps.width();
-    let h = ps.rows();
-    // Copy rows out so we don't just measure allocation of the PixelSlice.
-    let bpp = ps.descriptor().bytes_per_pixel();
+    let h = ps.height();
+    // Copy rows out so we don't just measure allocation of the PixelView.
+    let bpp = ps.format().layout.bytes_per_pixel();
     let mut bytes = vec![0u8; w as usize * h as usize * bpp];
     let row_bytes = w as usize * bpp;
     for y in 0..h {
@@ -128,10 +128,10 @@ fn decode_zenjpeg_zc_buffered(data: &[u8]) -> (u32, u32, Vec<u8>) {
 }
 
 /// 4. zenjpeg via zencodec `push_decode` with a direct-BGRA sink — mirrors the
-/// imageflow BitmapRowSink fast path (4bpp direct writes).
+///    imageflow BitmapRowSink fast path (4bpp direct writes).
 fn decode_zenjpeg_zc_push(data: &[u8]) -> (u32, u32, Vec<u8>) {
-    use zc::decode::{DecodeRowSink, DynDecoderConfig, SinkError};
-    use zenpixels::{ChannelLayout, ChannelType, PixelDescriptor, PixelSliceMut};
+    use zc::decode::{DecodeRowSink, DynDecoderConfig, RowStrip, SinkError};
+    use zenpixels::{FormatCow, PixelFormat, PixelViewMut, SampleType};
 
     struct Sink<'a> {
         data: &'a mut [u8],
@@ -140,9 +140,9 @@ fn decode_zenjpeg_zc_push(data: &[u8]) -> (u32, u32, Vec<u8>) {
         height: u32,
     }
     impl DecodeRowSink for Sink<'_> {
-        fn begin(&mut self, w: u32, h: u32, desc: PixelDescriptor) -> Result<(), SinkError> {
-            if desc.channel_type() != ChannelType::U8 || desc.bytes_per_pixel() != 4 {
-                return Err(format!("need 4bpp U8, got {:?}", desc).into());
+        fn begin(&mut self, w: u32, h: u32, fmt: PixelFormat) -> Result<(), SinkError> {
+            if fmt.layout.sample != SampleType::U8 || fmt.layout.bytes_per_pixel() != 4 {
+                return Err(format!("need 4bpp U8, got {:?}", fmt).into());
             }
             self.width = w;
             self.height = h;
@@ -150,17 +150,20 @@ fn decode_zenjpeg_zc_push(data: &[u8]) -> (u32, u32, Vec<u8>) {
         }
         fn provide_next_buffer(
             &mut self,
-            y: u32,
-            height: u32,
-            width: u32,
-            descriptor: PixelDescriptor,
-        ) -> Result<PixelSliceMut<'_>, SinkError> {
+            strip: RowStrip,
+            pixel_format: PixelFormat,
+        ) -> Result<PixelViewMut<'_>, SinkError> {
+            let (y, width, height) = (strip.y, strip.width, strip.height);
             let row_start = y as usize * self.stride;
             let row_bytes = width as usize * 4;
             let needed =
                 if height > 0 { (height as usize - 1) * self.stride + row_bytes } else { 0 };
             let slice = &mut self.data[row_start..row_start + needed];
-            PixelSliceMut::new(slice, width, height, self.stride, descriptor)
+            let format_cow = match pixel_format.as_static_ref() {
+                Some(s) => FormatCow::Borrowed(s),
+                None => FormatCow::from_owned(pixel_format),
+            };
+            PixelViewMut::new_with_format_cow(slice, width, height, self.stride, format_cow)
                 .map_err(|e| -> SinkError { format!("{e}").into() })
         }
     }
@@ -170,10 +173,10 @@ fn decode_zenjpeg_zc_push(data: &[u8]) -> (u32, u32, Vec<u8>) {
     let cfg_box: Box<dyn DynDecoderConfig> = Box::new(config);
     let job = cfg_box.dyn_job();
     let preferred = [
-        PixelDescriptor::BGRA8_SRGB,
-        PixelDescriptor::RGBA8_SRGB,
-        PixelDescriptor::RGB8_SRGB,
-        PixelDescriptor::GRAY8_SRGB,
+        PixelFormat::BGRA8_SRGB,
+        PixelFormat::RGBA8_SRGB,
+        PixelFormat::RGB8_SRGB,
+        PixelFormat::GRAY8_SRGB,
     ];
 
     // Probe size so we can allocate the destination before calling push_decode.

@@ -10,13 +10,12 @@ use imageflow_types::PixelLayout;
 use std::any::Any;
 use std::borrow::Cow;
 
-use zc::decode::{DecodeRowSink, DynAnimationFrameDecoder, DynDecoderConfig, SinkError};
+use zc::decode::{DecodeRowSink, DynAnimationFrameDecoder, DynDecoderConfig, RowStrip, SinkError};
+use zc::how_far::StopOnly;
 use zc::ImageFormat as ZenFormat;
 use zc::ImageInfo as ZenImageInfo;
-use zc::OwnedAnimationFrame;
-use zc::StopToken;
-// Bare `Stop` / `StopToken` to thread per-call cancellation without qualification noise.
-use enough::Stop;
+use zc::{OwnedAnimationFrame, Pulse, SharedPulse};
+use zenpixels::{ChannelOrder, FormatCow, PixelFormat, PixelView, PixelViewMut, SampleType};
 
 /// Fallback CMYK ICC profile used when a CMYK JPEG has no embedded profile.
 /// Same profile used by the mozjpeg (C) decoder path for consistent output.
@@ -85,8 +84,8 @@ pub struct ZenDecoder {
     ignore_color_profile_errors: bool,
     // Resource limits for decode jobs
     resource_limits: Option<zc::ResourceLimits>,
-    // Cooperative cancellation token threaded into every decode job
-    stop_token: Option<StopToken>,
+    // Cooperative cancellation pulse threaded into every decode job
+    pulse: Option<SharedPulse>,
     // Cached max_threads-sized rayon pool, reused across animation frames so the
     // codec's internal par_iter is bounded without re-spawning a pool per frame.
     thread_pool: Option<rayon::ThreadPool>,
@@ -238,7 +237,7 @@ impl ZenDecoder {
             ignore_color_profile: false,
             ignore_color_profile_errors: false,
             resource_limits: decode_limits_from_security(&c.security),
-            stop_token: Some(StopToken::new(c.cancellation_token())),
+            pulse: Some(SharedPulse::new(StopOnly::new(c.cancellation_token()))),
             thread_pool: build_pool(c.security.max_threads),
             format,
             has_more: None,
@@ -255,14 +254,13 @@ impl ZenDecoder {
         w: u32,
         h: u32,
     ) -> zc::estimate::ResourceEstimate {
-        let chars =
-            zc::estimate::ImageCharacteristics::new(w, h, zenpixels::PixelDescriptor::BGRA8_SRGB);
+        let chars = zc::estimate::ImageCharacteristics::new(w, h, PixelFormat::BGRA8_SRGB);
         self.config.estimate_decode_resources(&chars, env)
     }
 
     #[cfg(feature = "zen-codecs")]
     pub fn create_jpeg(c: &Context, io: IoProxy, _io_id: i32) -> Result<Self> {
-        // CmykHandling::Passthrough — emit raw CMYK bytes (PixelDescriptor::CMYK8)
+        // CmykHandling::Passthrough — emit raw inverted CMYK bytes (ChannelOrder::CmykInverted)
         // for 4-component JPEGs instead of applying zenjpeg's internal CMYK→RGB
         // matrix. The CMS stage then applies the source ICC profile (or the
         // bundled fallback CMYK profile) for an accurate conversion. No effect
@@ -354,8 +352,8 @@ impl ZenDecoder {
             if let Some(ref limits) = self.resource_limits {
                 job.set_limits(*limits);
             }
-            if let Some(ref stop) = self.stop_token {
-                job.set_stop(stop.clone());
+            if let Some(ref pulse) = self.pulse {
+                job.set_pulse(pulse.clone());
             }
             let info = job.probe(data).map_err(|e| {
                 FlowError::from_codec_error(
@@ -414,15 +412,22 @@ impl ZenDecoder {
         SourceProfile::Srgb
     }
 
-    /// Create a DynDecodeJob with resource limits applied.
+    /// Create a DynDecodeJob for pixel decoding with resource limits and pulse applied.
+    ///
+    /// Disables ICC attachment on the pixel-decode job (`allow_icc = false`):
+    /// `ensure_info_probed()` already extracted `source_color.icc_profile` for
+    /// imageflow's CMS stage (`cms::transform_to_srgb`), which owns policy for
+    /// `DiscardColorProfile`, `IgnoreColorProfileErrors`, and ignoring mismatched
+    /// profiles such as CMYK ICC on YCbCr/grayscale JPEGs (imageflow#737).
     fn make_job(&self) -> Box<dyn zc::decode::DynDecodeJob<'_> + '_> {
         let mut job = self.config.dyn_job();
         if let Some(ref limits) = self.resource_limits {
             job.set_limits(*limits);
         }
-        if let Some(ref stop) = self.stop_token {
-            job.set_stop(stop.clone());
+        if let Some(ref pulse) = self.pulse {
+            job.set_pulse(pulse.clone());
         }
+        let _ = job.try_set_policy(zc::decode::DecodePolicy::none().with_allow_icc(false));
         job
     }
 }
@@ -461,22 +466,30 @@ fn row_to_bgra(dst: &mut [u8], src: &[u8], width: usize, channels: usize) {
     }
 }
 
-/// Copy decoded pixels from a PixelSlice into a bitmap, handling stride and BGRA swizzle.
-fn copy_pixel_slice_to_bitmap(dst: &mut [u8], dst_stride: usize, ps: &zenpixels::PixelSlice<'_>) {
-    let w = ps.width();
-    let h = ps.rows();
-    let descriptor = ps.descriptor();
+/// Convert a `zencodec::animation::FrameDuration` to whole milliseconds
+/// (truncating sub-millisecond fractions, saturating at `u32::MAX`).
+#[inline]
+fn frame_duration_to_ms(dur: zc::animation::FrameDuration) -> u32 {
+    ((u128::from(dur.numerator()) * 1000 / u128::from(dur.denominator())).min(u128::from(u32::MAX)))
+        as u32
+}
 
-    let is_bgra = descriptor.layout() == zenpixels::ChannelLayout::Bgra
-        && descriptor.channel_type() == zenpixels::ChannelType::U8;
-    let is_rgba = descriptor.layout() == zenpixels::ChannelLayout::Rgba
-        && descriptor.channel_type() == zenpixels::ChannelType::U8;
+/// Copy decoded pixels from a PixelView into a bitmap, handling stride and BGRA swizzle.
+fn copy_pixel_slice_to_bitmap(dst: &mut [u8], dst_stride: usize, ps: &PixelView<'_>) {
+    let w = ps.width();
+    let h = ps.height();
+    let format = ps.format();
+
+    let is_bgra =
+        format.layout.order == ChannelOrder::Bgra && format.layout.sample == SampleType::U8;
+    let is_rgba =
+        format.layout.order == ChannelOrder::Rgba && format.layout.sample == SampleType::U8;
     // CMYK: pass through bytes verbatim into the BGRA bitmap slot — the
-    // downstream CMS stage (SourceProfile::CmykIcc) interprets the CMYK bytes
-    // and applies the ICC transform to BGRA. Swizzling here would corrupt
+    // downstream CMS stage (SourceProfile::CmykIcc) interprets the inverted CMYK
+    // bytes and applies the ICC transform to BGRA. Swizzling here would corrupt
     // the C/M/Y/K channel order that CMS expects.
-    let is_cmyk = descriptor.layout() == zenpixels::ChannelLayout::Cmyk
-        && descriptor.channel_type() == zenpixels::ChannelType::U8;
+    let is_cmyk = matches!(format.layout.order, ChannelOrder::Cmyk | ChannelOrder::CmykInverted)
+        && format.layout.sample == SampleType::U8;
 
     let row_bytes = w as usize * 4;
 
@@ -494,7 +507,7 @@ fn copy_pixel_slice_to_bitmap(dst: &mut [u8], dst_stride: usize, ps: &zenpixels:
         }
         let _ = garb::bytes::rgba_to_bgra_inplace_strided(dst, w as usize, h as usize, dst_stride);
     } else {
-        let channels = descriptor.channels();
+        let channels = format.layout.channels();
         for y in 0..h {
             let src_row = ps.row(y);
             let dst_start = y as usize * dst_stride;
@@ -535,12 +548,12 @@ struct BitmapRowSink<'a> {
     prev_strip: Option<StripMeta>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct StripMeta {
     y: u32,
     height: u32,
     width: u32,
-    descriptor: zenpixels::PixelDescriptor,
+    format: PixelFormat,
 }
 
 impl BitmapRowSink<'_> {
@@ -559,9 +572,9 @@ impl BitmapRowSink<'_> {
 
     /// Convert a non-4bpp U8 strip from `self.temp` into the bitmap.
     fn convert_strip(&mut self, meta: StripMeta) {
-        let bpp = meta.descriptor.bytes_per_pixel();
+        let bpp = meta.format.layout.bytes_per_pixel();
         let src_stride = meta.width as usize * bpp;
-        let channels = meta.descriptor.channels();
+        let channels = meta.format.layout.channels();
 
         for row in 0..meta.height as usize {
             let src_start = row * src_stride;
@@ -582,25 +595,24 @@ impl DecodeRowSink for BitmapRowSink<'_> {
         &mut self,
         width: u32,
         height: u32,
-        descriptor: zenpixels::PixelDescriptor,
+        format: PixelFormat,
     ) -> std::result::Result<(), SinkError> {
-        if descriptor.channel_type() != zenpixels::ChannelType::U8 {
-            return Err(format!("BitmapRowSink requires U8 channels, got {:?}", descriptor).into());
+        if format.layout.sample != SampleType::U8 {
+            return Err(format!("BitmapRowSink requires U8 channels, got {:?}", format).into());
         }
         self.width = width;
         self.height = height;
-        self.is_4bpp = descriptor.bytes_per_pixel() == 4;
-        self.needs_swizzle = descriptor.layout() == zenpixels::ChannelLayout::Rgba;
+        self.is_4bpp = format.layout.bytes_per_pixel() == 4;
+        self.needs_swizzle = format.layout.order == ChannelOrder::Rgba;
         Ok(())
     }
 
     fn provide_next_buffer(
         &mut self,
-        y: u32,
-        height: u32,
-        width: u32,
-        descriptor: zenpixels::PixelDescriptor,
-    ) -> std::result::Result<zenpixels::PixelSliceMut<'_>, SinkError> {
+        strip: RowStrip,
+        pixel_format: PixelFormat,
+    ) -> std::result::Result<PixelViewMut<'_>, SinkError> {
+        let (y, width, height) = (strip.y, strip.width, strip.height);
         // Bounds check: ensure strip fits within allocated bitmap
         let end_row = y as usize + height as usize;
         if end_row > self.height as usize || width as usize > self.width as usize {
@@ -626,7 +638,11 @@ impl DecodeRowSink for BitmapRowSink<'_> {
                 .into());
             }
             let slice = &mut self.data[row_start..row_start + needed];
-            PixelSliceMut::new(slice, width, height, self.stride, descriptor)
+            let format_cow = match pixel_format.as_static_ref() {
+                Some(s) => FormatCow::Borrowed(s),
+                None => FormatCow::from_owned(pixel_format),
+            };
+            PixelViewMut::new_with_format_cow(slice, width, height, self.stride, format_cow)
                 .map_err(|e| -> SinkError { format!("{e}").into() })
         } else {
             // Non-4bpp U8: convert the previous strip before reusing temp buffer
@@ -634,14 +650,18 @@ impl DecodeRowSink for BitmapRowSink<'_> {
                 self.convert_strip(meta);
             }
 
-            let bpp = descriptor.bytes_per_pixel();
+            let bpp = pixel_format.layout.bytes_per_pixel();
             let src_stride = width as usize * bpp;
             let needed = height as usize * src_stride;
             self.temp.resize(needed, 0);
 
-            self.prev_strip = Some(StripMeta { y, height, width, descriptor });
+            let format_cow = match pixel_format.as_static_ref() {
+                Some(s) => FormatCow::Borrowed(s),
+                None => FormatCow::from_owned(pixel_format.clone()),
+            };
+            self.prev_strip = Some(StripMeta { y, height, width, format: pixel_format });
 
-            PixelSliceMut::new(&mut self.temp, width, height, src_stride, descriptor)
+            PixelViewMut::new_with_format_cow(&mut self.temp, width, height, src_stride, format_cow)
                 .map_err(|e| -> SinkError { format!("{e}").into() })
         }
     }
@@ -665,8 +685,6 @@ impl DecodeRowSink for BitmapRowSink<'_> {
 }
 
 // ─── Decoder trait impl ──────────────────────────────────────────────────────
-
-use zenpixels::PixelSliceMut;
 
 impl ZenDecoder {
     /// Get frame delay in centiseconds (GIF convention) from milliseconds.
@@ -717,11 +735,19 @@ impl Decoder for ZenDecoder {
         self.ensure_info_probed()?;
         let info = self.cached_info.as_ref().unwrap();
         let orient = info.orientation as u8;
-        if orient <= 1 {
-            Ok(None)
-        } else {
-            Ok(Some(orient as i32))
+        if orient > 1 {
+            return Ok(Some(orient as i32));
         }
+        // `ImageInfo.orientation` defaults to `Orientation::Identity` (1) even when
+        // no EXIF orientation tag is present. Inspect the probed EXIF blob so an
+        // explicit Orientation=1 tag reports `Some(1)` (matching mozjpeg) while
+        // absent orientation tags still report `None`.
+        if let Some(ref exif) = info.embedded_metadata.exif
+            && let Some(parsed) = zc::exif::Exif::parse(exif).and_then(|e| e.orientation())
+        {
+            return Ok(Some(parsed as u8 as i32));
+        }
+        Ok(None)
     }
 
     fn tell_decoder(&mut self, _c: &Context, tell: s::DecoderCommand) -> Result<()> {
@@ -755,9 +781,9 @@ impl Decoder for ZenDecoder {
             let chars = zc::estimate::ImageCharacteristics::new(
                 info.width,
                 info.height,
-                zenpixels::PixelDescriptor::BGRA8_SRGB,
+                PixelFormat::BGRA8_SRGB,
             );
-            let mut env = zc::estimate::ComputeEnvironment::new();
+            let mut env = zc::estimate::ComputeEnvironment::host();
             if let Some(n) = c.security.max_threads {
                 env = env.with_cores(n as usize);
             }
@@ -789,9 +815,9 @@ impl Decoder for ZenDecoder {
         // writes straight into the imageflow BGRA bitmap. No RGBA/RGB/Gray
         // fallback path: if a codec ever drops BGRA support that's a bug
         // upstream, not something to silently paper over here.
-        // (CMYK JPEGs with CmykHandling::Passthrough still emit CMYK8 and
+        // (CMYK JPEGs with CmykHandling::Passthrough still emit CmykInverted and
         // bypass this negotiation — handled as a special case downstream.)
-        let preferred = [zenpixels::PixelDescriptor::BGRA8_SRGB];
+        let preferred = [PixelFormat::BGRA8_SRGB];
 
         // Animation path: use persistent full-frame decoder
         let is_animated = matches!(info.sequence, zc::ImageSequence::Animation { .. });
@@ -828,12 +854,12 @@ impl Decoder for ZenDecoder {
             let frame = if let Some(f) = self.peeked_frame.take() {
                 Some(f)
             } else {
-                // Thread the per-call stop: the animation frame decoders for
-                // GIF/WebP/AVIF drop the job stop and honor ONLY this argument,
+                // Thread the per-call pulse: the animation frame decoders for
+                // GIF/WebP/AVIF drop the job pulse and honor ONLY this argument,
                 // so passing None here leaves animated decode uncancellable.
-                let stop = c.cancellation_token();
+                let pulse = StopOnly::new(c.cancellation_token());
                 install_pooled(&self.thread_pool, move || {
-                    frame_dec.render_next_frame_owned(Some(&stop as &dyn Stop))
+                    frame_dec.render_next_frame_owned(Some(&pulse as &dyn Pulse))
                 })
                 .map_err(|e| {
                     FlowError::from_codec_error(ErrorKind::ImageDecodingError, "frame decode", &*e)
@@ -843,12 +869,12 @@ impl Decoder for ZenDecoder {
             let frame = frame
                 .ok_or_else(|| nerror!(ErrorKind::InvalidOperation, "No more frames available"))?;
 
-            self.last_delay_ms = frame.duration_ms();
+            self.last_delay_ms = frame_duration_to_ms(frame.duration());
             self.frame_index += 1;
 
             let ps = frame.pixels();
             let w = ps.width();
-            let h = ps.rows();
+            let h = ps.height();
 
             let mut bitmaps = c.borrow_bitmaps_mut().map_err(|e| e.at(here!()))?;
             let bitmap_key = bitmaps
@@ -893,9 +919,9 @@ impl Decoder for ZenDecoder {
                 self.has_more = Some(false);
             } else {
                 let frame_dec = self.frame_dec.as_mut().unwrap();
-                let stop = c.cancellation_token();
+                let pulse = StopOnly::new(c.cancellation_token());
                 match install_pooled(&self.thread_pool, move || {
-                    frame_dec.render_next_frame_owned(Some(&stop as &dyn Stop))
+                    frame_dec.render_next_frame_owned(Some(&pulse as &dyn Pulse))
                 }) {
                     Ok(Some(next)) => {
                         self.peeked_frame = Some(next);
@@ -966,15 +992,17 @@ impl Decoder for ZenDecoder {
                 let ext = self.format.extension();
                 let config = &self.config;
                 let limits = self.resource_limits;
-                let stop = self.stop_token.clone();
+                let pulse = self.pulse.clone();
                 let output = run_pooled(c.security.max_threads, move || {
                     let mut job = config.dyn_job();
                     if let Some(l) = limits {
                         job.set_limits(l);
                     }
-                    if let Some(s) = stop {
-                        job.set_stop(s);
+                    if let Some(p) = pulse {
+                        job.set_pulse(p);
                     }
+                    let _ =
+                        job.try_set_policy(zc::decode::DecodePolicy::none().with_allow_icc(false));
                     job.into_decoder(Cow::Borrowed(data), &preferred)?.decode()
                 })
                 .map_err(|e| {
@@ -987,13 +1015,13 @@ impl Decoder for ZenDecoder {
                 let ps = output.pixels();
 
                 // Verify decoded dimensions match what we allocated
-                if ps.width() != w || ps.rows() != h {
+                if ps.width() != w || ps.height() != h {
                     return Err(nerror!(
                         ErrorKind::ImageDecodingError,
                         "{} decoded {}x{} but info reported {}x{}",
                         self.format.extension(),
                         ps.width(),
-                        ps.rows(),
+                        ps.height(),
                         w,
                         h
                     ));

@@ -2,7 +2,8 @@ use crate::graphics::bitmaps::BitmapCompositing;
 use crate::graphics::color::{self, ColorContext, WorkingFloatspace};
 use crate::graphics::prelude::*;
 use zenresize::{
-    AlphaMode, Filter as ZenFilter, PixelDescriptor, ResizeConfig, SolidBackground, StreamingResize,
+    AlphaMode, ChannelOrder, ColorSpace, Filter as ZenFilter, PixelFormat, ResizeConfig,
+    SampleLayout, SampleType, SolidBackground, StreamingResize,
 };
 
 #[derive(Copy, Clone)]
@@ -98,9 +99,9 @@ fn resize_to_canvas(
     linear: bool,
     alpha_meaningful: bool,
 ) -> Result<(), FlowError> {
-    let desc = pixel_desc(alpha_meaningful);
+    let format = pixel_format(alpha_meaningful);
     let mut builder =
-        ResizeConfig::builder(input.w(), input.h(), info.w, info.h).filter(filter).format(desc);
+        ResizeConfig::builder(input.w(), input.h(), info.w, info.h).filter(filter).format(format);
     if info.sharpen_percent_goal > 0.0 {
         builder = builder.resize_sharpen(info.sharpen_percent_goal);
     }
@@ -125,9 +126,10 @@ fn resize_with_matte(
     alpha_meaningful: bool,
     matte: rgb::alt::BGRA8,
 ) -> Result<(), FlowError> {
-    let desc = pixel_desc(alpha_meaningful);
-    let mut builder =
-        ResizeConfig::builder(input.w(), input.h(), info.w, info.h).filter(filter).format(desc);
+    let format = pixel_format(alpha_meaningful);
+    let mut builder = ResizeConfig::builder(input.w(), input.h(), info.w, info.h)
+        .filter(filter)
+        .format(format.clone());
     if info.sharpen_percent_goal > 0.0 {
         builder = builder.resize_sharpen(info.sharpen_percent_goal);
     }
@@ -140,7 +142,7 @@ fn resize_with_matte(
 
     // SolidBackground takes (r, g, b, a) positional args. Since our data is BGRA,
     // pass B as the first arg so pixel[0] = linear(B), matching the BGRA channel order.
-    let bg = SolidBackground::from_srgb_u8(matte.b, matte.g, matte.r, matte.a, desc);
+    let bg = SolidBackground::from_srgb_u8(matte.b, matte.g, matte.r, matte.a, &format);
     let mut stream = StreamingResize::with_background(&config, bg)
         .map_err(|e| nerror!(ErrorKind::InvalidState, "Composite error: {}", e))?;
 
@@ -156,21 +158,24 @@ fn resize_and_composite(
     linear: bool,
     alpha_meaningful: bool,
 ) -> Result<(), FlowError> {
-    let in_desc = pixel_desc(alpha_meaningful);
+    let in_format = pixel_format(alpha_meaningful);
     let canvas_alpha_meaningful = canvas.info().alpha_meaningful();
     // Output linear f32 so we can composite in linear space. `next_output_row_f32` undoes the
     // resizer's internal premultiplication, so rows with meaningful alpha arrive straight.
-    let out_desc = if alpha_meaningful {
-        PixelDescriptor::RGBAF32_LINEAR.with_alpha(Some(AlphaMode::Straight))
+    let out_format = if alpha_meaningful {
+        PixelFormat::RGBAF32_LINEAR.with_alpha(AlphaMode::Straight)
     } else {
-        // No meaningful alpha → treat as 4-channel without alpha semantics
-        PixelDescriptor::RGBAF32_LINEAR.with_alpha(None)
+        // No meaningful alpha → 4-channel padding format without alpha semantics
+        PixelFormat::new(
+            SampleLayout::new(SampleType::F32, ChannelOrder::Rgbx),
+            ColorSpace::LINEAR_SRGB.with_alpha(AlphaMode::Undefined),
+        )
     };
 
     let mut builder = ResizeConfig::builder(input.w(), input.h(), info.w, info.h)
         .filter(filter)
-        .input(in_desc)
-        .output(out_desc);
+        .input(in_format)
+        .output(out_format);
     if info.sharpen_percent_goal > 0.0 {
         builder = builder.resize_sharpen(info.sharpen_percent_goal);
     }
@@ -316,14 +321,14 @@ fn uchar_clamp_ff(clr: f32) -> u8 {
     color::uchar_clamp_ff(clr)
 }
 
-/// Build the PixelDescriptor for BGRA u8 sRGB with the right alpha mode.
-fn pixel_desc(alpha_meaningful: bool) -> PixelDescriptor {
+/// Build the PixelFormat for BGRA u8 sRGB with the right alpha mode.
+fn pixel_format(alpha_meaningful: bool) -> PixelFormat {
     if alpha_meaningful {
         // Straight alpha — zenresize will premultiply internally before filtering
-        PixelDescriptor::BGRA8_SRGB
+        PixelFormat::BGRA8_SRGB
     } else {
         // 4 channels, no meaningful alpha — skip premultiply/unpremultiply
-        PixelDescriptor::BGRA8_SRGB.with_alpha(None)
+        PixelFormat::BGRX8_SRGB
     }
 }
 

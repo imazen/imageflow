@@ -20,7 +20,7 @@ use imageflow_core::BitmapKey;
 use imageflow_types::ResponsePayload;
 use std::time::Duration;
 use zensim_regress::checksums::{CheckResult, ChecksumManager};
-pub use zensim_regress::Tolerance;
+pub use zensim_regress::tolerance::ToleranceSpec as Tolerance;
 
 /// Process-wide test init. Called lazily before any test needs a Context.
 /// Sets CMS to Both mode so moxcms and lcms2 are compared on every transform.
@@ -454,7 +454,7 @@ impl Similarity {
         self,
     ) -> zensim_regress::testing::RegressionTolerance {
         let spec = self.to_tolerance_spec();
-        spec.to_regression_tolerance(zensim_regress::arch::detect_arch_tag())
+        spec.to_regression_tolerance("")
     }
 }
 
@@ -479,7 +479,7 @@ fn compare_bitmaps_zensim(
     diff_name: &str,
     do_panic: bool,
 ) -> (bool, f64) {
-    use zensim::{PixelFormat, StridedBytes, Zensim, ZensimProfile};
+    use zensim::{PixelFormat, StridedBytes, Zensim};
     use zensim_regress::testing::check_regression;
 
     let (aw, ah) = (actual.w() as usize, actual.h() as usize);
@@ -505,7 +505,7 @@ fn compare_bitmaps_zensim(
     )
     .expect("expected bitmap: invalid for zensim");
 
-    let z = Zensim::new(ZensimProfile::latest());
+    let z = Zensim::new(zensim_regress::profile::legacy_linear());
     let report = check_regression(&z, &expected_img, &actual_img, tolerance)
         .expect("zensim comparison failed");
 

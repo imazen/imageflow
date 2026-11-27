@@ -341,7 +341,7 @@ pub(super) fn estimate(context: &mut Context, data: EstimateEncode001) -> Result
             && let Some(zd) =
                 decoder.as_any().downcast_ref::<crate::codecs::zen_decoder::ZenDecoder>()
         {
-            let mut env = zc::estimate::ComputeEnvironment::new();
+            let mut env = zc::estimate::ComputeEnvironment::host();
             if let Some(n) = context.security.max_threads {
                 env = env.with_cores(n as usize);
             }
