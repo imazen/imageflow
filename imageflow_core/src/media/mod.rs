@@ -4,28 +4,29 @@
 //! 100% safe Rust (`forbid(unsafe_code)` when `c-codecs` is disabled). All C ABI
 //! translation lives exclusively in `imageflow_abi::streaming`.
 
+#[cfg(feature = "streaming-async")]
+pub mod async_driver;
 pub mod bindings;
 pub mod report;
 #[cfg(feature = "streaming")]
 pub mod session;
 #[cfg(feature = "streaming-async")]
 pub mod worker;
-#[cfg(feature = "streaming-async")]
-pub mod async_driver;
 
+#[cfg(feature = "streaming-async")]
+pub use async_driver::{AsyncJobHandle, AsyncJobHooks, AsyncStartError, NotificationActivator};
 pub use bindings::{
     BindingAccess, BindingSpec, FileReadAtSource, IoEvent, IoInput, IoTicket, JobStop,
     OperationKind, ReadAtSource, Reply, SliceReadAtSource, StopCause, Visibility, WorkQuota,
 };
 pub use report::{
-    CapabilitiesReportV2, ClockV2, DimensionsV2, EstimateReportV2, InspectReportV2,
-    InspectTrackV2, MediaRouteCapabilityV2, PublicationReceiptV2, StartupDependenciesV2,
-    StreamErrorReportV2, build_capabilities_report,
+    build_capabilities_report, CapabilitiesReportV2, ClockV2, CompareMetricResultV2,
+    CompareReportV2, DimensionsV2, EstimateReportV2, InspectReportV2, InspectTrackV2,
+    IqaMetricCapabilityV2, MediaRouteCapabilityV2, MetricIdDto, PublicationReceiptV2,
+    StartupDependenciesV2, StreamErrorReportV2,
 };
 #[cfg(feature = "streaming")]
 pub use session::{CopyPendingError, MediaSession, SessionError};
-#[cfg(feature = "streaming-async")]
-pub use async_driver::{AsyncJobHandle, AsyncJobHooks, AsyncStartError, NotificationActivator};
 
 use std::num::NonZeroU32;
 use std::sync::{Arc, OnceLock};
@@ -39,6 +40,42 @@ use zc::{CodecSet, ResourceLimits};
 use zencodecs::bundles;
 use zencodecs::engine::{Engine, WorkspacePolicy};
 use zenpipe::canonical::HostServices;
+
+/// Resolve a `timeout_ms` ceiling into an absolute monotonic [`std::time::Instant`], returning
+/// `None` if it exceeds [`crate::modern_endpoints::MAX_TIMEOUT_MS`] or overflows the host
+/// monotonic clock.
+pub(crate) fn deadline_instant_from_timeout_ms(ms: u64) -> Option<std::time::Instant> {
+    crate::modern_endpoints::deadline_instant_from_timeout_ms(ms)
+}
+
+/// Validate BOTH `base_timeout_ms` and `req_lim.timeout_ms` BEFORE intersecting `min(base, req)`
+/// so a valid shorter timeout can never mask an invalid/overflow timeout, then intersect all
+/// resource limits into `services`.
+pub(crate) fn validate_and_apply_modern_limits(
+    services: &mut HostServices,
+    req_lim: Option<&ModernLimitsV2>,
+    base_timeout_ms: Option<u64>,
+) -> Result<Option<u64>> {
+    if let Some(ms) = base_timeout_ms
+        && deadline_instant_from_timeout_ms(ms).is_none()
+    {
+        return Err(nerror!(
+            ErrorKind::InvalidArgument,
+            "context limits.timeout_ms {} cannot be represented as a monotonic deadline",
+            ms
+        ));
+    }
+    if let Some(ms) = req_lim.and_then(|l| l.timeout_ms)
+        && deadline_instant_from_timeout_ms(ms).is_none()
+    {
+        return Err(nerror!(
+            ErrorKind::InvalidArgument,
+            "limits.timeout_ms {} cannot be represented as a monotonic deadline",
+            ms
+        ));
+    }
+    Ok(apply_modern_limits(services, req_lim, base_timeout_ms))
+}
 
 /// Shared strict per-request resource limit overrides accepted identically across
 /// `v2/configure_context`, `v1/execute_zen`, `v2/execute`, `v2/inspect`, `v2/estimate`,
@@ -96,7 +133,7 @@ pub fn apply_modern_limits(
 }
 
 /// Lazily initialized process-shared immutable [`zencodecs::Engine`] carrying all
-/// compiled-in still, animation, video codec, container, and `moxcms` registrations.
+/// compiled-in still, animation, video codec, container, `moxcms`, and score-only IQA registrations.
 pub fn shared_modern_engine() -> Result<Arc<Engine>> {
     static ENGINE: OnceLock<std::result::Result<Arc<Engine>, String>> = OnceLock::new();
     let cached = ENGINE.get_or_init(|| {
@@ -105,6 +142,14 @@ pub fn shared_modern_engine() -> Result<Arc<Engine>> {
         let engine = Engine::new(set)
             .map_err(|e| format!("failed to initialize zencodecs Engine: {e}"))?
             .with_color_services(bundles::moxcms_color_services());
+        #[cfg(any(
+            feature = "iqa-zensim",
+            feature = "iqa-ssimulacra2",
+            feature = "iqa-butteraugli"
+        ))]
+        let engine =
+            zencodecs::iqa::register_enabled_scorers(engine, NonZeroU32::new(8).expect("non-zero"))
+                .map_err(|e| format!("failed to register zencodecs IQA scorers: {e}"))?;
         Ok(Arc::new(engine))
     });
     match cached {
@@ -157,10 +202,7 @@ pub fn host_services_from_parts(
     if let Some(px) = max_px {
         lim = lim.with_max_pixels(px);
     }
-    let max_in = min_opt_u64(
-        security.max_input_file_bytes.map(|v| v as u64),
-        cfg.max_input_bytes,
-    );
+    let max_in = min_opt_u64(security.max_input_file_bytes.map(|v| v as u64), cfg.max_input_bytes);
     if let Some(b) = max_in {
         lim = lim.with_max_input_bytes(b);
     }
@@ -207,6 +249,13 @@ pub(crate) fn map_pipe_error(err: whereat::At<zenpipe::PipeError>) -> FlowError 
         zenpipe::PipeError::DimensionMismatch(_) => {
             nerror!(ErrorKind::InvalidArgument, "{}", msg)
         }
+        zenpipe::PipeError::Codec(boxed) => {
+            if let Some(eng) = boxed.downcast_ref::<zencodecs::engine::EngineError>() {
+                map_engine_error_ref(eng, &msg)
+            } else {
+                nerror!(ErrorKind::InternalError, "{}", msg)
+            }
+        }
         zenpipe::PipeError::Op(s) => {
             if s.contains("cancelled") || s.contains("Cancelled") {
                 nerror!(ErrorKind::OperationCancelled, "{}", msg)
@@ -227,9 +276,13 @@ pub(crate) fn map_pipe_error(err: whereat::At<zenpipe::PipeError>) -> FlowError 
 
 /// Map a `zencodecs::engine::EngineError` into an Imageflow [`FlowError`].
 pub(crate) fn map_engine_error(err: whereat::At<zencodecs::engine::EngineError>) -> FlowError {
-    use zencodecs::engine::Failure;
     let msg = err.to_string();
-    match err.error().failure() {
+    map_engine_error_ref(err.error(), &msg)
+}
+
+pub(crate) fn map_engine_error_ref(err: &zencodecs::engine::EngineError, msg: &str) -> FlowError {
+    use zencodecs::engine::Failure;
+    match err.failure() {
         Failure::Stopped(_) => nerror!(ErrorKind::OperationCancelled, "{}", msg),
         Failure::ResourceLimit => nerror!(ErrorKind::SizeLimitExceeded, "{}", msg),
         Failure::InvalidRequest => nerror!(ErrorKind::InvalidArgument, "{}", msg),
@@ -237,7 +290,8 @@ pub(crate) fn map_engine_error(err: whereat::At<zencodecs::engine::EngineError>)
             nerror!(ErrorKind::ImageDecodingError, "{}", msg)
         }
         Failure::Io => nerror!(ErrorKind::DecodingIoError, "{}", msg),
-        Failure::PolicyRefusal
+        Failure::TargetUnmet
+        | Failure::PolicyRefusal
         | Failure::UnsupportedEffect
         | Failure::NoBackend(_)
         | Failure::NoMediaBackend

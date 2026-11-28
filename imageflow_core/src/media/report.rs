@@ -23,10 +23,10 @@ use zencodec_media::registry::{
 };
 use zencodec_media::track::{CodecId as MediaCodecId, TrackInfo, TrackKind, VideoTrackInfo};
 use zencodecs::engine::{
-    Coding, Engine, MetadataPolicy, PublicationMode, RouteReport, Run, SequencePolicy,
-    TargetFormat, TimingPolicy, TrackPolicy, WorkspacePolicy,
+    Coding, Engine, MetadataPolicy, Metric, MetricScorerMetadata, PublicationMode, RouteReport,
+    Run, SequencePolicy, TargetFormat, TimingPolicy, TrackPolicy, WorkspacePolicy,
 };
-use zencodecs::media::probe::{ContainerProbeOutcome, probe_container_prefix};
+use zencodecs::media::probe::{probe_container_prefix, ContainerProbeOutcome};
 use zencodecs::media::route::{select_demuxer, select_muxer, validate_container_codec_tuple};
 use zenpipe::canonical::{HostServices, ImageOp, OutputOp, PipelineRuntime};
 
@@ -117,8 +117,59 @@ pub struct MediaRouteCapabilityV2 {
     pub refusal_reason: Option<String>,
 }
 
-/// Canonical `v2/capabilities` response payload derived from live [`Engine`] offers.
+/// Explicit serde DTO mirroring `zenpsy_api::MetricId` provenance across `v2/capabilities`
+/// and `v2/compare`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MetricIdDto {
+    pub family: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub variant: Option<String>,
+    pub reference: String,
+    pub crate_name: String,
+    pub crate_version: String,
+    pub score_revision: u32,
+    pub backend: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build: Option<String>,
+    pub config: BTreeMap<String, String>,
+}
+
+/// One live registered score-only perceptual IQA metric capability advertised by `v2/capabilities`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct IqaMetricCapabilityV2 {
+    pub metric: String,
+    pub revision: String,
+    pub direction: String,
+    pub perfect: f64,
+    pub max_verify_attempts: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metric_id: Option<MetricIdDto>,
+}
+
+/// One metric's score-only result inside a `v2/compare` response.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CompareMetricResultV2 {
+    pub metric: String,
+    pub score: f64,
+    pub direction: String,
+    pub perfect: f64,
+    pub revision: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metric_id: Option<MetricIdDto>,
+}
+
+/// Canonical `v2/compare` score-only still-SDR IQA comparison payload.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CompareReportV2 {
+    pub version: u32,
+    pub width: u32,
+    pub height: u32,
+    pub comparison_format: String,
+    pub results: Vec<CompareMetricResultV2>,
+}
+
+/// Canonical `v2/capabilities` response payload derived from live [`Engine`] offers.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CapabilitiesReportV2 {
     pub version: u32,
     /// Canonical wire schema identifier (`"zenpipe-canonical-v1"`).
@@ -132,7 +183,40 @@ pub struct CapabilitiesReportV2 {
     pub media_containers: Vec<String>,
     /// Score-only perceptual metrics currently registered for `coding: { verify: ... }`.
     pub verify_metrics: Vec<String>,
+    /// Structured provenance and scoring semantics for every live registered IQA metric.
+    pub iqa_metrics: Vec<IqaMetricCapabilityV2>,
     pub media_routes: Vec<MediaRouteCapabilityV2>,
+}
+
+/// Convert [`MetricScorerMetadata`] into wire-stable [`MetricIdDto`].
+#[must_use]
+pub(crate) fn metric_id_dto(meta: &MetricScorerMetadata) -> MetricIdDto {
+    let mut config = BTreeMap::new();
+    for (k, v) in &meta.config {
+        config.insert(k.clone(), v.clone());
+    }
+    MetricIdDto {
+        family: meta.family.to_string(),
+        variant: meta.variant.map(str::to_string),
+        reference: meta.reference.clone(),
+        crate_name: meta.crate_name.to_string(),
+        crate_version: meta.crate_version.to_string(),
+        score_revision: meta.score_revision,
+        backend: meta.backend.to_string(),
+        build: meta.build.map(str::to_string),
+        config,
+    }
+}
+
+/// Wire direction (`"higher_is_better"` / `"lower_is_better"`) and perfect score for `metric`.
+#[must_use]
+pub(crate) fn metric_direction_and_perfect(metric: Metric) -> (&'static str, f64) {
+    let dir = match metric {
+        Metric::ButteraugliMax => "lower_is_better",
+        Metric::Ssimulacra2 | Metric::ZensimA | Metric::ZensimB => "higher_is_better",
+        _ => "higher_is_better",
+    };
+    (dir, metric.perfect_score())
 }
 
 /// Per-sink byte publication receipt reported on streaming completion or failure.
@@ -174,6 +258,7 @@ pub fn build_capabilities_report() -> CapabilitiesReportV2 {
             video_codecs: Vec::new(),
             media_containers: Vec::new(),
             verify_metrics: Vec::new(),
+            iqa_metrics: Vec::new(),
             media_routes: Vec::new(),
         },
     }
@@ -336,16 +421,10 @@ pub fn build_capabilities_report_for_engine(engine: &Engine) -> CapabilitiesRepo
         }
     }
 
-    let container_specs: [(ContainerId, &str); 3] = [
-        (ContainerId::Mp4, "mp4"),
-        (ContainerId::Webm, "webm"),
-        (ContainerId::Ivf, "ivf"),
-    ];
-    let codec_specs: [(MediaCodecId, &str); 3] = [
-        (MediaCodecId::Av1, "av1"),
-        (MediaCodecId::Vp8, "vp8"),
-        (MediaCodecId::Vp9, "vp9"),
-    ];
+    let container_specs: [(ContainerId, &str); 3] =
+        [(ContainerId::Mp4, "mp4"), (ContainerId::Webm, "webm"), (ContainerId::Ivf, "ivf")];
+    let codec_specs: [(MediaCodecId, &str); 3] =
+        [(MediaCodecId::Av1, "av1"), (MediaCodecId::Vp8, "vp8"), (MediaCodecId::Vp9, "vp9")];
 
     let mut media_containers = Vec::new();
     for (cid, name) in &container_specs {
@@ -478,60 +557,63 @@ pub fn build_capabilities_report_for_engine(engine: &Engine) -> CapabilitiesRepo
                 MediaTimingPolicy::BestEffort,
             );
 
-            let (enc_supported, enc_layout, enc_access, enc_incremental, enc_timing, enc_provider, enc_refusal) =
-                match (&best_mux_ok, venc_entry) {
-                    (Ok((_, offer)), Some(ve)) => {
-                        let layout = if offer.timing.streams() && !offer.timing.patches_at_finish() {
-                            "streaming"
-                        } else if offer.timing.streams() && offer.timing.patches_at_finish() {
-                            "streaming_with_finish_patch"
-                        } else {
-                            "at_finish"
-                        };
-                        let fwd_streaming = fwd_mux_ok.as_ref().is_ok_and(|(_, fo)| {
-                            fo.timing.streams() && !fo.timing.patches_at_finish()
-                        });
-                        let access = if fwd_streaming {
-                            "forward_or_patch"
-                        } else if offer.timing.patches_at_finish() {
-                            "patch_or_staged"
-                        } else {
-                            "staged_at_finish"
-                        };
-                        let timing = if exact_mux_ok.is_ok() {
-                            "exact_rational"
-                        } else {
-                            "quantized"
-                        };
-                        (
-                            true,
-                            layout.to_string(),
-                            access.to_string(),
-                            fwd_streaming,
-                            timing,
-                            Some(ve.id.as_str().to_string()),
-                            None,
-                        )
-                    }
-                    (Err(reason), _) => (
-                        false,
-                        "unsupported".to_string(),
-                        "none".to_string(),
-                        false,
-                        "unsupported",
+            let (
+                enc_supported,
+                enc_layout,
+                enc_access,
+                enc_incremental,
+                enc_timing,
+                enc_provider,
+                enc_refusal,
+            ) = match (&best_mux_ok, venc_entry) {
+                (Ok((_, offer)), Some(ve)) => {
+                    let layout = if offer.timing.streams() && !offer.timing.patches_at_finish() {
+                        "streaming"
+                    } else if offer.timing.streams() && offer.timing.patches_at_finish() {
+                        "streaming_with_finish_patch"
+                    } else {
+                        "at_finish"
+                    };
+                    let fwd_streaming = fwd_mux_ok
+                        .as_ref()
+                        .is_ok_and(|(_, fo)| fo.timing.streams() && !fo.timing.patches_at_finish());
+                    let access = if fwd_streaming {
+                        "forward_or_patch"
+                    } else if offer.timing.patches_at_finish() {
+                        "patch_or_staged"
+                    } else {
+                        "staged_at_finish"
+                    };
+                    let timing = if exact_mux_ok.is_ok() { "exact_rational" } else { "quantized" };
+                    (
+                        true,
+                        layout.to_string(),
+                        access.to_string(),
+                        fwd_streaming,
+                        timing,
+                        Some(ve.id.as_str().to_string()),
                         None,
-                        Some(reason.clone()),
-                    ),
-                    (_, None) => (
-                        false,
-                        "unsupported".to_string(),
-                        "none".to_string(),
-                        false,
-                        "unsupported",
-                        None,
-                        Some(format!("no video encoder registered for codec '{vname}'")),
-                    ),
-                };
+                    )
+                }
+                (Err(reason), _) => (
+                    false,
+                    "unsupported".to_string(),
+                    "none".to_string(),
+                    false,
+                    "unsupported",
+                    None,
+                    Some(reason.clone()),
+                ),
+                (_, None) => (
+                    false,
+                    "unsupported".to_string(),
+                    "none".to_string(),
+                    false,
+                    "unsupported",
+                    None,
+                    Some(format!("no video encoder registered for codec '{vname}'")),
+                ),
+            };
             media_routes.push(MediaRouteCapabilityV2 {
                 container: (*cname).to_string(),
                 video_codec: (*vname).to_string(),
@@ -547,8 +629,31 @@ pub fn build_capabilities_report_for_engine(engine: &Engine) -> CapabilitiesRepo
         }
     }
 
-    // Score-only Verify metrics are advertised strictly when registered on Engine.
-    let verify_metrics = Vec::new();
+    // Derive both `verify_metrics` and `iqa_metrics` strictly from live registered Engine scorers
+    // in canonical deterministic order (zensim_a, ssimulacra2, butteraugli_max, then any extras).
+    let mut registered: Vec<_> = engine.registered_metric_scorers().collect();
+    registered.sort_by_key(|info| match info.metric {
+        Metric::ZensimA => 0u8,
+        Metric::Ssimulacra2 => 1,
+        Metric::ButteraugliMax => 2,
+        Metric::ZensimB => 3,
+        _ => 4,
+    });
+    let mut verify_metrics = Vec::with_capacity(registered.len());
+    let mut iqa_metrics = Vec::with_capacity(registered.len());
+    for info in registered {
+        let token = info.metric.as_token().to_string();
+        let (direction, perfect) = metric_direction_and_perfect(info.metric);
+        verify_metrics.push(token.clone());
+        iqa_metrics.push(IqaMetricCapabilityV2 {
+            metric: token,
+            revision: info.scorer.revision().to_string(),
+            direction: direction.to_string(),
+            perfect,
+            max_verify_attempts: info.max_attempts.get(),
+            metric_id: info.scorer.metadata().as_ref().map(metric_id_dto),
+        });
+    }
 
     CapabilitiesReportV2 {
         version: 2,
@@ -561,6 +666,7 @@ pub fn build_capabilities_report_for_engine(engine: &Engine) -> CapabilitiesRepo
         video_codecs,
         media_containers,
         verify_metrics,
+        iqa_metrics,
         media_routes,
     }
 }
@@ -573,14 +679,7 @@ pub fn inspect_bytes(
     expected_container: Option<&str>,
     bounded_index_scan: bool,
 ) -> Result<InspectReportV2> {
-    inspect_bytes_with_stop(
-        engine,
-        services,
-        bytes,
-        expected_container,
-        bounded_index_scan,
-        None,
-    )
+    inspect_bytes_with_stop(engine, services, bytes, expected_container, bounded_index_scan, None)
 }
 
 /// Inspect a complete in-memory media container or still image byte slice with cooperative stop.
@@ -645,10 +744,7 @@ pub fn inspect_read_at_with_stop(
     stop: Option<&dyn Stop>,
     pulse: Option<zc::SharedPulse>,
 ) -> Result<InspectReportV2> {
-    let max_input = services
-        .limits
-        .and_then(|l| l.max_input_bytes)
-        .unwrap_or(256 * 1024 * 1024);
+    let max_input = services.limits.and_then(|l| l.max_input_bytes).unwrap_or(256 * 1024 * 1024);
     let max_mem = services.limits.and_then(|l| l.max_memory_bytes);
     let known_len = src.length()?;
     if let Some(len) = known_len
@@ -712,7 +808,8 @@ pub fn inspect_read_at_with_stop(
             }
             drop(prefix);
             let effective_cap = Some(max_mem.map_or(max_input, |m| m.min(max_input)));
-            let full = crate::media::bindings::read_all_bounded_with_stop(src, effective_cap, stop)?;
+            let full =
+                crate::media::bindings::read_all_bounded_with_stop(src, effective_cap, stop)?;
             let mut rem_services = services.clone();
             if let Some(m) = max_mem {
                 let rem = m.saturating_sub(full.len() as u64);
@@ -751,8 +848,8 @@ fn inspect_media_container_read_at(
     let run = build_run_for_services(&adj_services, pulse);
     let mut eff = engine.resolve_run(&run).map_err(crate::media::map_engine_error)?;
     let mut rep = RouteReport::default();
-    let (_demux_id, demux_factory) =
-        select_demuxer(engine, container, &mut eff, &mut rep).map_err(crate::media::map_engine_error)?;
+    let (_demux_id, demux_factory) = select_demuxer(engine, container, &mut eff, &mut rep)
+        .map_err(crate::media::map_engine_error)?;
     let source_access = SourceAccess::positional(known_len);
     let offer = demux_factory
         .quote(&DemuxNeeds::default(), &source_access, &eff.resources)
@@ -761,10 +858,7 @@ fn inspect_media_container_read_at(
         .open(&offer, &eff.resources)
         .map_err(|e| nerror!(ErrorKind::ImageDecodingError, "demux open failed: {}", e))?;
 
-    let max_input = services
-        .limits
-        .and_then(|l| l.max_input_bytes)
-        .unwrap_or(256 * 1024 * 1024);
+    let max_input = services.limits.and_then(|l| l.max_input_bytes).unwrap_or(256 * 1024 * 1024);
 
     let mut total_read: u64 = cur_buf.len() as u64;
     let mut headers_tracks = None;
@@ -801,8 +895,9 @@ fn inspect_media_container_read_at(
                 .max(1)
                 .min(window_budget)
                 .min(usize::try_from(max_input.saturating_sub(cur_offset)).unwrap_or(usize::MAX));
-            cur_buf =
-                crate::media::bindings::read_exact_range_with_stop(src, cur_offset, fetch_len, stop)?;
+            cur_buf = crate::media::bindings::read_exact_range_with_stop(
+                src, cur_offset, fetch_len, stop,
+            )?;
             cur_buf_offset = cur_offset;
             total_read = total_read.saturating_add(cur_buf.len() as u64);
         }
@@ -921,8 +1016,8 @@ fn inspect_media_container_bytes(
         return Err(nerror!(ErrorKind::OperationCancelled, "inspect cancelled or timed out"));
     }
     let mut rep = RouteReport::default();
-    let (_demux_id, demux_factory) =
-        select_demuxer(engine, container, &mut eff, &mut rep).map_err(crate::media::map_engine_error)?;
+    let (_demux_id, demux_factory) = select_demuxer(engine, container, &mut eff, &mut rep)
+        .map_err(crate::media::map_engine_error)?;
     let source_access = SourceAccess::borrowed(bytes.len() as u64);
     let offer = demux_factory
         .quote(&DemuxNeeds::default(), &source_access, &eff.resources)
@@ -1098,9 +1193,7 @@ fn inspect_still_image(
     if let Some(p) = stop {
         run = run.with_pulse(p);
     }
-    let probed = engine
-        .probe(bytes, &run)
-        .map_err(crate::media::map_engine_error)?;
+    let probed = engine.probe(bytes, &run).map_err(crate::media::map_engine_error)?;
     let env = &probed.inspection().envelope;
     let fmt_name = env
         .image_format
@@ -1267,9 +1360,11 @@ pub fn build_estimate_report(
         if let OutputOp::Encode(enc) = out_op {
             if let TargetFormat::Video { ref container, ref codec } = enc.intent.target {
                 let direct_track = match job.graph().node(enc.src) {
-                    Some(ImageOp::Decode(dec)) if dec.select.is_none() => slot_tracks
-                        .get(dec.slot.as_str())
-                        .and_then(|tracks| select_video_track_descriptor(tracks, &enc.intent.tracks)),
+                    Some(ImageOp::Decode(dec)) if dec.select.is_none() => {
+                        slot_tracks.get(dec.slot.as_str()).and_then(|tracks| {
+                            select_video_track_descriptor(tracks, &enc.intent.tracks)
+                        })
+                    }
                     _ => None,
                 };
                 if let Some((route_dims, route_tb)) = direct_track {

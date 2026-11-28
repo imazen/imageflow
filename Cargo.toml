@@ -39,8 +39,8 @@ zencodec-media = { git = "https://github.com/imazen/zencodec", rev = "9500a8154b
 zencodec-render = { git = "https://github.com/imazen/zencodec", rev = "9500a8154bbb21a2d71e87019b002bc43a6094f2" }
 zenmeta = { git = "https://github.com/imazen/zencodec", rev = "9500a8154bbb21a2d71e87019b002bc43a6094f2" }
 zenresize = { git = "https://github.com/imazen/zenresize", rev = "e6c077561dcb426b23d8e7c3da1ca0e12cc13c5f" }
-zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "213c04a440a89aaed0a71c5355d591acebbd2be3" }
-zenyuv = { git = "https://github.com/imazen/zenjpeg", rev = "213c04a440a89aaed0a71c5355d591acebbd2be3" }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "baf8de873110897830365716ffb5e89967e7b4b1" }
+zenyuv = { git = "https://github.com/imazen/zenjpeg", rev = "baf8de873110897830365716ffb5e89967e7b4b1" }
 zenpng = { git = "https://github.com/imazen/zenpng", rev = "af5d24b89d91efb3db91a632047a0e0c835fe007" }
 zenwebp = { git = "https://github.com/imazen/zenwebp", rev = "82cd643dbe7950f7a5c69afe8d5bf69652dd4aef" }
 zengif = { git = "https://github.com/imazen/zengif", rev = "edbbd1a1a30f15018a41079fcd54683cf875bef9" }
@@ -53,15 +53,18 @@ zenjxl = { git = "https://github.com/imazen/zenjxl", rev = "27a69d531938d1781777
 zenbitmaps = { git = "https://github.com/imazen/zenbitmaps", rev = "e50a9037a3583f18ab7ef45ca5bd086401a35299" }
 mozjpeg-rs = { git = "https://github.com/imazen/mozjpeg-rs", rev = "d72187417cab8de44216ab3c09057111386d8197" }
 ultrahdr-core = { git = "https://github.com/imazen/ultrahdr", rev = "76e9aad431e1faf7782b0654857325246b15c28b" }
-zensim = { git = "https://github.com/imazen/zensimx", rev = "6da0e710bafafa474b6b63f3cf6a476e43bbe799" }
-zensim-regress = { git = "https://github.com/imazen/zensimx", rev = "6da0e710bafafa474b6b63f3cf6a476e43bbe799" }
+zensim = { git = "https://github.com/imazen/zensim", rev = "7ee1a56495cf93b12f38e8673023fb0643e9f72d" }
+zensim-regress = { git = "https://github.com/imazen/zensim", rev = "7ee1a56495cf93b12f38e8673023fb0643e9f72d" }
+fast-ssim2 = { git = "https://github.com/imazen/fast-ssim2", rev = "1e9fa174ee6a1a417057892922b5720e2c5978a0" }
+butteraugli = { git = "https://github.com/imazen/butteraugli", rev = "3e2ebb830b9dd28a985f962e5065ad268592c2df" }
+zenpsy-api = { git = "https://github.com/imazen/zenpixels", rev = "83217972759fab02ff530fe50203a0c7fc3282f8" }
 garb = { git = "https://github.com/imazen/garb", rev = "457ff8b9153e9d675a39dc098052b2ffeb6206fa" }
 linear-srgb = { git = "https://github.com/imazen/linear-srgb", rev = "ae83f19426737635fee3dd16f228681019f52585" }
 zenflate = { git = "https://github.com/imazen/zenflate", rev = "7270e38faca9cdbae793938fa229d40ac4fe4c39" }
 zenjxl-decoder = { git = "https://github.com/imazen/zenjxl-decoder", rev = "e1c366b089b29511ef66f1b5af5d9e208dbff5d1" }
 
 [patch."https://github.com/imazen/zenlayout.git"]
-zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "1a80de6685b12329b1414ac0936d9a191dad0493" }
+zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "07885b2e21a1032d2eee10e51e509b163b09373c" }
 # load_image.git = "https://gitlab.com/lilith6/load_image.git"
 # TODO(rgb-0.8.91): Uncomment when rgb 0.8.91+ is published to crates.io
 # This enables: root-level BGR8/BGRA8/RGB8/RGBA8 exports, Gray_v09 compat type,

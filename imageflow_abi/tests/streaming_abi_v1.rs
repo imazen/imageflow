@@ -295,10 +295,7 @@ fn streaming_abi_manual_read_at_wrong_thread_and_async_lifecycle() {
                 ticket: ev.ticket,
                 value: IfxU64V1::from_u64(written as u64),
             };
-            assert_eq!(
-                unsafe { imageflow_stream_job_reply_v1(job, &rep, ptr::null(), 0) },
-                IFX_OK
-            );
+            assert_eq!(unsafe { imageflow_stream_job_reply_v1(job, &rep, ptr::null(), 0) }, IFX_OK);
         } else if ev.kind == IFX_EVENT_FLUSH {
             let rep = IfxReplyV1 {
                 size: size_of::<IfxReplyV1>() as u32,
@@ -308,10 +305,7 @@ fn streaming_abi_manual_read_at_wrong_thread_and_async_lifecycle() {
                 ticket: ev.ticket,
                 value: IfxU64V1::from_u64(0),
             };
-            assert_eq!(
-                unsafe { imageflow_stream_job_reply_v1(job, &rep, ptr::null(), 0) },
-                IFX_OK
-            );
+            assert_eq!(unsafe { imageflow_stream_job_reply_v1(job, &rep, ptr::null(), 0) }, IFX_OK);
         } else if ev.kind == IFX_EVENT_COMPLETE {
             break;
         }
@@ -327,7 +321,12 @@ fn streaming_abi_manual_read_at_wrong_thread_and_async_lifecycle() {
     let mut res_buf = vec![0u8; needed];
     assert_eq!(
         unsafe {
-            imageflow_stream_job_result_json_v1(job, res_buf.as_mut_ptr(), res_buf.len(), &mut needed)
+            imageflow_stream_job_result_json_v1(
+                job,
+                res_buf.as_mut_ptr(),
+                res_buf.len(),
+                &mut needed,
+            )
         },
         IFX_OK
     );
@@ -521,7 +520,10 @@ fn streaming_abi_manual_read_at_wrong_thread_and_async_lifecycle() {
                 ticket: cev.ticket,
                 value: cev.length,
             };
-            assert_eq!(unsafe { imageflow_stream_job_reply_v1(commit_job, &rep, ptr::null(), 0) }, IFX_OK);
+            assert_eq!(
+                unsafe { imageflow_stream_job_reply_v1(commit_job, &rep, ptr::null(), 0) },
+                IFX_OK
+            );
         } else if cev.kind == IFX_EVENT_FLUSH {
             let rep = IfxReplyV1 {
                 size: size_of::<IfxReplyV1>() as u32,
@@ -531,7 +533,10 @@ fn streaming_abi_manual_read_at_wrong_thread_and_async_lifecycle() {
                 ticket: cev.ticket,
                 value: IfxU64V1::from_u64(0),
             };
-            assert_eq!(unsafe { imageflow_stream_job_reply_v1(commit_job, &rep, ptr::null(), 0) }, IFX_OK);
+            assert_eq!(
+                unsafe { imageflow_stream_job_reply_v1(commit_job, &rep, ptr::null(), 0) },
+                IFX_OK
+            );
         } else if cev.kind == IFX_EVENT_COMMIT {
             // Abandon commit handle directly via release_v1 WITHOUT replying!
             assert_eq!(unsafe { imageflow_stream_job_release_v1(commit_job) }, IFX_OK);
@@ -550,4 +555,125 @@ fn streaming_abi_manual_read_at_wrong_thread_and_async_lifecycle() {
         1,
         "abandoned Commit via C release_v1 must fire release_user exactly once"
     );
+}
+
+#[cfg(feature = "iqa")]
+#[test]
+fn c_abi_v2_capabilities_and_v2_compare_roundtrip() {
+    use imageflow::{
+        imageflow_context_add_input_buffer, imageflow_context_add_output_buffer,
+        imageflow_context_get_output_buffer_by_id, imageflow_json_response_read,
+    };
+
+    let ctx = imageflow_context_create(3, 2);
+    assert!(!ctx.is_null());
+
+    let read_json = |resp: *const imageflow::JsonResponse| -> serde_json::Value {
+        let mut status: i64 = 0;
+        let mut ptr: *const u8 = ptr::null();
+        let mut len: usize = 0;
+        let ok =
+            unsafe { imageflow_json_response_read(ctx, resp, &mut status, &mut ptr, &mut len) };
+        assert!(ok, "imageflow_json_response_read must succeed");
+        let slice = unsafe { std::slice::from_raw_parts(ptr, len) };
+        assert_eq!(
+            status,
+            200,
+            "expected HTTP 200 status, body: {}",
+            String::from_utf8_lossy(slice)
+        );
+        serde_json::from_slice(slice).unwrap()
+    };
+
+    // 1. v2/capabilities advertises live IQA scorers across C ABI.
+    let m_cap = CString::new("v2/capabilities").unwrap();
+    let cap_resp = unsafe { imageflow_context_send_json(ctx, m_cap.as_ptr(), b"{}".as_ptr(), 2) };
+    assert!(!cap_resp.is_null());
+    let cap_v = read_json(cap_resp);
+    unsafe { imageflow_json_response_destroy(ctx, cap_resp as *mut _) };
+    let vm: Vec<&str> = cap_v["data"]["verify_metrics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|v| v.as_str())
+        .collect();
+    assert_eq!(vm, vec!["zensim_a", "ssimulacra2", "butteraugli_max"]);
+    assert_eq!(cap_v["data"]["iqa_metrics"].as_array().unwrap().len(), 3);
+
+    // 2. Render PNG reference & Verify-encoded JPEG candidate via v2/execute, then score via v2/compare.
+    assert!(unsafe { imageflow_context_add_output_buffer(ctx, 10) });
+    assert!(unsafe { imageflow_context_add_output_buffer(ctx, 11) });
+    let m_exec = CString::new("v2/execute").unwrap();
+    let exec_req = br#"{
+        "inputs": {},
+        "outputs": {"png": 10, "jpg": 11},
+        "pipeline": {
+            "steps": [
+                {"canvas": {"width": 32, "height": 32, "fill": [60, 140, 210, 255]}},
+                {"encode": {"output": "png", "format": "png"}},
+                {"encode": {"output": "jpg", "format": "jpeg", "coding": {"verify": {"metric": "zensim_a", "value": 85.0}}}}
+            ]
+        }
+    }"#;
+    let exec_resp = unsafe {
+        imageflow_context_send_json(ctx, m_exec.as_ptr(), exec_req.as_ptr(), exec_req.len())
+    };
+    assert!(!exec_resp.is_null());
+    let exec_v = read_json(exec_resp);
+    unsafe { imageflow_json_response_destroy(ctx, exec_resp as *mut _) };
+    assert_eq!(exec_v["data"]["outputs"].as_array().unwrap().len(), 2);
+
+    let mut png_ptr: *const u8 = ptr::null();
+    let mut png_len: usize = 0;
+    assert!(unsafe {
+        imageflow_context_get_output_buffer_by_id(ctx, 10, &mut png_ptr, &mut png_len)
+    });
+    let png_bytes = unsafe { std::slice::from_raw_parts(png_ptr, png_len) }.to_vec();
+
+    let mut jpg_ptr: *const u8 = ptr::null();
+    let mut jpg_len: usize = 0;
+    assert!(unsafe {
+        imageflow_context_get_output_buffer_by_id(ctx, 11, &mut jpg_ptr, &mut jpg_len)
+    });
+    let jpg_bytes = unsafe { std::slice::from_raw_parts(jpg_ptr, jpg_len) }.to_vec();
+
+    let cmp_ctx = imageflow_context_create(3, 2);
+    assert!(!cmp_ctx.is_null());
+    assert!(unsafe {
+        imageflow_context_add_input_buffer(
+            cmp_ctx,
+            0,
+            png_bytes.as_ptr(),
+            png_bytes.len(),
+            imageflow::Lifetime::OutlivesFunctionCall,
+        )
+    });
+    assert!(unsafe {
+        imageflow_context_add_input_buffer(
+            cmp_ctx,
+            1,
+            jpg_bytes.as_ptr(),
+            jpg_bytes.len(),
+            imageflow::Lifetime::OutlivesFunctionCall,
+        )
+    });
+    let m_cmp = CString::new("v2/compare").unwrap();
+    let cmp_req = br#"{"reference_io_id":0,"candidate_io_id":1,"metrics":["zensim_a","ssimulacra2","butteraugli_max"]}"#;
+    let cmp_resp = unsafe {
+        imageflow_context_send_json(cmp_ctx, m_cmp.as_ptr(), cmp_req.as_ptr(), cmp_req.len())
+    };
+    assert!(!cmp_resp.is_null());
+    let mut st: i64 = 0;
+    let mut bp: *const u8 = ptr::null();
+    let mut bl: usize = 0;
+    assert!(unsafe { imageflow_json_response_read(cmp_ctx, cmp_resp, &mut st, &mut bp, &mut bl) });
+    assert_eq!(st, 200);
+    let cmp_v: serde_json::Value =
+        serde_json::from_slice(unsafe { std::slice::from_raw_parts(bp, bl) }).unwrap();
+    assert_eq!(cmp_v["data"]["results"].as_array().unwrap().len(), 3);
+    assert!(cmp_v["data"]["results"][0]["score"].as_f64().unwrap() >= 85.0);
+
+    unsafe { imageflow_json_response_destroy(cmp_ctx, cmp_resp as *mut _) };
+    unsafe { imageflow_context_destroy(cmp_ctx) };
+    unsafe { imageflow_context_destroy(ctx) };
 }

@@ -22,7 +22,7 @@ use zc::decode::{Input, InputRequest};
 use zc::source::SourceAccess;
 use zencodec_media::registry::{ContainerId, ProbeLimits};
 use zencodecs::engine::{Engine, OutputIntent, PublicationMode, Run, TargetFormat, TrackPolicy};
-use zencodecs::media::probe::{ContainerProbeOutcome, probe_container_prefix};
+use zencodecs::media::probe::{probe_container_prefix, ContainerProbeOutcome};
 use zencodecs::media::pump::{IoTicket as PumpTicket, MediaPump, PumpEvent, WriteOffer};
 use zenpipe::canonical::json::parse_pipeline_value;
 use zenpipe::canonical::{
@@ -35,10 +35,10 @@ use crate::media::bindings::{
     OperationKind, Reply, StopCause, Visibility, WorkQuota,
 };
 use crate::media::report::{
-    PublicationReceiptV2, StreamErrorReportV2, build_estimate_report, inspect_bytes_with_stop,
-    probe_selected_video_track_descriptor, select_mux_offer_for_route, video_codec_token,
+    build_estimate_report, inspect_bytes_with_stop, probe_selected_video_track_descriptor,
+    select_mux_offer_for_route, video_codec_token, PublicationReceiptV2, StreamErrorReportV2,
 };
-use crate::media::{ModernLimitsV2, apply_modern_limits};
+use crate::media::{apply_modern_limits, ModernLimitsV2};
 use crate::{ErrorCategory, FlowError};
 
 /// Default per-transfer credit cap (64 KiB) for bounded streaming chunks.
@@ -132,20 +132,10 @@ struct PendingRangeAccum {
 #[derive(Clone, Debug)]
 enum ActiveWait {
     None,
-    Input {
-        ticket: IoTicket,
-        input_idx: usize,
-        request: IoInput,
-        pump_ticket: Option<PumpTicket>,
-    },
+    Input { ticket: IoTicket, input_idx: usize, request: IoInput, pump_ticket: Option<PumpTicket> },
     Output(PendingChunk),
-    Flush {
-        ticket: IoTicket,
-        sink_idx: usize,
-    },
-    Commit {
-        ticket: IoTicket,
-    },
+    Flush { ticket: IoTicket, sink_idx: usize },
+    Commit { ticket: IoTicket },
 }
 
 enum SessionMode {
@@ -166,18 +156,9 @@ enum SessionMode {
 }
 
 enum SessionModePlan {
-    Execute {
-        job: CanonicalJob,
-        direct_pump_intent: Option<OutputIntent>,
-    },
-    Inspect {
-        target_slot: String,
-        expected_container: Option<String>,
-        bounded_index_scan: bool,
-    },
-    Estimate {
-        job: CanonicalJob,
-    },
+    Execute { job: CanonicalJob, direct_pump_intent: Option<OutputIntent> },
+    Inspect { target_slot: String, expected_container: Option<String>, bounded_index_scan: bool },
+    Estimate { job: CanonicalJob },
 }
 
 /// Movable (`Send + 'static`) pre-stepped blueprint extracted from an un-stepped [`MediaSession`].
@@ -310,8 +291,14 @@ impl MediaSession {
         stop: JobStop,
         base_timeout_ms: Option<u64>,
     ) -> std::result::Result<Self, SessionError> {
-        let base_deadline_at =
-            base_timeout_ms.and_then(|ms| Instant::now().checked_add(Duration::from_millis(ms)));
+        let base_deadline_at = match base_timeout_ms {
+            Some(ms) => Some(super::deadline_instant_from_timeout_ms(ms).ok_or_else(|| {
+                SessionError::InvalidArgument(format!(
+                    "timeout_ms {ms} cannot be represented as a monotonic deadline"
+                ))
+            })?),
+            None => None,
+        };
         Self::create_with_stop_and_deadline_at(
             engine,
             services,
@@ -362,9 +349,9 @@ impl MediaSession {
 
         let root: Value = serde_json::from_slice(json)
             .map_err(|e| SessionError::InvalidArgument(format!("invalid JSON: {e}")))?;
-        let obj = root
-            .as_object()
-            .ok_or_else(|| SessionError::InvalidArgument("envelope root must be an object".into()))?;
+        let obj = root.as_object().ok_or_else(|| {
+            SessionError::InvalidArgument("envelope root must be an object".into())
+        })?;
 
         // Strictly parse and intersect envelope `limits` IDENTICALLY to sync endpoints,
         // without restarting any already-established `base_deadline_at`!
@@ -376,7 +363,14 @@ impl MediaSession {
         };
         let env_deadline_ms = apply_modern_limits(&mut services, req_limits.as_ref(), None);
         let env_deadline = env_deadline_ms.map(Duration::from_millis);
-        let env_deadline_at = env_deadline.and_then(|d| Instant::now().checked_add(d));
+        let env_deadline_at = match env_deadline_ms {
+            Some(ms) => Some(super::deadline_instant_from_timeout_ms(ms).ok_or_else(|| {
+                SessionError::InvalidArgument(format!(
+                    "envelope limits.timeout_ms {ms} cannot be represented as a monotonic deadline"
+                ))
+            })?),
+            None => None,
+        };
         let deadline = match (base_deadline, env_deadline) {
             (Some(a), Some(b)) => Some(a.min(b)),
             (Some(a), None) | (None, Some(a)) => Some(a),
@@ -475,10 +469,8 @@ impl MediaSession {
             }
         }
 
-        let max_input_bytes = services
-            .limits
-            .and_then(|l| l.max_input_bytes)
-            .unwrap_or(DEFAULT_MAX_INPUT_BYTES);
+        let max_input_bytes =
+            services.limits.and_then(|l| l.max_input_bytes).unwrap_or(DEFAULT_MAX_INPUT_BYTES);
         let max_output_bytes = services.limits.and_then(|l| l.max_output_bytes);
         let max_memory_bytes = services.limits.and_then(|l| l.max_memory_bytes);
 
@@ -560,7 +552,8 @@ impl MediaSession {
                 if operation == OperationKind::Estimate {
                     SessionMode::Estimate { job }
                 } else {
-                    let direct_pump_intent = extract_direct_video_pump_intent(&job, &inputs, &sinks);
+                    let direct_pump_intent =
+                        extract_direct_video_pump_intent(&job, &inputs, &sinks);
                     SessionMode::Execute { job, direct_pump_intent, direct_pump: None }
                 }
             }
@@ -649,7 +642,8 @@ impl MediaSession {
         if let Some(term) = self.current_terminal_event_if_done() {
             return term;
         }
-        if let ActiveWait::Output(chunk) = std::mem::replace(&mut self.active_wait, ActiveWait::None)
+        if let ActiveWait::Output(chunk) =
+            std::mem::replace(&mut self.active_wait, ActiveWait::None)
         {
             self.release_mem(chunk.charged_bytes);
         }
@@ -850,10 +844,8 @@ impl MediaSession {
             }
 
             // 2. Direct MediaPump streaming path (true sans-I/O demux -> decode -> encode -> mux).
-            let has_direct_intent = matches!(
-                self.mode,
-                SessionMode::Execute { direct_pump_intent: Some(_), .. }
-            );
+            let has_direct_intent =
+                matches!(self.mode, SessionMode::Execute { direct_pump_intent: Some(_), .. });
             if has_direct_intent {
                 if let Some(ev) = self.step_direct_pump()? {
                     return Ok(ev);
@@ -977,10 +969,8 @@ impl MediaSession {
                     )));
                 }
 
-                let diag = String::from_utf8_lossy(
-                    &diagnostic[..diagnostic.len().min(512)],
-                )
-                .into_owned();
+                let diag =
+                    String::from_utf8_lossy(&diagnostic[..diagnostic.len().min(512)]).into_owned();
 
                 // Record exact partial outcome BEFORE clearing active_wait!
                 let active_taken = std::mem::replace(&mut self.active_wait, ActiveWait::None);
@@ -1075,7 +1065,8 @@ impl MediaSession {
                     && let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } = self.mode
                 {
                     if !taken.is_patch {
-                        drv.out_offset = drv.out_offset.saturating_add(taken.pump_total_acked as u64);
+                        drv.out_offset =
+                            drv.out_offset.saturating_add(taken.pump_total_acked as u64);
                         drv.out_total_bytes = drv.out_total_bytes.max(drv.out_offset);
                     }
                     if let Err(e) = drv.pump.confirm_written(pt, taken.pump_total_acked) {
@@ -1152,10 +1143,13 @@ impl MediaSession {
                     self.inputs[input_idx].known_len = Some(len);
                     self.inputs[input_idx].len_queried = true;
                     if let Some(pt) = pump_ticket
-                        && let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } = self.mode
+                        && let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } =
+                            self.mode
                     {
                         drv.in_known_len = Some(len);
-                        if let Err(e) = drv.pump.supply_input(pt, Input::new(0, &[]).with_total_len(len)) {
+                        if let Err(e) =
+                            drv.pump.supply_input(pt, Input::new(0, &[]).with_total_len(len))
+                        {
                             let fe = crate::media::map_engine_error(e);
                             self.fail_with(fe.category(), StopCause::None, fe.message);
                         }
@@ -1167,7 +1161,8 @@ impl MediaSession {
                     self.inputs[input_idx].known_len = None;
                     self.inputs[input_idx].len_queried = true;
                     if let Some(pt) = pump_ticket
-                        && let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } = self.mode
+                        && let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } =
+                            self.mode
                     {
                         if let Err(e) = drv.pump.supply_input(pt, Input::new(0, &[])) {
                             let fe = crate::media::map_engine_error(e);
@@ -1189,9 +1184,9 @@ impl MediaSession {
                             max_transfer
                         )));
                     }
-                    let new_end = next_offset
-                        .checked_add(chunk.len() as u64)
-                        .ok_or_else(|| SessionError::ResourceLimit("input offset overflow".into()))?;
+                    let new_end = next_offset.checked_add(chunk.len() as u64).ok_or_else(|| {
+                        SessionError::ResourceLimit("input offset overflow".into())
+                    })?;
                     if new_end > self.max_input_bytes {
                         self.active_wait = ActiveWait::None;
                         self.fail_with(
@@ -1210,8 +1205,8 @@ impl MediaSession {
                             && let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } =
                                 self.mode
                         {
-                            let inp = Input::new(next_offset, chunk)
-                                .with_total_len_opt(drv.in_known_len);
+                            let inp =
+                                Input::new(next_offset, chunk).with_total_len_opt(drv.in_known_len);
                             if let Err(e) = drv.pump.supply_input(pt, inp) {
                                 let fe = crate::media::map_engine_error(e);
                                 self.fail_with(fe.category(), StopCause::None, fe.message);
@@ -1287,7 +1282,9 @@ impl MediaSession {
                 Reply::End { total_len } => {
                     self.active_wait = ActiveWait::None;
                     if let Some(pt) = pump_ticket {
-                        if let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } = self.mode {
+                        if let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } =
+                            self.mode
+                        {
                             let tot = total_len.or(drv.in_known_len).unwrap_or(next_offset);
                             drv.in_eof = true;
                             drv.in_known_len = Some(tot);
@@ -1331,9 +1328,9 @@ impl MediaSession {
                             len
                         )));
                     }
-                    let new_end = offset
-                        .checked_add(chunk.len() as u64)
-                        .ok_or_else(|| SessionError::ResourceLimit("range offset overflow".into()))?;
+                    let new_end = offset.checked_add(chunk.len() as u64).ok_or_else(|| {
+                        SessionError::ResourceLimit("range offset overflow".into())
+                    })?;
                     if new_end > self.max_input_bytes {
                         self.active_wait = ActiveWait::None;
                         self.release_pending_range_mem();
@@ -1373,7 +1370,8 @@ impl MediaSession {
                                 }
                             }
                         } else if let Some(pt) = pump_ticket {
-                            let inp = Input::new(offset, chunk).with_total_len_opt(drv.in_known_len);
+                            let inp =
+                                Input::new(offset, chunk).with_total_len_opt(drv.in_known_len);
                             if let Err(e) = drv.pump.supply_input(pt, inp) {
                                 pump_err = Some(crate::media::map_engine_error(e));
                             }
@@ -1417,8 +1415,9 @@ impl MediaSession {
                         } else if let Some(pt) = pump_ticket {
                             let tot = total_len.or(drv.in_known_len).unwrap_or(offset);
                             drv.in_known_len = Some(tot);
-                            if let Err(e) =
-                                drv.pump.supply_input(pt, Input::new(offset, &[]).with_total_len(tot))
+                            if let Err(e) = drv
+                                .pump
+                                .supply_input(pt, Input::new(offset, &[]).with_total_len(tot))
                             {
                                 pump_err = Some(crate::media::map_engine_error(e));
                             }
@@ -1441,10 +1440,7 @@ impl MediaSession {
 
     fn step_direct_pump(&mut self) -> std::result::Result<Option<IoEvent>, SessionError> {
         // Phase A: Probe initial prefix if pump not opened yet.
-        let need_open = matches!(
-            self.mode,
-            SessionMode::Execute { direct_pump: None, .. }
-        );
+        let need_open = matches!(self.mode, SessionMode::Execute { direct_pump: None, .. });
         if need_open {
             // Query known length first whenever source advertises known_length (ReadAt OR Forward!).
             if self.inputs[0].spec.access.has_known_length() && !self.inputs[0].len_queried {
@@ -1698,11 +1694,8 @@ impl MediaSession {
                     DirectStep::Finished
                 }
                 Ok(PumpEvent::NeedInput { ticket, requests }) => {
-                    let chosen = pick_compatible_pump_request(
-                        requests,
-                        is_range_capable,
-                        has_known_len,
-                    );
+                    let chosen =
+                        pick_compatible_pump_request(requests, is_range_capable, has_known_len);
                     DirectStep::NeedInput(ticket, chosen)
                 }
                 Ok(PumpEvent::NeedWriter { ticket, write }) => {
@@ -1829,9 +1822,7 @@ impl MediaSession {
                                             drv.out_header[start..end]
                                                 .copy_from_slice(&bytes[..copy_len]);
                                         }
-                                    } else if is_patch
-                                        && offset < drv.out_header.len() as u64
-                                    {
+                                    } else if is_patch && offset < drv.out_header.len() as u64 {
                                         let start = offset as usize;
                                         let patch_len =
                                             bytes.len().min(drv.out_header.len() - start);
@@ -1878,7 +1869,8 @@ impl MediaSession {
                 // First try to satisfy directly from buffered probe prefix via disjoint field
                 // borrow (ZERO `.to_vec()` clone allocation!).
                 let served_from_prefix = {
-                    let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } = self.mode else {
+                    let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } = self.mode
+                    else {
                         unreachable!();
                     };
                     let in_buf = drv.in_buf.as_slice();
@@ -1890,12 +1882,9 @@ impl MediaSession {
                         InputRequest::AtLeast { offset, min_len: _ } => {
                             let off_u = usize::try_from(offset).unwrap_or(usize::MAX);
                             if off_u < in_buf.len() {
-                                let tot = if in_eof {
-                                    Some(eof_total_len)
-                                } else {
-                                    in_known_len
-                                };
-                                let inp = Input::new(offset, &in_buf[off_u..]).with_total_len_opt(tot);
+                                let tot = if in_eof { Some(eof_total_len) } else { in_known_len };
+                                let inp =
+                                    Input::new(offset, &in_buf[off_u..]).with_total_len_opt(tot);
                                 Some(pump.supply_input(pt, inp))
                             } else if in_eof && offset >= eof_total_len {
                                 let inp = Input::new(offset, &[]).with_total_len(eof_total_len);
@@ -1909,13 +1898,9 @@ impl MediaSession {
                             let need = usize::try_from(r.length).unwrap_or(usize::MAX);
                             let end = start.saturating_add(need);
                             if start < in_buf.len() && end <= in_buf.len() {
-                                let tot = if in_eof {
-                                    Some(eof_total_len)
-                                } else {
-                                    in_known_len
-                                };
-                                let inp =
-                                    Input::new(r.offset, &in_buf[start..end]).with_total_len_opt(tot);
+                                let tot = if in_eof { Some(eof_total_len) } else { in_known_len };
+                                let inp = Input::new(r.offset, &in_buf[start..end])
+                                    .with_total_len_opt(tot);
                                 Some(pump.supply_input(pt, inp))
                             } else if in_eof
                                 && start < in_buf.len()
@@ -1964,9 +1949,7 @@ impl MediaSession {
                         let max_transfer = if rem_cap == 0 {
                             self.transfer_max
                         } else {
-                            self.transfer_max
-                                .min(u32::try_from(rem_cap).unwrap_or(u32::MAX))
-                                .max(1)
+                            self.transfer_max.min(u32::try_from(rem_cap).unwrap_or(u32::MAX)).max(1)
                         };
                         IoInput::AtLeast {
                             next_offset: offset,
@@ -2253,19 +2236,13 @@ impl MediaSession {
                 );
                 return Ok(Some(self.current_terminal_event()));
             }
-            let max_transfer = self
-                .transfer_max
-                .min(u32::try_from(remaining_cap).unwrap_or(u32::MAX))
-                .max(1);
+            let max_transfer =
+                self.transfer_max.min(u32::try_from(remaining_cap).unwrap_or(u32::MAX)).max(1);
             let ticket = self.alloc_ticket()?;
             self.active_wait = ActiveWait::Input {
                 ticket,
                 input_idx: idx,
-                request: IoInput::AtLeast {
-                    next_offset,
-                    min_remaining: 1,
-                    max_transfer,
-                },
+                request: IoInput::AtLeast { next_offset, min_remaining: 1, max_transfer },
                 pump_ticket: None,
             };
             return Ok(self.current_wait_event());
@@ -2400,18 +2377,6 @@ impl MediaSession {
                 }
             }
             SessionMode::Execute { job, .. } => {
-                // Pinned zenpipe `PreparedJob::run()` cannot observe a cooperative `Pulse` mid-DAG
-                // or yield per `WorkQuota`. Already-expired deadlines failed above with
-                // `StopCause::Deadline`; explicitly refuse live `timeout_ms`/deadlines on buffered
-                // multi-node Execute pipelines rather than running un-interruptibly past deadline!
-                if self.deadline_at.is_some() {
-                    self.fail_with(
-                        ErrorCategory::ActionNotSupported,
-                        StopCause::None,
-                        "deadline/timeout_ms cannot be enforced mid-execution on buffered multi-node Execute pipelines with the pinned zenpipe runtime; use a direct video streaming route, Inspect, or Estimate, or omit timeout_ms".to_string(),
-                    );
-                    return;
-                }
                 let mut b = Bindings::new();
                 for inp in &self.inputs {
                     match b.with_bytes(&inp.slot, &inp.data) {
@@ -2442,10 +2407,11 @@ impl MediaSession {
                     );
                     return;
                 }
-                let job_res = match prepared.run() {
+                let job_res = match prepared.run_with_pulse(pulse) {
                     Ok(r) => r,
                     Err(e) => {
                         let fe = crate::media::map_pipe_error(e);
+                        self.check_deadline();
                         self.fail_with(fe.category(), self.stop.cause(), fe.message);
                         return;
                     }
@@ -2742,7 +2708,8 @@ impl MediaSession {
             ActiveWait::Input { .. } | ActiveWait::None => {}
         }
         self.release_all_direct_and_input_mem();
-        let freed_queued: u64 = self.queued_outputs.drain(..).map(|(_, buf)| buf.len() as u64).sum();
+        let freed_queued: u64 =
+            self.queued_outputs.drain(..).map(|(_, buf)| buf.len() as u64).sum();
         self.release_mem(freed_queued);
         self.lifecycle = Lifecycle::Failed { category, cause };
         let publications = self

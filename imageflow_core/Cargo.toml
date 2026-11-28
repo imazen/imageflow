@@ -85,6 +85,7 @@ zengif = { version = "0.8.0", optional = true }
 zenwebp = { version = "0.5.0", optional = true }
 zenavif = { version = "0.2.0", features = ["encode"], optional = true }
 zenpixels = { version = "0.5.0", default-features = false, optional = true }
+zenpixels-convert = { version = "0.5.0", default-features = false, features = ["std", "cms-moxcms"], optional = true }
 zc = { version = "0.3.0", package = "zencodec", features = ["std"], optional = true }
 zenpng = { version = "0.2.0", features = ["zencodec"], optional = true }
 zenjxl = { version = "0.3.0", features = ["decode", "encode", "zencodec"], optional = true }
@@ -92,8 +93,8 @@ zenbitmaps = { version = "0.2.0", features = ["bmp", "zencodec"], optional = tru
 mozjpeg-rs = { version = "0.9.2", optional = true, default-features = false, features = ["zencodec"] }
 
 # --- Modern canonical pipeline, video media, sans-I/O & async streaming (all opt-in) ---
-zenpipe = { git = "https://github.com/imazen/zenpipe", rev = "1a80de6685b12329b1414ac0936d9a191dad0493", optional = true, default-features = false }
-zencodecs = { git = "https://github.com/imazen/zenpipe", rev = "1a80de6685b12329b1414ac0936d9a191dad0493", optional = true, default-features = false }
+zenpipe = { git = "https://github.com/imazen/zenpipe", rev = "07885b2e21a1032d2eee10e51e509b163b09373c", optional = true, default-features = false }
+zencodecs = { git = "https://github.com/imazen/zenpipe", rev = "07885b2e21a1032d2eee10e51e509b163b09373c", optional = true, default-features = false }
 zencodec-media = { version = "0.2.0", optional = true, default-features = false }
 zencodec-io = { version = "0.2.0", optional = true, default-features = false }
 whereat = { version = "0.1.5", optional = true }
@@ -180,6 +181,7 @@ zen-media = [
     "dep:zencodec-io",
     "dep:whereat",
     "dep:zenpixels",
+    "dep:zenpixels-convert",
     "dep:zc",
     "zenpipe/std",
     "zenpipe/canonical-json",
@@ -191,6 +193,12 @@ zen-media = [
     "zencodecs/tonemap",
     "zencodec-io/std",
 ]
+# Opt-in embedded score-only perceptual IQA metrics (zensim-a rev-7, ssimulacra2, butteraugli_max).
+# Each feature also enables zen-codecs so still image comparison and Verify work out of the box.
+iqa-zensim = ["zen-media", "zen-codecs", "zenpipe/iqa-zensim", "zencodecs/iqa-zensim"]
+iqa-ssimulacra2 = ["zen-media", "zen-codecs", "zenpipe/iqa-ssimulacra2", "zencodecs/iqa-ssimulacra2"]
+iqa-butteraugli = ["zen-media", "zen-codecs", "zenpipe/iqa-butteraugli", "zencodecs/iqa-butteraugli"]
+iqa = ["iqa-zensim", "iqa-ssimulacra2", "iqa-butteraugli"]
 # Independent video container registrations over zen-media.
 mp4 = ["zen-media", "zenpipe/mp4", "zencodecs/mp4"]
 webm = ["zen-media", "zenpipe/webm", "zencodecs/webm"]
