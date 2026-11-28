@@ -6,11 +6,24 @@ use crate::{Context, ErrorKind, JsonResponse, Result};
 use imageflow_types::collections::AddRemoveSet;
 use imageflow_types::IoDirection;
 use std::rc::Rc;
+use std::sync::Arc;
 use uuid::Uuid;
+
+/// Zero-copy shared byte backing allowing a single `Vec<u8>` allocation to be
+/// read by both legacy `IoProxy` decoders and modern replayable pipeline leases.
+#[derive(Clone)]
+struct SharedVec(Arc<Vec<u8>>);
+
+impl AsRef<[u8]> for SharedVec {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_slice()
+    }
+}
 
 enum IoBackend {
     ReadSlice(Cursor<&'static [u8]>),
     ReadVec(Cursor<Vec<u8>>),
+    ReadShared(Cursor<SharedVec>),
     WriteVec(Cursor<Vec<u8>>),
     ReadFile(BufReader<File>),
     WriteFile(BufWriter<File>),
@@ -27,6 +40,7 @@ impl IoBackend {
         match self {
             IoBackend::ReadSlice(w) => Some(w),
             IoBackend::ReadVec(w) => Some(w),
+            IoBackend::ReadShared(w) => Some(w),
             IoBackend::ReadFile(w) => Some(w),
             _ => None,
         }
@@ -35,6 +49,7 @@ impl IoBackend {
         match self {
             IoBackend::ReadSlice(w) => Some(w),
             IoBackend::ReadVec(w) => Some(w),
+            IoBackend::ReadShared(w) => Some(w),
             IoBackend::ReadFile(w) => Some(w),
             _ => None,
         }
@@ -43,6 +58,7 @@ impl IoBackend {
         match self {
             IoBackend::ReadSlice(w) => Some(w),
             IoBackend::ReadVec(w) => Some(w),
+            IoBackend::ReadShared(w) => Some(w),
             IoBackend::ReadFile(w) => Some(w),
             _ => None,
         }
@@ -63,6 +79,7 @@ impl IoBackend {
         match self {
             IoBackend::ReadSlice(cursor) => Some(cursor.get_ref()),
             IoBackend::ReadVec(cursor) => Some(cursor.get_ref().as_slice()),
+            IoBackend::ReadShared(cursor) => Some(cursor.get_ref().as_ref()),
             _ => None,
         }
     }
@@ -133,6 +150,7 @@ impl IoProxy {
         match &self.backend {
             IoBackend::ReadVec(v) => Some(v.get_ref().len() as u64),
             IoBackend::ReadSlice(v) => Some(v.get_ref().len() as u64),
+            IoBackend::ReadShared(v) => Some(v.get_ref().as_ref().len() as u64),
             IoBackend::ReadFile(v) => v.get_ref().metadata().map(|m| m.len()).ok(),
             _ => None,
         }
@@ -142,6 +160,7 @@ impl IoProxy {
         match &self.backend {
             IoBackend::ReadVec(v) => Some(v.position()),
             IoBackend::ReadSlice(v) => Some(v.position()),
+            IoBackend::ReadShared(v) => Some(v.position()),
             IoBackend::ReadFile(v) => v.get_ref().stream_position().ok(),
             _ => None,
         }
@@ -234,6 +253,16 @@ impl IoProxy {
         IoProxy::check_io_id(context, io_id)?;
 
         Ok(IoProxy { path: None, io_id, backend: IoBackend::ReadVec(Cursor::new(bytes)) })
+    }
+
+    pub fn read_shared_vec(context: &Context, io_id: i32, bytes: Arc<Vec<u8>>) -> Result<IoProxy> {
+        IoProxy::check_io_id(context, io_id)?;
+
+        Ok(IoProxy {
+            path: None,
+            io_id,
+            backend: IoBackend::ReadShared(Cursor::new(SharedVec(bytes))),
+        })
     }
 
     pub fn copy_slice(context: &Context, io_id: i32, bytes: &[u8]) -> Result<IoProxy> {

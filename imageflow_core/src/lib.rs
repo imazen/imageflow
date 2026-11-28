@@ -22,10 +22,14 @@ mod flow;
 pub mod graphics;
 mod io;
 pub mod json;
+#[cfg(any(feature = "zen-media", feature = "streaming"))]
+pub mod media;
+pub(crate) mod modern_endpoints;
 
 pub use crate::codecs::cms::CmsBackend;
 pub use crate::codecs::NamedDecoders;
 pub use crate::context::Context;
+pub use crate::context::ModernContextConfig;
 pub use crate::context::ThreadSafeContext;
 pub use crate::flow::definitions::Graph;
 pub use crate::io::IoProxy;

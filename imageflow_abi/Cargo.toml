@@ -24,21 +24,40 @@ exclude = [
 [lib]
 name = "imageflow"
 doc = true
-# Default crate type for non-musl targets
-crate-type = ["cdylib"]
+# Default crate type for non-musl targets (rlib enables Rust ABI integration tests)
+crate-type = ["cdylib", "rlib"]
 doctest = false
-
-
 
 [dependencies]
 libc = "0.2"
-imageflow_core = { path = "../imageflow_core", version = "*"}
+imageflow_core = { path = "../imageflow_core", version = "*", default-features = false }
 backtrace = "*"
 smallvec="*"
 base64="0.22"
+
+[features]
+default = ["c-codecs", "bmp"]
+c-codecs = ["imageflow_core/c-codecs"]
+bmp = ["imageflow_core/bmp"]
+neon = ["imageflow_core/neon"]
+zen-codecs = ["imageflow_core/zen-codecs"]
+zen-media = ["imageflow_core/zen-media"]
+mp4 = ["imageflow_core/mp4"]
+webm = ["imageflow_core/webm"]
+ivf = ["imageflow_core/ivf"]
+av1 = ["imageflow_core/av1"]
+av1-svt = ["imageflow_core/av1-svt"]
+vp8 = ["imageflow_core/vp8"]
+vp9 = ["imageflow_core/vp9"]
+all-media = ["imageflow_core/all-media"]
+streaming-ffi = ["imageflow_core/streaming"]
+async-ffi = ["streaming-ffi", "imageflow_core/streaming-async"]
 
 [build-dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*"}
 cbindgen = "0.29"
 regex-lite = { version = "0.1.6" }
 rayon = "1"
+
+[dev-dependencies]
+serde_json = "1"

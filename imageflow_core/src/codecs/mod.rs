@@ -811,6 +811,54 @@ impl CodecInstanceContainer {
             )),
         }
     }
+
+    /// Validate that this slot is an unused, un-lent, un-taken output buffer eligible
+    /// for atomic publication by a modern Zen pipeline execution.
+    pub fn can_commit_modern_output(&self) -> Result<()> {
+        if !matches!(self.codec, CodecKind::EncoderPlaceholder) {
+            return Err(nerror!(
+                ErrorKind::InvalidState,
+                "Output buffer for io_id {} has already been written or is not an encoder slot",
+                self.io_id
+            ));
+        }
+        match &self.output_state {
+            OutputBufferState::Ready(io) if io.can_swap_output() => Ok(()),
+            OutputBufferState::Ready(_) => Err(nerror!(
+                ErrorKind::InvalidState,
+                "Output buffer for io_id {} is not an empty memory output buffer",
+                self.io_id
+            )),
+            OutputBufferState::Lent(_) => Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "Cannot overwrite output buffer for io_id {}: a raw pointer was already lent out",
+                self.io_id
+            )),
+            OutputBufferState::Taken => Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "Output buffer for io_id {} has already been taken",
+                self.io_id
+            )),
+            OutputBufferState::None => Err(nerror!(
+                ErrorKind::InvalidArgument,
+                "io_id {} is not an output buffer",
+                self.io_id
+            )),
+        }
+    }
+
+    /// Atomically install finalized modern pipeline bytes into this output buffer slot.
+    /// Caller must have validated all target slots with `can_commit_modern_output()` first.
+    pub fn commit_modern_output(&mut self, data: Vec<u8>) -> Result<()> {
+        self.can_commit_modern_output()?;
+        if let OutputBufferState::Ready(ref mut io) = self.output_state {
+            io.swap_output_vec(data);
+            self.codec = CodecKind::EncoderFinished;
+            Ok(())
+        } else {
+            unreachable!("validated Ready state above")
+        }
+    }
 }
 
 #[cfg(test)]

@@ -91,6 +91,14 @@ zenjxl = { version = "0.3.0", features = ["decode", "encode", "zencodec"], optio
 zenbitmaps = { version = "0.2.0", features = ["bmp", "zencodec"], optional = true }
 mozjpeg-rs = { version = "0.9.2", optional = true, default-features = false, features = ["zencodec"] }
 
+# --- Modern canonical pipeline, video media, sans-I/O & async streaming (all opt-in) ---
+zenpipe = { git = "https://github.com/imazen/zenpipe", rev = "1a80de6685b12329b1414ac0936d9a191dad0493", optional = true, default-features = false }
+zencodecs = { git = "https://github.com/imazen/zenpipe", rev = "1a80de6685b12329b1414ac0936d9a191dad0493", optional = true, default-features = false }
+zencodec-media = { version = "0.2.0", optional = true, default-features = false }
+zencodec-io = { version = "0.2.0", optional = true, default-features = false }
+whereat = { version = "0.1.5", optional = true }
+tokio = { version = "1", optional = true, default-features = false, features = ["rt-multi-thread", "sync", "time", "io-util"] }
+
 # --- C codec dependencies (optional, gated behind c-codecs feature) ---
 imageflow_c_components = { path = "../c_components", optional = true }
 mozjpeg = { version = "0.10", optional = true }
@@ -152,7 +160,52 @@ zen-codecs = [
     "dep:zenpixels",
     "dep:zc",
     "dep:mozjpeg-rs",
+    "zencodecs?/jpeg",
+    "zencodecs?/png",
+    "zencodecs?/png-zenquant",
+    "zencodecs?/webp",
+    "zencodecs?/gif",
+    "zencodecs?/gif-zenquant",
+    "zencodecs?/avif-decode",
+    "zencodecs?/avif-encode",
+    "zencodecs?/jxl-decode",
+    "zencodecs?/jxl-encode",
+    "zencodecs?/bitmaps-bmp",
 ]
+# Opt-in canonical Zen pipeline + media container/codec contracts (no default media codec providers).
+zen-media = [
+    "dep:zenpipe",
+    "dep:zencodecs",
+    "dep:zencodec-media",
+    "dep:zencodec-io",
+    "dep:whereat",
+    "dep:zenpixels",
+    "dep:zc",
+    "zenpipe/std",
+    "zenpipe/canonical-json",
+    "zenpipe/media",
+    "zenpipe/job",
+    "zencodecs/std",
+    "zencodecs/media",
+    "zencodecs/cms",
+    "zencodecs/tonemap",
+    "zencodec-io/std",
+]
+# Independent video container registrations over zen-media.
+mp4 = ["zen-media", "zenpipe/mp4", "zencodecs/mp4"]
+webm = ["zen-media", "zenpipe/webm", "zencodecs/webm"]
+ivf = ["zen-media", "zenpipe/ivf", "zencodecs/ivf"]
+# Independent video codec provider registrations over zen-media.
+av1 = ["zen-media", "zenpipe/av1", "zenpipe/av1-encode", "zencodecs/av1", "zencodecs/av1-encode"]
+av1-svt = ["av1", "zencodecs/av1-svt"]
+vp8 = ["zen-media", "zenpipe/vp8", "zenpipe/vp8-encode", "zencodecs/vp8", "zencodecs/vp8-encode"]
+vp9 = ["zen-media", "zenpipe/vp9", "zenpipe/vp9-encode", "zencodecs/vp9", "zencodecs/vp9-encode"]
+# Convenience bundle for full first-class AV1/VP8/VP9 x MP4/WebM/IVF support.
+all-media = ["mp4", "webm", "ivf", "av1", "vp8", "vp9"]
+# Opt-in sans-I/O streaming execution and ReadAt source support (zero Tokio dependency).
+streaming = ["zen-media"]
+# Opt-in Tokio-backed async streaming driver and bounded compute scheduler.
+streaming-async = ["streaming", "dep:tokio"]
 # Feature to enable OpenAPI schema generation capabilities
 schema-export = ["dep:utoipa", "imageflow_types/schema-export"]
 # Enable schemars-based JSON Schema generation. Enables the corresponding feature in imageflow_types

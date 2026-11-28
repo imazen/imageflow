@@ -307,6 +307,24 @@ fn parent_function_name<T>(f: T) -> &'static str {
     name[..name.len() - 3].rsplit_terminator(":").next().unwrap_or("[function name not found]")
 }
 
+macro_rules! context_shared {
+    ($ptr:ident) => {{
+        if $ptr.is_null() {
+            fn f() {}
+            let name = parent_function_name(f);
+            eprintln!("Null context pointer provided to {}. Terminating process.", name);
+            let bt = ::backtrace::Backtrace::new();
+            eprintln!("{:?}", bt);
+            ::std::process::abort();
+        }
+        {
+            #[allow(unused_unsafe)]
+            let r: &ThreadSafeContext = unsafe { &*$ptr };
+            r
+        }
+    }};
+}
+
 macro_rules! context {
     ($ptr:ident) => {{
         if $ptr.is_null() {
@@ -358,6 +376,7 @@ macro_rules! lock_context_mut_and_error_or_return {
         }
     }};
 }
+#[allow(unused_macros)]
 macro_rules! lock_context_mut_or_return {
     ($ctx:ident,$failure_value:expr) => {{
         match $ctx.context_mut_and_error_or_poisoned() {
@@ -376,6 +395,10 @@ macro_rules! lock_context_mut_or_return {
     }};
 }
 include!("abi_version.rs");
+
+/// cbindgen:ignore
+#[cfg(feature = "streaming-ffi")]
+pub mod streaming;
 
 ///
 /// Call this method before doing anything else to ensure that your header or FFI bindings are compatible
@@ -876,8 +899,13 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(
 /// operation is running.** Use this to implement timeouts or user cancellation.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn imageflow_context_request_cancellation(context: *mut ThreadSafeContext) {
-    let c: &mut ThreadSafeContext = context!(context);
-    c.request_cancellation();
+    if context.is_null() {
+        std::process::abort();
+    }
+    // Use a shared reference (`&ThreadSafeContext`) so concurrent cancellation from another
+    // thread never creates an aliasing `&mut ThreadSafeContext` reference!
+    let c: &ThreadSafeContext = unsafe { &*context };
+    c.request_cancellation_shared();
 }
 
 /// Sends a JSON message to the imageflow context using the specified endpoint method.
@@ -947,31 +975,42 @@ pub unsafe extern "C" fn imageflow_context_send_json(
     json_buffer: *const u8,
     json_buffer_size: libc::size_t,
 ) -> *const JsonResponse {
-    let c = context!(context);
+    // Borrow shared `&ThreadSafeContext` with interior locks so concurrent
+    // `imageflow_context_request_cancellation` from another thread never aliases `&mut`!
+    let c: &ThreadSafeContext = context_shared!(context);
     if c.outward_error().has_error() {
         let json_error = c.outward_error().get_json_response_for_error();
         if let Some(json_error) = json_error {
-            return create_abi_json_response(c, &json_error.response_json, json_error.status_code);
+            return create_abi_json_response_shared(c, &json_error.response_json, json_error.status_code);
         }
         panic!("Internal error: error flag set but no error object available")
     }
     if method.is_null() {
-        c.outward_error_mut()
+        c.outward_error_write_shared()
             .try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'method' is null."));
         return ptr::null();
     }
     if json_buffer.is_null() {
-        c.outward_error_mut()
+        c.outward_error_write_shared()
             .try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'json_buffer' is null."));
         return ptr::null();
     }
     if json_buffer_size.leading_zeros() == 0 {
-        c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `json_buffer_size` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
+        c.outward_error_write_shared().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `json_buffer_size` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
         return ptr::null();
     }
 
     let panic_result = {
-        let mut inner_context_guard = lock_context_mut_or_return!(c, ptr::null());
+        let mut inner_context_guard = match c.context_and_error_write_shared() {
+            (_, Ok(guard)) => guard,
+            (mut outward_error, Err(_)) => {
+                outward_error.try_set_error(nerror!(
+                    ErrorKind::FailedBorrow,
+                    "Context previously panicked: imageflow_context_send_json cannot be called"
+                ));
+                return ptr::null();
+            }
+        };
         catch_unwind(AssertUnwindSafe(|| {
             let method_str = if let Ok(str) = unsafe { ::std::ffi::CStr::from_ptr(method) }.to_str()
             {
@@ -999,26 +1038,25 @@ pub unsafe extern "C" fn imageflow_context_send_json(
     match panic_result {
         Ok((json, Ok(_))) => {
             let json = json.unwrap();
-            // An unfortunate copy occurs here
-            create_abi_json_response(c, &json.response_json, json.status_code)
+            create_abi_json_response_shared(c, &json.response_json, json.status_code)
         }
         Ok((json, Err(e))) => {
-            c.outward_error_mut().try_set_error(e);
+            c.outward_error_write_shared().try_set_error(e);
             if let Some(json) = json {
-                create_abi_json_response(c, &json.response_json, json.status_code)
+                create_abi_json_response_shared(c, &json.response_json, json.status_code)
             } else {
                 ptr::null_mut()
             }
         }
         Err(p) => {
-            c.outward_error_mut().try_set_panic_error(p);
+            c.outward_error_write_shared().try_set_panic_error(p);
             ptr::null_mut()
         }
     }
 }
 
-pub fn create_abi_json_response(
-    c: &mut ThreadSafeContext,
+fn create_abi_json_response_shared(
+    c: &ThreadSafeContext,
     json_bytes: &[u8],
     status_code: i64,
 ) -> *const JsonResponse {
@@ -1028,7 +1066,7 @@ pub fn create_abi_json_response(
         let alloc_size = match sizeof_struct.checked_add(json_bytes.len()) {
             Some(size) if size.leading_zeros() > 0 => size,
             _ => {
-                c.outward_error_mut().try_set_error(nerror!(
+                c.outward_error_write_shared().try_set_error(nerror!(
                     ErrorKind::Category(ErrorCategory::InternalError),
                     "Error in creating JSON structure; length overflow prevented."
                 ));
@@ -1038,7 +1076,7 @@ pub fn create_abi_json_response(
 
         let pointer = match c.mem_calloc(alloc_size, 16, None, -1) {
             Err(e) => {
-                c.outward_error_mut().try_set_error(e);
+                c.outward_error_write_shared().try_set_error(e);
                 return ptr::null();
             }
             Ok(v) => v,
@@ -1057,6 +1095,14 @@ pub fn create_abi_json_response(
 
         imageflow_response as *const JsonResponse
     }
+}
+
+pub fn create_abi_json_response(
+    c: &mut ThreadSafeContext,
+    json_bytes: &[u8],
+    status_code: i64,
+) -> *const JsonResponse {
+    create_abi_json_response_shared(c, json_bytes, status_code)
 }
 
 //

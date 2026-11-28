@@ -31,18 +31,23 @@ opt-level = 2
 libpng-sys = { git = "https://github.com/imazen/rust-libpng-sys" }
 lcms2-sys = { git = "https://github.com/imazen/rust-lcms2-sys", branch = "update-lcms2-2.18" }
 # zenpixels 0.5 + zencodec 0.3 + updated zen codec cohort pins
-zenpixels = { git = "https://github.com/imazen/zenpixels", rev = "7fa068834f8074c2630a352b25f355f7c90751f8" }
-zenpixels-convert = { git = "https://github.com/imazen/zenpixels", rev = "7fa068834f8074c2630a352b25f355f7c90751f8" }
-zencodec = { git = "https://github.com/imazen/zencodec", rev = "5d4f6c473404c09c95f404543f8a16a1e3cb8477" }
-zenmeta = { git = "https://github.com/imazen/zencodec", rev = "5d4f6c473404c09c95f404543f8a16a1e3cb8477" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", rev = "83217972759fab02ff530fe50203a0c7fc3282f8" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", rev = "83217972759fab02ff530fe50203a0c7fc3282f8" }
+zencodec = { git = "https://github.com/imazen/zencodec", rev = "9500a8154bbb21a2d71e87019b002bc43a6094f2" }
+zencodec-io = { git = "https://github.com/imazen/zencodec", rev = "9500a8154bbb21a2d71e87019b002bc43a6094f2" }
+zencodec-media = { git = "https://github.com/imazen/zencodec", rev = "9500a8154bbb21a2d71e87019b002bc43a6094f2" }
+zencodec-render = { git = "https://github.com/imazen/zencodec", rev = "9500a8154bbb21a2d71e87019b002bc43a6094f2" }
+zenmeta = { git = "https://github.com/imazen/zencodec", rev = "9500a8154bbb21a2d71e87019b002bc43a6094f2" }
 zenresize = { git = "https://github.com/imazen/zenresize", rev = "e6c077561dcb426b23d8e7c3da1ca0e12cc13c5f" }
-zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "80dac328d0b9279413d037c0291477c8df6ae53b" }
-zenyuv = { git = "https://github.com/imazen/zenjpeg", rev = "80dac328d0b9279413d037c0291477c8df6ae53b" }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "213c04a440a89aaed0a71c5355d591acebbd2be3" }
+zenyuv = { git = "https://github.com/imazen/zenjpeg", rev = "213c04a440a89aaed0a71c5355d591acebbd2be3" }
 zenpng = { git = "https://github.com/imazen/zenpng", rev = "af5d24b89d91efb3db91a632047a0e0c835fe007" }
 zenwebp = { git = "https://github.com/imazen/zenwebp", rev = "82cd643dbe7950f7a5c69afe8d5bf69652dd4aef" }
 zengif = { git = "https://github.com/imazen/zengif", rev = "edbbd1a1a30f15018a41079fcd54683cf875bef9" }
-zenavif = { git = "https://github.com/imazen/zenavif", rev = "8868bc5ebeeed6ba55ec2e94eb8f1c6cb425e7ac" }
-zenavif-serialize = { git = "https://github.com/imazen/zenavif", rev = "8868bc5ebeeed6ba55ec2e94eb8f1c6cb425e7ac" }
+zenavif = { git = "https://github.com/imazen/zenavif", rev = "bc93c79121c81c0ba7f0f65e1ce6f07d07d5942d" }
+zenavif-serialize = { git = "https://github.com/imazen/zenavif", rev = "bc93c79121c81c0ba7f0f65e1ce6f07d07d5942d" }
+zennode = { git = "https://github.com/imazen/zennode" }
+zennode-derive = { git = "https://github.com/imazen/zennode" }
 jxl-encoder = { git = "https://github.com/imazen/jxl-encoder", rev = "7fdd3ea2839b5a0ccd73dd61c9a99b8fe95857fe" }
 zenjxl = { git = "https://github.com/imazen/zenjxl", rev = "27a69d531938d1781777fd99ec7d7f74b805abdf" }
 zenbitmaps = { git = "https://github.com/imazen/zenbitmaps", rev = "e50a9037a3583f18ab7ef45ca5bd086401a35299" }
@@ -54,6 +59,9 @@ garb = { git = "https://github.com/imazen/garb", rev = "457ff8b9153e9d675a39dc09
 linear-srgb = { git = "https://github.com/imazen/linear-srgb", rev = "ae83f19426737635fee3dd16f228681019f52585" }
 zenflate = { git = "https://github.com/imazen/zenflate", rev = "7270e38faca9cdbae793938fa229d40ac4fe4c39" }
 zenjxl-decoder = { git = "https://github.com/imazen/zenjxl-decoder", rev = "e1c366b089b29511ef66f1b5af5d9e208dbff5d1" }
+
+[patch."https://github.com/imazen/zenlayout.git"]
+zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "1a80de6685b12329b1414ac0936d9a191dad0493" }
 # load_image.git = "https://gitlab.com/lilith6/load_image.git"
 # TODO(rgb-0.8.91): Uncomment when rgb 0.8.91+ is published to crates.io
 # This enables: root-level BGR8/BGRA8/RGB8/RGBA8 exports, Gray_v09 compat type,

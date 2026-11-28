@@ -53,20 +53,55 @@ pub struct Context {
     // allocations (`imageflow_context_memory_allocate`/`_free`) are owned by
     // `ThreadSafeContext::allocations`; a second, never-read `RefCell<AllocationContainer>`
     // used to sit here and cost 32 bytes of the `Context` size budget above.
-    /// Bitmap keys captured by CaptureBitmapKey nodes during graph execution.
-    // The box is deliberate and is not a redundant indirection: `Context` has a
-    // hard stack-size budget (see the type doc above, enforced by
-    // `test_context_size`). `Option<Box<HashMap<..>>>` is 8 bytes; the unboxed
-    // `Option<HashMap<..>>` clippy suggests here is 48, which alone is more than
-    // the headroom the budget leaves. Nothing is allocated unless a
-    // CaptureBitmapKey node actually runs.
-    #[allow(clippy::box_collection)]
-    captured_bitmap_keys: Option<Box<std::collections::HashMap<i32, BitmapKey>>>,
+    /// Cold/optional per-context state boxed into a single 8-byte `Option<Box<..>>` slot
+    /// so `Context` preserves its exact `< 400 B` stack budget and `<= 1056 B / 6 allocs`
+    /// initial heap budget. Nothing is allocated until a CaptureBitmapKey node runs or
+    /// modern registration/configuration is invoked.
+    extras: Option<Box<ContextExtras>>,
+}
+
+/// Replayable input lease registered on a [`Context`] for modern Zen/media execution.
+#[derive(Clone)]
+pub(crate) enum ModernInputLease {
+    Borrowed(&'static [u8]),
+    Shared(Arc<Vec<u8>>),
+    #[cfg(feature = "streaming")]
+    ReadAt(Arc<dyn crate::media::ReadAtSource>),
+}
+
+/// Modern policy configuration frozen per job on [`Context`] via `v2/configure_context`.
+#[derive(Clone, Debug, Default)]
+pub struct ModernContextConfig {
+    /// When `true`, `add_*_input_*` stores a replayable lease without eager legacy probing.
+    pub input_registration_deferred: bool,
+    /// When `true`, opts into `WorkspacePolicy::BestEffort`; default `false` is `Strict`.
+    pub workspace_policy_best_effort: bool,
+    /// Optional explicit live memory cap in bytes (intersected with `ExecutionSecurity`).
+    pub max_memory_bytes: Option<u64>,
+    /// Optional explicit output byte cap.
+    pub max_output_bytes: Option<u64>,
+    /// Optional explicit input byte cap.
+    pub max_input_bytes: Option<u64>,
+    /// Optional explicit frame count cap.
+    pub max_frames: Option<u32>,
+    /// Optional explicit max canvas width/height cap.
+    pub max_dimension: Option<u32>,
+    /// Optional route trace entry capacity.
+    pub trace_capacity: Option<u32>,
+    /// Optional wall-clock job deadline in milliseconds for async streaming starts.
+    pub timeout_ms: Option<u64>,
+}
+
+#[derive(Default)]
+struct ContextExtras {
+    captured_bitmap_keys: std::collections::HashMap<i32, BitmapKey>,
+    modern_inputs: std::collections::HashMap<i32, ModernInputLease>,
+    modern_config: ModernContextConfig,
 }
 
 // This token is the shared state.
 #[derive(Default)]
-struct CancellationToken {
+pub(crate) struct CancellationToken {
     flag: Arc<AtomicBool>,
     #[cfg(debug_assertions)]
     poll_countdown: Arc<AtomicI64>,
@@ -174,10 +209,18 @@ impl ThreadSafeContext {
             .unwrap_or_else(|_| Err(err_oom!())) //err_oom because it doesn't allocate anything.
     }
 
-    pub fn request_cancellation(&mut self) {
+    /// Request cancellation using a shared reference (sound under concurrent FFI cancellation
+    /// while another thread holds the context lock).
+    pub fn request_cancellation_shared(&self) {
         self.cancellation_token.cancel_internal();
-        self.outward_error_mut()
+        self.outward_error
+            .write()
+            .expect("OutwardErrorBuffer.write failed: lock poisoned from a panic")
             .try_set_error(nerror!(ErrorKind::OperationCancelled, "Cancellation was requested"));
+    }
+
+    pub fn request_cancellation(&mut self) {
+        self.request_cancellation_shared();
     }
     #[cfg(debug_assertions)]
     pub fn request_cancellation_after_n_polls(&self, cancel_after_polls: i64) {
@@ -193,10 +236,38 @@ impl ThreadSafeContext {
             .read()
             .expect("OutwardErrorBuffer.write failed: lock poisoned from a panic")
     }
-    pub fn outward_error_mut(&mut self) -> RwLockWriteGuard<'_, OutwardErrorBuffer> {
+    /// Acquire a write guard on the outward error buffer through a shared reference (avoids
+    /// creating aliasing `&mut ThreadSafeContext` references at FFI boundaries).
+    pub fn outward_error_write_shared(&self) -> RwLockWriteGuard<'_, OutwardErrorBuffer> {
         self.outward_error
             .write()
             .expect("OutwardErrorBuffer.write failed: lock poisoned from a panic")
+    }
+
+    pub fn outward_error_mut(&mut self) -> RwLockWriteGuard<'_, OutwardErrorBuffer> {
+        self.outward_error_write_shared()
+    }
+
+    /// Acquire a read guard on the inner [`Context`] through a shared reference (avoids
+    /// creating aliasing `&mut ThreadSafeContext` references at FFI boundaries).
+    pub fn context_read_shared(&self) -> LockResult<RwLockReadGuard<'_, Context>> {
+        self.context.read()
+    }
+
+    /// Acquire a write guard on the inner [`Context`] through a shared reference (avoids
+    /// creating aliasing `&mut ThreadSafeContext` references at FFI boundaries).
+    pub fn context_write_shared(&self) -> LockResult<RwLockWriteGuard<'_, Context>> {
+        self.context.write()
+    }
+
+    /// Acquire write guards on both outward error buffer and inner [`Context`] through a
+    /// shared reference (sound under concurrent `imageflow_context_request_cancellation`).
+    pub fn context_and_error_write_shared(
+        &self,
+    ) -> (RwLockWriteGuard<'_, OutwardErrorBuffer>, LockResult<RwLockWriteGuard<'_, Context>>) {
+        let error = self.outward_error_write_shared();
+        let context = self.context.write();
+        (error, context)
     }
 
     pub fn context_mut_or_poisoned(&mut self) -> LockResult<RwLockWriteGuard<'_, Context>> {
@@ -313,7 +384,7 @@ impl Context {
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
-            captured_bitmap_keys: None,
+            extras: None,
         }))
     }
     fn default_codecs_capacity() -> usize {
@@ -334,7 +405,7 @@ impl Context {
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
-            captured_bitmap_keys: None,
+            extras: None,
         })
     }
     fn create_with_cancellation_token_and_can_panic(
@@ -354,7 +425,7 @@ impl Context {
                 crate::graphics::bitmaps::BitmapsContainer::with_default_capacity(),
             ),
             security: imageflow_types::ExecutionSecurity::sane_defaults(),
-            captured_bitmap_keys: None,
+            extras: None,
         }))
     }
 
@@ -386,14 +457,18 @@ impl Context {
     /// An owned, cloneable cancellation token for codec jobs that take ownership
     /// of a stop signal (zencodec `set_pulse` stores a `SharedPulse` for the
     /// duration of decode/encode). Shares the same flag as [`Context::stop`].
-    #[cfg(feature = "bmp")]
+    #[cfg(any(feature = "bmp", feature = "zen-media", feature = "streaming"))]
     #[inline]
     pub(crate) fn cancellation_token(&self) -> impl Stop + Clone + 'static {
         self.cancellation_token.clone()
     }
 
     pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
-        crate::json::invoke_with_json_error(self, method, json)
+        match crate::modern_endpoints::try_invoke(self, method, json) {
+            Ok(Some(response)) => (response, Ok(())),
+            Err(e) => (JsonResponse::from_flow_error(&e), Err(e)),
+            Ok(None) => crate::json::invoke_with_json_error(self, method, json),
+        }
     }
 
     pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<'_, BitmapsContainer>> {
@@ -445,31 +520,196 @@ impl Context {
 
     /// Retrieve a BitmapKey captured by a CaptureBitmapKey node during execution.
     pub fn get_captured_bitmap_key(&self, capture_id: i32) -> Option<BitmapKey> {
-        self.captured_bitmap_keys.as_ref()?.get(&capture_id).copied()
+        self.extras.as_ref()?.captured_bitmap_keys.get(&capture_id).copied()
     }
 
     /// Insert a captured BitmapKey (called by CaptureBitmapKey node during execution).
     pub(crate) fn insert_captured_bitmap_key(&mut self, capture_id: i32, key: BitmapKey) {
-        self.captured_bitmap_keys
-            .get_or_insert_with(|| Box::new(std::collections::HashMap::new()))
+        self.extras
+            .get_or_insert_with(|| Box::new(ContextExtras::default()))
+            .captured_bitmap_keys
             .insert(capture_id, key);
     }
 
+    /// Enable or disable deferred input registration (for modern Zen/media sources
+    /// such as MP4/WebM/IVF that lack a legacy v1 magic-byte prober).
+    pub fn set_input_registration_deferred(&mut self, deferred: bool) {
+        self.extras
+            .get_or_insert_with(|| Box::new(ContextExtras::default()))
+            .modern_config
+            .input_registration_deferred = deferred;
+    }
+
+    /// Whether deferred input registration is active on this [`Context`].
+    pub fn is_input_registration_deferred(&self) -> bool {
+        self.extras
+            .as_ref()
+            .is_some_and(|e| e.modern_config.input_registration_deferred)
+    }
+
+    /// Snapshot modern policy configuration on this [`Context`].
+    pub fn modern_config(&self) -> ModernContextConfig {
+        self.extras
+            .as_ref()
+            .map(|e| e.modern_config.clone())
+            .unwrap_or_default()
+    }
+
+    /// Mutably access modern policy configuration on this [`Context`].
+    pub fn modern_config_mut(&mut self) -> &mut ModernContextConfig {
+        &mut self
+            .extras
+            .get_or_insert_with(|| Box::new(ContextExtras::default()))
+            .modern_config
+    }
+
+    /// Clone this context's live cancellation token (`enough::Stop`).
+    #[cfg(feature = "zen-media")]
+    pub(crate) fn cancellation_stop(&self) -> CancellationToken {
+        self.cancellation_token.clone()
+    }
+
+    /// Borrow a replayable input lease registered under `io_id`, if present.
+    pub(crate) fn modern_input(&self, io_id: i32) -> Option<&ModernInputLease> {
+        self.extras.as_ref()?.modern_inputs.get(&io_id)
+    }
+
+    /// Validate that an output slot is ready for atomic modern publication.
+    pub(crate) fn can_commit_modern_output(&self, io_id: i32) -> Result<()> {
+        let codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        codec.can_commit_modern_output().map_err(|e| e.at(here!()))
+    }
+
+    /// Atomically commit finalized modern output bytes into a registered output slot.
+    pub(crate) fn commit_modern_output(&mut self, io_id: i32, data: Vec<u8>) -> Result<()> {
+        let mut codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        codec.commit_modern_output(data).map_err(|e| e.at(here!()))
+    }
+
+    /// Register a seekable `ReadAt` input source under `io_id` on a deferred `Context`.
+    #[cfg(feature = "streaming")]
+    pub fn add_input_read_at(
+        &mut self,
+        io_id: i32,
+        source: Arc<dyn crate::media::ReadAtSource>,
+    ) -> Result<()> {
+        if !self.is_input_registration_deferred() {
+            return Err(nerror!(
+                ErrorKind::InvalidState,
+                "add_input_read_at requires deferred input registration (call v2/configure_context first)"
+            ));
+        }
+        if self.io_id_present(io_id) {
+            return Err(nerror!(
+                ErrorKind::DuplicateIoId,
+                "io_id {} is already in use on this context",
+                io_id
+            ));
+        }
+        self.io_id_list.borrow_mut().push(io_id);
+        self.extras
+            .get_or_insert_with(|| Box::new(ContextExtras::default()))
+            .modern_inputs
+            .insert(io_id, ModernInputLease::ReadAt(source));
+        Ok(())
+    }
+
+    fn record_modern_input(&mut self, io_id: i32, lease: ModernInputLease) {
+        self.extras
+            .get_or_insert_with(|| Box::new(ContextExtras::default()))
+            .modern_inputs
+            .insert(io_id, lease);
+    }
+
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
+        if direction == IoDirection::In && self.is_input_registration_deferred() {
+            if self.io_id_present(io_id) {
+                return Err(nerror!(
+                    ErrorKind::DuplicateIoId,
+                    "io_id {} is already in use on this context",
+                    io_id
+                ));
+            }
+            #[cfg(feature = "streaming")]
+            {
+                let file = std::fs::File::open(path).map_err(|e| {
+                    nerror!(ErrorKind::DecodingIoError, "Failed to open input file: {}", e)
+                })?;
+                let src = Arc::new(crate::media::FileReadAtSource::new(file));
+                return self.add_input_read_at(io_id, src);
+            }
+            #[cfg(not(feature = "streaming"))]
+            {
+                let bytes = std::fs::read(path).map_err(|e| {
+                    nerror!(ErrorKind::DecodingIoError, "Failed to read input file: {}", e)
+                })?;
+                self.io_id_list.borrow_mut().push(io_id);
+                self.record_modern_input(io_id, ModernInputLease::Shared(Arc::new(bytes)));
+                return Ok(());
+            }
+        }
         let io =
             IoProxy::file_with_mode(self, io_id, path, direction).map_err(|e| e.at(here!()))?;
         self.add_io(io, io_id, direction).map_err(|e| e.at(here!()))
     }
 
     pub fn add_copied_input_buffer(&mut self, io_id: i32, bytes: &[u8]) -> Result<()> {
-        let io = IoProxy::copy_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
-
-        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        if self.is_input_registration_deferred() {
+            if self.io_id_present(io_id) {
+                return Err(nerror!(
+                    ErrorKind::DuplicateIoId,
+                    "io_id {} is already in use on this context",
+                    io_id
+                ));
+            }
+            let shared = Arc::new(bytes.to_vec());
+            self.io_id_list.borrow_mut().push(io_id);
+            self.record_modern_input(io_id, ModernInputLease::Shared(shared));
+            return Ok(());
+        }
+        #[cfg(feature = "zen-media")]
+        {
+            let shared = Arc::new(bytes.to_vec());
+            let io = IoProxy::read_shared_vec(self, io_id, Arc::clone(&shared))
+                .map_err(|e| e.at(here!()))?;
+            self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))?;
+            self.record_modern_input(io_id, ModernInputLease::Shared(shared));
+            Ok(())
+        }
+        #[cfg(not(feature = "zen-media"))]
+        {
+            let io = IoProxy::read_vec(self, io_id, bytes.to_vec()).map_err(|e| e.at(here!()))?;
+            self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        }
     }
     pub fn add_input_vector(&mut self, io_id: i32, bytes: Vec<u8>) -> Result<()> {
-        let io = IoProxy::read_vec(self, io_id, bytes).map_err(|e| e.at(here!()))?;
-
-        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        if self.is_input_registration_deferred() {
+            if self.io_id_present(io_id) {
+                return Err(nerror!(
+                    ErrorKind::DuplicateIoId,
+                    "io_id {} is already in use on this context",
+                    io_id
+                ));
+            }
+            let shared = Arc::new(bytes);
+            self.io_id_list.borrow_mut().push(io_id);
+            self.record_modern_input(io_id, ModernInputLease::Shared(shared));
+            return Ok(());
+        }
+        #[cfg(feature = "zen-media")]
+        {
+            let shared = Arc::new(bytes);
+            let io = IoProxy::read_shared_vec(self, io_id, Arc::clone(&shared))
+                .map_err(|e| e.at(here!()))?;
+            self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))?;
+            self.record_modern_input(io_id, ModernInputLease::Shared(shared));
+            Ok(())
+        }
+        #[cfg(not(feature = "zen-media"))]
+        {
+            let io = IoProxy::read_vec(self, io_id, bytes).map_err(|e| e.at(here!()))?;
+            self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        }
     }
 
     /// Zero-copy: borrows `bytes` without copying.
@@ -482,9 +722,24 @@ impl Context {
     /// The `'static` lifetime means callers must guarantee the data outlives the Context.
     /// In practice, the ABI layer (imageflow_abi) uses transmute to erase the real lifetime.
     pub fn add_input_buffer(&mut self, io_id: i32, bytes: &'static [u8]) -> Result<()> {
+        if self.is_input_registration_deferred() {
+            if self.io_id_present(io_id) {
+                return Err(nerror!(
+                    ErrorKind::DuplicateIoId,
+                    "io_id {} is already in use on this context",
+                    io_id
+                ));
+            }
+            self.io_id_list.borrow_mut().push(io_id);
+            self.record_modern_input(io_id, ModernInputLease::Borrowed(bytes));
+            return Ok(());
+        }
         let io = IoProxy::read_slice(self, io_id, bytes).map_err(|e| e.at(here!()))?;
 
-        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))?;
+        #[cfg(feature = "zen-media")]
+        self.record_modern_input(io_id, ModernInputLease::Borrowed(bytes));
+        Ok(())
     }
 
     pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
