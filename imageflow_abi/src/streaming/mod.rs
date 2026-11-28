@@ -10,7 +10,9 @@ pub mod wire;
 pub use job::{
     IfxJobV1, imageflow_stream_abi_features_v1, imageflow_stream_abi_version_v1,
     imageflow_stream_job_cancel_v1, imageflow_stream_job_copy_pending_v1,
-    imageflow_stream_job_create_v1, imageflow_stream_job_next_v1, imageflow_stream_job_release_v1,
+    imageflow_stream_job_create_v1, imageflow_stream_job_enable_progress_v1,
+    imageflow_stream_job_next_v1, imageflow_stream_job_progress_json_v1,
+    imageflow_stream_job_progress_v1, imageflow_stream_job_release_v1,
     imageflow_stream_job_reply_v1, imageflow_stream_job_result_json_v1,
 };
 #[cfg(feature = "async-ffi")]

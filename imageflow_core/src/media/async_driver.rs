@@ -22,6 +22,7 @@ use std::time::Duration;
 use tokio::sync::{Notify, OwnedSemaphorePermit};
 
 use crate::media::bindings::{IoEvent, IoInput, IoTicket, JobStop, Reply, StopCause, WorkQuota};
+use crate::media::progress::{ProgressMode, ProgressObserver};
 use crate::media::session::{CopyPendingError, MediaSession, SessionError};
 use crate::media::worker::AsyncMediaRuntime;
 use crate::ErrorCategory;
@@ -30,6 +31,25 @@ use crate::ErrorCategory;
 pub const NOTIFY_EVENT: u32 = 1 << 0;
 /// Notification flag: `STOP` has latched on this job.
 pub const NOTIFY_STOP: u32 = 1 << 1;
+/// Notification flag: paced/coalesced progress update is available via `progress_observer()`.
+pub const NOTIFY_PROGRESS: u32 = 1 << 2;
+
+/// Opt-in progress tracking mode for [`AsyncJobHandle`].
+///
+/// Default is [`AsyncProgressMode::Disabled`] (zero `PulseTree` allocation, zero progress
+/// callbacks, zero wake overhead — pure `how_far::StopOnly`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum AsyncProgressMode {
+    /// No progress tracking (zero cost; stop token only).
+    #[default]
+    Disabled,
+    /// Lock-free atomic `PulseTree` + `Observer` only (zero progress notifications/callbacks;
+    /// caller polls `progress_observer()` at its own cadence).
+    PullOnly,
+    /// Atomic `FnPulse` + `Observer` emitting paced, coalesced [`NOTIFY_PROGRESS`] wakes at most
+    /// once per `min_interval_ms` (plus on stage and terminal transitions).
+    PacedNotify { min_interval_ms: u32 },
+}
 
 /// Owned host notification hooks transferred atomically on successful async start.
 pub struct AsyncJobHooks {
@@ -315,6 +335,7 @@ pub struct AsyncJobHandle {
     stop: JobStop,
     reply_wake: Arc<Notify>,
     notifier: Arc<NotifierDispatch>,
+    progress: Option<ProgressObserver>,
 }
 
 impl Drop for AsyncJobHandle {
@@ -328,33 +349,44 @@ impl Drop for AsyncJobHandle {
 }
 
 impl AsyncJobHandle {
-    /// Start `session` on the bounded [`AsyncMediaRuntime`] with optional `deadline`.
-    ///
-    /// Takes ownership of `hooks` ONLY when returning `Ok`. On `Err` (including
-    /// [`AsyncStartError::QueueFull`]), `hooks` is returned untouched without invoking either callback.
+    /// Start `session` on the bounded [`AsyncMediaRuntime`] with optional `deadline` (zero-cost
+    /// default: progress disabled unless caller opted in on `session`).
     pub fn start(
         session: MediaSession,
         hooks: AsyncJobHooks,
         deadline: Option<Duration>,
     ) -> std::result::Result<Self, (AsyncStartError, MediaSession, AsyncJobHooks)> {
-        Self::start_internal(session, hooks, deadline, true)
+        Self::start_internal(session, hooks, deadline, true, AsyncProgressMode::Disabled)
     }
 
     /// Start `session` with host notification delivery initially paused until the caller
     /// releases its own outer handle lock and calls [`NotificationActivator::activate`].
-    ///
-    /// Activation remains strictly under the caller's authority (even if the worker finishes
-    /// immediately or the job was pre-stopped!), guaranteeing zero callbacks can fire while
-    /// outer locks or busy guards are still held.
     pub fn start_paused(
         session: MediaSession,
         hooks: AsyncJobHooks,
         deadline: Option<Duration>,
     ) -> std::result::Result<(Self, NotificationActivator), (AsyncStartError, MediaSession, AsyncJobHooks)>
     {
-        let handle = Self::start_internal(session, hooks, deadline, false)?;
+        Self::start_paused_with_progress(session, hooks, deadline, AsyncProgressMode::Disabled)
+    }
+
+    /// Start `session` paused with an explicit opt-in [`AsyncProgressMode`].
+    pub fn start_paused_with_progress(
+        session: MediaSession,
+        hooks: AsyncJobHooks,
+        deadline: Option<Duration>,
+        progress_mode: AsyncProgressMode,
+    ) -> std::result::Result<(Self, NotificationActivator), (AsyncStartError, MediaSession, AsyncJobHooks)>
+    {
+        let handle = Self::start_internal(session, hooks, deadline, false, progress_mode)?;
         let activator = NotificationActivator { notifier: Arc::clone(&handle.notifier) };
         Ok((handle, activator))
+    }
+
+    /// Return the lock-free [`ProgressObserver`] if progress tracking was opted in (`None` by default).
+    #[must_use]
+    pub fn progress_observer(&self) -> Option<&ProgressObserver> {
+        self.progress.as_ref()
     }
 
     fn start_internal(
@@ -362,6 +394,7 @@ impl AsyncJobHandle {
         hooks: AsyncJobHooks,
         deadline: Option<Duration>,
         start_activated: bool,
+        progress_mode: AsyncProgressMode,
     ) -> std::result::Result<Self, (AsyncStartError, MediaSession, AsyncJobHooks)> {
         let rt = match AsyncMediaRuntime::global() {
             Ok(r) => r,
@@ -402,6 +435,34 @@ impl AsyncJobHandle {
             (None, None) => None,
         };
         session.set_deadline_at(effective_deadline_at);
+        let notifier = Arc::new(NotifierDispatch::new(start_activated));
+
+        // Enable opt-in progress tracking strictly BEFORE converting into a movable plan.
+        let progress_observer = match progress_mode {
+            AsyncProgressMode::Disabled => session.progress_observer(),
+            AsyncProgressMode::PullOnly => match session.enable_progress(ProgressMode::PullOnly) {
+                Ok(obs) => Some(obs),
+                Err(_) => {
+                    drop(admission_permit);
+                    return Err((AsyncStartError::AlreadyStepped, session, hooks));
+                }
+            },
+            AsyncProgressMode::PacedNotify { min_interval_ms } => {
+                let p_notif = Arc::clone(&notifier);
+                let mode = ProgressMode::PacedNotify {
+                    on_notify: Arc::new(move || p_notif.signal(NOTIFY_PROGRESS)),
+                    min_interval: Duration::from_millis(u64::from(min_interval_ms.max(1))),
+                };
+                match session.enable_progress(mode) {
+                    Ok(obs) => Some(obs),
+                    Err(_) => {
+                        drop(admission_permit);
+                        return Err((AsyncStartError::AlreadyStepped, session, hooks));
+                    }
+                }
+            }
+        };
+
         let stop = session.stop_handle();
         let mut plan = match session.try_into_plan() {
             Ok(p) => p,
@@ -417,7 +478,6 @@ impl AsyncJobHandle {
 
         let release_once = Arc::new(ReleaseOnce::new(hooks.release));
         let notify_fn = hooks.notify;
-        let notifier = Arc::new(NotifierDispatch::new(start_activated));
         let state = Arc::new(Mutex::new(MailboxState {
             visible_event: None,
             pending_output: None,
@@ -564,7 +624,7 @@ impl AsyncJobHandle {
             finalizer.finish_quiesced().await;
         });
 
-        Ok(Self { state, stop, reply_wake, notifier })
+        Ok(Self { state, stop, reply_wake, notifier, progress: progress_observer })
     }
 
     /// Non-blocking poll for the currently published event (`None` => `IFX_WOULD_BLOCK`).

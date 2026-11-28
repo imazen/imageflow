@@ -1194,17 +1194,25 @@ fn inspect_still_image(
         run = run.with_pulse(p);
     }
     let probed = engine.probe(bytes, &run).map_err(crate::media::map_engine_error)?;
-    let env = &probed.inspection().envelope;
+    let insp = probed.inspection();
+    let env = &insp.envelope;
     let fmt_name = env
         .image_format
         .map_or_else(|| "unknown".to_string(), |f| format!("{f:?}").to_ascii_lowercase());
+    let (disp_w, disp_h) = insp
+        .image_info
+        .as_ref()
+        .map(|i| i.orientation.output_dimensions(env.width, env.height))
+        .unwrap_or((env.width, env.height));
+    let is_animation = env.kind == zencodecs::engine::MediaKind::Animation
+        || env.frame_count.is_some_and(|n| n > 1);
     let track = InspectTrackV2 {
         id: 1,
-        kind: "image".to_string(),
+        kind: if is_animation { "animation" } else { "image" }.to_string(),
         codec: fmt_name.clone(),
         evidence: "headers".to_string(),
         coded: Some(DimensionsV2 { width: env.width, height: env.height }),
-        display: Some(DimensionsV2 { width: env.width, height: env.height }),
+        display: Some(DimensionsV2 { width: disp_w, height: disp_h }),
         clock: None,
         duration_ticks: None,
         presentation_count: env.frame_count.map(|n| n.to_string()),

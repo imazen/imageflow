@@ -60,6 +60,18 @@ internal struct ReplyV1
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal struct ProgressV1
+{
+    internal uint Size;
+    internal uint Status;
+    internal uint Flags;
+    internal uint Reserved;
+    internal double Fraction;
+    internal double UnresolvedFraction;
+    internal U64Words Generation;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct HooksV1
 {
     internal uint Size;
@@ -85,6 +97,13 @@ internal static class WireConstants
     internal const uint StreamAbiVersionV1 = 0x0001_0000u;
     internal const uint FeatManualV1 = 1u << 0;
     internal const uint FeatAsyncV1 = 1u << 1;
+    internal const uint FeatProgressV1 = 1u << 2;
+
+    internal const uint HookProgressPull = 1u << 0;
+    internal const uint HookProgressNotify = 1u << 1;
+
+    internal const uint ProgressFlagHasFraction = 1u << 0;
+    internal const uint ProgressFlagTerminal = 1u << 1;
 
     internal const uint OpExecuteV1 = 1u;
     internal const uint OpInspectV1 = 2u;
@@ -129,6 +148,7 @@ internal static class WireConstants
 
     internal const uint NotifyEvent = 1u << 0;
     internal const uint NotifyStop = 1u << 1;
+    internal const uint NotifyProgress = 1u << 2;
 
     /// <summary>
     /// Verifies exact managed struct sizes and field offsets match <c>imageflow_stream_v1.h</c>.
@@ -139,6 +159,7 @@ internal static class WireConstants
         if (Unsafe.SizeOf<BindingV1>() != 16) throw new InvalidOperationException("BindingV1 size mismatch");
         if (Unsafe.SizeOf<EventV1>() != 56) throw new InvalidOperationException("EventV1 size mismatch");
         if (Unsafe.SizeOf<ReplyV1>() != 32) throw new InvalidOperationException("ReplyV1 size mismatch");
+        if (Unsafe.SizeOf<ProgressV1>() != 40) throw new InvalidOperationException("ProgressV1 size mismatch");
         int expectedHooks = IntPtr.Size == 8 ? 32 : 20;
         int expectedReadAt = IntPtr.Size == 8 ? 40 : 24;
         if (Unsafe.SizeOf<HooksV1>() != expectedHooks) throw new InvalidOperationException("HooksV1 size mismatch");
@@ -219,4 +240,92 @@ internal static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "imageflow_stream_job_release_v1")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial int Release(nint job);
+
+    [LibraryImport(Lib, EntryPoint = "imageflow_stream_job_enable_progress_v1")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial int EnableProgress(JobHandle job);
+
+    [LibraryImport(Lib, EntryPoint = "imageflow_stream_job_progress_v1")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial int Progress(JobHandle job, ProgressV1* outProgress);
+
+    [LibraryImport(Lib, EntryPoint = "imageflow_stream_job_progress_json_v1")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial int ProgressJson(JobHandle job, byte* dst, nuint cap, nuint* needed);
+
+    [LibraryImport(Lib, EntryPoint = "imageflow_context_has_error")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    [return: MarshalAs(UnmanagedType.I1)]
+    internal static partial bool ContextHasError(nint context);
+
+    [LibraryImport(Lib, EntryPoint = "imageflow_context_send_json")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial nint ContextSendJson(
+        nint context,
+        byte* methodUtf8NullTerm,
+        byte* json,
+        nuint jsonLen);
+
+    [LibraryImport(Lib, EntryPoint = "imageflow_json_response_read")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    [return: MarshalAs(UnmanagedType.I1)]
+    internal static partial bool JsonResponseRead(
+        nint context,
+        nint response,
+        out long httpCode,
+        out byte* utf8Ptr,
+        out nuint utf8Len);
+
+    [LibraryImport(Lib, EntryPoint = "imageflow_json_response_destroy")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    [return: MarshalAs(UnmanagedType.I1)]
+    internal static partial bool JsonResponseDestroy(nint context, nint response);
+
+    internal static (long HttpCode, string Json, bool HasError) SendContextJson(
+        SafeHandle context,
+        string method,
+        string payload)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        byte[] methodBytes = System.Text.Encoding.UTF8.GetBytes(method + "\0");
+        byte[] payloadBytes = System.Text.Encoding.UTF8.GetBytes(payload);
+        bool addedRef = false;
+        try
+        {
+            context.DangerousAddRef(ref addedRef);
+            nint raw = context.DangerousGetHandle();
+            fixed (byte* mPtr = methodBytes)
+            fixed (byte* pPtr = payloadBytes)
+            {
+                nint resp = ContextSendJson(raw, mPtr, pPtr, (nuint)payloadBytes.Length);
+                if (resp == nint.Zero)
+                {
+                    throw new InvalidOperationException($"imageflow_context_send_json('{method}') returned null response.");
+                }
+                try
+                {
+                    if (!JsonResponseRead(raw, resp, out long code, out byte* outPtr, out nuint outLen))
+                    {
+                        throw new InvalidOperationException($"imageflow_json_response_read('{method}') failed.");
+                    }
+                    string json = outLen > 0
+                        ? System.Text.Encoding.UTF8.GetString(new ReadOnlySpan<byte>(outPtr, checked((int)outLen)))
+                        : string.Empty;
+                    bool hasError = ContextHasError(raw);
+                    return (code, json, hasError);
+                }
+                finally
+                {
+                    JsonResponseDestroy(raw, resp);
+                }
+            }
+        }
+        finally
+        {
+            if (addedRef)
+            {
+                context.DangerousRelease();
+            }
+        }
+    }
 }

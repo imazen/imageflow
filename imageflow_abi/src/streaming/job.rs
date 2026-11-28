@@ -8,13 +8,13 @@ use core::mem::size_of;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::thread::ThreadId;
 
 use imageflow_core::media::{
     BindingSpec, CopyPendingError, IoEvent, IoInput, IoTicket, JobStop, MediaSession,
-    OperationKind, Reply, SessionError, StopCause, WorkQuota, host_services_from_context,
-    shared_modern_engine,
+    OperationKind, ProgressMode, ProgressObserver, ProgressStatus, Reply, SessionError, StopCause,
+    WorkQuota, host_services_from_context, shared_modern_engine,
 };
 use imageflow_core::ThreadSafeContext;
 
@@ -22,11 +22,15 @@ use crate::streaming::wire::{
     IFX_BUFFER_TOO_SMALL, IFX_BUSY, IFX_CLOSED, IFX_EVENT_COMMIT, IFX_EVENT_COMPLETE,
     IFX_EVENT_FAILED, IFX_EVENT_FLAG_INCREMENTAL, IFX_EVENT_FLUSH, IFX_EVENT_NEED_AT_LEAST,
     IFX_EVENT_NEED_LEN, IFX_EVENT_NEED_RANGE, IFX_EVENT_OUTPUT, IFX_EVENT_PATCH, IFX_EVENT_YIELD,
-    IFX_INTERNAL, IFX_INVALID_ARGUMENT, IFX_OK, IFX_REPLY_ABORTED, IFX_REPLY_ACK, IFX_REPLY_BYTES,
-    IFX_REPLY_END, IFX_REPLY_FLAG_HAS_VALUE, IFX_REPLY_IO_ERROR, IFX_REPLY_LENGTH,
+    IFX_HOOK_PROGRESS_NOTIFY, IFX_HOOK_PROGRESS_PULL, IFX_INTERNAL, IFX_INVALID_ARGUMENT, IFX_OK,
+    IFX_PROGRESS_ABANDONED, IFX_PROGRESS_CANCELLED, IFX_PROGRESS_DISABLED, IFX_PROGRESS_FAILED,
+    IFX_PROGRESS_FLAG_HAS_FRACTION, IFX_PROGRESS_FLAG_TERMINAL, IFX_PROGRESS_NOT_STARTED,
+    IFX_PROGRESS_RUNNING, IFX_PROGRESS_SUCCEEDED, IFX_REPLY_ABORTED, IFX_REPLY_ACK,
+    IFX_REPLY_BYTES, IFX_REPLY_END, IFX_REPLY_FLAG_HAS_VALUE, IFX_REPLY_IO_ERROR, IFX_REPLY_LENGTH,
     IFX_REPLY_UNKNOWN_LENGTH, IFX_RESOURCE_LIMIT, IFX_STALE_TICKET, IFX_STREAM_ABI_VERSION_V1,
-    IFX_STREAM_FEAT_ASYNC_V1, IFX_STREAM_FEAT_MANUAL_V1, IFX_UNSUPPORTED, IFX_WOULD_BLOCK,
-    IFX_WRONG_THREAD, IfxBindingV1, IfxEventV1, IfxReplyV1, IfxU64V1,
+    IFX_STREAM_FEAT_ASYNC_V1, IFX_STREAM_FEAT_MANUAL_V1, IFX_STREAM_FEAT_PROGRESS_V1,
+    IFX_UNSUPPORTED, IFX_WOULD_BLOCK, IFX_WRONG_THREAD, IfxBindingV1, IfxEventV1, IfxProgressV1,
+    IfxReplyV1, IfxU64V1,
 };
 
 #[cfg(feature = "async-ffi")]
@@ -46,6 +50,7 @@ pub struct IfxJobV1 {
     busy: AtomicBool,
     owner_thread: Mutex<Option<ThreadId>>,
     stop: JobStop,
+    progress: OnceLock<ProgressObserver>,
     state: Mutex<JobState>,
 }
 
@@ -71,16 +76,16 @@ pub extern "C" fn imageflow_stream_abi_version_v1() -> u32 {
     IFX_STREAM_ABI_VERSION_V1
 }
 
-/// Streaming ABI feature bitmask (`bit 0 = manual/read_at`, `bit 1 = async-ffi`).
+/// Streaming ABI feature bitmask (`bit 0 = manual/read_at`, `bit 1 = async-ffi`, `bit 2 = progress`).
 #[unsafe(no_mangle)]
 pub extern "C" fn imageflow_stream_abi_features_v1() -> u32 {
     #[cfg(feature = "async-ffi")]
     {
-        IFX_STREAM_FEAT_MANUAL_V1 | IFX_STREAM_FEAT_ASYNC_V1
+        IFX_STREAM_FEAT_MANUAL_V1 | IFX_STREAM_FEAT_ASYNC_V1 | IFX_STREAM_FEAT_PROGRESS_V1
     }
     #[cfg(not(feature = "async-ffi"))]
     {
-        IFX_STREAM_FEAT_MANUAL_V1
+        IFX_STREAM_FEAT_MANUAL_V1 | IFX_STREAM_FEAT_PROGRESS_V1
     }
 }
 
@@ -159,6 +164,7 @@ pub unsafe extern "C" fn imageflow_stream_job_create_v1(
             busy: AtomicBool::new(false),
             owner_thread: Mutex::new(None),
             stop,
+            progress: OnceLock::new(),
             state: Mutex::new(JobState::Manual { session, stepped: false }),
         });
         unsafe {
@@ -452,6 +458,140 @@ pub unsafe extern "C" fn imageflow_stream_job_release_v1(job: *mut IfxJobV1) -> 
     res.unwrap_or(IFX_INTERNAL)
 }
 
+/// Opt in to lock-free atomic progress tracking on an un-stepped job before manual stepping or
+/// async start. When omitted (and `hooks.flags == 0`), the job incurs zero progress overhead.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn imageflow_stream_job_enable_progress_v1(job: *mut IfxJobV1) -> i32 {
+    if job.is_null() {
+        return IFX_INVALID_ARGUMENT;
+    }
+    let res = catch_unwind(AssertUnwindSafe(|| {
+        let j = unsafe { &*job };
+        let Some(_busy) = BusyGuard::try_acquire(&j.busy) else {
+            return IFX_BUSY;
+        };
+        let Ok(mut state) = j.state.lock() else {
+            return IFX_INTERNAL;
+        };
+        match &mut *state {
+            JobState::Manual { session, stepped: false } => {
+                match session.enable_progress(ProgressMode::PullOnly) {
+                    Ok(obs) => {
+                        let _ = j.progress.set(obs);
+                        IFX_OK
+                    }
+                    Err(e) => map_session_err(&e),
+                }
+            }
+            _ => IFX_INVALID_ARGUMENT,
+        }
+    }));
+    res.unwrap_or(IFX_INTERNAL)
+}
+
+/// Thread-safe, non-blocking progress summary read (safe to call concurrently with `next`/`reply`/`cancel`).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn imageflow_stream_job_progress_v1(
+    job: *mut IfxJobV1,
+    out_progress: *mut IfxProgressV1,
+) -> i32 {
+    if job.is_null() || out_progress.is_null() {
+        return IFX_INVALID_ARGUMENT;
+    }
+    let res = catch_unwind(AssertUnwindSafe(|| {
+        let caller_size = unsafe { (*out_progress).size };
+        if caller_size as usize != size_of::<IfxProgressV1>() {
+            return IFX_INVALID_ARGUMENT;
+        }
+        let j = unsafe { &*job };
+        let Some(obs) = j.progress.get() else {
+            unsafe {
+                *out_progress = IfxProgressV1 {
+                    size: size_of::<IfxProgressV1>() as u32,
+                    status: IFX_PROGRESS_DISABLED,
+                    flags: 0,
+                    reserved: 0,
+                    fraction: 0.0,
+                    unresolved_fraction: 1.0,
+                    generation: IfxU64V1::from_u64(0),
+                };
+            }
+            return IFX_OK;
+        };
+        let Some(sum) = obs.try_summary() else {
+            return IFX_WOULD_BLOCK;
+        };
+        let status = match sum.status {
+            ProgressStatus::Disabled => IFX_PROGRESS_DISABLED,
+            ProgressStatus::NotStarted => IFX_PROGRESS_NOT_STARTED,
+            ProgressStatus::Running => IFX_PROGRESS_RUNNING,
+            ProgressStatus::Succeeded => IFX_PROGRESS_SUCCEEDED,
+            ProgressStatus::Failed => IFX_PROGRESS_FAILED,
+            ProgressStatus::Cancelled => IFX_PROGRESS_CANCELLED,
+            ProgressStatus::Abandoned => IFX_PROGRESS_ABANDONED,
+        };
+        let mut flags = 0u32;
+        if sum.fraction.is_some() {
+            flags |= IFX_PROGRESS_FLAG_HAS_FRACTION;
+        }
+        if sum.is_terminal {
+            flags |= IFX_PROGRESS_FLAG_TERMINAL;
+        }
+        unsafe {
+            *out_progress = IfxProgressV1 {
+                size: size_of::<IfxProgressV1>() as u32,
+                status,
+                flags,
+                reserved: 0,
+                fraction: sum.fraction.unwrap_or(0.0),
+                unresolved_fraction: sum.unresolved_fraction,
+                generation: IfxU64V1::from_u64(sum.generation),
+            };
+        }
+        IFX_OK
+    }));
+    res.unwrap_or(IFX_INTERNAL)
+}
+
+/// Thread-safe, non-blocking export of the versioned (`schema_version: 2`) phase-tree snapshot JSON.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn imageflow_stream_job_progress_json_v1(
+    job: *mut IfxJobV1,
+    dst: *mut u8,
+    cap: usize,
+    needed: *mut usize,
+) -> i32 {
+    if job.is_null() || needed.is_null() || cap > (isize::MAX as usize) {
+        return IFX_INVALID_ARGUMENT;
+    }
+    if cap > 0 && dst.is_null() {
+        return IFX_INVALID_ARGUMENT;
+    }
+    let res = catch_unwind(AssertUnwindSafe(|| {
+        let j = unsafe { &*job };
+        let Some(obs) = j.progress.get() else {
+            return IFX_UNSUPPORTED;
+        };
+        let Some(json) = obs.try_snapshot_json() else {
+            return IFX_WOULD_BLOCK;
+        };
+        let bytes = json.as_bytes();
+        unsafe {
+            *needed = bytes.len();
+        }
+        if cap < bytes.len() {
+            return IFX_BUFFER_TOO_SMALL;
+        }
+        if !bytes.is_empty() {
+            unsafe {
+                ptr::copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len());
+            }
+        }
+        IFX_OK
+    }));
+    res.unwrap_or(IFX_INTERNAL)
+}
+
 /// Transition a freshly created un-stepped job onto the Tokio async driver (`async-ffi`).
 ///
 /// Takes ownership of `hooks->user` + `release_user` ONLY on returning `IFX_OK`.
@@ -474,9 +614,19 @@ pub unsafe extern "C" fn imageflow_stream_job_start_async_v1(
                 return IFX_BUSY;
             };
             let raw_hooks = unsafe { *hooks };
-            if raw_hooks.size as usize != size_of::<IfxAsyncHooksV1>() || raw_hooks.flags != 0 {
+            let allowed_hook_flags = IFX_HOOK_PROGRESS_PULL | IFX_HOOK_PROGRESS_NOTIFY;
+            if raw_hooks.size as usize != size_of::<IfxAsyncHooksV1>()
+                || (raw_hooks.flags & !allowed_hook_flags) != 0
+            {
                 return IFX_INVALID_ARGUMENT;
             }
+            let progress_mode = if (raw_hooks.flags & IFX_HOOK_PROGRESS_NOTIFY) != 0 {
+                imageflow_core::media::AsyncProgressMode::PacedNotify { min_interval_ms: 50 }
+            } else if (raw_hooks.flags & IFX_HOOK_PROGRESS_PULL) != 0 {
+                imageflow_core::media::AsyncProgressMode::PullOnly
+            } else {
+                imageflow_core::media::AsyncProgressMode::Disabled
+            };
             let Some(notify_fn) = raw_hooks.notify else {
                 return IFX_INVALID_ARGUMENT;
             };
@@ -527,8 +677,16 @@ pub unsafe extern "C" fn imageflow_stream_job_start_async_v1(
                 unreachable!();
             };
 
-            match imageflow_core::media::AsyncJobHandle::start_paused(session, rust_hooks, None) {
+            match imageflow_core::media::AsyncJobHandle::start_paused_with_progress(
+                session,
+                rust_hooks,
+                None,
+                progress_mode,
+            ) {
                 Ok((handle, activator)) => {
+                    if let Some(obs) = handle.progress_observer() {
+                        let _ = j.progress.set(obs.clone());
+                    }
                     *state = JobState::Async(handle);
                     activator
                 }

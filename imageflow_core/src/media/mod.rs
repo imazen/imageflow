@@ -7,6 +7,8 @@
 #[cfg(feature = "streaming-async")]
 pub mod async_driver;
 pub mod bindings;
+#[cfg(feature = "streaming")]
+pub mod progress;
 pub mod report;
 #[cfg(feature = "streaming")]
 pub mod session;
@@ -14,11 +16,16 @@ pub mod session;
 pub mod worker;
 
 #[cfg(feature = "streaming-async")]
-pub use async_driver::{AsyncJobHandle, AsyncJobHooks, AsyncStartError, NotificationActivator};
+pub use async_driver::{
+    AsyncJobHandle, AsyncJobHooks, AsyncProgressMode, AsyncStartError, NOTIFY_EVENT,
+    NOTIFY_PROGRESS, NOTIFY_STOP, NotificationActivator,
+};
 pub use bindings::{
     BindingAccess, BindingSpec, FileReadAtSource, IoEvent, IoInput, IoTicket, JobStop,
     OperationKind, ReadAtSource, Reply, SliceReadAtSource, StopCause, Visibility, WorkQuota,
 };
+#[cfg(feature = "streaming")]
+pub use progress::{ProgressMode, ProgressObserver, ProgressStatus, ProgressSummary};
 pub use report::{
     build_capabilities_report, CapabilitiesReportV2, ClockV2, CompareMetricResultV2,
     CompareReportV2, DimensionsV2, EstimateReportV2, InspectReportV2, InspectTrackV2,

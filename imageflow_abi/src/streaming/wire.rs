@@ -9,6 +9,25 @@ use core::mem::{offset_of, size_of};
 pub const IFX_STREAM_ABI_VERSION_V1: u32 = 0x0001_0000;
 pub const IFX_STREAM_FEAT_MANUAL_V1: u32 = 1 << 0;
 pub const IFX_STREAM_FEAT_ASYNC_V1: u32 = 1 << 1;
+pub const IFX_STREAM_FEAT_PROGRESS_V1: u32 = 1 << 2;
+
+pub const IFX_HOOK_PROGRESS_PULL: u32 = 1 << 0;
+pub const IFX_HOOK_PROGRESS_NOTIFY: u32 = 1 << 1;
+
+pub const IFX_NOTIFY_EVENT: u32 = 1 << 0;
+pub const IFX_NOTIFY_STOP: u32 = 1 << 1;
+pub const IFX_NOTIFY_PROGRESS: u32 = 1 << 2;
+
+pub const IFX_PROGRESS_DISABLED: u32 = 0;
+pub const IFX_PROGRESS_NOT_STARTED: u32 = 1;
+pub const IFX_PROGRESS_RUNNING: u32 = 2;
+pub const IFX_PROGRESS_SUCCEEDED: u32 = 3;
+pub const IFX_PROGRESS_FAILED: u32 = 4;
+pub const IFX_PROGRESS_CANCELLED: u32 = 5;
+pub const IFX_PROGRESS_ABANDONED: u32 = 6;
+
+pub const IFX_PROGRESS_FLAG_HAS_FRACTION: u32 = 1 << 0;
+pub const IFX_PROGRESS_FLAG_TERMINAL: u32 = 1 << 1;
 
 pub const IFX_OK: i32 = 0;
 pub const IFX_WOULD_BLOCK: i32 = 1;
@@ -104,6 +123,19 @@ pub struct IfxReplyV1 {
     pub value: IfxU64V1,
 }
 
+/// Fixed-layout non-blocking progress snapshot (40 bytes; identical offsets on 32-bit & 64-bit).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct IfxProgressV1 {
+    pub size: u32,
+    pub status: u32,
+    pub flags: u32,
+    pub reserved: u32,
+    pub fraction: f64,
+    pub unresolved_fraction: f64,
+    pub generation: IfxU64V1,
+}
+
 pub type IfxNotifyV1 = unsafe extern "C" fn(*mut c_void, u32);
 pub type IfxReleaseUserV1 = unsafe extern "C" fn(*mut c_void);
 pub type IfxReadAtFnV1 =
@@ -163,6 +195,15 @@ const _: () = {
     assert!(offset_of!(IfxReplyV1, reserved) == 12);
     assert!(offset_of!(IfxReplyV1, ticket) == 16);
     assert!(offset_of!(IfxReplyV1, value) == 24);
+
+    assert!(size_of::<IfxProgressV1>() == 40);
+    assert!(offset_of!(IfxProgressV1, size) == 0);
+    assert!(offset_of!(IfxProgressV1, status) == 4);
+    assert!(offset_of!(IfxProgressV1, flags) == 8);
+    assert!(offset_of!(IfxProgressV1, reserved) == 12);
+    assert!(offset_of!(IfxProgressV1, fraction) == 16);
+    assert!(offset_of!(IfxProgressV1, unresolved_fraction) == 24);
+    assert!(offset_of!(IfxProgressV1, generation) == 32);
 
     #[cfg(target_pointer_width = "64")]
     {

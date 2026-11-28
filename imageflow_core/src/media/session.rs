@@ -34,6 +34,7 @@ use crate::media::bindings::{
     BindingAccess, BindingSpec, DeadlineJobStop, IoEvent, IoInput, IoTicket, JobStop,
     OperationKind, Reply, StopCause, Visibility, WorkQuota,
 };
+use crate::media::progress::{ProgressMode, ProgressObserver, ProgressTracker};
 use crate::media::report::{
     build_estimate_report, inspect_bytes_with_stop, probe_selected_video_track_descriptor,
     select_mux_offer_for_route, video_codec_token, PublicationReceiptV2, StreamErrorReportV2,
@@ -179,6 +180,7 @@ pub struct MediaSessionPlan {
     deadline: Option<Duration>,
     deadline_at: Option<Instant>,
     transfer_max: u32,
+    progress_tracker: Option<ProgressTracker>,
 }
 
 #[cfg(feature = "streaming-async")]
@@ -251,6 +253,7 @@ pub struct MediaSession {
     deadline: Option<Duration>,
     deadline_at: Option<Instant>,
     transfer_max: u32,
+    progress_tracker: Option<ProgressTracker>,
 }
 
 impl MediaSession {
@@ -579,7 +582,44 @@ impl MediaSession {
             deadline,
             deadline_at,
             transfer_max: DEFAULT_TRANSFER_MAX,
+            progress_tracker: None,
         })
+    }
+
+    /// Opt in to lock-free atomic `how-far-along` progress tracking before the first step or async
+    /// start. When never called, this session runs with ZERO progress tracking allocation or cost.
+    pub fn enable_progress(
+        &mut self,
+        mode: ProgressMode,
+    ) -> std::result::Result<ProgressObserver, SessionError> {
+        if self.next_ticket != 1
+            || self.lifecycle != Lifecycle::Running
+            || !matches!(self.active_wait, ActiveWait::None)
+            || matches!(self.mode, SessionMode::Execute { direct_pump: Some(_), .. })
+        {
+            return Err(SessionError::InvalidArgument(
+                "progress tracking must be enabled before stepping or starting the session"
+                    .to_string(),
+            ));
+        }
+        if let Some(ref existing) = self.progress_tracker {
+            if matches!(mode, ProgressMode::PacedNotify { .. }) && !existing.is_notify_enabled() {
+                return Err(SessionError::InvalidArgument(
+                    "progress already enabled in pull-only mode; pass IFX_HOOK_PROGRESS_NOTIFY on async start instead of calling enable_progress first"
+                        .to_string(),
+                ));
+            }
+            return Ok(existing.observer());
+        }
+        let (tracker, observer) = ProgressTracker::new(self.deadline_stop(), mode);
+        self.progress_tracker = Some(tracker);
+        Ok(observer)
+    }
+
+    /// Return the progress observer if progress tracking was opted in (`None` by default).
+    #[must_use]
+    pub fn progress_observer(&self) -> Option<ProgressObserver> {
+        self.progress_tracker.as_ref().map(ProgressTracker::observer)
     }
 
     /// Borrow this session's thread-safe [`JobStop`] controller.
@@ -656,8 +696,17 @@ impl MediaSession {
         DeadlineJobStop::new(self.stop.clone(), self.deadline_at)
     }
 
-    fn deadline_pulse(&self) -> zc::SharedPulse {
+    fn stop_only_pulse(&self) -> zc::SharedPulse {
         zc::SharedPulse::new(zc::how_far::StopOnly::new(self.deadline_stop()))
+    }
+
+    fn deadline_pulse(&mut self) -> zc::SharedPulse {
+        if let Some(ref mut tracker) = self.progress_tracker
+            && let Some(p) = tracker.begin_process()
+        {
+            return p;
+        }
+        self.stop_only_pulse()
     }
 
     /// Override per-transfer I/O credit ceiling (clamped to `1..=256 KiB`). Useful for testing
@@ -723,6 +772,7 @@ impl MediaSession {
             deadline: self.deadline,
             deadline_at: self.deadline_at,
             transfer_max: self.transfer_max,
+            progress_tracker: self.progress_tracker,
         })
     }
 
@@ -758,6 +808,7 @@ impl MediaSession {
             deadline: plan.deadline,
             deadline_at: plan.deadline_at,
             transfer_max: plan.transfer_max,
+            progress_tracker: plan.progress_tracker,
         }
     }
 
@@ -1045,6 +1096,11 @@ impl MediaSession {
                 if !taken.is_patch {
                     sink.accepted_bytes = sink.accepted_bytes.saturating_add(bytes);
                 }
+                if let Some(ref mut tracker) = self.progress_tracker
+                    && !taken.is_patch
+                {
+                    tracker.advance_output(bytes);
+                }
                 taken.sent_offset += acked;
                 taken.offset = taken.offset.saturating_add(bytes);
                 taken.pump_total_acked += acked;
@@ -1110,7 +1166,7 @@ impl MediaSession {
                     }
                 }
                 self.terminal_json = self.staged_result_json.take();
-                self.lifecycle = Lifecycle::Complete;
+                self.complete_session();
                 Ok(())
             }
             ActiveWait::None => Err(SessionError::StaleTicket),
@@ -1142,6 +1198,9 @@ impl MediaSession {
                     self.active_wait = ActiveWait::None;
                     self.inputs[input_idx].known_len = Some(len);
                     self.inputs[input_idx].len_queried = true;
+                    if let Some(ref mut tracker) = self.progress_tracker {
+                        tracker.set_input_total(len);
+                    }
                     if let Some(pt) = pump_ticket
                         && let SessionMode::Execute { direct_pump: Some(ref mut drv), .. } =
                             self.mode
@@ -1198,6 +1257,9 @@ impl MediaSession {
                             ),
                         );
                         return Ok(());
+                    }
+                    if let Some(ref mut tracker) = self.progress_tracker {
+                        tracker.advance_input(chunk.len() as u64);
                     }
                     if pump_ticket.is_some() {
                         self.active_wait = ActiveWait::None;
@@ -1578,7 +1640,7 @@ impl MediaSession {
                             &pump_services,
                             &self.inputs[0].data,
                             &intent.tracks,
-                            Some(self.deadline_pulse()),
+                            Some(self.stop_only_pulse()),
                         )
                     {
                         let fwd_check = select_mux_offer_for_route(
@@ -2155,7 +2217,7 @@ impl MediaSession {
                     &rem_services,
                     &out_header,
                     &TrackPolicy::DropNonVideo,
-                    Some(self.deadline_pulse()),
+                    Some(self.stop_only_pulse()),
                 ) {
                     d
                 } else {
@@ -2273,7 +2335,7 @@ impl MediaSession {
             return;
         }
         let deadline_stop = self.deadline_stop();
-        let pulse = zc::SharedPulse::new(zc::how_far::StopOnly::new(deadline_stop.clone()));
+        let pulse = self.deadline_pulse();
         let rem_services = self.services_with_remaining_budget();
 
         match &self.mode {
@@ -2308,7 +2370,7 @@ impl MediaSession {
                         match serde_json::to_vec(&report) {
                             Ok(json) => {
                                 self.terminal_json = Some(json);
-                                self.lifecycle = Lifecycle::Complete;
+                                self.complete_session();
                             }
                             Err(e) => self.fail_with(
                                 ErrorCategory::InternalError,
@@ -2361,7 +2423,7 @@ impl MediaSession {
                         match serde_json::to_vec(&report) {
                             Ok(json) => {
                                 self.terminal_json = Some(json);
-                                self.lifecycle = Lifecycle::Complete;
+                                self.complete_session();
                             }
                             Err(e) => self.fail_with(
                                 ErrorCategory::InternalError,
@@ -2565,8 +2627,15 @@ impl MediaSession {
         }
 
         self.terminal_json = self.staged_result_json.take();
-        self.lifecycle = Lifecycle::Complete;
+        self.complete_session();
         Ok(Some(IoEvent::Complete))
+    }
+
+    fn complete_session(&mut self) {
+        self.lifecycle = Lifecycle::Complete;
+        if let Some(ref mut tracker) = self.progress_tracker {
+            tracker.finish_succeeded();
+        }
     }
 
     fn alloc_ticket(&mut self) -> std::result::Result<IoTicket, SessionError> {
@@ -2712,6 +2781,9 @@ impl MediaSession {
             self.queued_outputs.drain(..).map(|(_, buf)| buf.len() as u64).sum();
         self.release_mem(freed_queued);
         self.lifecycle = Lifecycle::Failed { category, cause };
+        if let Some(ref mut tracker) = self.progress_tracker {
+            tracker.finish_failed(cause);
+        }
         let publications = self
             .sinks
             .iter()

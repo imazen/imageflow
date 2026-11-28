@@ -97,6 +97,7 @@ zenpipe = { git = "https://github.com/imazen/zenpipe", rev = "07885b2e21a1032d2e
 zencodecs = { git = "https://github.com/imazen/zenpipe", rev = "07885b2e21a1032d2eee10e51e509b163b09373c", optional = true, default-features = false }
 zencodec-media = { version = "0.2.0", optional = true, default-features = false }
 zencodec-io = { version = "0.2.0", optional = true, default-features = false }
+how-far-along = { version = "0.1.0", optional = true }
 whereat = { version = "0.1.5", optional = true }
 tokio = { version = "1", optional = true, default-features = false, features = ["rt-multi-thread", "sync", "time", "io-util"] }
 
@@ -211,7 +212,7 @@ vp9 = ["zen-media", "zenpipe/vp9", "zenpipe/vp9-encode", "zencodecs/vp9", "zenco
 # Convenience bundle for full first-class AV1/VP8/VP9 x MP4/WebM/IVF support.
 all-media = ["mp4", "webm", "ivf", "av1", "vp8", "vp9"]
 # Opt-in sans-I/O streaming execution and ReadAt source support (zero Tokio dependency).
-streaming = ["zen-media"]
+streaming = ["zen-media", "dep:how-far-along"]
 # Opt-in Tokio-backed async streaming driver and bounded compute scheduler.
 streaming-async = ["streaming", "dep:tokio"]
 # Feature to enable OpenAPI schema generation capabilities

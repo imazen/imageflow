@@ -132,6 +132,12 @@ int main(void) {{
         offsetof(IfxReplyV1, flags) == 8 && offsetof(IfxReplyV1, reserved) == 12 &&
         offsetof(IfxReplyV1, ticket) == 16 && offsetof(IfxReplyV1, value) == 24, "IfxReplyV1 offsets");
 
+    CHK(sizeof(IfxProgressV1) == 40, "IfxProgressV1 size");
+    CHK(offsetof(IfxProgressV1, size) == 0 && offsetof(IfxProgressV1, status) == 4 &&
+        offsetof(IfxProgressV1, flags) == 8 && offsetof(IfxProgressV1, reserved) == 12 &&
+        offsetof(IfxProgressV1, fraction) == 16 && offsetof(IfxProgressV1, unresolved_fraction) == 24 &&
+        offsetof(IfxProgressV1, generation) == 32, "IfxProgressV1 offsets");
+
     size_t ptr_sz = sizeof(void *);
     CHK(sizeof(IfxAsyncHooksV1) == (ptr_sz == 8 ? 32 : 20), "IfxAsyncHooksV1 size");
     CHK(sizeof(IfxReadAtV1) == (ptr_sz == 8 ? 40 : 24), "IfxReadAtV1 size");
@@ -169,7 +175,7 @@ fn streaming_abi_manual_read_at_wrong_thread_and_async_lifecycle() {
     assert_eq!(imageflow_stream_abi_version_v1(), IFX_STREAM_ABI_VERSION_V1);
     assert_eq!(
         imageflow_stream_abi_features_v1(),
-        IFX_STREAM_FEAT_MANUAL_V1 | IFX_STREAM_FEAT_ASYNC_V1
+        IFX_STREAM_FEAT_MANUAL_V1 | IFX_STREAM_FEAT_ASYNC_V1 | IFX_STREAM_FEAT_PROGRESS_V1
     );
     assert_eq!(unsafe { imageflow_stream_job_release_v1(ptr::null_mut()) }, IFX_OK);
 
@@ -676,4 +682,233 @@ fn c_abi_v2_capabilities_and_v2_compare_roundtrip() {
     unsafe { imageflow_json_response_destroy(cmp_ctx, cmp_resp as *mut _) };
     unsafe { imageflow_context_destroy(cmp_ctx) };
     unsafe { imageflow_context_destroy(ctx) };
+}
+
+#[test]
+fn streaming_abi_v1_progress_zero_cost_pull_only_and_paced_notify() {
+    assert_ne!(imageflow_stream_abi_features_v1() & IFX_STREAM_FEAT_PROGRESS_V1, 0);
+
+    let job_json = br#"{
+        "inputs": {},
+        "outputs": {"out": 1},
+        "pipeline": {
+            "steps": [
+                {"canvas": {"width": 16, "height": 16, "fill": [40, 140, 220, 255]}},
+                {"encode": {"output": "out", "format": "png"}}
+            ]
+        }
+    }"#;
+    let binding = IfxBindingV1 {
+        size: size_of::<IfxBindingV1>() as u32,
+        io_id: 1,
+        flags: (1 << 1) | (1 << 3), // Sink + Incremental
+        reserved: 0,
+    };
+
+    let make_job = || -> *mut IfxJobV1 {
+        let ctx = imageflow_context_create(3, 2);
+        assert!(!ctx.is_null());
+        let mut job: *mut IfxJobV1 = ptr::null_mut();
+        assert_eq!(
+            unsafe {
+                imageflow_stream_job_create_v1(
+                    ctx,
+                    1,
+                    job_json.as_ptr(),
+                    job_json.len(),
+                    &binding,
+                    1,
+                    &mut job,
+                )
+            },
+            IFX_OK
+        );
+        unsafe { imageflow_context_destroy(ctx) };
+        job
+    };
+
+    let drive_async_to_completion = |job: *mut IfxJobV1, hook_flags: u32| -> u32 {
+        let releases = Arc::new(AtomicUsize::new(0));
+        let observed = Arc::new((Mutex::new(0u32), Condvar::new()));
+        struct Cookie {
+            observed: Arc<(Mutex<u32>, Condvar)>,
+            releases: Arc<AtomicUsize>,
+        }
+        unsafe extern "C" fn on_notify(user: *mut c_void, flags: u32) {
+            let c = unsafe { &*(user as *const Cookie) };
+            let mut g = c.observed.0.lock().unwrap();
+            *g |= flags;
+            c.observed.1.notify_all();
+        }
+        unsafe extern "C" fn on_release(user: *mut c_void) {
+            let b = unsafe { Box::from_raw(user as *mut Cookie) };
+            b.releases.fetch_add(1, Ordering::SeqCst);
+        }
+
+        let raw = Box::into_raw(Box::new(Cookie {
+            observed: Arc::clone(&observed),
+            releases: Arc::clone(&releases),
+        }));
+        let hooks = IfxAsyncHooksV1 {
+            size: size_of::<IfxAsyncHooksV1>() as u32,
+            flags: hook_flags,
+            user: raw as *mut c_void,
+            notify: Some(on_notify),
+            release_user: Some(on_release),
+        };
+        assert_eq!(unsafe { imageflow_stream_job_start_async_v1(job, &hooks) }, IFX_OK);
+
+        let mut ev = IfxEventV1 { size: size_of::<IfxEventV1>() as u32, ..Default::default() };
+        loop {
+            let rc = unsafe { imageflow_stream_job_next_v1(job, 0, &mut ev) };
+            if rc == IFX_WOULD_BLOCK {
+                std::thread::yield_now();
+                continue;
+            }
+            assert_eq!(rc, IFX_OK);
+            match ev.kind {
+                IFX_EVENT_OUTPUT => {
+                    let rep = IfxReplyV1 {
+                        size: size_of::<IfxReplyV1>() as u32,
+                        code: IFX_REPLY_ACK,
+                        flags: 0,
+                        reserved: 0,
+                        ticket: ev.ticket,
+                        value: ev.length,
+                    };
+                    assert_eq!(
+                        unsafe { imageflow_stream_job_reply_v1(job, &rep, ptr::null(), 0) },
+                        IFX_OK
+                    );
+                }
+                IFX_EVENT_FLUSH => {
+                    let rep = IfxReplyV1 {
+                        size: size_of::<IfxReplyV1>() as u32,
+                        code: IFX_REPLY_ACK,
+                        flags: 0,
+                        reserved: 0,
+                        ticket: ev.ticket,
+                        value: IfxU64V1::from_u64(0),
+                    };
+                    assert_eq!(
+                        unsafe { imageflow_stream_job_reply_v1(job, &rep, ptr::null(), 0) },
+                        IFX_OK
+                    );
+                }
+                IFX_EVENT_COMPLETE => break,
+                other => panic!("unexpected event kind {other}"),
+            }
+        }
+        let dl = Instant::now() + Duration::from_secs(2);
+        while releases.load(Ordering::SeqCst) == 0 && Instant::now() < dl {
+            std::thread::yield_now();
+        }
+        assert_eq!(releases.load(Ordering::SeqCst), 1);
+        *observed.0.lock().unwrap()
+    };
+
+    // 1. Default zero-cost mode (hooks.flags == 0): progress stays DISABLED and ZERO IFX_NOTIFY_PROGRESS!
+    {
+        let job = make_job();
+        let mut p = IfxProgressV1 { size: size_of::<IfxProgressV1>() as u32, ..Default::default() };
+        assert_eq!(unsafe { imageflow_stream_job_progress_v1(job, &mut p) }, IFX_OK);
+        assert_eq!(p.status, IFX_PROGRESS_DISABLED);
+        let mut needed = 0usize;
+        assert_eq!(
+            unsafe { imageflow_stream_job_progress_json_v1(job, ptr::null_mut(), 0, &mut needed) },
+            IFX_UNSUPPORTED
+        );
+        let flags = drive_async_to_completion(job, 0);
+        assert_eq!(
+            flags & IFX_NOTIFY_PROGRESS,
+            0,
+            "zero-cost default must NEVER emit IFX_NOTIFY_PROGRESS"
+        );
+        assert_eq!(unsafe { imageflow_stream_job_progress_v1(job, &mut p) }, IFX_OK);
+        assert_eq!(p.status, IFX_PROGRESS_DISABLED);
+        assert_eq!(unsafe { imageflow_stream_job_release_v1(job) }, IFX_OK);
+    }
+
+    // 2. PullOnly mode (IFX_HOOK_PROGRESS_PULL): ZERO IFX_NOTIFY_PROGRESS, full atomic summary + JSON!
+    {
+        let job = make_job();
+        let flags = drive_async_to_completion(job, IFX_HOOK_PROGRESS_PULL);
+        assert_eq!(
+            flags & IFX_NOTIFY_PROGRESS,
+            0,
+            "PullOnly mode must NEVER emit IFX_NOTIFY_PROGRESS"
+        );
+        let mut p = IfxProgressV1 { size: size_of::<IfxProgressV1>() as u32, ..Default::default() };
+        assert_eq!(unsafe { imageflow_stream_job_progress_v1(job, &mut p) }, IFX_OK);
+        assert_eq!(p.status, IFX_PROGRESS_SUCCEEDED);
+        assert_ne!(p.flags & IFX_PROGRESS_FLAG_TERMINAL, 0);
+        assert_ne!(p.flags & IFX_PROGRESS_FLAG_HAS_FRACTION, 0);
+        assert!((p.fraction - 1.0).abs() < 1e-6);
+
+        let mut needed = 0usize;
+        assert_eq!(
+            unsafe { imageflow_stream_job_progress_json_v1(job, ptr::null_mut(), 0, &mut needed) },
+            IFX_BUFFER_TOO_SMALL
+        );
+        let mut jbuf = vec![0u8; needed];
+        assert_eq!(
+            unsafe {
+                imageflow_stream_job_progress_json_v1(
+                    job,
+                    jbuf.as_mut_ptr(),
+                    jbuf.len(),
+                    &mut needed,
+                )
+            },
+            IFX_OK
+        );
+        let jv: serde_json::Value = serde_json::from_slice(&jbuf).unwrap();
+        assert_eq!(jv["schema_version"], 2);
+        assert_eq!(unsafe { imageflow_stream_job_release_v1(job) }, IFX_OK);
+    }
+
+    // 3. PacedNotify mode (IFX_HOOK_PROGRESS_NOTIFY): emits IFX_NOTIFY_PROGRESS and reaches SUCCEEDED!
+    {
+        let job = make_job();
+        let flags = drive_async_to_completion(job, IFX_HOOK_PROGRESS_NOTIFY);
+        assert_ne!(
+            flags & IFX_NOTIFY_PROGRESS,
+            0,
+            "PacedNotify mode must deliver IFX_NOTIFY_PROGRESS"
+        );
+        let mut p = IfxProgressV1 { size: size_of::<IfxProgressV1>() as u32, ..Default::default() };
+        assert_eq!(unsafe { imageflow_stream_job_progress_v1(job, &mut p) }, IFX_OK);
+        assert_eq!(p.status, IFX_PROGRESS_SUCCEEDED);
+        assert!((p.fraction - 1.0).abs() < 1e-6);
+        assert_eq!(unsafe { imageflow_stream_job_release_v1(job) }, IFX_OK);
+    }
+
+    // 4. Manual enable_progress_v1 + conflicting PacedNotify rejection without leaking hooks!
+    {
+        let job = make_job();
+        assert_eq!(unsafe { imageflow_stream_job_enable_progress_v1(job) }, IFX_OK);
+        let mut p = IfxProgressV1 { size: size_of::<IfxProgressV1>() as u32, ..Default::default() };
+        assert_eq!(unsafe { imageflow_stream_job_progress_v1(job, &mut p) }, IFX_OK);
+        assert_eq!(p.status, IFX_PROGRESS_NOT_STARTED);
+
+        let dummy_rel = Arc::new(AtomicUsize::new(0));
+        let dummy_cookie = Box::into_raw(Box::new(AsyncCookie {
+            pair: (Mutex::new(0u32), Condvar::new()),
+            releases: Arc::clone(&dummy_rel),
+        }));
+        let conflict_hooks = IfxAsyncHooksV1 {
+            size: size_of::<IfxAsyncHooksV1>() as u32,
+            flags: IFX_HOOK_PROGRESS_NOTIFY,
+            user: dummy_cookie as *mut c_void,
+            notify: Some(test_notify),
+            release_user: Some(test_release_async),
+        };
+        assert_eq!(
+            unsafe { imageflow_stream_job_start_async_v1(job, &conflict_hooks) },
+            IFX_INVALID_ARGUMENT
+        );
+        assert_eq!(dummy_rel.load(Ordering::SeqCst), 0);
+        drop(unsafe { Box::from_raw(dummy_cookie) });
+        assert_eq!(unsafe { imageflow_stream_job_release_v1(job) }, IFX_OK);
+    }
 }

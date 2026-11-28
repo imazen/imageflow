@@ -34,7 +34,7 @@ libc = "0.2"
 clap = "4"
 time = "0.3.47"
 threadpool = "1"
-serde = "1"
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
@@ -42,11 +42,41 @@ zip = { version = "8", default-features = false }
 smallvec = "1"
 bytes = "1"
 utoipa = { version = "5.3.1", features = [], optional = true }
+toml = { version = "0.9", optional = true }
+walkdir = { version = "2", optional = true }
+glob = { version = "0.3", optional = true }
+rayon = { version = "1", optional = true }
+sha2 = { version = "0.11", optional = true }
+httparse = { version = "1", optional = true }
+hex = { version = "0.4", optional = true }
+base64 = { version = "0.22", optional = true }
+getrandom = { version = "0.2", optional = true }
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1", features = ["fs"], optional = true }
 
 [features]
 default = ["schema-export", "json-schema"]
 schema-export = ["dep:utoipa", "imageflow_types/schema-export", "imageflow_core/schema-export"]
 json-schema = ["imageflow_types/json-schema", "imageflow_core/json-schema"]
+modern-cli = [
+    "imageflow_core/zen-codecs",
+    "imageflow_core/zen-media",
+    "imageflow_core/all-media",
+    "imageflow_core/streaming",
+    "imageflow_core/streaming-async",
+    "imageflow_core/iqa",
+    "dep:toml",
+    "dep:walkdir",
+    "dep:glob",
+    "dep:rayon",
+    "dep:sha2",
+    "dep:httparse",
+    "dep:hex",
+    "dep:base64",
+    "dep:getrandom",
+    "dep:rustix",
+]
 
 [[bin]]
 name = "imageflow_tool"
@@ -54,3 +84,4 @@ path = "src/main.rs"
 doc = false
 
 [dev-dependencies]
+png = "0.18.1"

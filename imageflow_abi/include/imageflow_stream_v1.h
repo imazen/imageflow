@@ -18,8 +18,9 @@ extern "C" {
 #define IFX_STREAM_ABI_VERSION_V1 0x00010000u
 
 /* Feature flags returned by imageflow_stream_abi_features_v1(). */
-#define IFX_STREAM_FEAT_MANUAL_V1 (1u << 0)
-#define IFX_STREAM_FEAT_ASYNC_V1  (1u << 1)
+#define IFX_STREAM_FEAT_MANUAL_V1   (1u << 0)
+#define IFX_STREAM_FEAT_ASYNC_V1    (1u << 1)
+#define IFX_STREAM_FEAT_PROGRESS_V1 (1u << 2)
 
 /* Operation selectors for imageflow_stream_job_create_v1(). */
 #define IFX_OP_EXECUTE_V1  1u
@@ -92,8 +93,30 @@ extern "C" {
 #define IFX_REPLY_FLAG_HAS_VALUE (1u << 0)
 
 /* IfxNotifyV1 flags bitmask. */
-#define IFX_NOTIFY_EVENT (1u << 0)
-#define IFX_NOTIFY_STOP  (1u << 1)
+#define IFX_NOTIFY_EVENT    (1u << 0)
+#define IFX_NOTIFY_STOP     (1u << 1)
+#define IFX_NOTIFY_PROGRESS (1u << 2)
+
+/* IfxAsyncHooksV1::flags bitmask (0 = zero-cost default with no progress tracking).
+ *   - IFX_HOOK_PROGRESS_PULL: allocate lock-free atomic progress counters ONLY (zero progress
+ *     callbacks/wakes; caller polls imageflow_stream_job_progress_v1 at its own cadence).
+ *   - IFX_HOOK_PROGRESS_NOTIFY: implies PULL and emits paced, coalesced IFX_NOTIFY_PROGRESS wakes.
+ */
+#define IFX_HOOK_PROGRESS_PULL   (1u << 0)
+#define IFX_HOOK_PROGRESS_NOTIFY (1u << 1)
+
+/* IfxProgressV1::status values. */
+#define IFX_PROGRESS_DISABLED    0u
+#define IFX_PROGRESS_NOT_STARTED 1u
+#define IFX_PROGRESS_RUNNING     2u
+#define IFX_PROGRESS_SUCCEEDED   3u
+#define IFX_PROGRESS_FAILED      4u
+#define IFX_PROGRESS_CANCELLED   5u
+#define IFX_PROGRESS_ABANDONED   6u
+
+/* IfxProgressV1::flags bitmask. */
+#define IFX_PROGRESS_FLAG_HAS_FRACTION (1u << 0)
+#define IFX_PROGRESS_FLAG_TERMINAL     (1u << 1)
 
 typedef struct IfxJobV1 IfxJobV1;
 struct imageflow_context;
@@ -133,6 +156,17 @@ typedef struct IfxReplyV1 {
     IfxU64V1 ticket;
     IfxU64V1 value;
 } IfxReplyV1;
+
+/* Fixed-layout non-blocking progress snapshot (40 bytes; identical offsets on 32-bit & 64-bit). */
+typedef struct IfxProgressV1 {
+    uint32_t size;
+    uint32_t status;
+    uint32_t flags;
+    uint32_t reserved;
+    double fraction;
+    double unresolved_fraction;
+    IfxU64V1 generation;
+} IfxProgressV1;
 
 /* Host async callbacks (transferred ONLY on IFX_OK from imageflow_stream_job_start_async_v1).
  *
@@ -258,6 +292,30 @@ int32_t IFX_CALL imageflow_stream_job_cancel_v1(IfxJobV1 *job);
  * (including an in-flight Commit) and triggers non-blocking quiescence + single `release_user`.
  */
 int32_t IFX_CALL imageflow_stream_job_release_v1(IfxJobV1 *job);
+
+/* Opt in to lock-free atomic progress tracking on a freshly created, un-stepped job before its
+ * first manual step or async start. When NOT called (and hooks->flags == 0), the job runs with
+ * zero progress-tracking allocation or overhead.
+ */
+int32_t IFX_CALL imageflow_stream_job_enable_progress_v1(IfxJobV1 *job);
+
+/* Thread-safe, non-blocking progress summary read (safe to call concurrently with next/reply/cancel).
+ * When progress was not opted in, sets status = IFX_PROGRESS_DISABLED and returns IFX_OK.
+ * Returns IFX_WOULD_BLOCK without spinning if stage metadata is momentarily contended.
+ */
+int32_t IFX_CALL imageflow_stream_job_progress_v1(
+    IfxJobV1 *job,
+    IfxProgressV1 *out_progress);
+
+/* Thread-safe, non-blocking export of the versioned (schema_version=2) how-far-along phase-tree
+ * snapshot JSON. Returns IFX_UNSUPPORTED if progress is disabled, IFX_WOULD_BLOCK if momentarily
+ * contended, or IFX_BUFFER_TOO_SMALL with `*needed` set to exact required byte count.
+ */
+int32_t IFX_CALL imageflow_stream_job_progress_json_v1(
+    IfxJobV1 *job,
+    uint8_t *dst,
+    size_t cap,
+    size_t *needed);
 
 /* Present only when built with feature `async-ffi`.
  * Transitions an un-stepped manual job to Tokio async execution. Takes ownership of

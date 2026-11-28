@@ -66,6 +66,271 @@ public interface IStagedCommitTransaction
 /// </summary>
 public sealed record MediaResult(string ResultJson, bool Succeeded);
 
+/// <summary>Lifecycle status of a tracked media job's native progress observer.</summary>
+public enum MediaProgressStatus : uint
+{
+    Disabled = 0,
+    NotStarted = 1,
+    Running = 2,
+    Succeeded = 3,
+    Failed = 4,
+    Cancelled = 5,
+    Abandoned = 6,
+}
+
+/// <summary>
+/// Allocation-free point-in-time native progress snapshot read from <c>how-far-along</c> via
+/// <c>imageflow_stream_job_progress_v1</c>.
+/// </summary>
+public readonly record struct MediaProgress(
+    MediaProgressStatus Status,
+    double? Fraction,
+    double UnresolvedFraction,
+    bool IsTerminal,
+    ulong Generation);
+
+/// <summary>
+/// Pull-only, zero-callback progress monitor for <see cref="MediaJob"/>.
+///
+/// Passing a <see cref="MediaProgressMonitor"/> without an <see cref="IProgress{T}"/> enables
+/// lock-free atomic counters in native <c>how-far-along</c> with ZERO progress callbacks or wake
+/// notifications; UI/caller timers can poll <see cref="TryRead"/> or <see cref="TryReadSnapshotJson"/>
+/// at any cadence without blocking native execution.
+/// </summary>
+public sealed class MediaProgressMonitor
+{
+    private readonly object _lock = new();
+    private JobHandle? _job;
+    private MediaProgress _finalSummary = new(MediaProgressStatus.NotStarted, null, 1.0, false, 0);
+    private bool _hasFinalSummary;
+    private string? _finalJson;
+    private bool _detached;
+
+    internal void Attach(JobHandle job)
+    {
+        lock (_lock)
+        {
+            if (_job is not null)
+            {
+                throw new InvalidOperationException(
+                    "This MediaProgressMonitor is already attached to an active MediaJob. Create a separate MediaProgressMonitor instance for each concurrent job.");
+            }
+            _job = job;
+            _detached = false;
+            _finalSummary = new(MediaProgressStatus.NotStarted, null, 1.0, false, 0);
+            _hasFinalSummary = false;
+            _finalJson = null;
+        }
+    }
+
+    internal void DetachAndSnapshot(JobHandle expectedJob, bool snapshotNative)
+    {
+        JobHandle? job;
+        lock (_lock)
+        {
+            if (!ReferenceEquals(_job, expectedJob) || _detached)
+            {
+                return;
+            }
+            job = _job;
+        }
+        try
+        {
+            if (snapshotNative && job is not null)
+            {
+                // Snapshot final terminal state strictly BEFORE JobHandle is disposed so
+                // post-completion reads still observe the frozen terminal summary and phase tree!
+                try
+                {
+                    if (TryReadFromHandle(job, out MediaProgress finalP))
+                    {
+                        lock (_lock)
+                        {
+                            if (ReferenceEquals(_job, expectedJob))
+                            {
+                                _finalSummary = finalP;
+                                _hasFinalSummary = true;
+                            }
+                        }
+                    }
+                    if (TryReadJsonFromHandle(job, out string? finalJ))
+                    {
+                        lock (_lock)
+                        {
+                            if (ReferenceEquals(_job, expectedJob))
+                            {
+                                _finalJson = finalJ;
+                            }
+                        }
+                    }
+                }
+                catch (EntryPointNotFoundException)
+                {
+                    // Older native library without progress exports; detach cleanly without throwing.
+                }
+            }
+        }
+        finally
+        {
+            lock (_lock)
+            {
+                if (ReferenceEquals(_job, expectedJob))
+                {
+                    _job = null;
+                    _detached = true;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Non-blocking, allocation-free read of the current progress summary. Safe to call from any
+    /// thread while the job is running or after it finishes.
+    /// </summary>
+    public bool TryRead(out MediaProgress progress)
+    {
+        JobHandle? job;
+        lock (_lock)
+        {
+            if (_detached)
+            {
+                if (_hasFinalSummary)
+                {
+                    progress = _finalSummary;
+                    return true;
+                }
+                progress = new MediaProgress(MediaProgressStatus.NotStarted, null, 1.0, false, 0);
+                return false;
+            }
+            job = _job;
+        }
+        if (job is null)
+        {
+            progress = new MediaProgress(MediaProgressStatus.NotStarted, null, 1.0, false, 0);
+            return false;
+        }
+        return TryReadFromHandle(job, out progress);
+    }
+
+    /// <summary>
+    /// Non-blocking export of <c>how-far-along</c>'s versioned (<c>schema_version: 2</c>)
+    /// hierarchical phase-tree snapshot JSON (stages: <c>input</c>, <c>process</c>, <c>output</c>
+    /// plus codec sub-phases).
+    /// </summary>
+    public bool TryReadSnapshotJson(out string? snapshotJson)
+    {
+        JobHandle? job;
+        lock (_lock)
+        {
+            if (_detached)
+            {
+                snapshotJson = _finalJson;
+                return snapshotJson is not null;
+            }
+            job = _job;
+        }
+        if (job is null)
+        {
+            snapshotJson = null;
+            return false;
+        }
+        return TryReadJsonFromHandle(job, out snapshotJson);
+    }
+
+    internal static unsafe bool TryReadFromHandle(JobHandle job, out MediaProgress progress)
+    {
+        bool addedRef = false;
+        try
+        {
+            if (job.IsClosed || job.IsInvalid)
+            {
+                progress = default;
+                return false;
+            }
+            job.DangerousAddRef(ref addedRef);
+            var raw = new ProgressV1 { Size = (uint)sizeof(ProgressV1) };
+            int rc = Native.Progress(job, &raw);
+            if (rc != WireConstants.Ok)
+            {
+                progress = default;
+                return false;
+            }
+            bool hasFrac = (raw.Flags & WireConstants.ProgressFlagHasFraction) != 0;
+            bool isTerm = (raw.Flags & WireConstants.ProgressFlagTerminal) != 0;
+            progress = new MediaProgress(
+                (MediaProgressStatus)raw.Status,
+                hasFrac ? raw.Fraction : null,
+                raw.UnresolvedFraction,
+                isTerm,
+                raw.Generation.Value);
+            return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            progress = default;
+            return false;
+        }
+        finally
+        {
+            if (addedRef)
+            {
+                job.DangerousRelease();
+            }
+        }
+    }
+
+    internal static unsafe bool TryReadJsonFromHandle(JobHandle job, out string? json)
+    {
+        bool addedRef = false;
+        try
+        {
+            if (job.IsClosed || job.IsInvalid)
+            {
+                json = null;
+                return false;
+            }
+            job.DangerousAddRef(ref addedRef);
+            nuint needed = 0;
+            int rc = Native.ProgressJson(job, null, 0, &needed);
+            if (rc == WireConstants.Ok && needed == 0)
+            {
+                json = string.Empty;
+                return true;
+            }
+            if (rc != WireConstants.BufferTooSmall || needed == 0)
+            {
+                json = null;
+                return false;
+            }
+            byte[] buf = new byte[checked((int)needed)];
+            fixed (byte* p = buf)
+            {
+                nuint actual = 0;
+                rc = Native.ProgressJson(job, p, (nuint)buf.Length, &actual);
+                if (rc != WireConstants.Ok)
+                {
+                    json = null;
+                    return false;
+                }
+                json = Encoding.UTF8.GetString(buf, 0, checked((int)actual));
+                return true;
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            json = null;
+            return false;
+        }
+        finally
+        {
+            if (addedRef)
+            {
+                job.DangerousRelease();
+            }
+        }
+    }
+}
+
 /// <summary>
 /// I/O exception raised when a managed input/output adapter fails during streaming, preserving
 /// BOTH the original adapter exception (<see cref="Exception.InnerException"/>) AND the native
@@ -81,6 +346,40 @@ public sealed class MediaIoException : IOException
     {
         TerminalReceiptJson = terminalReceiptJson;
     }
+}
+
+/// <summary>
+/// Opt-in progress observation configuration for <see cref="MediaJob.ExecuteWithProgressAsync"/>,
+/// <see cref="MediaJob.InspectWithProgressAsync"/>, and <see cref="MediaJob.EstimateWithProgressAsync"/>.
+/// Callers that use the standard <c>ExecuteAsync</c>/<c>InspectAsync</c>/<c>EstimateAsync</c>
+/// methods incur zero progress allocation or callback overhead.
+/// </summary>
+public sealed class MediaProgressOptions
+{
+    public IProgress<MediaProgress>? Progress { get; }
+    public MediaProgressMonitor? Monitor { get; }
+
+    private MediaProgressOptions(IProgress<MediaProgress>? progress, MediaProgressMonitor? monitor)
+    {
+        Progress = progress;
+        Monitor = monitor;
+    }
+
+    /// <summary>
+    /// Enable lock-free atomic native tracking with ZERO progress callbacks or wake notifications.
+    /// Poll <paramref name="monitor"/> at any cadence you choose.
+    /// </summary>
+    public static MediaProgressOptions PullOnly(MediaProgressMonitor monitor) =>
+        new(progress: null, monitor: monitor ?? throw new ArgumentNullException(nameof(monitor)));
+
+    /// <summary>
+    /// Enable paced, coalesced <see cref="IProgress{T}"/> delivery (with an optional
+    /// <see cref="MediaProgressMonitor"/> for phase-tree JSON inspection).
+    /// </summary>
+    public static MediaProgressOptions PacedNotify(
+        IProgress<MediaProgress> progress,
+        MediaProgressMonitor? monitor = null) =>
+        new(progress: progress ?? throw new ArgumentNullException(nameof(progress)), monitor: monitor);
 }
 
 /// <summary>
@@ -106,8 +405,7 @@ public static class MediaJob
 {
     /// <summary>
     /// Execute a streaming pipeline using a <see cref="SafeHandle"/>-protected native context lease.
-    /// The context handle is ref-counted across <c>imageflow_stream_job_create_v1</c> and may safely
-    /// be disposed immediately after this call returns (or even while the returned task runs).
+    /// Zero progress overhead (stop token only).
     /// </summary>
     public static Task<MediaResult> ExecuteAsync(
         SafeHandle context,
@@ -123,7 +421,36 @@ public static class MediaJob
             sources,
             destinations,
             commitTransaction,
-            cancellationToken);
+            cancellationToken,
+            progress: null,
+            progressMonitor: null);
+
+    /// <summary>
+    /// Execute a streaming pipeline with opt-in <c>how-far-along</c> progress tracking
+    /// (<see cref="MediaProgressOptions.PullOnly"/> for zero-callback polling, or
+    /// <see cref="MediaProgressOptions.PacedNotify"/> for coalesced <see cref="IProgress{T}"/>).
+    /// </summary>
+    public static Task<MediaResult> ExecuteWithProgressAsync(
+        SafeHandle context,
+        string envelopeJson,
+        IReadOnlyDictionary<int, IMediaInputAdapter> sources,
+        IReadOnlyDictionary<int, IMediaOutputAdapter> destinations,
+        MediaProgressOptions progressOptions,
+        IStagedCommitTransaction? commitTransaction = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(progressOptions);
+        return RunWithSafeContextAsync(
+            context,
+            WireConstants.OpExecuteV1,
+            envelopeJson,
+            sources,
+            destinations,
+            commitTransaction,
+            cancellationToken,
+            progressOptions.Progress,
+            progressOptions.Monitor);
+    }
 
     /// <summary>
     /// Execute a streaming pipeline using a raw native context pointer.
@@ -143,7 +470,34 @@ public static class MediaJob
             sources,
             destinations,
             commitTransaction,
-            cancellationToken);
+            cancellationToken,
+            progress: null,
+            progressMonitor: null);
+
+    /// <summary>
+    /// Execute a streaming pipeline using a raw native context pointer with opt-in progress tracking.
+    /// </summary>
+    public static Task<MediaResult> ExecuteWithProgressAsync(
+        nint context,
+        string envelopeJson,
+        IReadOnlyDictionary<int, IMediaInputAdapter> sources,
+        IReadOnlyDictionary<int, IMediaOutputAdapter> destinations,
+        MediaProgressOptions progressOptions,
+        IStagedCommitTransaction? commitTransaction = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(progressOptions);
+        return RunOperationAsync(
+            context,
+            WireConstants.OpExecuteV1,
+            envelopeJson,
+            sources,
+            destinations,
+            commitTransaction,
+            cancellationToken,
+            progressOptions.Progress,
+            progressOptions.Monitor);
+    }
 
     /// <summary>
     /// Inspect media container headers/index using a <see cref="SafeHandle"/>-protected native context.
@@ -160,7 +514,32 @@ public static class MediaJob
             sources,
             new Dictionary<int, IMediaOutputAdapter>(),
             null,
-            cancellationToken);
+            cancellationToken,
+            progress: null,
+            progressMonitor: null);
+
+    /// <summary>
+    /// Inspect media container headers/index with opt-in progress tracking.
+    /// </summary>
+    public static Task<MediaResult> InspectWithProgressAsync(
+        SafeHandle context,
+        string envelopeJson,
+        IReadOnlyDictionary<int, IMediaInputAdapter> sources,
+        MediaProgressOptions progressOptions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(progressOptions);
+        return RunWithSafeContextAsync(
+            context,
+            WireConstants.OpInspectV1,
+            envelopeJson,
+            sources,
+            new Dictionary<int, IMediaOutputAdapter>(),
+            null,
+            cancellationToken,
+            progressOptions.Progress,
+            progressOptions.Monitor);
+    }
 
     /// <summary>
     /// Inspect media container headers/index using a raw native context pointer.
@@ -178,7 +557,32 @@ public static class MediaJob
             sources,
             new Dictionary<int, IMediaOutputAdapter>(),
             null,
-            cancellationToken);
+            cancellationToken,
+            progress: null,
+            progressMonitor: null);
+
+    /// <summary>
+    /// Inspect media container headers/index using a raw native context pointer with opt-in progress tracking.
+    /// </summary>
+    public static Task<MediaResult> InspectWithProgressAsync(
+        nint context,
+        string envelopeJson,
+        IReadOnlyDictionary<int, IMediaInputAdapter> sources,
+        MediaProgressOptions progressOptions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(progressOptions);
+        return RunOperationAsync(
+            context,
+            WireConstants.OpInspectV1,
+            envelopeJson,
+            sources,
+            new Dictionary<int, IMediaOutputAdapter>(),
+            null,
+            cancellationToken,
+            progressOptions.Progress,
+            progressOptions.Monitor);
+    }
 
     /// <summary>
     /// Estimate pipeline admission and startup dependencies using a <see cref="SafeHandle"/>-protected context.
@@ -196,7 +600,33 @@ public static class MediaJob
             sources,
             destinations,
             null,
-            cancellationToken);
+            cancellationToken,
+            progress: null,
+            progressMonitor: null);
+
+    /// <summary>
+    /// Estimate pipeline admission and startup dependencies with opt-in progress tracking.
+    /// </summary>
+    public static Task<MediaResult> EstimateWithProgressAsync(
+        SafeHandle context,
+        string envelopeJson,
+        IReadOnlyDictionary<int, IMediaInputAdapter> sources,
+        IReadOnlyDictionary<int, IMediaOutputAdapter> destinations,
+        MediaProgressOptions progressOptions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(progressOptions);
+        return RunWithSafeContextAsync(
+            context,
+            WireConstants.OpEstimateV1,
+            envelopeJson,
+            sources,
+            destinations,
+            null,
+            cancellationToken,
+            progressOptions.Progress,
+            progressOptions.Monitor);
+    }
 
     /// <summary>
     /// Estimate pipeline admission and startup dependencies using a raw native context pointer.
@@ -215,7 +645,33 @@ public static class MediaJob
             sources,
             destinations,
             null,
-            cancellationToken);
+            cancellationToken,
+            progress: null,
+            progressMonitor: null);
+
+    /// <summary>
+    /// Estimate pipeline admission and startup dependencies using a raw native context pointer with opt-in progress tracking.
+    /// </summary>
+    public static Task<MediaResult> EstimateWithProgressAsync(
+        nint context,
+        string envelopeJson,
+        IReadOnlyDictionary<int, IMediaInputAdapter> sources,
+        IReadOnlyDictionary<int, IMediaOutputAdapter> destinations,
+        MediaProgressOptions progressOptions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(progressOptions);
+        return RunOperationAsync(
+            context,
+            WireConstants.OpEstimateV1,
+            envelopeJson,
+            sources,
+            destinations,
+            null,
+            cancellationToken,
+            progressOptions.Progress,
+            progressOptions.Monitor);
+    }
 
     private static Task<MediaResult> RunWithSafeContextAsync(
         SafeHandle context,
@@ -224,7 +680,9 @@ public static class MediaJob
         IReadOnlyDictionary<int, IMediaInputAdapter> sources,
         IReadOnlyDictionary<int, IMediaOutputAdapter> destinations,
         IStagedCommitTransaction? commitTransaction,
-        CancellationToken caller)
+        CancellationToken caller,
+        IProgress<MediaProgress>? progress,
+        MediaProgressMonitor? progressMonitor)
     {
         ArgumentNullException.ThrowIfNull(context);
         WireConstants.AssertLayouts();
@@ -245,7 +703,7 @@ public static class MediaJob
                 context.DangerousRelease();
             }
         }
-        return RunCreatedJobAsync(job, sources, destinations, commitTransaction, caller);
+        return RunCreatedJobAsync(job, sources, destinations, commitTransaction, caller, progress, progressMonitor);
     }
 
     private static Task<MediaResult> RunOperationAsync(
@@ -255,7 +713,9 @@ public static class MediaJob
         IReadOnlyDictionary<int, IMediaInputAdapter> sources,
         IReadOnlyDictionary<int, IMediaOutputAdapter> destinations,
         IStagedCommitTransaction? commitTransaction,
-        CancellationToken caller)
+        CancellationToken caller,
+        IProgress<MediaProgress>? progress,
+        MediaProgressMonitor? progressMonitor)
     {
         if (context == nint.Zero)
         {
@@ -266,7 +726,7 @@ public static class MediaJob
         ValidateStagedTransactionRequirement(operation, destinations, commitTransaction);
 
         JobHandle job = CreateJob(context, operation, envelopeJson, sources, destinations);
-        return RunCreatedJobAsync(job, sources, destinations, commitTransaction, caller);
+        return RunCreatedJobAsync(job, sources, destinations, commitTransaction, caller, progress, progressMonitor);
     }
 
     private static void ValidateStagedTransactionRequirement(
@@ -293,10 +753,22 @@ public static class MediaJob
         IReadOnlyDictionary<int, IMediaInputAdapter> sources,
         IReadOnlyDictionary<int, IMediaOutputAdapter> destinations,
         IStagedCommitTransaction? commitTransaction,
-        CancellationToken caller)
+        CancellationToken caller,
+        IProgress<MediaProgress>? progress,
+        MediaProgressMonitor? progressMonitor)
     {
         var job = createdJob;
-        var pump = new Pump(job, sources, destinations, commitTransaction);
+        var pump = new Pump(job, sources, destinations, commitTransaction, progress);
+
+        uint hookFlags = 0;
+        if (progress is not null)
+        {
+            hookFlags |= WireConstants.HookProgressNotify;
+        }
+        else if (progressMonitor is not null)
+        {
+            hookFlags |= WireConstants.HookProgressPull;
+        }
 
         using var ioStop = CancellationTokenSource.CreateLinkedTokenSource(caller);
         CancellationTokenRegistration registration = caller.UnsafeRegister(
@@ -305,9 +777,17 @@ public static class MediaJob
 
         Task? watchStop = null;
         bool started = false;
+        bool monitorAttached = false;
         try
         {
-            int accepted = StartAsyncNative(pump);
+            // Claim exclusive monitor ownership BEFORE starting native work so overlapping reuse
+            // fails immediately without touching the already-running job's monitor attachment!
+            if (progressMonitor is not null)
+            {
+                progressMonitor.Attach(job);
+                monitorAttached = true;
+            }
+            int accepted = StartAsyncNative(pump, hookFlags);
             if (accepted != WireConstants.Ok)
             {
                 throw new InvalidOperationException($"imageflow_stream_job_start_async_v1 failed with code {accepted}");
@@ -332,12 +812,34 @@ public static class MediaJob
         }
         finally
         {
-            // Reverse-order cleanup:
-            // 1. Unregister caller cancel hook BEFORE disposing JobHandle (prevents callback racing release).
-            // 2. Dispose JobHandle BEFORE awaiting NativeReleased so an abandoned in-flight Commit
-            //    triggers native abandonment and guarantees worker quiescence!
-            registration.Dispose();
-            job.Dispose();
+            // Reverse-order cleanup with guaranteed handle disposal even if progress exports are absent:
+            // 1. Detach monitor (and snapshot ONLY if native start actually succeeded!).
+            // 2. Flush final progress (only if native start succeeded).
+            // 3. Unregister caller cancel hook BEFORE disposing JobHandle.
+            // 4. Dispose JobHandle BEFORE awaiting NativeReleased so abandoned Commit quiesces.
+            try
+            {
+                if (monitorAttached)
+                {
+                    progressMonitor!.DetachAndSnapshot(job, snapshotNative: started);
+                }
+            }
+            catch
+            {
+                // Never skip cancel unregister / JobHandle dispose on observer cleanup error.
+            }
+            if (started)
+            {
+                pump.FlushFinalProgressNoThrow();
+            }
+            try
+            {
+                registration.Dispose();
+            }
+            finally
+            {
+                job.Dispose();
+            }
             if (started)
             {
                 await pump.NativeReleased.Task.ConfigureAwait(false);
@@ -436,13 +938,13 @@ public static class MediaJob
         }
     }
 
-    private static unsafe int StartAsyncNative(Pump pump)
+    private static unsafe int StartAsyncNative(Pump pump, uint hookFlags)
     {
         var root = GCHandle.Alloc(pump);
         var hooks = new HooksV1
         {
             Size = (uint)sizeof(HooksV1),
-            Flags = 0,
+            Flags = hookFlags,
             User = GCHandle.ToIntPtr(root),
             Notify = &OnNotify,
             ReleaseUser = &OnReleased,
@@ -465,11 +967,15 @@ public static class MediaJob
         private readonly IReadOnlyDictionary<int, IMediaInputAdapter> _sources;
         private readonly IReadOnlyDictionary<int, IMediaOutputAdapter> _sinks;
         private readonly IStagedCommitTransaction? _commitTransaction;
+        private readonly IProgress<MediaProgress>? _progress;
         private readonly object _sigLock = new();
         private bool _eventPending;
+        private bool _progressPending;
         private TaskCompletionSource<bool>? _waiter;
         private bool _committed;
         private bool _rolledBack;
+        private bool _hasLastProgress;
+        private MediaProgress _lastProgress;
 
         internal JobHandle Job { get; }
         internal TaskCompletionSource<bool> NativeReleased { get; } =
@@ -481,12 +987,14 @@ public static class MediaJob
             JobHandle job,
             IReadOnlyDictionary<int, IMediaInputAdapter> sources,
             IReadOnlyDictionary<int, IMediaOutputAdapter> sinks,
-            IStagedCommitTransaction? commitTransaction)
+            IStagedCommitTransaction? commitTransaction,
+            IProgress<MediaProgress>? progress)
         {
             Job = job;
             _sources = sources;
             _sinks = sinks;
             _commitTransaction = commitTransaction;
+            _progress = progress;
         }
 
         internal void Enqueue(uint flags)
@@ -495,11 +1003,17 @@ public static class MediaJob
             {
                 StopLatched.TrySetResult(true);
             }
-            if ((flags & (WireConstants.NotifyEvent | WireConstants.NotifyStop)) != 0)
+            bool hasEventOrStop = (flags & (WireConstants.NotifyEvent | WireConstants.NotifyStop)) != 0;
+            bool hasProgress = (flags & WireConstants.NotifyProgress) != 0 && _progress is not null;
+            if (hasEventOrStop || hasProgress)
             {
                 TaskCompletionSource<bool>? toWake = null;
                 lock (_sigLock)
                 {
+                    if (hasProgress)
+                    {
+                        _progressPending = true;
+                    }
                     if (_waiter is not null)
                     {
                         toWake = _waiter;
@@ -511,6 +1025,55 @@ public static class MediaJob
                     }
                 }
                 toWake?.TrySetResult(true);
+            }
+        }
+
+        internal void FlushFinalProgressNoThrow()
+        {
+            if (_progress is null) return;
+            try
+            {
+                ReportProgressIfChanged(force: true);
+            }
+            catch
+            {
+                // Never mask terminal result or cleanup with a user IProgress callback exception.
+            }
+        }
+
+        private void ReportProgressIfChanged(bool force)
+        {
+            if (_progress is null) return;
+            bool shouldRead = force;
+            if (!shouldRead)
+            {
+                lock (_sigLock)
+                {
+                    if (_progressPending)
+                    {
+                        _progressPending = false;
+                        shouldRead = true;
+                    }
+                }
+            }
+            if (!shouldRead) return;
+            if (!MediaProgressMonitor.TryReadFromHandle(Job, out MediaProgress cur))
+            {
+                return;
+            }
+            if (!_hasLastProgress || cur != _lastProgress)
+            {
+                _hasLastProgress = true;
+                _lastProgress = cur;
+                try
+                {
+                    _progress.Report(cur);
+                }
+                catch
+                {
+                    // Isolate observer exceptions so a throwing IProgress<MediaProgress> handler
+                    // can never abort DriveAsync or turn a committed result into a faulted task.
+                }
             }
         }
 
@@ -547,6 +1110,7 @@ public static class MediaJob
         {
             while (true)
             {
+                ReportProgressIfChanged(force: false);
                 int rc = PollNext(out EventV1 ev);
                 if (rc == WireConstants.WouldBlock)
                 {
@@ -561,10 +1125,12 @@ public static class MediaJob
                 switch (ev.Kind)
                 {
                     case WireConstants.EventComplete:
+                        ReportProgressIfChanged(force: true);
                         return new MediaResult(ReadResultJson(), Succeeded: true);
 
                     case WireConstants.EventFailed:
                         await RollbackStagedIfUncommittedAsync().ConfigureAwait(false);
+                        ReportProgressIfChanged(force: true);
                         return new MediaResult(ReadResultJson(), Succeeded: false);
 
                     case WireConstants.EventNeedAtLeast:

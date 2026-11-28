@@ -9,7 +9,13 @@ use std::{
 };
 
 use std::path::{Path, PathBuf};
+#[cfg(feature = "modern-cli")]
+pub mod bulk;
 mod cmd_build;
+#[cfg(feature = "modern-cli")]
+mod cmd_modern;
+#[cfg(feature = "modern-cli")]
+pub mod gallery;
 pub mod self_test;
 
 use clap::{Arg, ArgAction, Command, ValueHint};
@@ -161,6 +167,8 @@ pub fn main_with_exit_code() -> i32 {
             )
 
         );
+    #[cfg(feature = "modern-cli")]
+    let app = cmd_modern::register_modern_subcommands(app);
     let matches = app.get_matches();
     if let Some(capture_dest) = matches.get_one("capture-to") {
         let mut filtered_args = std::env::args().collect::<Vec<String>>();
@@ -281,6 +289,10 @@ pub fn main_with_exit_code() -> i32 {
             self_test::export_examples(None);
             return 0;
         }
+    }
+    #[cfg(feature = "modern-cli")]
+    if let Some(code) = cmd_modern::handle_modern_subcommand(&matches) {
+        return code;
     }
 
     64
